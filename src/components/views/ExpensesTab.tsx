@@ -96,7 +96,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
 
       {/* EXPENSE FORM */}
       <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
-         <div className="text-[14px] font-sans font-semibold text-white mb-4">Log Expense</div>
+         <div className="text-[14px] font-sans font-semibold text-[var(--color-foreground)] mb-4">Log Expense</div>
          
          <div className="space-y-4">
            {/* CATEGORY SCROLLER */}

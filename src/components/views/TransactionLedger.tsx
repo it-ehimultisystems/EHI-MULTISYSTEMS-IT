@@ -28,7 +28,7 @@ export const TransactionLedger = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-white relative animate-in slide-in-from-right overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex items-center justify-between shrink-0">
         <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-white transition-colors cursor-pointer">

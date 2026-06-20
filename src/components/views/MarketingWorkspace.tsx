@@ -129,7 +129,7 @@ export const MarketingWorkspace = ({
             <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase mt-1">Total Sales</div>
           </div>
           <div className="flex-1 bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.07)] p-3 flex flex-col justify-between">
-            <div className="text-[20px] font-bold font-mono text-white" style={{ fontFamily: 'JetBrains Mono' }}>{marketingTxs.length}</div>
+            <div className="text-[20px] font-bold font-mono text-[var(--color-foreground)]" style={{ fontFamily: 'JetBrains Mono' }}>{marketingTxs.length}</div>
             <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase mt-1">Customers</div>
           </div>
         </div>

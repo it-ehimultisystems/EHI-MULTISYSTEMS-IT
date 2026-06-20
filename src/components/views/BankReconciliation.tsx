@@ -269,7 +269,7 @@ export const BankReconciliation = ({
          <div className="w-16 h-16 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.2)] mb-4">
            <CheckCircle2 size={32} className="text-[var(--color-success)]" />
          </div>
-         <h2 className="text-[20px] font-sans font-bold text-white mb-2">Reconciliation confirmed</h2>
+         <h2 className="text-[20px] font-sans font-bold text-[var(--color-foreground)] mb-2">Reconciliation confirmed</h2>
          <p className="text-[14px] font-sans text-slate-400 mb-8 max-w-sm">
            {matchedBtxCount} of {bankTxList.length} transactions matched. Saved to accounting ledger.
          </p>

@@ -90,7 +90,7 @@ export const Dashboard = ({ user, transactions }: { user: User; transactions: Tr
       {isAdmin && (
         <div className="w-full bg-[rgba(16,185,129,0.05)] border border-[var(--color-success)] rounded-xl p-4">
           <div className="text-[12px] font-sans font-medium text-[var(--color-success)]">Grand Total For All Streams</div>
-          <div className="text-[28px] font-bold font-mono text-white mt-1">
+          <div className="text-[28px] font-bold font-mono text-[var(--color-foreground)] mt-1">
             <AnimatedAmount value={cargoTotal + mktgTotal + vjTotal} />
           </div>
           

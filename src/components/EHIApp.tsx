@@ -1,6 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { User, TabView, Transaction, Expense } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport } from '../lib/sync';
+import { useTheme } from '../lib/useTheme';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { Dashboard } from './views/Dashboard';
@@ -29,6 +30,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [toast, setToast] = useState<ToastProps | null>(null);
+  
+  const { theme, toggle, isDark } = useTheme();
 
   const showToast = (props: Omit<ToastProps, 'onClose'>) => {
     setToast({ ...props, onClose: () => setToast(null) });
@@ -118,13 +121,18 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-[430px] mx-auto bg-[var(--color-obsidian)] relative overflow-hidden">
+    <div 
+      className="flex flex-col h-screen max-w-[430px] mx-auto bg-[var(--color-obsidian)] relative overflow-hidden"
+      style={{ transition: 'background-color 0.2s ease' }}
+    >
       <Header 
         user={user} 
         isOffline={isOffline} 
         pendingCount={pendingSyncCount} 
         onToggleWifi={handleToggleWifi} 
         onLogout={onLogout} 
+        theme={theme}
+        onToggleTheme={toggle}
       />
       
       <main className="flex-1 overflow-y-auto w-full pb-[60px]">

@@ -236,7 +236,7 @@ export const Analytics = ({
           <select 
             value={selectedHub}
             onChange={(e) => setSelectedHub(e.target.value)}
-            className="bg-[var(--color-surface-1)] text-white text-[10px] font-mono h-7 pl-2 pr-6 rounded border border-[rgba(255,255,255,0.15)] appearance-none cursor-pointer"
+            className="bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[10px] font-mono h-7 pl-2 pr-6 rounded border border-[rgba(255,255,255,0.15)] appearance-none cursor-pointer"
           >
             {activeHubs.map(hub => (
               <option key={hub.id} value={hub.id}>{hub.name}</option>

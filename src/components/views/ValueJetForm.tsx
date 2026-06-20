@@ -95,7 +95,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
           <div className="w-full bg-[var(--color-obsidian)] rounded p-3 mb-4 text-left border border-[rgba(255,255,255,0.07)]">
             <div className="flex justify-between items-center mb-2">
               <span className="text-[10px] font-mono text-[var(--color-muted)]">Total Weight</span>
-              <span className="text-[12px] font-mono text-white">{s.kgs.toFixed(1)} kg</span>
+              <span className="text-[12px] font-mono text-[var(--color-foreground)]">{s.kgs.toFixed(1)} kg</span>
             </div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-[10px] font-mono text-[var(--color-muted)]">Free Allowance</span>

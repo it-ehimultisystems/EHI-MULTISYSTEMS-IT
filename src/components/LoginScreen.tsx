@@ -57,7 +57,7 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
             <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse"></div>
             <span className="text-[10px] font-sans font-semibold text-[var(--color-success)] uppercase tracking-wide">System Online</span>
           </div>
-          <div className="text-[15px] font-bold font-sans text-white tracking-[0.1em] mt-6">MULTISYSTEMS</div>
+          <div className="text-[15px] font-bold font-sans text-[var(--color-foreground)] tracking-[0.1em] mt-6">MULTISYSTEMS</div>
           <div className="text-[14px] font-sans text-[var(--color-muted)] mt-1">Staff Operations Portal</div>
         </div>
 

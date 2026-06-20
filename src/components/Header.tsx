@@ -1,20 +1,25 @@
-import { Wifi, WifiOff, LogOut } from 'lucide-react';
+import { Wifi, WifiOff, LogOut, Sun, Moon } from 'lucide-react';
 import { User } from '../lib/types';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Theme } from '../lib/useTheme';
 
 export const Header = ({ 
   user, 
   isOffline, 
   pendingCount, 
   onToggleWifi, 
-  onLogout 
+  onLogout,
+  theme,
+  onToggleTheme
 }: { 
   user: User; 
   isOffline: boolean; 
   pendingCount: number; 
   onToggleWifi: () => void; 
   onLogout: () => void;
+  theme: Theme;
+  onToggleTheme: () => void;
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -32,10 +37,10 @@ export const Header = ({
   };
 
   return (
-    <div className="flex flex-col w-full z-10 shrink-0 border-b border-[rgba(255,255,255,0.07)]">
-      <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-obsidian)]">
+    <div className="flex flex-col w-full z-10 shrink-0 border-b border-[var(--color-border)]">
+      <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-obsidian)] text-[var(--color-foreground)] transition-colors">
         <div>
-          <div className="text-[14px] font-bold font-sans text-white">EHI Multisystems</div>
+          <div className="text-[14px] font-bold font-sans">EHI Multisystems</div>
           <div className="text-[10px] font-sans font-medium text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)] inline-block px-1.5 py-0.5 rounded mt-0.5">
             {getRoleDisplay(user.role)}
           </div>
@@ -43,25 +48,29 @@ export const Header = ({
         
         <div className="flex items-center space-x-3">
           <div className="text-right">
-            <div className="text-[12px] font-sans font-medium text-white">{user.name}</div>
+            <div className="text-[12px] font-sans font-medium">{user.name}</div>
             <div className="text-[10px] font-sans text-[var(--color-muted)]">{user.hub}</div>
           </div>
           
+          <button onClick={onToggleTheme} className="p-1.5 focus:outline-none text-[var(--color-light-muted)] hover:text-[var(--color-foreground)] transition-colors">
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           <button onClick={onToggleWifi} className="p-1.5 focus:outline-none">
             {isOffline ? <WifiOff size={18} className="text-[#D97706]" /> : <Wifi size={18} className="text-[var(--color-light-muted)]" />}
           </button>
           
           <div className="relative">
-            <button onClick={() => setShowDropdown(!showDropdown)} className="w-9 h-9 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center border border-[rgba(255,255,255,0.07)] focus:outline-none">
-              <span className="text-[13px] font-bold font-sans text-white">{user.name.charAt(0)}</span>
+            <button onClick={() => setShowDropdown(!showDropdown)} className="w-9 h-9 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center border border-[var(--color-border)] focus:outline-none text-[var(--color-foreground)] transition-colors">
+              <span className="text-[13px] font-bold font-sans">{user.name.charAt(0)}</span>
             </button>
             
             {showDropdown && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} aria-hidden="true" role="presentation" tabIndex={-1} />
-                <div className="absolute right-0 top-11 w-48 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl shadow-xl z-20 overflow-hidden flex flex-col">
-                  <div className="px-3 py-3 border-b border-[rgba(255,255,255,0.07)]">
-                    <div className="text-[13px] font-bold font-sans text-white">{user.name}</div>
+                <div className="absolute right-0 top-11 w-48 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl shadow-xl z-20 overflow-hidden flex flex-col transition-colors">
+                  <div className="px-3 py-3 border-b border-[var(--color-border)]">
+                    <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">{user.name}</div>
                     <div className="text-[11px] font-sans text-[var(--color-muted)]">{user.hub}</div>
                   </div>
                   <button 
@@ -88,7 +97,7 @@ export const Header = ({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="w-full bg-[#D97706] text-white text-[12px] font-sans font-medium text-center py-1.5 overflow-hidden"
+            className="w-full bg-[#D97706] text-[var(--color-foreground)] text-[12px] font-sans font-medium text-center py-1.5 overflow-hidden"
           >
             No Internet — entries will sync when reconnected
           </motion.div>

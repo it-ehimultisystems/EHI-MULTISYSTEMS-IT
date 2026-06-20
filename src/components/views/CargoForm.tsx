@@ -119,7 +119,7 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
     }
   };
 
-  const formInputClass = "w-full h-12 px-3 text-[14px] rounded-xl bg-[var(--color-surface-2)] text-white border border-[rgba(255,255,255,0.07)] font-sans focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-amber)] focus:border-[var(--color-accent-amber)] transition-all";
+  const formInputClass = "w-full h-12 px-3 text-[14px] rounded-xl bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[rgba(255,255,255,0.07)] font-sans focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-amber)] focus:border-[var(--color-accent-amber)] transition-all";
 
   const renderLabel = (icon: any, text: string) => {
     const Icon = icon;

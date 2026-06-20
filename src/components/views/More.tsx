@@ -110,7 +110,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
     const transferTotal = transactions.reduce((sum, t) => sum + (t.mode === 'Transfer' || t.mode === 'Transfer-as-Cash' ? t.amount : 0), 0);
 
     return (
-      <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 relative text-white animate-in slide-in-from-right overflow-y-auto pb-[60px]">
+      <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 relative text-[var(--color-foreground)] animate-in slide-in-from-right overflow-y-auto pb-[60px]">
         <button onClick={() => setEodView(false)} className="flex items-center space-x-2 text-[var(--color-light-muted)] mb-4 w-max p-2 -ml-2 rounded hover:bg-[var(--color-surface-2)]">
           <ArrowLeft size={16} />
           <span className="text-[11px] font-mono">Back</span>

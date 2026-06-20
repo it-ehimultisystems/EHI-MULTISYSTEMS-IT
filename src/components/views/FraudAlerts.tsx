@@ -61,7 +61,7 @@ export const FraudAlerts = ({
   const reviewedAlerts = alerts.filter(a => a.reviewed);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-white overflow-y-auto pb-[80px] font-sans">
+    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] overflow-y-auto pb-[80px] font-sans">
       {/* Header back navigation */}
       <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.07)] pb-2 mb-4">
         <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-white transition-colors">

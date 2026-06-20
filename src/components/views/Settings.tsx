@@ -93,7 +93,7 @@ export const Settings = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-white p-4 space-y-6 pb-[100px] overflow-y-auto select-none font-sans">
+    <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] p-4 space-y-6 pb-[100px] overflow-y-auto select-none font-sans">
       
       {/* Header back navigation */}
       <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.07)] pb-2">

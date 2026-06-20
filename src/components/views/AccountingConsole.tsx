@@ -112,7 +112,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
   const variance = physicalCount !== null ? physicalCount - expectedClosing : 0;
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 relative text-white animate-in slide-in-from-right overflow-y-auto">
+    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 relative text-[var(--color-foreground)] animate-in slide-in-from-right overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
         <button onClick={onBack} className="flex items-center space-x-2 text-[var(--color-light-muted)] w-max p-2 -ml-2 rounded-xl hover:bg-[var(--color-surface-2)] transition-colors focus:outline-none">
           <ArrowLeft size={18} />

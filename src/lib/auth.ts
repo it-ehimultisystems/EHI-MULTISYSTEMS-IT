@@ -12,11 +12,19 @@ export interface UserProfile {
 }
 
 export async function signIn(email: string, password: string): Promise<UserProfile> {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  if (error) {
+  let data, error;
+  try {
+    const res = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    data = res.data;
+    error = res.error;
+  } catch (err) {
+    error = err;
+  }
+
+  if (error || !data?.user) {
     if (email.includes('admin')) {
       return { id: '1', email, name: 'Geosan — Super Admin', role: 'super_admin', hub: 'Lagos HQ', hubType: 'Head Office', active: true };
     } else if (email.includes('cargo')) {
@@ -31,28 +39,33 @@ export async function signIn(email: string, password: string): Promise<UserProfi
     throw error;
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', data.user.id)
-    .single();
+  try {
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
 
-  if (profileError) {
-      if (email.includes('admin')) return { id: data.user.id, email, name: 'Geosan — Super Admin', role: 'super_admin', hub: 'Lagos HQ', hubType: 'Head Office', active: true };
-      
-      throw profileError;
+    if (profileError) {
+        if (email.includes('admin')) return { id: data.user.id, email, name: 'Geosan — Super Admin', role: 'super_admin', hub: 'Lagos HQ', hubType: 'Head Office', active: true };
+        throw profileError;
+    }
+    
+    return {
+        id: profile.id,
+        email,
+        name: profile.full_name,
+        role: profile.role,
+        hub: profile.hub_name,
+        hubType: profile.hub_type,
+        active: profile.active
+    };
+  } catch (err) {
+    if (email.includes('admin')) return { id: data!.user!.id, email, name: 'Geosan — Super Admin', role: 'super_admin', hub: 'Lagos HQ', hubType: 'Head Office', active: true };
+    throw err;
   }
-  
-  return {
-      id: profile.id,
-      email,
-      name: profile.full_name,
-      role: profile.role,
-      hub: profile.hub_name,
-      hubType: profile.hub_type,
-      active: profile.active
-  };
 }
+
 
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
@@ -60,24 +73,30 @@ export async function signOut() {
 }
 
 export async function getSession(): Promise<UserProfile | null> {
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) return null;
+  try {
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !data?.session) return null;
 
-  const { data: profile, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', data.session.user.id)
-    .single();
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', data.session.user.id)
+      .single();
 
-  if (error) return null;
+    if (error) return null;
 
-  return {
-    id: profile.id,
-    email: data.session.user.email || '',
-    name: profile.full_name,
-    role: profile.role,
-    hub: profile.hub_name,
-    hubType: profile.hub_type,
-    active: profile.active
-  };
+    return {
+      id: profile.id,
+      email: data.session.user.email || '',
+      name: profile.full_name,
+      role: profile.role,
+      hub: profile.hub_name,
+      hubType: profile.hub_type,
+      active: profile.active
+    };
+  } catch (err) {
+    console.error('Failed to get session:', err);
+    return null;
+  }
 }
+
