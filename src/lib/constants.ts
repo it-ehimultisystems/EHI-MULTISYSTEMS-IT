@@ -1,4 +1,4 @@
-import { Transaction } from './types';
+import { Transaction, UserRole, HubType } from './types';
 
 export const PRICING: Record<string, { BB: number; MB: number; SB: number }> = {
   Benin:  { BB: 30000, MB: 18000, SB: 22000 },
@@ -10,45 +10,80 @@ export const PRICING: Record<string, { BB: number; MB: number; SB: number }> = {
   Warri:  { BB: 26000, MB: 15000, SB: 19000 },
   Asaba:  { BB: 25000, MB: 14000, SB: 18000 },
   Kaduna: { BB: 38000, MB: 22000, SB: 26000 },
+  Onitsha:{ BB: 27000, MB: 15000, SB: 19000 },
+  Makurdi:{ BB: 30000, MB: 18000, SB: 21000 },
 };
+
+export const AIRLINES = [
+  { code: 'AK',  name: 'Arik Air' },
+  { code: 'GA',  name: 'Green Africa Airways' },
+  { code: 'UN',  name: 'United Nigeria Airlines' },
+] as const;
 
 export const DEMO_USERS = {
   'admin@ehimultisystems.com': {
-    password: 'admin123',
-    name: 'Geosan — Admin',
-    role: 'admin',
-    hub: 'Lagos HQ'
+    password: 'Admin1234',
+    name: 'Geosan — Super Admin',
+    role: 'super_admin' as UserRole,
+    hubType: 'Head Office' as HubType,
+    hub: 'Lagos HQ',
   },
   'cargo@ehimultisystems.com': {
-    password: 'counter123',
-    name: 'Cargo Counter',
-    role: 'cargo_agent',
-    hub: 'Lagos Cargo Desk'
+    password: 'Counter123',
+    name: 'Cargo Agent',
+    role: 'cargo_agent' as UserRole,
+    hubType: 'Cargo Station' as HubType,
+    hub: 'Lagos Cargo Station',
   },
   'vj@ehimultisystems.com': {
-    password: 'vj123',
+    password: 'VJAgent123',
     name: 'VJ Counter',
-    role: 'vj_agent',
-    hub: 'Murtala Airport Terminal'
+    role: 'vj_agent' as UserRole,
+    hubType: 'Cargo Station' as HubType,
+    hub: 'Murtala Airport Terminal',
   },
-  'mktg@ehimultisystems.com': {
-    password: 'mktg123',
-    name: 'Mama Faith — Marketing',
-    role: 'marketing_agent',
-    hub: 'Lagos Market'
+  'marketing@ehimultisystems.com': {
+    password: 'Market123',
+    name: 'Marketing Agent',
+    role: 'marketing_agent' as UserRole,
+    hubType: 'Cargo Station' as HubType,
+    hub: 'Lagos Market Run',
   },
-  'air@ehimultisystems.com': {
-    password: 'air123',
-    name: 'Commercial Ops',
-    role: 'air_cargo_agent',
-    hub: 'MMA Air Cargo'
-  }
+  'aircargo@ehimultisystems.com': {
+    password: 'AirCargo123',
+    name: 'Air Cargo Officer',
+    role: 'cargo_agent' as UserRole, // The prompt mapped it to cargo_agent, but wait let's use air_cargo_agent to retain existing logic mostly? The prompt said: role: 'cargo_agent' as UserRole! Oh let's look at prompt again: "role: 'cargo_agent' as UserRole". I'll follow the prompt. But wait, I need to see what `BottomNav` expects. Let's just follow the prompt exactly for DEMO_USERS! Wait no, the prompt says "role: 'cargo_agent'". But earlier I added `air_cargo_agent`? Actually, let me use what it said.
+    hubType: 'Cargo Station' as HubType,
+    hub: 'Murtala Air Cargo Station',
+  },
 } as const;
 
 export const CORPORATE_CLIENTS = ['Aramex', 'SAHCO', 'Globacom', 'ZeemMax', 'FedEx', 'DHL'];
-export const CONTENT_TYPES = ['Medical', 'Documents', 'Electronics/Phones', 'Cosmetics', 'Parcels', 'Tyres', 'SIM Cards', 'Clothing', 'Food Items', 'Miscellaneous'];
-export const BANKS = ['UBA', 'Zenith', 'GTBank', 'Access', 'FirstBank'];
-export const EXPENSE_TYPES = ['Bus Hire', 'Fuel', 'Security', 'Miscellaneous'];
+
+export const CONTENT_TYPES = [
+  'Medical Supplies',
+  'Documents',
+  'Electronics / Phones',
+  'Cosmetics',
+  'Clothing',
+  'Parcels',
+  'Tyres',
+  'SIM Cards',
+  'Food Items',
+  'Miscellaneous',
+] as const;
+
+export const EXPENSE_CATEGORIES = [
+  'Cars',
+  'Carrier',
+  'Transport',
+  'Bus Hire',
+  'Sack & Nylon',
+  'Miscellaneous',
+] as const;
+
+export const PAYMENT_MODES = ['Cash', 'POS', 'Transfer', 'Debt'] as const;
+export const BANKS = ['UBA', 'GTBank', 'Access', 'Zenith', 'First Bank', 'Polaris', 'Keystone', 'Fidelity', 'Sterling', 'Other'] as const;
 
 export const SEED_TRANSACTIONS: Transaction[] = [
   { id: 'WB-240619-A3F1', name: 'Madam Uchechi', detail: 'PHC · 2BB 1SB', amount: 95000, mode: 'Transfer', time: '08:14', type: 'cargo', status: 'In-Transit' },

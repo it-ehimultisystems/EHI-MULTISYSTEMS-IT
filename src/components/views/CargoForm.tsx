@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PRICING } from '../../lib/constants';
+import { PRICING, BANKS } from '../../lib/constants';
 import { PaymentMode, Transaction } from '../../lib/types';
 import { fmt, uid, tnow } from '../../lib/helpers';
 import { CheckCircle } from 'lucide-react';
@@ -10,6 +10,8 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
   const [phone, setPhone] = useState('');
   const [route, setRoute] = useState(Object.keys(PRICING)[0]);
   const [mode, setMode] = useState<PaymentMode>('Cash');
+  const [bank, setBank] = useState('');
+  const [notes, setNotes] = useState('');
   
   const [bb, setBb] = useState(0);
   const [mb, setMb] = useState(0);
@@ -37,6 +39,8 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
       detail: summaryStr,
       amount: totalAmount,
       mode,
+      bank: mode === 'Transfer' || mode === 'Debt' ? bank : undefined,
+      remarks: notes.trim(),
       time: tnow(),
       type: 'cargo',
       status: 'Intake'
@@ -52,6 +56,8 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
     setBb(0);
     setMb(0);
     setSb(0);
+    setBank('');
+    setNotes('');
     setSuccessTx(null);
   };
 
@@ -126,16 +132,36 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
           </select>
         </div>
         
-        <select 
-          value={mode}
-          onChange={(e) => setMode(e.target.value as PaymentMode)}
-          className="w-full h-11 px-3 text-sm flex-1 rounded font-sans"
-        >
-          <option value="Cash">Cash</option>
-          <option value="POS">POS</option>
-          <option value="Transfer">Transfer</option>
-          <option value="Debt">Debt</option>
-        </select>
+        <div className="flex space-x-3">
+          <select 
+            value={mode}
+            onChange={(e) => setMode(e.target.value as PaymentMode)}
+            className="h-11 px-3 text-sm flex-1 rounded font-sans"
+          >
+            <option value="Cash">Cash</option>
+            <option value="POS">POS</option>
+            <option value="Transfer">Transfer</option>
+            <option value="Debt">Debt</option>
+          </select>
+
+          {(mode === 'Transfer' || mode === 'Debt') && (
+            <select 
+              value={bank}
+              onChange={(e) => setBank(e.target.value)}
+              className="h-11 px-3 text-sm flex-1 rounded font-sans"
+            >
+              <option value="">Select Bank</option>
+              {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          )}
+        </div>
+        
+        <input 
+          placeholder="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full h-11 px-3 text-sm rounded font-sans"
+        />
       </div>
 
       <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded overflow-hidden">

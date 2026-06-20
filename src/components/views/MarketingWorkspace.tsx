@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
-import { PRICING, BANKS, EXPENSE_TYPES } from '../../lib/constants';
+import { PRICING, BANKS, EXPENSE_CATEGORIES } from '../../lib/constants';
 import { fmt, uid, tnow } from '../../lib/helpers';
 import { CheckCircle, Plus } from 'lucide-react';
 
@@ -28,7 +28,7 @@ export const MarketingWorkspace = ({
   const [sb, setSb] = useState(0);
 
   // Expense State
-  const [expType, setExpType] = useState(EXPENSE_TYPES[0]);
+  const [expType, setExpType] = useState(EXPENSE_CATEGORIES[0]);
   const [expAmount, setExpAmount] = useState('');
   const [expDesc, setExpDesc] = useState('');
 
@@ -245,7 +245,7 @@ export const MarketingWorkspace = ({
             onChange={(e) => setExpType(e.target.value)}
             className="flex-1 h-11 px-3 text-sm rounded font-sans"
           >
-            {EXPENSE_TYPES.map(e => <option key={e} value={e}>{e}</option>)}
+            {EXPENSE_CATEGORIES.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
           <input 
             type="number"

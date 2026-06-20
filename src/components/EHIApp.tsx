@@ -14,7 +14,12 @@ import { AirCargoForm } from './views/AirCargoForm';
 import { Toast, ToastProps } from './Toast';
 
 export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
-  const [currentTab, setCurrentTab] = useState<TabView>(user.role === 'marketing_agent' ? 'Mktg' : 'Tower');
+  const getDefaultTab = (role: string): TabView => {
+    if (role === 'marketing_agent') return 'Marketing';
+    if (role === 'driver') return 'MyTrips';
+    return 'Tower';
+  };
+  const [currentTab, setCurrentTab] = useState<TabView>(getDefaultTab(user.role));
   const [transactions, setTransactions] = useState<Transaction[]>(SEED_TRANSACTIONS);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isOffline, setIsOffline] = useState(false);
@@ -71,10 +76,14 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       <main className="flex-1 overflow-y-auto w-full pb-[60px]">
         {currentTab === 'Tower' && <Dashboard user={user} transactions={transactions} />}
         {currentTab === 'Cargo' && <CargoForm onAddTx={handleAddTx} />}
-        {currentTab === 'Mktg' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={(exp) => setExpenses(prev => [exp, ...prev])} />}
-        {currentTab === 'Air Cargo' && <AirCargoForm onAddTx={handleAddTx} />}
+        {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])} />}
         {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} />}
         {currentTab === 'Scan' && <Scanner transactions={transactions} />}
+        {currentTab === 'MyTrips' && (
+          <div className="flex flex-col items-center justify-center h-full text-[var(--color-muted)] font-mono text-[10px]">
+             MY TRIPS MODULE PENDING
+          </div>
+        )}
         {currentTab === 'More' && (
           <More 
             user={user} 

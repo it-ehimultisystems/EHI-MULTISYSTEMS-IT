@@ -35,7 +35,7 @@ export const Header = ({
             {isOffline ? <WifiOff size={16} className="text-[var(--color-error)]" /> : <Wifi size={16} className="text-[var(--color-light-muted)]" />}
           </button>
           
-          {user.role !== 'admin' && (
+          {true && (
             <div className="relative">
               <button onClick={() => setShowDropdown(!showDropdown)} className="w-7 h-7 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center border border-[rgba(255,255,255,0.07)] focus:outline-none">
                 <span className="text-[10px] font-bold font-mono text-white">{user.name.charAt(0)}</span>
@@ -43,14 +43,19 @@ export const Header = ({
               
               {showDropdown && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} />
+                  <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} aria-hidden="true" role="presentation" tabIndex={-1} />
                   <div className="absolute right-0 top-10 w-48 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded shadow-xl z-20 overflow-hidden flex flex-col">
                     <div className="px-3 py-2 border-b border-[rgba(255,255,255,0.07)]">
                       <div className="text-[11px] font-bold font-sans text-white">{user.name}</div>
                       <div className="text-[9px] font-mono text-[var(--color-muted)]">{user.hub}</div>
                     </div>
                     <button 
-                      onClick={() => { setShowDropdown(false); onLogout(); }}
+                      onClick={() => { 
+                        setShowDropdown(false); 
+                        if (window.confirm('Sign out of EHI Multisystems?')) {
+                          onLogout(); 
+                        }
+                      }}
                       className="px-3 py-3 w-full text-left flex items-center space-x-2 bg-transparent hover:bg-[var(--color-surface-2)] transition-colors text-[var(--color-error)] focus:outline-none"
                     >
                       <LogOut size={14} />

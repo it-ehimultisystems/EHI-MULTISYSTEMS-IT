@@ -1,11 +1,26 @@
+export type HubType = 'Cargo Station' | 'Head Office';
+
+export type UserRole =
+  | 'super_admin'
+  | 'admin'
+  | 'cargo_agent'
+  | 'vj_agent'
+  | 'marketing_agent'
+  | 'driver'
+  | 'accountant'
+  | 'auditor';
+
 export interface User {
   email: string;
   name: string;
-  role: 'admin' | 'cargo_agent' | 'vj_agent' | 'marketing_agent' | 'air_cargo_agent';
+  role: UserRole;
+  hubType: HubType;
   hub: string;
 }
 
 export type PaymentMode = 'Cash' | 'POS' | 'Transfer' | 'Debt' | 'Debt Paid';
+
+export type ShipmentType = 'ground_counter' | 'marketing' | 'air_commercial';
 
 export interface Transaction {
   id: string;
@@ -38,7 +53,7 @@ export interface Expense {
   time: string;
 }
 
-export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Air Cargo' | 'Mktg' | 'Scan' | 'More';
+export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Air Cargo' | 'Marketing' | 'Scan' | 'More' | 'MyTrips';
 
 export interface AppState {
   user: User | null;

@@ -15,9 +15,9 @@ export const Dashboard = ({ user, transactions }: { user: User; transactions: Tr
   const posTotal = transactions.reduce((sum, t) => sum + (t.mode === 'POS' ? t.amount : 0), 0);
   const transferTotal = transactions.reduce((sum, t) => sum + (t.mode === 'Transfer' ? t.amount : 0), 0);
 
-  const showCargo = user.role === 'admin' || user.role === 'cargo_agent' || user.role === 'marketing_agent';
-  const showVJ = user.role === 'admin' || user.role === 'vj_agent';
-  const showAir = user.role === 'admin' || user.role === 'air_cargo_agent';
+  const showCargo = user.role === 'admin' || user.role === 'super_admin' || user.role === 'cargo_agent' || user.role === 'marketing_agent';
+  const showVJ = user.role === 'admin' || user.role === 'super_admin' || user.role === 'vj_agent';
+  const showAir = user.role === 'admin' || user.role === 'super_admin';
 
   return (
     <div className="flex flex-col p-4 space-y-4">
@@ -51,7 +51,7 @@ export const Dashboard = ({ user, transactions }: { user: User; transactions: Tr
         )}
       </div>
 
-      {user.role === 'admin' && (
+      {(user.role === 'admin' || user.role === 'super_admin') && (
         <div className="w-full bg-[rgba(16,185,129,0.05)] border border-[var(--color-success)] rounded p-3">
           <div className="text-[9px] font-mono text-[var(--color-success)] uppercase tracking-wider">● TODAY'S REVENUE</div>
           <div className="text-[28px] font-bold font-mono text-white mt-1">{fmt(cargoTotal + vjTotal + airTotal)}</div>

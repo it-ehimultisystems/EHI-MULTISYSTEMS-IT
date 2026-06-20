@@ -17,7 +17,7 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
       setIsLoading(false);
       const user = DEMO_USERS[email as keyof typeof DEMO_USERS];
       if (user && user.password === password) {
-        onLogin({ email, name: user.name, role: user.role, hub: user.hub });
+        onLogin({ email, name: user.name, role: user.role, hub: user.hub, hubType: user.hubType });
       } else {
         setError('Invalid credentials. Use the demo credentials below.');
       }
@@ -83,15 +83,24 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
           
           <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.07)] flex flex-col divide-y divide-[rgba(255,255,255,0.07)] max-h-[160px] overflow-y-auto">
             {(Object.entries(DEMO_USERS)).map(([demoEmail, user]) => {
-              const roleDisplay = user.role === 'admin' ? 'ADMIN' : 
+              const roleDisplay = user.role === 'super_admin' ? 'SUPER ADMIN' : 
+                                  user.role === 'admin' ? 'ADMIN' : 
+                                  user.role === 'cargo_agent' && demoEmail.includes('air') ? 'AIR OPS' :
                                   user.role === 'cargo_agent' ? 'CARGO' : 
                                   user.role === 'vj_agent' ? 'VJ POS' : 
-                                  user.role === 'marketing_agent' ? 'MKTG' : 'AIR OPS';
+                                  user.role === 'marketing_agent' ? 'MKTG' : 'AGENT';
               return (
                 <div 
                   key={demoEmail}
                   onClick={() => handleDemoClick(demoEmail, user.password)}
-                  className="px-3 py-2 flex flex-col cursor-pointer hover:bg-[var(--color-surface-2)] transition-colors active:opacity-70"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleDemoClick(demoEmail, user.password);
+                    }
+                  }}
+                  className="px-3 py-2 flex flex-col cursor-pointer hover:bg-[var(--color-surface-2)] transition-colors active:opacity-70 focus:outline-none focus:bg-[var(--color-surface-2)]"
                 >
                   <div className="text-[10px] font-mono text-[var(--color-light-muted)]">
                     <span className={`font-bold ${
