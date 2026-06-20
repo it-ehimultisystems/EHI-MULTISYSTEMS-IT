@@ -5,6 +5,7 @@ import paystackRoutes from './server/paystack';
 import notificationRoutes from './server/notifications';
 
 import eodRoutes from './server/eod';
+import geminiRoutes from './server/gemini';
 
 async function startServer() {
   const app = express();
@@ -16,6 +17,7 @@ async function startServer() {
   app.use('/api/paystack', paystackRoutes);
   app.use('/api/notify', notificationRoutes);
   app.use('/api/eod', eodRoutes);
+  app.use('/api/gemini', geminiRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });

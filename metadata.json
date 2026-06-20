@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "EHI Multisystems Logistics",
+  "description": "Logistics and Cargo Intelligence platform for EHI Multisystems, carrying multi-stream daily operations, real-time sync, and reporting.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

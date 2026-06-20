@@ -1,12 +1,16 @@
 import { AccountingConsole } from './AccountingConsole';
+import { Reports } from './Reports';
+import { Settings } from './Settings';
 import { useState } from 'react';
 import { User, Transaction } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
-import { FileText, Activity, Database, Shield, Settings, LogOut, ArrowLeft } from 'lucide-react';
+import { FileText, Activity, Database, Shield, Settings as SettingsIcon, LogOut, ArrowLeft, BarChart } from 'lucide-react';
 
 export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: User; transactions: Transaction[]; onLogout: () => void; onEOD: () => void; onAddTx: (tx: Transaction) => void }) => {
   const [eodView, setEodView] = useState(false);
   const [accountingView, setAccountingView] = useState(false);
+  const [reportsView, setReportsView] = useState(false);
+  const [settingsView, setSettingsView] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleLockEOD = () => {
@@ -20,6 +24,14 @@ export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: U
 
   if (accountingView) {
     return <AccountingConsole user={user} transactions={transactions} onBack={() => setAccountingView(false)} />;
+  }
+
+  if (reportsView) {
+    return <Reports user={user} transactions={transactions} onBack={() => setReportsView(false)} />;
+  }
+
+  if (settingsView) {
+    return <Settings user={user} onBack={() => setSettingsView(false)} />;
   }
 
   if (eodView) {
@@ -133,6 +145,24 @@ export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: U
         </div>
       </button>
 
+      {/* Reports Audit */}
+      <button 
+        onClick={() => {
+          if (user.role === 'admin' || user.role === 'super_admin' || user.role === 'accountant') {
+            setReportsView(true);
+          }
+        }}
+        className={`w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center justify-between transition-colors ${(user.role === 'admin' || user.role === 'super_admin' || user.role === 'accountant') ? 'hover:border-[var(--color-success)] hover:bg-[var(--color-surface-2)] cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+      >
+        <div className="flex items-center space-x-3">
+          <BarChart size={18} className="text-[var(--color-success)]" />
+          <div className="text-left">
+            <div className="text-[13px] font-bold font-sans text-white">Advanced Reports</div>
+            <div className="text-[10px] font-mono text-[var(--color-muted)]">Operational audits and trend sheets</div>
+          </div>
+        </div>
+      </button>
+
       <div className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center justify-between opacity-50 cursor-not-allowed">
         <div className="flex items-center space-x-3">
           <Shield size={18} className="text-[var(--color-muted)]" />
@@ -144,16 +174,23 @@ export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: U
         <div className="px-2 py-0.5 bg-[rgba(255,255,255,0.1)] rounded text-[8px] font-mono text-white">SOON</div>
       </div>
 
-      <div className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center justify-between opacity-50 cursor-not-allowed">
+      {/* Settings Console */}
+      <button 
+        onClick={() => {
+          if (user.role === 'super_admin') {
+            setSettingsView(true);
+          }
+        }}
+        className={`w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center justify-between transition-colors ${user.role === 'super_admin' ? 'hover:border-[var(--color-accent-amber)] hover:bg-[var(--color-surface-2)] cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+      >
         <div className="flex items-center space-x-3">
-          <Settings size={18} className="text-[var(--color-muted)]" />
+          <SettingsIcon size={18} className="text-[var(--color-accent-amber)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Settings</div>
-            <div className="text-[10px] font-mono text-[var(--color-muted)]">Platform configuration</div>
+            <div className="text-[13px] font-bold font-sans text-white">Platform Settings</div>
+            <div className="text-[10px] font-mono text-[var(--color-muted)]">Automation and route pricing configuration</div>
           </div>
         </div>
-        <div className="px-2 py-0.5 bg-[rgba(255,255,255,0.1)] rounded text-[8px] font-mono text-white">SOON</div>
-      </div>
+      </button>
 
       <button 
         onClick={() => {

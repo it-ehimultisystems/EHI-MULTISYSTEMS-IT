@@ -9,8 +9,7 @@ export const AccountingConsole = ({ user, transactions, onBack }: { user: User, 
   const cargoTotal = transactions.filter(t => t.type === 'cargo').reduce((sum, t) => sum + t.amount, 0);
   const vjTotal = transactions.filter(t => t.type === 'baggage').reduce((sum, t) => sum + t.amount, 0);
   const mktgTotal = transactions.filter(t => t.type === 'marketing').reduce((sum, t) => sum + t.amount, 0);
-  const airTotal = transactions.filter(t => t.type === 'air_cargo').reduce((sum, t) => sum + t.amount, 0);
-  const gt = cargoTotal + vjTotal + mktgTotal + airTotal;
+  const gt = cargoTotal + vjTotal + mktgTotal;
 
   const cashTotal = transactions.reduce((sum, t) => sum + (t.mode === 'Cash' ? t.amount : 0), 0);
   const transferTotal = transactions.reduce((sum, t) => sum + (t.mode === 'Transfer' ? t.amount : 0), 0);
@@ -49,22 +48,18 @@ export const AccountingConsole = ({ user, transactions, onBack }: { user: User, 
           <span className="text-[11px] font-bold font-mono text-white">Grand Total</span>
           <span className="text-[18px] font-bold font-mono text-[var(--color-success)]">{fmt(gt)}</span>
         </div>
-        <div className="p-4 grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-[9px] font-mono text-[var(--color-muted)]">Ground Cargo</div>
-            <div className="text-[13px] font-bold font-mono text-[var(--color-accent-amber)] mt-1">{fmt(cargoTotal)}</div>
-          </div>
-          <div>
-            <div className="text-[9px] font-mono text-[var(--color-muted)]">ValueJet</div>
-            <div className="text-[13px] font-bold font-mono text-[var(--color-accent-cobalt)] mt-1">{fmt(vjTotal)}</div>
-          </div>
+        <div className="p-4 grid grid-cols-3 gap-2 text-center">
           <div>
             <div className="text-[9px] font-mono text-[var(--color-muted)]">Marketing</div>
-            <div className="text-[13px] font-bold font-mono text-[var(--color-accent-amber)] mt-1">{fmt(mktgTotal)}</div>
+            <div className="text-[12px] font-bold font-mono text-[var(--color-success)] mt-1">{fmt(mktgTotal)}</div>
           </div>
           <div>
             <div className="text-[9px] font-mono text-[var(--color-muted)]">Air Cargo</div>
-            <div className="text-[13px] font-bold font-mono text-[var(--color-error)] mt-1">{fmt(airTotal)}</div>
+            <div className="text-[12px] font-bold font-mono text-[var(--color-accent-amber)] mt-1">{fmt(cargoTotal)}</div>
+          </div>
+          <div>
+            <div className="text-[9px] font-mono text-[var(--color-muted)]">ValueJet</div>
+            <div className="text-[12px] font-bold font-mono text-[var(--color-accent-cobalt)] mt-1">{fmt(vjTotal)}</div>
           </div>
         </div>
       </div>

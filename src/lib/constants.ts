@@ -91,13 +91,13 @@ export const BANKS = ['UBA', 'GTBank', 'Access', 'Zenith', 'First Bank', 'Polari
 export const SEED_TRANSACTIONS: Transaction[] = [
   { id: 'WB-240619-A3F1', name: 'Madam Uchechi', detail: 'PHC · 2BB 1SB', amount: 95000, mode: 'Transfer', time: '08:14', type: 'cargo', status: 'In-Transit' },
   { id: 'VJ-240619-B2E4', name: 'Adamu Bello', detail: 'VQ-201 · +6.5kg', amount: 32500, mode: 'POS', time: '08:32', type: 'baggage', status: 'Delivered' },
-  { id: 'AC-240619-X9Y8', name: 'Aramex', detail: 'AWB 14153-14154 · ABV', amount: 845000, mode: 'Transfer', time: '08:45', type: 'air_cargo', status: 'Received', awbStart: '14153', awbEnd: '14154', pieces: 120, kg: 3450, route: 'Abuja', contentType: 'Parcels', consignee: 'Aramex', bank: 'UBA' },
+  { id: 'AC-240619-X9Y8', name: 'Aramex', detail: 'AWB 14153-14154 · ABV', amount: 845000, mode: 'Transfer', time: '08:45', type: 'cargo', status: 'Received', pieces: 120, kg: 3450, route: 'Abuja', contentType: 'Parcels', consignee: 'Aramex', bank: 'UBA' },
   { id: 'MK-240619-M112', name: 'Madam Lily', detail: 'Abuja · 1SB', amount: 25000, mode: 'Transfer', time: '08:50', type: 'marketing', status: 'Intake', route: 'Abuja', bank: 'UBA' },
   { id: 'WB-240619-C1D9', name: 'Alhaji Musa Traders', detail: 'Kano · 3BB 2MB', amount: 176000, mode: 'Cash', time: '09:01', type: 'cargo', status: 'Departure' },
   { id: 'VJ-240619-D8A2', name: 'Mrs. Chioma Obi', detail: 'VQ-314 · +3.2kg', amount: 16000, mode: 'Cash', time: '09:23', type: 'baggage', status: 'Delivered' },
   { id: 'MK-240619-M115', name: 'Chineye', detail: 'Abuja · 1BB', amount: 40000, mode: 'Cash', time: '09:30', type: 'marketing', status: 'Intake', route: 'Abuja' },
   { id: 'WB-240619-E5C7', name: 'SunBridge Logistics', detail: 'Abuja · 1BB', amount: 40000, mode: 'Transfer', time: '09:45', type: 'cargo', status: 'Arrived' },
-  { id: 'AC-240619-X8Z1', name: 'Globacom', detail: 'AWB 18002 · PHC', amount: 420000, mode: 'Debt', time: '09:55', type: 'air_cargo', status: 'Dispatched', awbStart: '18002', pieces: 12, kg: 450, route: 'PHC', contentType: 'SIM Cards', consignee: 'Globacom' },
+  { id: 'AC-240619-X8Z1', name: 'Globacom', detail: 'AWB 18002 · PHC', amount: 420000, mode: 'Debt', time: '09:55', type: 'cargo', status: 'Dispatched', pieces: 12, kg: 450, route: 'PHC', contentType: 'SIM Cards', consignee: 'Globacom' },
   { id: 'VJ-240619-F4B1', name: 'Dr. Emeka Nwachukwu', detail: 'VQ-405 · +8.1kg', amount: 40500, mode: 'POS', time: '10:02', type: 'baggage', status: 'Delivered' },
   { id: 'WB-240619-G7H3', name: 'FastMove Cargo', detail: 'Benin · 4BB 3SB', amount: 186000, mode: 'Transfer', time: '10:28', type: 'cargo', status: 'In-Transit' },
 ];

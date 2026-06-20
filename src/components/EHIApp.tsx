@@ -4,6 +4,7 @@ import { processSyncQueue, writeWithOfflineSupport } from '../lib/sync';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { Dashboard } from './views/Dashboard';
+import { Analytics } from './views/Analytics';
 import { CargoForm } from './views/CargoForm';
 import { ValueJetForm } from './views/ValueJetForm';
 import { Scanner } from './views/Scanner';
@@ -89,7 +90,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   const handleAddTx = async (tx: Transaction) => {
     setTransactions(prev => [tx, ...prev]);
     const tableName = tx.type === 'marketing' ? 'marketing_entries' 
-      : tx.type === 'air_cargo' ? 'air_consignments' 
+      : tx.type === 'cargo' ? 'air_consignments' 
       : 'shipments';
     
     // We mock payload matching what backend would expect
@@ -124,7 +125,13 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       />
       
       <main className="flex-1 overflow-y-auto w-full pb-[60px]">
-        {currentTab === 'Tower' && <Dashboard user={user} transactions={transactions} />}
+        {currentTab === 'Tower' && (
+          (user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant') ? (
+            <Analytics user={user} transactions={transactions} />
+          ) : (
+            <Dashboard user={user} transactions={transactions} />
+          )
+        )}
         {currentTab === 'Cargo' && <CargoForm onAddTx={handleAddTx} />}
         {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])} />}
         {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} />}
