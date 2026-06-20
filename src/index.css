@@ -58,3 +58,21 @@ input:focus, select:focus, textarea:focus {
   font-family: var(--font-sans);
   color: var(--color-muted);
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.97); }
+}
+
+#qr-reader-div video {
+  border-radius: 10px;
+  width: 100% !important;
+}
+#qr-reader-div img { display: none !important; }
+#qr-reader-div__scan_region { background: transparent !important; }
+#qr-reader-div__dashboard { display: none !important; }

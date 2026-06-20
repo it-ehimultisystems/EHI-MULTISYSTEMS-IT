@@ -15,7 +15,7 @@ import {
   MailWarning
 } from 'lucide-react';
 
-type ReportTab = 'daily' | 'monthly' | 'routes' | 'agents' | 'debt' | 'airline';
+type ReportTab = 'daily' | 'monthly' | 'routes' | 'agents' | 'credit' | 'airline';
 
 export const Reports = ({ 
   user, 
@@ -41,7 +41,7 @@ export const Reports = ({
     monthly: 'Monthly Performance audit',
     routes: 'Route Profitability audit',
     agents: 'Agent Performance tracking',
-    debt: 'Aged Receivables (Debts)',
+    credit: 'Credit Sales (Outstanding)',
     airline: 'Airline cargo analysis'
   };
 
@@ -127,14 +127,25 @@ export const Reports = ({
     };
   }, [selectedMonth]);
 
-  // ── DEBT AGING MATRICES ──
-  const agedDebts = useMemo(() => {
-    return [
-      { id: '1', debtor: 'Aramex Logistics Ltd', ref: 'CG-98443', amount: 145000, age: '14 days', status: '0-30', phone: '08123456789', color: 'var(--color-success)' },
-      { id: '2', debtor: 'Globacom Nigeria Corp', ref: 'CG-88401', amount: 320000, age: '37 days', status: '31-60', phone: '08098765432', color: 'var(--color-accent-amber)' },
-      { id: '3', debtor: 'SAHCO ground handlers', ref: 'CG-74112', amount: 185000, age: '68 days', status: '61-90', phone: '08111222333', color: 'orange' },
-      { id: '4', debtor: 'Fidson Pharmaceuticals', ref: 'CG-50431', amount: 75000, age: '95 days', status: '90+', phone: '08055555555', color: 'var(--color-error)' }
-    ];
+  const creditSalesData = useMemo(() => {
+    // Generate dummy breakdown for summary
+    const totalCredit = 4800000;
+    const collected = 3100000;
+    const outstanding = totalCredit - collected;
+    const collectionRate = (collected / totalCredit) * 100;
+    
+    return {
+      totalCredit,
+      collected,
+      outstanding,
+      collectionRate,
+      list: [
+        { id: '1', debtor: 'Aramex Logistics Ltd', ref: 'CG-98443', amount: 145000, age: '14 days', status: '0-30', phone: '08123456789', color: 'var(--color-success)' },
+        { id: '2', debtor: 'Globacom Nigeria Corp', ref: 'CG-88401', amount: 320000, age: '37 days', status: '31-60', phone: '08098765432', color: 'var(--color-accent-amber)' },
+        { id: '3', debtor: 'SAHCO ground handlers', ref: 'CG-74112', amount: 185000, age: '68 days', status: '61-90', phone: '08111222333', color: 'orange' },
+        { id: '4', debtor: 'Fidson Pharmaceuticals', ref: 'CG-50431', amount: 75000, age: '95 days', status: '90+', phone: '08055555555', color: 'var(--color-error)' }
+      ]
+    };
   }, []);
 
   // ── ROUTE EFFICIENCY TABLE ──
@@ -186,7 +197,7 @@ export const Reports = ({
       } else if (activeTab === 'routes') {
         reportDataToSend = routeProfits;
       } else {
-        reportDataToSend = agedDebts;
+        reportDataToSend = creditSalesData;
       }
 
       const response = await fetch('/api/gemini/report-narrative', {
@@ -210,7 +221,7 @@ export const Reports = ({
     } finally {
       setGeneratingAI(false);
     }
-  }, [activeTab, dailyLedger, monthlyLedger, routeProfits, agedDebts]);
+  }, [activeTab, dailyLedger, monthlyLedger, routeProfits, creditSalesData]);
 
   // Dispatch SMS / WhatsApp notification to debtors
   const handleDispatchDebtReminder = async (debtor: any) => {
@@ -243,7 +254,7 @@ export const Reports = ({
 
       {/* Select Report Flow Option Cards */}
       <div className="grid grid-cols-3 gap-2">
-        {(['daily', 'monthly', 'routes', 'agents', 'debt', 'airline'] as const).map((tab) => (
+        {(['daily', 'monthly', 'routes', 'agents', 'credit', 'airline'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => {
@@ -252,7 +263,7 @@ export const Reports = ({
             }}
             className={`border rounded p-2 text-center flex flex-col justify-center items-center h-[52px] transition-all cursor-pointer ${activeTab === tab ? 'bg-[var(--color-success)] text-[var(--color-obsidian)] border-[var(--color-success)]' : 'bg-[var(--color-surface-1)] border-[rgba(255,255,255,0.055)] text-gray-300'}`}
           >
-            <span className="text-[9px] font-sans font-bold capitalize truncate w-full">{tab}</span>
+            <span className="text-[9px] font-sans font-bold capitalize truncate w-full">{tab === 'credit' ? 'Credit Sales' : tab}</span>
           </button>
         ))}
       </div>
@@ -434,11 +445,30 @@ export const Reports = ({
             </div>
           )}
 
-          {/* TAB 5: DEBT AGING */}
-          {activeTab === 'debt' && (
-            <div className="space-y-3">
+          {/* TAB 5: CREDIT SALES AGING */}
+          {activeTab === 'credit' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 bg-black rounded text-center border border-[rgba(255,255,255,0.05)]">
+                  <div className="text-[8px] text-[var(--color-muted)] font-mono uppercase">Total Credit Extended</div>
+                  <div className="text-[12px] font-bold text-white mt-1">{fmt(creditSalesData.totalCredit)}</div>
+                </div>
+                <div className="p-2.5 bg-black rounded text-center border border-[rgba(255,255,255,0.05)]">
+                  <div className="text-[8px] text-[var(--color-muted)] font-mono uppercase">Collection Rate</div>
+                  <div className="text-[12px] font-bold text-[var(--color-success)] mt-1">{creditSalesData.collectionRate.toFixed(1)}%</div>
+                </div>
+                <div className="p-2.5 bg-[rgba(16,185,129,0.1)] rounded text-center border border-[rgba(16,185,129,0.2)]">
+                  <div className="text-[8px] text-[var(--color-success)] font-mono uppercase">Collected (Cleared)</div>
+                  <div className="text-[12px] font-bold text-[var(--color-success)] mt-1">{fmt(creditSalesData.collected)}</div>
+                </div>
+                <div className="p-2.5 bg-[rgba(239,68,68,0.1)] rounded text-center border border-[rgba(239,68,68,0.2)]">
+                  <div className="text-[8px] text-[var(--color-error)] font-mono uppercase">Outstanding</div>
+                  <div className="text-[12px] font-bold text-[var(--color-error)] mt-1">{fmt(creditSalesData.outstanding)}</div>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                {agedDebts.map((item) => (
+                {creditSalesData.list.map((item) => (
                   <div key={item.id} className="p-2.5 bg-black/40 rounded border border-[rgba(255,255,255,0.05)] flex justify-between items-center text-[10px] font-mono">
                     <div className="space-y-1">
                       <div className="text-[11px] font-sans font-bold text-white truncate max-w-[150px]">{item.debtor}</div>

@@ -7,9 +7,10 @@ import { Forecasting } from './Forecasting';
 import { FraudAlerts } from './FraudAlerts';
 import { AuditLog } from './AuditLog';
 import { APIDashboard } from './APIDashboard';
+import { TransactionLedger } from './TransactionLedger';
 
 import { useState } from 'react';
-import { User, Transaction } from '../../lib/types';
+import { User, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { 
   FileText, 
@@ -28,7 +29,7 @@ import {
   History 
 } from 'lucide-react';
 
-export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: User; transactions: Transaction[]; onLogout: () => void; onEOD: () => void; onAddTx: (tx: Transaction) => void }) => {
+export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onAddExpense }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD: () => void; onAddTx: (tx: Transaction) => void; onAddExpense: (e: Expense) => void }) => {
   const [eodView, setEodView] = useState(false);
   const [accountingView, setAccountingView] = useState(false);
   const [reportsView, setReportsView] = useState(false);
@@ -41,6 +42,7 @@ export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: U
   const [fraudAlertsView, setFraudAlertsView] = useState(false);
   const [auditLogView, setAuditLogView] = useState(false);
   const [apiDashboardView, setApiDashboardView] = useState(false);
+  const [ledgerView, setLedgerView] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -55,7 +57,7 @@ export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: U
 
   // View controllers
   if (accountingView) {
-    return <AccountingConsole user={user} transactions={transactions} onBack={() => setAccountingView(false)} />;
+    return <AccountingConsole user={user} transactions={transactions} expenses={expenses} onBack={() => setAccountingView(false)} onAddExpense={onAddExpense} onOpenBankRecon={() => setBankReconView(true)} />;
   }
 
   if (reportsView) {
@@ -80,6 +82,10 @@ export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: U
 
   if (fraudAlertsView) {
     return <FraudAlerts onBack={() => setFraudAlertsView(false)} />;
+  }
+
+  if (ledgerView) {
+    return <TransactionLedger user={user} transactions={transactions} onBack={() => setLedgerView(false)} onUpdateTx={onAddTx} />;
   }
 
   if (auditLogView) {
@@ -253,11 +259,14 @@ export const More = ({ user, transactions, onLogout, onEOD, onAddTx }: { user: U
       </button>
 
       {/* Base Tracking list (Legacy) */}
-      <button className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center justify-between opacity-75 cursor-default">
+      <button 
+        onClick={() => { if (canAccessAccounting) setLedgerView(true); }}
+        className={`w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center justify-between transition-colors ${canAccessAccounting ? 'hover:border-[var(--color-accent-amber)] hover:bg-[var(--color-surface-2)] cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+      >
         <div className="flex items-center space-x-3">
-          <Activity size={18} className="text-[var(--color-accent-cobalt)]" />
+          <Activity size={18} className="text-[var(--color-accent-amber)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Tracking History Console</div>
+            <div className="text-[13px] font-bold font-sans text-white">Transaction Ledger</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">{transactions.length} total records logged</div>
           </div>
         </div>

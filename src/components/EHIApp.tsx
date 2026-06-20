@@ -1,19 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { User, TabView, Transaction, Expense } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport } from '../lib/sync';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { Dashboard } from './views/Dashboard';
-import { Analytics } from './views/Analytics';
 import { CargoForm } from './views/CargoForm';
-import { ValueJetForm } from './views/ValueJetForm';
 import { Scanner } from './views/Scanner';
-import { More } from './views/More';
-import { MarketingWorkspace } from './views/MarketingWorkspace';
 import { Toast, ToastProps } from './Toast';
 import { supabase } from '../lib/supabase';
 import { randCargo, randBaggage, randMarketingEntry } from '../lib/helpers';
 import { SEED_TRANSACTIONS } from '../lib/constants';
+import { Loader2 } from 'lucide-react';
+
+const Analytics = lazy(() => import('./views/Analytics').then(m => ({ default: m.Analytics })));
+const ValueJetForm = lazy(() => import('./views/ValueJetForm').then(m => ({ default: m.ValueJetForm })));
+const More = lazy(() => import('./views/More').then(m => ({ default: m.More })));
+const MarketingWorkspace = lazy(() => import('./views/MarketingWorkspace').then(m => ({ default: m.MarketingWorkspace })));
 
 export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const getDefaultTab = (role: string): TabView => {
@@ -126,33 +128,37 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       />
       
       <main className="flex-1 overflow-y-auto w-full pb-[60px]">
-        {currentTab === 'Tower' && (
-          (user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant') ? (
-            <Analytics user={user} transactions={transactions} />
-          ) : (
-            <Dashboard user={user} transactions={transactions} />
-          )
-        )}
-        {currentTab === 'Cargo' && <CargoForm onAddTx={handleAddTx} />}
-        {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])} />}
-        {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} />}
-        {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} />}
-        {currentTab === 'MyTrips' && (
-          <div className="flex flex-col items-center justify-center h-full text-[var(--color-muted)] font-mono text-[10px]">
-             MY TRIPS MODULE PENDING
-          </div>
-        )}
-        {currentTab === 'More' && (
-          <More 
-            user={user} 
-            transactions={transactions} 
-            onLogout={onLogout} 
-            onAddTx={handleAddTx}
-            onEOD={() => {
-              showToast({ message: 'EOD Report Dispatched — Saved to Drive · Emailed to management', type: 'success' });
-            }}
-          />
-        )}
+        <Suspense fallback={<div className="flex h-full items-center justify-center p-8"><Loader2 className="animate-spin text-[var(--color-accent-amber)]" size={32} /></div>}>
+          {currentTab === 'Tower' && (
+            (user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant') ? (
+              <Analytics user={user} transactions={transactions} />
+            ) : (
+              <Dashboard user={user} transactions={transactions} />
+            )
+          )}
+          {currentTab === 'Cargo' && <CargoForm onAddTx={handleAddTx} />}
+          {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])} />}
+          {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} />}
+          {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} />}
+          {currentTab === 'MyTrips' && (
+            <div className="flex flex-col items-center justify-center h-full text-[var(--color-muted)] font-mono text-[10px]">
+               MY TRIPS MODULE PENDING
+            </div>
+          )}
+          {currentTab === 'More' && (
+            <More 
+              user={user} 
+              transactions={transactions} 
+              expenses={expenses}
+              onLogout={onLogout} 
+              onAddTx={handleAddTx}
+              onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])}
+              onEOD={() => {
+                showToast({ message: 'EOD Report Dispatched — Saved to Drive · Emailed to management', type: 'success' });
+              }}
+            />
+          )}
+        </Suspense>
       </main>
 
       <BottomNav user={user} currentTab={currentTab} onChangeTab={setCurrentTab} />

@@ -39,6 +39,56 @@ export type ContentType =
   | 'Courier'
   | 'Other';
 
+export type ScanMode = 'ARRIVE' | 'DEPART';
+
+export type ScanResultType =
+  | 'SUCCESS_ARRIVE'
+  | 'SUCCESS_DEPART'
+  | 'WRONG_DESTINATION'
+  | 'NOT_LOGGED_IN'
+  | 'ALREADY_PROCESSED'
+  | 'NOT_FOUND'
+  | 'ERROR';
+
+export interface ScanValidationResult {
+  type: ScanResultType;
+  cargo?: {
+    ref: string;
+    name: string;
+    destination: string;
+    awb: string;
+    content: string;
+    pieces?: number;
+    kg?: number;
+  };
+  lastEvent?: {
+    type: string;
+    hub: string;
+    time: string;
+    by: string;
+  };
+  currentHub: string;
+  message?: string;
+}
+
+export interface TrackingEvent {
+  id: string;
+  cargo_ref: string;
+  event_type: 'ARRIVE' | 'DEPART' | 'WRONG_DESTINATION_ALERT';
+  hub_name: string;
+  scanned_by_name: string;
+  notes?: string;
+  cargo_destination?: string;
+  created_at: string;
+}
+
+export interface BatchScanItem {
+  ref: string;
+  name: string;
+  result: ScanResultType;
+  time: string;
+}
+
 export interface CargoEntry {
   id: string;
   entry_ref: string;

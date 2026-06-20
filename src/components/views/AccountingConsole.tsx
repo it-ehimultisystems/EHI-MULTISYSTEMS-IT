@@ -17,7 +17,7 @@ export interface AccountingConsoleProps {
 }
 
 export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddExpense, onUpdateTx, onOpenBankRecon }: AccountingConsoleProps) => {
-  const [activeTab, setActiveTab] = useState<'Summary' | 'Cash Register' | 'Debtors' | 'Expenses' | 'Remittances'>('Summary');
+  const [activeTab, setActiveTab] = useState<'Summary' | 'Cash Register' | 'Credit Sales' | 'Expenses' | 'Remittances'>('Summary');
   const [period, setPeriod] = useState<'Today' | 'This Week' | 'This Month' | 'Custom'>('Today');
 
   // We simply simulate period filtering for now. In a real app, this would use date math.
@@ -37,21 +37,18 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
   const totalExpenses = filteredExp.reduce((sum, e) => sum + e.amount, 0);
   const netRevenue = grandRevenue - totalExpenses;
 
-  const cashTotal = filteredTx.reduce((sum, t) => sum + ((t.mode === 'Cash' || t.mode === 'Cash (Transfer)' || t.mode === 'Cash (POS)') ? t.amount : 0), 0) + 
-                    filteredTx.reduce((sum, t) => sum + (t.mode === 'Cash' ? t.amount : 0), 0);
-  // Re-calculating modes properly matching standard mode strings
-  const exactCashTotal = filteredTx.reduce((sum, t) => sum + (t.mode === 'Cash' ? t.amount : 0), 0);
-  const transferTotal = filteredTx.reduce((sum, t) => sum + (t.mode === 'Transfer' || t.mode === 'Transfer-as-Cash' ? t.amount : 0), 0);
+  const cashTotal = filteredTx.reduce((sum, t) => sum + (t.mode === 'Cash' ? t.amount : 0), 0);
+  const transferTotal = filteredTx.reduce((sum, t) => sum + (t.mode === 'Transfer' ? t.amount : 0), 0);
   const posTotal = filteredTx.reduce((sum, t) => sum + (t.mode === 'POS' ? t.amount : 0), 0);
   const debtTotal = filteredTx.reduce((sum, t) => sum + (t.mode === 'Debt' ? t.amount : 0), 0);
-  const modeSum = exactCashTotal + transferTotal + posTotal + debtTotal;
+  const modeSum = cashTotal + transferTotal + posTotal + debtTotal;
 
-  const cashPct = modeSum ? (exactCashTotal / modeSum) * 100 : 0;
+  const cashPct = modeSum ? (cashTotal / modeSum) * 100 : 0;
   const transferPct = modeSum ? (transferTotal / modeSum) * 100 : 0;
   const posPct = modeSum ? (posTotal / modeSum) * 100 : 0;
   const debtPct = modeSum ? (debtTotal / modeSum) * 100 : 0;
 
-  const collectionEff = grandRevenue ? ((exactCashTotal + transferTotal + posTotal) / grandRevenue) * 100 : 0;
+  const collectionEff = grandRevenue ? ((cashTotal + transferTotal + posTotal) / grandRevenue) * 100 : 0;
   const collectionColor = collectionEff >= 90 ? 'text-[var(--color-success)]' : collectionEff >= 70 ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-error)]';
   const vatEstimate = grandRevenue * 0.075;
 
@@ -125,7 +122,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
 
       {/* TABS HEADER */}
       <div className="flex space-x-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-        {['Summary', 'Cash Register', 'Debtors', 'Expenses', 'Remittances'].map((t) => (
+        {['Summary', 'Cash Register', 'Credit Sales', 'Expenses', 'Remittances'].map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t as any)}
@@ -207,28 +204,32 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
              <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
                <div className="text-[13px] font-sans font-medium text-[var(--color-muted)] mb-4">Collection Breakdown</div>
                <div className="w-full h-4 flex rounded-full overflow-hidden mb-4">
-                 {cashPct > 0 && <div style={{width: `${cashPct}%`}} className="bg-[var(--color-success)]" title={`Cash: ${fmt(exactCashTotal)}`} />}
-                 {transferPct > 0 && <div style={{width: `${transferPct}%`}} className="bg-[var(--color-accent-cobalt)]" title={`Transfer: ${fmt(transferTotal)}`} />}
-                 {posPct > 0 && <div style={{width: `${posPct}%`}} className="bg-[var(--color-accent-amber)]" title={`POS: ${fmt(posTotal)}`} />}
-                 {debtPct > 0 && <div style={{width: `${debtPct}%`}} className="bg-[var(--color-error)]" title={`Debt: ${fmt(debtTotal)}`} />}
+                 {cashPct > 0 && <div style={{width: `${cashPct}%`}} className="bg-[var(--color-success)]" title={`Cash: ${fmt(cashTotal)}`} />}
+                 {transferPct > 0 && <div style={{width: `${transferPct}%`}} className="bg-[var(--color-accent-cobalt)]" title={`Bank Transfer: ${fmt(transferTotal)}`} />}
+                 {posPct > 0 && <div style={{width: `${posPct}%`}} className="bg-[var(--color-accent-amber)]" title={`POS / Card: ${fmt(posTotal)}`} />}
+                 {debtPct > 0 && <div style={{width: `${debtPct}%`}} className="bg-[var(--color-error)]" title={`On Credit: ${fmt(debtTotal)}`} />}
                </div>
                <div className="grid grid-cols-2 gap-3 text-[12px] font-sans">
-                  <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[var(--color-success)]"/> <span className="text-[var(--color-light-muted)]">Cash: {cashPct.toFixed(0)}%</span></div>
-                  <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[var(--color-accent-cobalt)]"/> <span className="text-[var(--color-light-muted)]">Transfer: {transferPct.toFixed(0)}%</span></div>
-                  <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[var(--color-accent-amber)]"/> <span className="text-[var(--color-light-muted)]">POS: {posPct.toFixed(0)}%</span></div>
-                  <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[var(--color-error)]"/> <span className="text-[var(--color-light-muted)]">Debt: {debtPct.toFixed(0)}%</span></div>
+                  <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[var(--color-success)]"/> <span className="text-[var(--color-light-muted)]">Cash: {cashPct.toFixed(0)}% ({fmt(cashTotal)})</span></div>
+                  <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[var(--color-accent-cobalt)]"/> <span className="text-[var(--color-light-muted)]">Bank Transfer: {transferPct.toFixed(0)}% ({fmt(transferTotal)})</span></div>
+                  <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[var(--color-accent-amber)]"/> <span className="text-[var(--color-light-muted)]">POS / Card: {posPct.toFixed(0)}% ({fmt(posTotal)})</span></div>
+                  <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[var(--color-error)]"/> <span className="text-[var(--color-light-muted)]">On Credit: {debtPct.toFixed(0)}% ({fmt(debtTotal)})</span></div>
                </div>
              </div>
 
-             <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5 flex flex-col justify-between">
-                <div className="text-[13px] font-sans font-medium text-[var(--color-muted)]">Collection Efficiency</div>
-                <div className="flex items-end justify-between mt-4">
-                   <div className="text-[13px] font-sans text-[var(--color-light-muted)] max-w-[140px] leading-snug">
-                     Percentage of revenue physically collected vs. credit.
+             <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5 flex flex-col justify-between relative overflow-hidden">
+                <div className="text-[13px] font-sans font-medium text-[var(--color-muted)]">Collection Rate</div>
+                <div className="mt-4 flex items-center justify-between">
+                   <div className="flex flex-col">
+                     <span className="text-[12px] font-sans text-[var(--color-muted)]">Total Collected</span>
+                     <span className="text-[20px] font-bold font-mono text-white mt-1">{fmt(cashTotal + transferTotal + posTotal)}</span>
                    </div>
-                   <div className={`text-[36px] font-bold font-mono leading-none ${collectionColor}`}>
-                     {collectionEff.toFixed(0)}%
+                   <div className={`flex items-center justify-center w-16 h-16 rounded-full border-4 ${collectionEff >= 90 ? 'border-[var(--color-success)] text-[var(--color-success)] bg-[rgba(16,185,129,0.1)]' : collectionEff >= 70 ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)]' : 'border-[var(--color-error)] text-[var(--color-error)] bg-[rgba(239,68,68,0.1)]'}`}>
+                     <span className="text-[18px] font-bold font-mono">{collectionEff.toFixed(0)}%</span>
                    </div>
+                </div>
+                <div className="mt-4 text-[12px] font-sans text-[var(--color-error)] opacity-80">
+                   {fmt(debtTotal)} still on credit
                 </div>
              </div>
           </div>
@@ -354,7 +355,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
         </div>
       )}
 
-      {activeTab === 'Debtors' && <DebtorsTab />}
+      {activeTab === 'Credit Sales' && <DebtorsTab />}
       {activeTab === 'Expenses' && <ExpensesTab />}
       {activeTab === 'Remittances' && (
         <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)] mt-4">

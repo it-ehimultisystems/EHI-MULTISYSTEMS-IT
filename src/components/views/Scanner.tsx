@@ -1,155 +1,371 @@
-import { useState, useEffect } from 'react';
-import { Transaction } from '../../lib/types';
-import { ALL_STATUSES } from '../../lib/constants';
-import { fmt } from '../../lib/helpers';
-import { QrCode, Search } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { QrCode, RefreshCw, Package, Plane, TrendingUp, ArrowDown, ArrowUp, List } from 'lucide-react';
+import { User, ScanMode, ScanValidationResult, BatchScanItem } from '../../lib/types';
+import { validateScan, logScanEvent } from '../../lib/scanLogic';
+import { WrongDestinationAlert, NotLoggedInAlert, AlreadyProcessedAlert, SuccessFlash } from '../ScanAlerts';
 
-export const Scanner = ({ transactions, user }: { transactions: Transaction[], user: any }) => {
-  const [search, setSearch] = useState('');
-  const [result, setResult] = useState<Transaction | null>(null);
-  const [errorMsg, setErrorMsg] = useState('');
+export const Scanner = ({
+  user,
+  transactions,
+}: {
+  user: User;
+  transactions: any[];
+}) => {
+  const [mode, setMode] = useState<ScanMode>('ARRIVE');
+  const [isScanning, setIsScanning] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [currentResult, setCurrentResult] = useState<ScanValidationResult | null>(null);
+  const [successFlash, setSuccessFlash] = useState<ScanValidationResult | null>(null);
+  const [batchItems, setBatchItems] = useState<BatchScanItem[]>([]);
+  const [showBatch, setShowBatch] = useState(false);
+  const [manualRef, setManualRef] = useState('');
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const processingRef = useRef(false);
 
-  useEffect(() => {
+  const currentHub = user.hub;
+  const batchSuccess = batchItems.filter(b => b.result.startsWith('SUCCESS')).length;
+  const batchAlerts = batchItems.filter(b => !b.result.startsWith('SUCCESS') && b.result !== 'ALREADY_PROCESSED').length;
+
+  const processCode = useCallback(async (code: string) => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+    setProcessing(true);
+
+    try {
+      const result = await validateScan(code, mode, currentHub);
+
+      if (result.type === 'SUCCESS_ARRIVE' || result.type === 'SUCCESS_DEPART') {
+        // Log the event to database
+        await logScanEvent(
+          code,
+          mode,
+          currentHub,
+          user.name,
+          result.cargo?.destination
+        );
+
+        // Add to batch list
+        setBatchItems(prev => [{
+          ref: code,
+          name: result.cargo?.name || code,
+          result: result.type,
+          time: new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+        }, ...prev]);
+
+        // Show success flash briefly then auto-clear
+        setSuccessFlash(result);
+        setTimeout(() => {
+          setSuccessFlash(null);
+          processingRef.current = false;
+          setProcessing(false);
+        }, 1500);
+
+      } else {
+        // Error — show alert modal, pause scanner
+        if (scannerRef.current) {
+          try { await scannerRef.current.pause(true); } catch { /* ignore */ }
+        }
+        setCurrentResult(result);
+        setProcessing(false);
+        processingRef.current = false;
+      }
+    } catch (err) {
+      console.error('Scan processing error:', err);
+      setProcessing(false);
+      processingRef.current = false;
+    }
+  }, [mode, currentHub, user.name]);
+
+  // Start camera scanner
+  const startScanner = useCallback(() => {
+    if (scannerRef.current) return;
+
     const scanner = new Html5QrcodeScanner(
-      'qr-reader',
+      'qr-reader-div',
       {
-        fps: 10,
+        fps: 15,
         qrbox: { width: 220, height: 220 },
         aspectRatio: 1.0,
         showTorchButtonIfSupported: true,
+        showZoomSliderIfSupported: false,
+        defaultZoomValueIfSupported: 2,
       },
       false
     );
 
     scanner.render(
-      async (decodedText) => {
-        await scanner.clear();
-        lookupWaybill(decodedText);
-      },
-      (error) => {
-        console.debug('QR scan:', error);
-      }
+      (decodedText) => processCode(decodedText),
+      () => { /* ignore scan failures — camera looking */ }
     );
 
-    return () => {
-      scanner.clear().catch(console.error);
-    };
+    scannerRef.current = scanner;
+    setIsScanning(true);
+  }, [processCode]);
+
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current) {
+      try { await scannerRef.current.clear(); } catch { /* ignore */ }
+      scannerRef.current = null;
+    }
+    setIsScanning(false);
   }, []);
 
-  const lookupWaybill = (id: string) => {
-    const q = id.trim().toLowerCase();
-    const found = transactions.find(t => t.id.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
-    if (found) {
-      setResult(found);
-      setErrorMsg('');
-    } else {
-      setResult(null);
-      setErrorMsg('No waybill found for this query.');
+  // Resume scanner after alert dismissed
+  const dismissAlert = useCallback(async () => {
+    setCurrentResult(null);
+    processingRef.current = false;
+    if (scannerRef.current) {
+      try { scannerRef.current.resume(); } catch { /* ignore */ }
     }
+  }, []);
+
+  const switchToArriveAndDismiss = useCallback(() => {
+    setMode('ARRIVE');
+    dismissAlert();
+  }, [dismissAlert]);
+
+  // Manual lookup
+  const handleManualLookup = async () => {
+    if (!manualRef.trim()) return;
+    await processCode(manualRef.trim());
+    setManualRef('');
   };
 
-  const handleSearch = () => {
-    if (!search.trim()) return;
-    lookupWaybill(search);
-  };
+  // Stop scanner on unmount
+  useEffect(() => {
+    return () => { stopScanner(); };
+  }, [stopScanner]);
 
-  const handleMarkArrived = () => {
-    // Mock the backend update
-    if (result) {
-      const updated = { ...result, status: 'Arrived' } as Transaction;
-      setResult(updated);
-      alert(`Waybill ${result.id} marked as arrived! SMS sent to customer.`);
-    }
-  };
+  // Batch list view
+  if (showBatch) {
+    return (
+      <div className="p-4 pb-20 space-y-4">
+        <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.07)] pb-3">
+          <button onClick={() => setShowBatch(false)} className="text-[11px] font-mono text-[var(--color-muted)] flex items-center gap-1">
+            ← BACK TO SCANNER
+          </button>
+          <span className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider">
+            {batchItems.length} scans this session
+          </span>
+        </div>
+        <div className="space-y-2">
+          {batchItems.length === 0 ? (
+            <div className="text-center py-12 text-[var(--color-muted)] font-mono text-[11px]">
+              No scans yet this session
+            </div>
+          ) : batchItems.map((item, i) => {
+            const isSuccess = item.result.startsWith('SUCCESS');
+            const color = item.result === 'SUCCESS_ARRIVE' ? 'var(--color-success)' : 'var(--color-accent-cobalt)';
+            return (
+              <div key={i} className="flex items-center gap-3 bg-[var(--color-surface-1)] p-3 rounded border border-[rgba(255,255,255,0.06)]">
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: isSuccess ? (item.result === 'SUCCESS_ARRIVE' ? '#10B981' : '#3B82F6') : '#EF4444',
+                  flexShrink: 0,
+                }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="text-[12px] font-bold text-[var(--color-foreground)] truncate">{item.name}</div>
+                  <div className="text-[10px] font-mono text-[var(--color-muted)]">{item.ref}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[10px] font-mono" style={{ color: isSuccess ? color : '#EF4444' }}>
+                    {item.result.replace('SUCCESS_', '').replace('_', ' ')}
+                  </div>
+                  <div className="text-[9px] text-[var(--color-muted)] font-mono">{item.time}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="text-[9px] font-mono text-[var(--color-success)] tracking-[0.1em] uppercase">▸ QR SCAN & TRACKING</div>
+    <div className="p-4 pb-20 space-y-4">
 
-      <div className="w-full bg-white rounded overflow-hidden">
-        <div id="qr-reader" className="w-full"></div>
+      {/* Section header */}
+      <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.12em] uppercase border-b border-[rgba(255,255,255,0.07)] pb-2">
+        ▸ QR SCAN & TRACKING
       </div>
-      <style>{`
-        #qr-reader { border-radius: 12px; overflow: hidden; border: none !important; }
-        #qr-reader__scan_region { background: transparent; }
-        #qr-reader__dashboard { display: none; }
-        #qr-reader video { object-fit: cover; }
-      `}</style>
-      
-      <div className="flex space-x-2">
-        <input 
-          placeholder="Search waybill ID or customer name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 h-11 px-3 text-sm rounded font-sans"
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <button 
-          onClick={handleSearch}
-          className="h-11 px-4 bg-[var(--color-surface-2)] text-white rounded flex items-center justify-center focus:outline-none"
-        >
-          <Search size={18} />
-        </button>
+
+      {/* Hub indicator */}
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] font-mono text-[var(--color-accent-amber)]">
+          📍 {currentHub}
+        </div>
+        {batchItems.length > 0 && (
+          <button
+            onClick={() => setShowBatch(true)}
+            className="flex items-center gap-1.5 text-[10px] font-mono text-[var(--color-light-muted)]"
+          >
+            <List size={11} />
+            {batchSuccess} ✓ {batchAlerts > 0 && <span className="text-[var(--color-error)]">| {batchAlerts} alerts</span>}
+          </button>
+        )}
       </div>
-      
-      {errorMsg && (
-        <div className="text-[11px] font-mono text-[var(--color-error)] text-center py-2">{errorMsg}</div>
-      )}
 
-      {result && (
-        <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 mt-2 mb-8 animate-in fade-in slide-in-from-bottom-5">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <div className={`text-[16px] font-bold font-mono ${result.type === 'cargo' ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-accent-cobalt)]'}`}>
-                {result.id}
-              </div>
-              <div className="text-[13px] font-sans text-white mt-1">{result.name}</div>
-              <div className="text-[11px] font-mono text-[var(--color-light-muted)] mt-1">{result.detail}</div>
-            </div>
-            <div className="px-2 py-1 bg-[rgba(255,255,255,0.05)] rounded text-[9px] font-mono text-white border border-[rgba(255,255,255,0.1)]">
-              {result.type.toUpperCase()}
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div className="mt-6 mb-6 pl-2 relative border-l border-[rgba(255,255,255,0.1)] space-y-5">
-            {ALL_STATUSES.map((status, idx) => {
-              const currentIdx = ALL_STATUSES.indexOf(result.status as any);
-              const isPast = idx < currentIdx;
-              const isCurrent = idx === currentIdx;
-              const isFuture = idx > currentIdx;
-
-              return (
-                <div key={status} className="relative pl-5">
-                  <div className={`absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full border border-white bg-white ${isPast || isCurrent ? 'bg-white' : 'bg-[var(--color-surface-1)] border-[rgba(255,255,255,0.2)]'}`} />
-                  <div className="flex items-center space-x-2">
-                    <span className={`text-[12px] font-mono ${isCurrent ? 'font-bold text-white' : isPast ? 'text-[var(--color-light-muted)]' : 'text-[var(--color-muted)]'}`}>
-                      {status}
-                    </span>
-                    {isCurrent && (
-                      <span className="text-[8px] font-mono bg-[var(--color-success)] text-[var(--color-obsidian)] px-1 py-0.5 rounded uppercase font-bold tracking-wider">Current</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="border-t border-[rgba(255,255,255,0.07)] pt-3 flex justify-between items-center mb-4">
-            <div className={`text-[18px] font-bold font-mono ${result.type === 'cargo' ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-accent-cobalt)]'}`}>
-              {fmt(result.amount)}
-            </div>
-            <div className="text-[10px] font-mono text-[var(--color-muted)]">{result.mode} &middot; {result.time}</div>
-          </div>
-
-          {result.status === 'In-Transit' && (user.role === 'admin' || user.role === 'super_admin' || user.role === 'cargo_agent') && (
-            <button onClick={handleMarkArrived} className="w-full py-3 bg-[var(--color-success)] text-[var(--color-obsidian)] font-bold text-[12px] rounded uppercase">
-              Mark as Arrived
+      {/* Mode Toggle — ARRIVE / DEPART */}
+      <div className="flex rounded overflow-hidden border border-[var(--color-border)]">
+        {(['ARRIVE', 'DEPART'] as ScanMode[]).map((m) => {
+          const active = mode === m;
+          const isArrive = m === 'ARRIVE';
+          const activeColor = isArrive ? 'var(--color-success)' : 'var(--color-accent-cobalt)';
+          const activeBg = isArrive ? 'rgba(16,185,129,0.12)' : 'rgba(59,130,246,0.12)';
+          const Icon = isArrive ? ArrowDown : ArrowUp;
+          return (
+            <button
+              key={m}
+              onClick={() => { setMode(m); dismissAlert(); }}
+              style={{
+                flex: 1, padding: '12px 8px',
+                background: active ? activeBg : 'transparent',
+                border: 'none',
+                borderRight: m === 'ARRIVE' ? '1px solid var(--color-border)' : 'none',
+                color: active ? activeColor : '#64748B',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: 6,
+                transition: 'all 0.2s',
+              }}
+            >
+              <Icon size={16} />
+              <span style={{
+                fontFamily: 'monospace', fontSize: 13,
+                fontWeight: active ? 800 : 500,
+                letterSpacing: '0.04em',
+              }}>
+                {m}
+              </span>
             </button>
+          );
+        })}
+      </div>
+
+      {/* Mode description */}
+      <div className="text-[10px] font-mono text-[var(--color-muted)] text-center">
+        {mode === 'ARRIVE'
+          ? 'Scan cargo arriving at this hub'
+          : 'Scan cargo departing from this hub'}
+      </div>
+
+      {/* Camera scanner */}
+      {isScanning ? (
+        <div className="relative">
+          <div
+            id="qr-reader-div"
+            style={{ borderRadius: 12, overflow: 'hidden' }}
+          />
+          {processing && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 10,
+              background: 'rgba(11,15,25,0.7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 12,
+            }}>
+              <RefreshCw size={28} color="#F59E0B" style={{ animation: 'spin 1s linear infinite' }} />
+            </div>
           )}
+          <button
+            onClick={stopScanner}
+            className="mt-3 w-full py-3 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[11px] font-mono rounded border border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors"
+          >
+            Stop Camera
+          </button>
+        </div>
+      ) : (
+        <div
+          onClick={startScanner}
+          style={{
+            height: 180,
+            background: 'var(--color-surface-1)',
+            border: '2px dashed var(--color-border-strong)',
+            borderRadius: 12,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 10, cursor: 'pointer',
+          }}
+        >
+          <QrCode size={36} color="#64748B" />
+          <div style={{
+            fontFamily: 'monospace', fontSize: 11,
+            color: '#64748B', textAlign: 'center', lineHeight: 1.6,
+            letterSpacing: '0.04em',
+          }}>
+            TAP TO START CAMERA
+            <br />
+            <span style={{ fontSize: 9, opacity: 0.6 }}>Point at cargo QR tag to scan</span>
+          </div>
         </div>
       )}
+
+      {/* Manual entry fallback */}
+      <div className="flex gap-2">
+        <input
+          value={manualRef}
+          onChange={e => setManualRef(e.target.value.toUpperCase())}
+          onKeyDown={e => e.key === 'Enter' && handleManualLookup()}
+          placeholder="Enter AWB / tag ref manually..."
+          className="flex-1 h-11 px-3 text-[12px] font-mono rounded border border-[var(--color-border)] focus:border-[var(--color-muted)] outline-none bg-[var(--color-input-bg)] text-[var(--color-input-text)]"
+        />
+        <button
+          onClick={handleManualLookup}
+          disabled={!manualRef.trim() || processing}
+          className="h-11 px-4 bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[11px] font-mono rounded disabled:opacity-50 border border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors"
+        >
+          LOOKUP
+        </button>
+      </div>
+
+      {/* Batch counter when active */}
+      {batchItems.length > 0 && (
+        <div className="flex gap-3 mt-2">
+          <div className="flex-1 bg-[rgba(16,185,129,0.07)] border border-[rgba(16,185,129,0.2)] rounded p-2 text-center">
+            <div className="text-[18px] font-bold font-mono text-[var(--color-success)]">{batchSuccess}</div>
+            <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Logged</div>
+          </div>
+          <div className="flex-1 bg-[rgba(239,68,68,0.07)] border border-[rgba(239,68,68,0.2)] rounded p-2 text-center">
+            <div className="text-[18px] font-bold font-mono text-[var(--color-error)]">{batchAlerts}</div>
+            <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Alerts</div>
+          </div>
+          <div className="flex-1 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded p-2 text-center">
+            <div className="text-[18px] font-bold font-mono text-[var(--color-foreground)]">{batchItems.length}</div>
+            <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Total</div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert modals */}
+      {currentResult?.type === 'WRONG_DESTINATION' && (
+        <WrongDestinationAlert
+          result={currentResult}
+          onAcknowledge={dismissAlert}
+        />
+      )}
+      {currentResult?.type === 'NOT_LOGGED_IN' && (
+        <NotLoggedInAlert
+          result={currentResult}
+          onOk={dismissAlert}
+          onSwitchToArrive={switchToArriveAndDismiss}
+        />
+      )}
+      {currentResult?.type === 'ALREADY_PROCESSED' && (
+        <AlreadyProcessedAlert
+          result={currentResult}
+          onOk={dismissAlert}
+        />
+      )}
+      {currentResult?.type === 'NOT_FOUND' && (
+        <NotLoggedInAlert
+          result={{ ...currentResult, message: currentResult.message }}
+          onOk={dismissAlert}
+          onSwitchToArrive={dismissAlert}
+        />
+      )}
+
+      {/* Success flash */}
+      {successFlash && <SuccessFlash result={successFlash} />}
 
     </div>
   );

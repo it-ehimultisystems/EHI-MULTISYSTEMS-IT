@@ -25,7 +25,7 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
   const [route, setRoute] = useState(CARGO_ROUTES[0]);
   const [contentType, setContentType] = useState(CONTENT_TYPES[0] as string);
   const [amount, setAmount] = useState('');
-  const [mode, setMode] = useState<'Cash' | 'Transfer' | 'Debt'>('Cash');
+  const [mode, setMode] = useState<'Cash' | 'Transfer' | 'POS' | 'Debt'>('Cash');
   const [bank, setBank] = useState(BANKS[0] as string);
   const [remark, setRemark] = useState('');
   const [salesAnalysis, setSalesAnalysis] = useState('');
@@ -112,8 +112,9 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
     setSuccessTx(null);
   };
 
-  const handleDownloadReceipt = () => {
+  const handleDownloadReceipt = async () => {
     if (successTx) {
+      const { downloadCargoReceipt } = await import('./CargoReceipt');
       downloadCargoReceipt(successTx, serialNumber - 1);
     }
   };
@@ -324,8 +325,8 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
 
         <div>
           {renderLabel(CreditCard, "Receipt / Payment Mode")}
-          <div className="flex bg-[var(--color-surface-1)] rounded-xl p-1.5 border border-[rgba(255,255,255,0.07)]">
-            {['Cash', 'Transfer', 'Debt'].map(m => (
+          <div className="flex bg-[var(--color-surface-1)] rounded-xl p-1.5 border border-[rgba(255,255,255,0.07)] mb-3">
+            {['Cash', 'Transfer', 'POS'].map(m => (
               <button
                 key={m}
                 type="button"
@@ -336,6 +337,26 @@ export const CargoForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) =
               </button>
             ))}
           </div>
+
+          <div className="flex items-center justify-center space-x-3 my-3">
+             <div className="flex-1 h-px bg-[rgba(255,255,255,0.05)]" />
+             <div className="text-[11px] font-sans text-[var(--color-muted)] uppercase tracking-wider">OR</div>
+             <div className="flex-1 h-px bg-[rgba(255,255,255,0.05)]" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMode('Debt')}
+            className={`w-full py-2.5 text-[13px] font-sans font-medium rounded-lg border transition-colors cursor-pointer focus:outline-none ${mode === 'Debt' ? 'bg-[rgba(239,68,68,0.1)] border-[var(--color-error)] text-[var(--color-error)] shadow-sm' : 'bg-transparent border-[rgba(239,68,68,0.3)] text-[var(--color-error)] hover:bg-[rgba(239,68,68,0.05)]'}`}
+          >
+            Log as Credit Sale (Debt)
+          </button>
+          
+          {mode === 'Debt' && (
+            <div className="mt-2 text-[12px] font-sans text-[var(--color-error)] bg-[rgba(239,68,68,0.05)] p-2.5 rounded-lg border border-[rgba(239,68,68,0.1)]">
+              This sale will be logged as a credit. Collect payment before dispatch or arrange with management.
+            </div>
+          )}
         </div>
         
         {mode === 'Transfer' && (

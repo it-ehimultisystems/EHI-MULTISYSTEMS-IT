@@ -20,7 +20,8 @@ export const Dashboard = ({ user, transactions }: { user: User; transactions: Tr
   const showMktg = isAdmin || user.role === 'marketing_agent';
 
   const calculateCash = (txs: Transaction[]) => txs.reduce((sum, t) => sum + (t.mode === 'Cash' ? t.amount : 0), 0);
-  const calculateTransfer = (txs: Transaction[]) => txs.reduce((sum, t) => sum + (t.mode === 'Transfer' || t.mode === 'Transfer-as-Cash' ? t.amount : 0), 0);
+  const calculateTransfer = (txs: Transaction[]) => txs.reduce((sum, t) => sum + (t.mode === 'Transfer' ? t.amount : 0), 0);
+  const calculatePos = (txs: Transaction[]) => txs.reduce((sum, t) => sum + (t.mode === 'POS' ? t.amount : 0), 0);
 
   const allVisibleTx = transactions.filter(t => 
     (showCargo && t.type === 'cargo') || 
@@ -96,6 +97,7 @@ export const Dashboard = ({ user, transactions }: { user: User; transactions: Tr
           <div className="mt-3 flex space-x-6 text-[12px] font-sans text-[var(--color-light-muted)]">
             <div>Cash: <span className="text-white font-bold font-mono tracking-tight">{fmt(calculateCash(allVisibleTx))}</span></div>
             <div>Transfer: <span className="text-white font-bold font-mono tracking-tight">{fmt(calculateTransfer(allVisibleTx))}</span></div>
+            <div>POS: <span className="text-white font-bold font-mono tracking-tight">{fmt(calculatePos(allVisibleTx))}</span></div>
           </div>
         </div>
       )}
@@ -171,10 +173,11 @@ export const Dashboard = ({ user, transactions }: { user: User; transactions: Tr
                       <div className="flex items-center space-x-1.5 flex-wrap justify-end">
                         <span className={`text-[9px] font-sans px-1.5 py-0.5 rounded font-medium ${
                           t.mode === 'Cash' ? 'bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]' :
-                          t.mode === 'Transfer' || t.mode === 'Transfer-as-Cash' ? 'bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]' :
-                          'bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]'
+                          t.mode === 'Transfer' ? 'bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]' :
+                          t.mode === 'POS' ? 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]' :
+                          'border border-[var(--color-error)] text-[var(--color-error)]'
                         }`}>
-                          {t.mode}
+                          {t.mode === 'Debt' ? 'Credit' : t.mode}
                         </span>
                         <span className="text-[10px] font-sans text-[var(--color-muted)]">{t.time}</span>
                       </div>
