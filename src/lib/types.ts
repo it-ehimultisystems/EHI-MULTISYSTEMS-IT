@@ -89,6 +89,7 @@ export interface Expense {
   amount: number;
   description: string;
   time: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Scan' | 'More' | 'MyTrips' | 'Accounting';
@@ -100,4 +101,136 @@ export interface AppState {
   isOffline: boolean;
   pendingSyncCount: number;
   currentTab: TabView;
+}
+
+// Daily Cash Register
+export interface CashRegister {
+  id: string;
+  date: string;                        // YYYY-MM-DD
+  hub: string;
+  openingBalance: number;              // cash carried from previous day close
+  closingBalance?: number;             // filled at EOD
+  physicalCount?: number;              // actual cash counted at close
+  variance?: number;                   // physicalCount - closingBalance
+  lockedBy?: string;                   // user who locked the day
+  lockedAt?: string;
+  status: 'open' | 'locked';
+}
+
+// Cash Register Entry (individual movements within a day)
+export interface CashMovement {
+  id: string;
+  registerId: string;
+  type: 'receipt' | 'payment';
+  source: 'cargo' | 'valuejet' | 'marketing' | 'expense' | 'remittance' | 'adjustment';
+  transactionRef?: string;             // links to Transaction.id if from a sale
+  amount: number;
+  description: string;
+  time: string;
+  loggedBy: string;
+}
+
+// Debt / Accounts Receivable entry with aging
+export interface DebtRecord {
+  id: string;
+  transactionId: string;              // links to Transaction.id
+  clientName: string;
+  clientType: 'corporate' | 'individual';
+  amount: number;
+  amountPaid: number;                 // starts at 0, updated on partial payment
+  balance: number;                    // amount - amountPaid
+  dueDate: string;                    // ISO date
+  dateCreated: string;                // ISO date
+  ageInDays: number;                  // computed: today - dateCreated
+  agingBucket: 'current' | 'overdue' | 'critical' | 'writeoff-risk';
+  status: 'outstanding' | 'partial' | 'paid' | 'written-off';
+  notes: string;
+  payments: DebtPayment[];
+}
+
+export interface DebtPayment {
+  id: string;
+  date: string;
+  amount: number;
+  mode: 'Cash' | 'Transfer';
+  bank?: string;
+  recordedBy: string;
+  reference?: string;
+}
+
+// Expense with budget tracking
+export interface ExpenseEntry {
+  id: string;
+  category: string;
+  subcategory?: string;
+  amount: number;
+  description: string;
+  date: string;
+  time: string;
+  hub: string;
+  loggedBy: string;
+  approvedBy?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  receiptRef?: string;
+  requiresApproval: boolean;          // true if amount > 20000
+}
+
+export interface ExpenseBudget {
+  category: string;
+  monthlyBudget: number;
+  spent: number;
+  remaining: number;
+  percentUsed: number;
+}
+
+// Hub remittance
+export interface HubRemittance {
+  id: string;
+  fromHub: string;
+  toHub: string;                      // usually 'Lagos HQ'
+  date: string;
+  totalCollected: number;
+  totalExpenses: number;
+  netRemittance: number;              // totalCollected - totalExpenses
+  mode: 'Cash' | 'Transfer';
+  bank?: string;
+  reference?: string;
+  confirmedByHQ: boolean;
+  confirmedAt?: string;
+  notes?: string;
+}
+
+// Agent commission record
+export interface AgentCommission {
+  agentId: string;
+  agentName: string;
+  role: string;
+  hub: string;
+  period: string;                     // e.g., '2026-06'
+  totalSales: number;
+  cashSales: number;
+  transferSales: number;
+  debtCreated: number;
+  commissionRate: number;             // e.g., 0.02 for 2%
+  commissionEarned: number;
+  commissionPaid: boolean;
+  paidDate?: string;
+}
+
+// VAT record
+export interface VATRecord {
+  period: string;                     // e.g., '2026-06'
+  totalRevenue: number;
+  vatRate: number;                    // 0.075 for 7.5%
+  outputVAT: number;                  // totalRevenue * vatRate
+  filingStatus: 'pending' | 'filed' | 'paid';
+  filingDate?: string;
+}
+
+// Accounting period lock
+export interface PeriodLock {
+  period: string;                     // YYYY-MM-DD (day) or YYYY-MM (month)
+  lockedBy: string;
+  lockedAt: string;
+  type: 'day' | 'month';
 }

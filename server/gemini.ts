@@ -153,4 +153,60 @@ Write in a formal corporate tone. Return ONLY the 3 plain-text paragraphs.
   }
 });
 
+router.post('/parse-pdf', async (req, res) => {
+  try {
+    const { pdfBase64 } = req.body;
+    
+    if (!pdfBase64) {
+       return res.status(400).json({ success: false, error: "No PDF provided" });
+    }
+
+    const ai = getAiClient();
+    if (!ai) {
+      return res.status(200).json({
+        success: false,
+        error: "AI service config missing"
+      });
+    }
+
+    // Prepare Document part from base64
+    const documentPart = {
+      inlineData: {
+        data: pdfBase64,
+        mimeType: 'application/pdf',
+      },
+    };
+
+    const prompt = `You are parsing a Nigerian bank statement PDF. Extract all credit transactions only (where money came in). Return a JSON array with this structure per transaction: [{"date": "YYYY-MM-DD", "description": "string", "credit": number, "reference": "string"}]. Ignore debit rows. Dates should be YYYY-MM-DD. Amounts should be plain numbers without commas or currency symbols. Do not wrap the JSON in markdown blocks.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: [documentPart, prompt],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              date: { type: Type.STRING },
+              description: { type: Type.STRING },
+              credit: { type: Type.NUMBER },
+              reference: { type: Type.STRING }
+            },
+            required: ["date", "description", "credit", "reference"]
+          }
+        }
+      }
+    });
+
+    const text = response.text || "[]";
+    const parsed = JSON.parse(text.trim());
+    res.json({ success: true, transactions: parsed });
+  } catch (error: any) {
+    console.error("Gemini parse-pdf error:", error);
+    res.json({ success: false, error: error.message });
+  }
+});
+
 export default router;

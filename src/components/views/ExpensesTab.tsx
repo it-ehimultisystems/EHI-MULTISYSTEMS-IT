@@ -1,0 +1,291 @@
+import React, { useState, useEffect } from 'react';
+import { Expense, User } from '../../lib/types';
+import { fmt, uid, tnow } from '../../lib/helpers';
+import { Car, Truck, Bus, Box, Briefcase, Download, Plus, AlertCircle, Edit2, CheckCircle, XCircle } from 'lucide-react';
+
+export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpense }: { expenses?: Expense[], user?: User, period?: string, onAddExpense?: (e: Expense) => void }) => {
+  
+  const [showForm, setShowForm] = useState(true);
+  const [category, setCategory] = useState<string>('Cars');
+  const [subCategory, setSubCategory] = useState('');
+  const [amount, setAmount] = useState('');
+  const [desc, setDesc] = useState('');
+  const [mode, setMode] = useState<'Cash' | 'Transfer'>('Cash');
+  const [bank, setBank] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const monthKey = date.substring(0, 7); // YYYY-MM
+  const storageKey = `ehi-budgets-${monthKey}`;
+
+  const defaultBudgets: Record<string, number> = {
+    'Cars': 80000,
+    'Carrier': 150000,
+    'Transport': 120000,
+    'Bus Hire': 60000,
+    'Sack & Nylon': 40000,
+    'Miscellaneous': 30000
+  };
+
+  const categories = Object.keys(defaultBudgets);
+
+  const [budgets, setBudgets] = useState<Record<string, number>>(defaultBudgets);
+  const [editingBudget, setEditingBudget] = useState<string | null>(null);
+  const [budgetInput, setBudgetInput] = useState('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      setBudgets(JSON.parse(saved));
+    } else {
+      setBudgets(defaultBudgets);
+    }
+  }, [storageKey]);
+
+  const saveBudget = (cat: string, val: number) => {
+    const newB = { ...budgets, [cat]: val };
+    setBudgets(newB);
+    localStorage.setItem(storageKey, JSON.stringify(newB));
+    setEditingBudget(null);
+  };
+
+  const getIcon = (cat: string) => {
+    switch (cat) {
+      case 'Cars': return <Car size={16} />;
+      case 'Carrier': return <Truck size={16} />;
+      case 'Transport': return <Briefcase size={16} />;
+      case 'Bus Hire': return <Bus size={16} />;
+      case 'Sack & Nylon': return <Box size={16} />;
+      default: return <Briefcase size={16} />;
+    }
+  };
+
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  const handleLog = () => {
+    const numAmt = parseFloat(amount);
+    if (!numAmt || numAmt <= 0 || !desc) return;
+
+    const requiresApproval = numAmt > 20000 && user?.role !== 'super_admin' && user?.role !== 'admin';
+    const status = requiresApproval ? 'pending' : 'approved';
+
+    const exp: Expense = {
+      id: uid('EX' as any),
+      type: category,
+      amount: numAmt,
+      description: desc + (subCategory ? ` - ${subCategory}` : ''),
+      time: tnow(),
+      status
+    };
+
+    if (onAddExpense) onAddExpense(exp);
+    setAmount('');
+    setDesc('');
+    setSubCategory('');
+  };
+
+  const numAmount = parseFloat(amount) || 0;
+  const requiresApproval = numAmount > 20000 && user?.role !== 'super_admin' && user?.role !== 'admin';
+
+  return (
+    <div className="space-y-6 pb-24">
+      {/* PERIOD SUMMARY */}
+      <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
+         <div className="text-[13px] font-sans font-medium text-[var(--color-muted)] mb-1">Total Expenses ({period})</div>
+         <div className="text-[28px] font-mono font-bold text-[#F59E0B] mb-2">{fmt(totalExpenses)}</div>
+      </div>
+
+      {/* EXPENSE FORM */}
+      <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
+         <div className="text-[14px] font-sans font-semibold text-white mb-4">Log Expense</div>
+         
+         <div className="space-y-4">
+           {/* CATEGORY SCROLLER */}
+           <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+              {categories.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`flex items-center space-x-1.5 px-3 py-2 text-[12px] font-sans font-medium rounded-lg whitespace-nowrap transition-colors focus:outline-none ${category === c ? 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)] border border-[rgba(245,158,11,0.3)] shadow-sm' : 'bg-[var(--color-surface-1)] text-[var(--color-muted)] border border-transparent'}`}
+                >
+                  {getIcon(c)} <span>{c}</span>
+                </button>
+              ))}
+           </div>
+           
+           <div className="flex gap-3">
+             <div className="flex-1">
+               <label className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Amount ₦</label>
+               <input 
+                 type="number"
+                 value={amount}
+                 onChange={e => setAmount(e.target.value)}
+                 placeholder="0"
+                 className="w-full h-11 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 text-[var(--color-accent-amber)] font-mono text-[16px] font-bold focus:outline-none focus:border-[var(--color-accent-amber)] focus:ring-1 focus:ring-[var(--color-accent-amber)]"
+               />
+             </div>
+             <div className="flex-1">
+               <label className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Payment Mode</label>
+               <div className="flex bg-[var(--color-surface-1)] rounded-xl p-1 border border-[rgba(255,255,255,0.07)] h-11">
+                 <button onClick={() => setMode('Cash')} className={`flex-1 text-[12px] font-sans font-medium rounded-lg ${mode === 'Cash' ? 'bg-[var(--color-surface-2)] text-white shadow-sm' : 'text-[var(--color-muted)]'}`}>Cash</button>
+                 <button onClick={() => setMode('Transfer')} className={`flex-1 text-[12px] font-sans font-medium rounded-lg ${mode === 'Transfer' ? 'bg-[var(--color-surface-2)] text-white shadow-sm' : 'text-[var(--color-muted)]'}`}>Transfer</button>
+               </div>
+             </div>
+           </div>
+
+           <div>
+             <label className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Description</label>
+             <input 
+               type="text"
+               value={desc}
+               onChange={e => setDesc(e.target.value)}
+               placeholder="e.g. Fuel for bus, Toll gate..."
+               className="w-full h-11 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 text-white font-sans text-[13px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+             />
+           </div>
+
+           {requiresApproval && (
+             <div className="flex items-start space-x-2 bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)] p-3 rounded-xl mt-2">
+               <AlertCircle size={16} className="text-[var(--color-accent-amber)] shrink-0 mt-0.5" />
+               <div className="text-[12px] font-sans text-[var(--color-accent-amber)]">
+                 This expense requires admin approval before it is posted.
+               </div>
+             </div>
+           )}
+
+           <button 
+             onClick={handleLog}
+             disabled={!amount || !desc}
+             className="w-full h-12 mt-2 bg-[var(--color-accent-amber)] disabled:opacity-50 hover:bg-opacity-90 text-[#0B0F19] text-[15px] font-sans font-bold rounded-xl transition-all focus:outline-none flex items-center justify-center space-x-2"
+           >
+             <Plus size={18} />
+             <span>{requiresApproval ? "Submit for Approval" : "Log Expense"}</span>
+           </button>
+         </div>
+      </div>
+
+      {/* BUDGET VS ACTUAL */}
+      <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
+         <div className="text-[15px] font-sans font-bold text-white mb-4">Budget Tracker</div>
+         <div className="space-y-4">
+           {categories.map(c => {
+             const budget = budgets[c];
+             const spent = expenses.filter(e => e.type === c).reduce((sum, e) => sum + e.amount, 0);
+             const pct = budget ? (spent / budget) * 100 : 0;
+             
+             let barColor = 'bg-[var(--color-success)]';
+             if (pct > 100) barColor = 'bg-[var(--color-error)]'; // should be striped in a real app
+             else if (pct > 85) barColor = 'bg-[#ea580c]';
+             else if (pct > 60) barColor = 'bg-[var(--color-accent-amber)]';
+
+             return (
+               <div key={c} className="space-y-1.5">
+                 <div className="flex justify-between items-center text-[12px] font-sans">
+                   <div className="flex items-center space-x-2 text-white">
+                     <span className="text-[var(--color-muted)]">{getIcon(c)}</span>
+                     <span className="font-medium">{c}</span>
+                   </div>
+                   <div className="flex items-center space-x-2">
+                     <span className="font-mono text-[var(--color-muted)]">{fmt(spent)}</span>
+                     <span className="text-[var(--color-light-muted)]">/</span>
+                     
+                     {editingBudget === c ? (
+                       <div className="flex items-center space-x-1">
+                         <input 
+                           type="number" 
+                           autoFocus
+                           className="w-20 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.2)] rounded px-1 text-[11px] text-white font-mono h-6 outline-none"
+                           value={budgetInput}
+                           onChange={e => setBudgetInput(e.target.value)}
+                           onBlur={() => saveBudget(c, parseFloat(budgetInput) || budget)}
+                           onKeyDown={e => e.key === 'Enter' && saveBudget(c, parseFloat(budgetInput) || budget)}
+                         />
+                       </div>
+                     ) : (
+                       <div className="flex items-center space-x-1 group">
+                         <span className="font-mono text-white">{fmt(budget)}</span>
+                         <button onClick={() => { setEditingBudget(c); setBudgetInput(budget.toString()); }} className="opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:text-white transition-opacity focus:outline-none">
+                           <Edit2 size={12} />
+                         </button>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+                 
+                 <div className="w-full h-2 bg-[var(--color-surface-1)] rounded-full overflow-hidden">
+                   <div style={{ width: `${Math.min(pct, 100)}%` }} className={`h-full rounded-full transition-all ${barColor}`} />
+                 </div>
+               </div>
+             );
+           })}
+         </div>
+      </div>
+
+      {/* EXPENSE LOG */}
+      <div>
+         <div className="flex justify-between items-center mb-3">
+           <span className="text-[14px] font-sans font-semibold text-white">Expense Log</span>
+           <button className="flex items-center space-x-1 text-[11px] font-sans text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.1)] px-2 py-1 rounded focus:outline-none hover:bg-opacity-20 transition-colors">
+             <Download size={12} />
+             <span>CSV</span>
+           </button>
+         </div>
+
+         {expenses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-6 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)]">
+               <Briefcase size={24} className="text-[#64748B] mb-2" />
+               <div className="text-[13px] font-medium text-white font-sans">No expenses logged yet.</div>
+            </div>
+         ) : (
+            <div className="space-y-2">
+              {expenses.map((e, idx) => (
+                <div key={idx} className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-4 flex items-start space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-[rgba(245,158,11,0.1)] text-[var(--color-accent-amber)] flex items-center justify-center mt-0.5">
+                    {getIcon(e.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between">
+                      <span className="text-[14px] font-sans font-medium text-white break-words pr-2 leading-tight">{e.description}</span>
+                      <span className="text-[15px] font-mono font-bold text-[var(--color-accent-amber)] shrink-0">{fmt(e.amount)}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <span className="text-[11px] font-sans text-[var(--color-muted)]">{e.time}</span>
+                      <span className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.2)]" />
+                      <span className="text-[11px] font-sans text-[var(--color-muted)]">{e.type}</span>
+                      
+                      {e.status && (
+                        <>
+                           <span className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.2)]" />
+                           <span className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[9px] font-sans font-bold uppercase tracking-wider ${
+                             e.status === 'approved' ? 'text-[var(--color-success)] bg-[rgba(16,185,129,0.1)]' :
+                             e.status === 'pending' ? 'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)]' :
+                             'text-[var(--color-error)] bg-[rgba(239,68,68,0.1)]'
+                           }`}>
+                             {e.status === 'approved' && <CheckCircle size={10} />}
+                             {e.status === 'pending' && <AlertCircle size={10} />}
+                             {e.status === 'rejected' && <XCircle size={10} />}
+                             <span>{e.status}</span>
+                           </span>
+                        </>
+                      )}
+                    </div>
+                    
+                    {e.status === 'pending' && (user?.role === 'super_admin' || user?.role === 'admin') && (
+                      <div className="flex space-x-2 mt-3 pt-3 border-t border-[rgba(255,255,255,0.05)]">
+                        <button className="flex-1 py-1.5 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] text-[11px] font-sans font-bold rounded flex justify-center items-center space-x-1 transition-colors">
+                          <CheckCircle size={12}/> <span>Approve</span>
+                        </button>
+                        <button className="flex-1 py-1.5 bg-[rgba(239,68,68,0.1)] hover:bg-[rgba(239,68,68,0.2)] text-[var(--color-error)] text-[11px] font-sans font-bold rounded flex justify-center items-center space-x-1 transition-colors">
+                          <XCircle size={12}/> <span>Reject</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+         )}
+      </div>
+
+    </div>
+  );
+};
