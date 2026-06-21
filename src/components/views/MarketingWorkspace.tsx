@@ -29,7 +29,7 @@ export const MarketingWorkspace = ({
   const [sb, setSb] = useState(0);
 
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Expense State
   const [expType, setExpType] = useState(EXPENSE_CATEGORIES[0]);
@@ -50,9 +50,9 @@ export const MarketingWorkspace = ({
   const balanceToRemit = cashSales - totalExpenses; // Usually, expenses are taken from cash
 
   const handleAddEntry = () => {
-    if (!isValid || isLoading) return;
+    if (!isValid || submitting) return;
 
-    setIsLoading(true);
+    setSubmitting(true);
 
     let details = [];
     if (bb > 0) details.push(`${bb}BB`);
@@ -71,11 +71,10 @@ export const MarketingWorkspace = ({
       status: 'Intake'
     };
 
-    setTimeout(() => {
-      onAddTx(tx);
-      setSuccessTx(tx);
-      setIsLoading(false);
-    }, 800);
+    setSuccessTx(tx);
+    setSubmitting(false);
+
+    onAddTx(tx);
   };
 
   const handleReset = () => {
@@ -108,272 +107,278 @@ export const MarketingWorkspace = ({
   const mktgFocusClasses = "focus:outline-none focus:ring-2 focus:ring-[rgba(16,185,129,0.5)] focus:border-[rgba(16,185,129,0.5)] transition-[border-color,box-shadow]";
 
   return (
-    <div className="p-4 space-y-6 pb-12">
+    <div className="p-4 h-full pb-12">
       {/* Workspace Header */}
-      <div className="flex justify-between items-center text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-widest border-b border-[rgba(255,255,255,0.07)] pb-2">
+      <div className="flex justify-between items-center text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-widest border-b border-[rgba(255,255,255,0.07)] pb-2 mb-6">
         <div>{new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
         <div>Agent: {user.name.split(' ')[0]}</div>
       </div>
 
-      {/* Scoreboard */}
-      <div className="space-y-3">
-        <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
-          <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#10B981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            ▸ TODAY'S RECORD
-          </span>
-        </div>
-
-        <div className="flex w-full space-x-3">
-          <div className="flex-1 bg-[rgba(16,185,129,0.05)] rounded border border-[rgba(16,185,129,0.2)] p-3 flex flex-col justify-between">
-            <div className="text-[20px] font-bold font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalSales)}</div>
-            <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase mt-1">Total Sales</div>
-          </div>
-          <div className="flex-1 bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.07)] p-3 flex flex-col justify-between">
-            <div className="text-[20px] font-bold font-mono text-[var(--color-foreground)]" style={{ fontFamily: 'JetBrains Mono' }}>{marketingTxs.length}</div>
-            <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase mt-1">Customers</div>
-          </div>
-        </div>
-
-        <div className="bg-[var(--color-surface-1)] p-3 rounded flex justify-between space-x-4">
-          <div className="flex-1 text-center border-r border-[rgba(255,255,255,0.05)]">
-            <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Cash</div>
-            <div className="text-[12px] font-bold font-mono text-[var(--color-success)] mt-1" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(cashSales)}</div>
-          </div>
-          <div className="flex-1 text-center">
-            <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Transfer</div>
-            <div className="text-[12px] font-bold font-mono text-[var(--color-success)] mt-1" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(transferSales)}</div>
-          </div>
-        </div>
-      </div>
-
-      {successTx ? (
-        <motion.div 
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 15, stiffness: 200 }}
-          className="bg-[rgba(16,185,129,0.05)] border border-[rgba(16,185,129,0.2)] rounded p-4 flex flex-col"
-        >
-          <motion.div
-            animate={{ scale: [1, 1.15, 1] }}
-            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-            className="flex justify-center"
-          >
-            <CheckCircle size={32} className="text-[var(--color-success)] mb-3" />
-          </motion.div>
-          <div className="text-[11px] font-mono text-[var(--color-success)] uppercase tracking-widest mb-1 text-center">ENTRY RECORDED</div>
-          <div className="text-[14px] font-bold font-mono text-[var(--color-success)] mb-4 uppercase text-center" style={{ fontFamily: 'JetBrains Mono' }}>
-            REF: {successTx.id}
-          </div>
-          
-          <div className="bg-[var(--color-obsidian)] rounded p-3 mb-4 space-y-2 border border-[rgba(255,255,255,0.05)]">
-            <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
-               <span className="text-[10px] font-mono text-[var(--color-muted)]">Customer</span>
-               <span className="text-[11px] font-mono text-white">{successTx.name}</span>
-            </div>
-            <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
-               <span className="text-[10px] font-mono text-[var(--color-muted)]">Route / Bags</span>
-               <span className="text-[11px] font-mono text-white">{successTx.detail}</span>
-            </div>
-            <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
-               <span className="text-[10px] font-mono text-[var(--color-muted)]">Amount</span>
-               <span className="text-[12px] font-bold font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(successTx.amount)}</span>
-            </div>
-            <div className="flex justify-between pt-1">
-               <span className="text-[10px] font-mono text-[var(--color-muted)]">Payment</span>
-               <span className="text-[11px] font-mono text-white">{successTx.mode} {successTx.bank && `(${successTx.bank})`}</span>
-            </div>
-          </div>
-
-          <div className="flex w-full space-x-2">
-            <button onClick={handleReset} className="flex-1 py-3 bg-[var(--color-success)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer">
-              Add Another
-            </button>
-            <button onClick={() => setSuccessTx(null)} className="flex-1 py-3 bg-[var(--color-surface-1)] text-white text-[11px] font-mono rounded border border-[rgba(255,255,255,0.1)] cursor-pointer">
-              View List
-            </button>
-          </div>
-        </motion.div>
-      ) : (
-        <div className="space-y-4 bg-[rgba(255,255,255,0.02)] -mx-4 px-4 py-4 border-y border-[rgba(255,255,255,0.05)]">
-          <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#10B981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              ▸ NEW MARKETING ENTRY
-            </span>
-          </div>
-          
-          <div className="space-y-3">
-            <input 
-              placeholder="Customer Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
-            />
-            <input 
-              type="tel"
-              placeholder="Phone Number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
-            />
-            
-            <div className="flex space-x-3">
-              <select 
-                value={route}
-                onChange={(e) => setRoute(e.target.value)}
-                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${mktgFocusClasses}`}
+      <div className="grid gap-6 md:grid-cols-[1fr_280px]">
+        
+        {/* Left Column - Forms */}
+        <div className="space-y-6">
+          {successTx ? (
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 15, stiffness: 200 }}
+              className="bg-[rgba(16,185,129,0.05)] border border-[rgba(16,185,129,0.2)] rounded p-4 flex flex-col"
+            >
+              <motion.div
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                className="flex justify-center"
               >
-                {Object.keys(PRICING).map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <select 
-                value={mode}
-                onChange={(e) => setMode(e.target.value)}
-                className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${mktgFocusClasses}`}
-              >
-                <option value="Cash">Cash</option>
-                <option value="Transfer">Transfer</option>
-                <option value="Transfer-as-Cash">Transfer-as-Cash</option>
-              </select>
-            </div>
-
-            {mode === 'Transfer' && (
-              <select 
-                value={bank}
-                onChange={(e) => setBank(e.target.value)}
-                className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
-              >
-                {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
-            )}
-
-            <div className="flex space-x-2">
-              {[ 
-                { key: 'bb', label: 'BB', val: bb, set: setBb },
-                { key: 'mb', label: 'MB', val: mb, set: setMb },
-                { key: 'sb', label: 'SB', val: sb, set: setSb }
-              ].map(bag => (
-                <div key={bag.key} className="flex-1 bg-[var(--color-surface-1)] rounded p-2 flex items-center justify-between border border-[rgba(255,255,255,0.07)]">
-                  <span className="text-[11px] font-bold font-mono text-[var(--color-muted)]">{bag.label}</span>
-                  <input 
-                    type="number"
-                    min="0"
-                    value={bag.val || ''}
-                    onChange={(e) => bag.set(parseInt(e.target.value) || 0)}
-                    className="w-10 h-7 text-center text-sm font-bold bg-transparent border-none p-0 focus:ring-0 text-white"
-                    placeholder="0"
-                  />
+                <CheckCircle size={32} className="text-[var(--color-success)] mb-3" />
+              </motion.div>
+              <div className="text-[11px] font-mono text-[var(--color-success)] uppercase tracking-widest mb-1 text-center">ENTRY RECORDED</div>
+              <div className="text-[14px] font-bold font-mono text-[var(--color-success)] mb-4 uppercase text-center" style={{ fontFamily: 'JetBrains Mono' }}>
+                REF: {successTx.id}
+              </div>
+              
+              <div className="bg-[var(--color-obsidian)] rounded p-3 mb-4 space-y-2 border border-[rgba(255,255,255,0.05)]">
+                <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
+                   <span className="text-[10px] font-mono text-[var(--color-muted)]">Customer</span>
+                   <span className="text-[11px] font-mono text-white">{successTx.name}</span>
                 </div>
-              ))}
-            </div>
+                <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
+                   <span className="text-[10px] font-mono text-[var(--color-muted)]">Route / Bags</span>
+                   <span className="text-[11px] font-mono text-white">{successTx.detail}</span>
+                </div>
+                <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
+                   <span className="text-[10px] font-mono text-[var(--color-muted)]">Amount</span>
+                   <span className="text-[12px] font-bold font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(successTx.amount)}</span>
+                </div>
+                <div className="flex justify-between pt-1">
+                   <span className="text-[10px] font-mono text-[var(--color-muted)]">Payment</span>
+                   <span className="text-[11px] font-mono text-white">{successTx.mode} {successTx.bank && `(${successTx.bank})`}</span>
+                </div>
+              </div>
 
-            <div className="flex justify-between items-center py-2">
-              <span className="text-[10px] font-mono text-[var(--color-light-muted)]">AUTO-CALCULATED</span>
-              <span className={`text-[18px] font-bold font-mono ${totalAmount > 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-muted)]'}`} style={{ fontFamily: 'JetBrains Mono' }}>
-                {fmt(totalAmount)}
+              <div className="flex w-full space-x-2">
+                <button onClick={handleReset} className="flex-1 py-3 bg-[var(--color-success)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer">
+                  Add Another
+                </button>
+                <button onClick={() => setSuccessTx(null)} className="flex-1 py-3 bg-[var(--color-surface-1)] text-white text-[11px] font-mono rounded border border-[rgba(255,255,255,0.1)] cursor-pointer">
+                  View List
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="space-y-4 bg-[rgba(255,255,255,0.02)] -mx-4 px-4 py-4 md:mx-0 md:rounded-xl md:border border-y border-[rgba(255,255,255,0.05)]">
+              <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#10B981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  ▸ NEW MARKETING ENTRY
+                </span>
+              </div>
+              
+              <div className="space-y-3">
+                <input 
+                  placeholder="Customer Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                />
+                <input 
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                />
+                
+                <div className="flex space-x-3">
+                  <select 
+                    value={route}
+                    onChange={(e) => setRoute(e.target.value)}
+                    className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${mktgFocusClasses}`}
+                  >
+                    {Object.keys(PRICING).map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <select 
+                    value={mode}
+                    onChange={(e) => setMode(e.target.value)}
+                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${mktgFocusClasses}`}
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Transfer-as-Cash">Transfer-as-Cash</option>
+                  </select>
+                </div>
+
+                {mode === 'Transfer' && (
+                  <select 
+                    value={bank}
+                    onChange={(e) => setBank(e.target.value)}
+                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                  >
+                    {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                )}
+
+                <div className="flex space-x-2">
+                  {[ 
+                    { key: 'bb', label: 'BB', val: bb, set: setBb },
+                    { key: 'mb', label: 'MB', val: mb, set: setMb },
+                    { key: 'sb', label: 'SB', val: sb, set: setSb }
+                  ].map(bag => (
+                    <div key={bag.key} className="flex-1 bg-[var(--color-surface-1)] rounded p-2 flex items-center justify-between border border-[rgba(255,255,255,0.07)]">
+                      <span className="text-[11px] font-bold font-mono text-[var(--color-muted)]">{bag.label}</span>
+                      <input 
+                        type="number"
+                        min="0"
+                        value={bag.val || ''}
+                        onChange={(e) => bag.set(parseInt(e.target.value) || 0)}
+                        className="w-10 h-7 text-center text-sm font-bold bg-transparent border-none p-0 focus:ring-0 text-white"
+                        placeholder="0"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-[10px] font-mono text-[var(--color-light-muted)]">AUTO-CALCULATED</span>
+                  <span className={`text-[18px] font-bold font-mono ${totalAmount > 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-muted)]'}`} style={{ fontFamily: 'JetBrains Mono' }}>
+                    {fmt(totalAmount)}
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleAddEntry}
+                  disabled={!isValid || submitting}
+                  className={`w-full py-3 rounded font-bold font-mono text-[12px] flex items-center justify-center gap-2 transition-all focus:outline-none ${
+                    submitting ? 'opacity-80 cursor-wait bg-[var(--color-success)] text-[var(--color-obsidian)]' :
+                    !isValid ? 'bg-[var(--color-surface-2)] text-[var(--color-muted)] cursor-not-allowed' :
+                    'bg-[var(--color-success)] text-[var(--color-obsidian)] cursor-pointer hover:bg-opacity-90'
+                  }`}
+                >
+                  {submitting && <Loader2 size={16} className="animate-spin" />}
+                  {submitting ? 'ADDING ENTRY...' : 'ADD ENTRY'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Expense Section */}
+          <div className="space-y-4 pt-4 border-t border-[rgba(255,255,255,0.07)] md:border-none md:pt-0">
+            <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#10B981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                ▸ LOG EXPENSE
               </span>
             </div>
 
-            {/* Improvement 4 Submit button states */}
-            <button
-              onClick={handleAddEntry}
-              disabled={!isValid || isLoading}
-              style={
-                isLoading ? { backgroundColor: 'rgba(16, 185, 129, 0.7)', color: '#0B0F19', cursor: 'wait', pointerEvents: 'none' } :
-                isValid ? { backgroundColor: '#10B981', color: '#0B0F19', cursor: 'pointer' } :
-                { backgroundColor: '#1E293B', color: '#64748B', cursor: 'not-allowed' }
-              }
-              className="w-full py-3 rounded font-bold font-mono text-[12px] flex items-center justify-center gap-2"
-            >
-              {isLoading && <Loader2 size={16} className="animate-spin" />}
-              {isLoading ? 'ADDING ENTRY...' : 'ADD ENTRY'}
+            <div className="flex space-x-2">
+              <select 
+                value={expType}
+                onChange={(e) => setExpType(e.target.value)}
+                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+              >
+                {EXPENSE_CATEGORIES.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+              <input 
+                type="number"
+                placeholder="Amount"
+                value={expAmount}
+                onChange={(e) => setExpAmount(e.target.value)}
+                className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+              />
+            </div>
+            <div className="flex space-x-2">
+              <input 
+                placeholder="Description (optional)"
+                value={expDesc}
+                onChange={(e) => setExpDesc(e.target.value)}
+                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+              />
+              <button 
+                onClick={handleAddExpense}
+                disabled={!expAmount}
+                className="h-11 px-4 bg-[var(--color-surface-2)] text-white text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors"
+              >
+                LOG
+              </button>
+            </div>
+
+            <div className="bg-[rgba(255,255,255,0.03)] p-3 rounded mt-4 space-y-2">
+              <div className="flex justify-between items-center text-[10px] font-mono uppercase">
+                <span className="text-[var(--color-muted)]">Expenses Today</span>
+                <span className="text-[var(--color-error)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalExpenses)}</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px] font-bold font-mono uppercase border-t border-[rgba(255,255,255,0.07)] pt-2">
+                <span className="text-[var(--color-light-muted)]">Balance to Remit</span>
+                <span className="text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(balanceToRemit)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Scoreboard & Entries */}
+        <aside className="space-y-6">
+          <div className="space-y-3 sticky top-4">
+            <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#10B981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                ▸ TODAY'S RECORD
+              </span>
+            </div>
+
+            <div className="flex w-full space-x-3">
+              <div className="flex-1 bg-[rgba(16,185,129,0.05)] rounded border border-[rgba(16,185,129,0.2)] p-3 flex flex-col justify-between">
+                <div className="text-[20px] font-bold font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalSales)}</div>
+                <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase mt-1">Total Sales</div>
+              </div>
+              <div className="flex-1 bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.07)] p-3 flex flex-col justify-between">
+                <div className="text-[20px] font-bold font-mono text-[var(--color-foreground)]" style={{ fontFamily: 'JetBrains Mono' }}>{marketingTxs.length}</div>
+                <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase mt-1">Customers</div>
+              </div>
+            </div>
+
+            <div className="bg-[var(--color-surface-1)] p-3 rounded flex justify-between space-x-4">
+              <div className="flex-1 text-center border-r border-[rgba(255,255,255,0.05)]">
+                <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Cash</div>
+                <div className="text-[12px] font-bold font-mono text-[var(--color-success)] mt-1" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(cashSales)}</div>
+              </div>
+              <div className="flex-1 text-center">
+                <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Transfer</div>
+                <div className="text-[12px] font-bold font-mono text-[var(--color-success)] mt-1" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(transferSales)}</div>
+              </div>
+            </div>
+
+            {/* Entries Today */}
+            <div className="pt-4 border-t border-[rgba(255,255,255,0.07)] mt-4">
+              <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#10B981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  ▸ ENTRIES TODAY
+                </span>
+              </div>
+              
+              {marketingTxs.length === 0 ? (
+                <div className="text-[11px] text-[var(--color-muted)] font-mono py-4 text-center border border-dashed border-[rgba(255,255,255,0.1)] rounded">No entries yet</div>
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                  {marketingTxs.map(t => (
+                    <div key={t.id} className="flex justify-between items-center bg-[var(--color-surface-1)] p-3 rounded border border-[rgba(255,255,255,0.05)]">
+                      <div className="flex-1 min-w-0 pr-3">
+                        <div className="text-[12px] font-bold text-white truncate">{t.name}</div>
+                        <div className="text-[10px] font-mono text-[var(--color-muted)]">{t.detail}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-[12px] font-bold font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(t.amount)}</div>
+                        <div className="text-[9px] font-mono text-[var(--color-muted)]">{t.mode} {t.bank ? `· ${t.bank}` : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button className="w-full py-[14px] mt-4 bg-[var(--color-surface-1)] hover:bg-[var(--color-surface-2)] text-[var(--color-success)] text-[12px] font-bold font-mono rounded border border-[rgba(16,185,129,0.2)] transition-colors cursor-pointer">
+              END DAY & SUBMIT
             </button>
           </div>
-        </div>
-      )}
+        </aside>
 
-      {/* Entries Today */}
-      <div className="space-y-3">
-        <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
-          <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#10B981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            ▸ ENTRIES TODAY
-          </span>
-        </div>
-        
-        {marketingTxs.length === 0 ? (
-          <div className="text-[11px] text-[var(--color-muted)] font-mono py-4 text-center border border-dashed border-[rgba(255,255,255,0.1)] rounded">No entries yet</div>
-        ) : (
-          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-            {marketingTxs.map(t => (
-              <div key={t.id} className="flex justify-between items-center bg-[var(--color-surface-1)] p-3 rounded border border-[rgba(255,255,255,0.05)]">
-                <div className="flex-1 min-w-0 pr-3">
-                  <div className="text-[12px] font-bold text-white truncate">{t.name}</div>
-                  <div className="text-[10px] font-mono text-[var(--color-muted)]">{t.detail}</div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="text-[12px] font-bold font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(t.amount)}</div>
-                  <div className="text-[9px] font-mono text-[var(--color-muted)]">{t.mode} {t.bank ? `· ${t.bank}` : ''}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
-
-      {/* Expense Section */}
-      <div className="space-y-4 pt-4 border-t border-[rgba(255,255,255,0.07)] mt-6">
-        <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
-          <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#10B981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            ▸ LOG EXPENSE
-          </span>
-        </div>
-
-        <div className="flex space-x-2">
-          <select 
-            value={expType}
-            onChange={(e) => setExpType(e.target.value)}
-            className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
-          >
-            {EXPENSE_CATEGORIES.map(e => <option key={e} value={e}>{e}</option>)}
-          </select>
-          <input 
-            type="number"
-            placeholder="Amount"
-            value={expAmount}
-            onChange={(e) => setExpAmount(e.target.value)}
-            className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
-          />
-        </div>
-        <div className="flex space-x-2">
-          <input 
-            placeholder="Description (optional)"
-            value={expDesc}
-            onChange={(e) => setExpDesc(e.target.value)}
-            className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
-          />
-          <button 
-            onClick={handleAddExpense}
-            disabled={!expAmount}
-            className="h-11 px-4 bg-[var(--color-surface-2)] text-white text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer"
-          >
-            LOG
-          </button>
-        </div>
-
-        <div className="bg-[rgba(255,255,255,0.03)] p-3 rounded mt-4 space-y-2">
-          <div className="flex justify-between items-center text-[10px] font-mono uppercase">
-            <span className="text-[var(--color-muted)]">Expenses Today</span>
-            <span className="text-[var(--color-error)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalExpenses)}</span>
-          </div>
-          <div className="flex justify-between items-center text-[11px] font-bold font-mono uppercase border-t border-[rgba(255,255,255,0.07)] pt-2">
-            <span className="text-[var(--color-light-muted)]">Balance to Remit</span>
-            <span className="text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(balanceToRemit)}</span>
-          </div>
-        </div>
-      </div>
-
-      <button className="w-full py-[14px] mt-4 bg-[var(--color-surface-1)] hover:bg-[var(--color-surface-2)] text-[var(--color-success)] text-[12px] font-bold font-mono rounded border border-[rgba(16,185,129,0.2)] transition-colors cursor-pointer">
-        END DAY & SUBMIT
-      </button>
-
     </div>
   );
 };

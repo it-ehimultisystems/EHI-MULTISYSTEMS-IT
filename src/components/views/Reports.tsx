@@ -253,7 +253,7 @@ export const Reports = ({
       </div>
 
       {/* Select Report Flow Option Cards */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {(['daily', 'monthly', 'routes', 'agents', 'credit', 'airline'] as const).map((tab) => (
           <button
             key={tab}
@@ -314,7 +314,7 @@ export const Reports = ({
           {/* TAB 1: DAILY */}
           {activeTab === 'daily' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="p-2.5 bg-black rounded text-center">
                   <div className="text-[8px] text-[var(--color-muted)] font-mono uppercase">Cargo</div>
                   <div className="text-[12px] font-bold text-[var(--color-accent-amber)] mt-1">{fmt(dailyLedger.cargoTotal)}</div>
@@ -448,7 +448,7 @@ export const Reports = ({
           {/* TAB 5: CREDIT SALES AGING */}
           {activeTab === 'credit' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-2.5 bg-black rounded text-center border border-[rgba(255,255,255,0.05)]">
                   <div className="text-[8px] text-[var(--color-muted)] font-mono uppercase">Total Credit Extended</div>
                   <div className="text-[12px] font-bold text-white mt-1">{fmt(creditSalesData.totalCredit)}</div>

@@ -14,7 +14,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
   const [mode, setMode] = useState<PaymentMode>('POS');
 
   const [successTx, setSuccessTx] = useState<{ tx: Transaction, kgs: number, exc: number } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const kgVal = parseFloat(kg) || 0;
   const rateVal = parseFloat(rate) || 0;
@@ -24,9 +24,9 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
   const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0;
 
   const handleSubmit = () => {
-    if (!isValid || isLoading) return;
+    if (!isValid || submitting) return;
 
-    setIsLoading(true);
+    setSubmitting(true);
 
     const tx: Transaction = {
       id: uid('VJ'),
@@ -39,11 +39,10 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
       status: 'Delivered'
     };
 
-    setTimeout(() => {
-      onAddTx(tx);
-      setSuccessTx({ tx, kgs: kgVal, exc: excessKg });
-      setIsLoading(false);
-    }, 800);
+    setSuccessTx({ tx, kgs: kgVal, exc: excessKg });
+    setSubmitting(false);
+
+    onAddTx(tx);
   };
 
   const handleReset = () => {
@@ -61,7 +60,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
   if (successTx) {
     const s = successTx;
     return (
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 max-w-md mx-auto">
         <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
           <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#3B82F6', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             ▸ BAGGAGE RECEIPT
@@ -131,111 +130,119 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
   }
 
   return (
-    <div className="p-4 space-y-4 pb-12">
-      <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+    <div className="p-4 pb-12 h-full">
+      <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-4">
         <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#3B82F6', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           ▸ VALUEJET EXCESS BAGGAGE POS
         </span>
       </div>
-      
-      <div className="space-y-3">
-        <input 
-          placeholder="Passenger Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
-        />
-        
-        <div className="flex space-x-3">
-          <input 
-            placeholder="Flight Number"
-            value={flight}
-            onChange={(e) => setFlight(e.target.value)}
-            className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
-          />
-          <input 
-            placeholder="Destination"
-            value={dest}
-            onChange={(e) => setDest(e.target.value)}
-            className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
-          />
-        </div>
 
-        <div className="flex space-x-3">
+      <div className="grid gap-6 md:grid-cols-[1fr_280px]">
+        {/* Left Column */}
+        <div className="space-y-4">
           <input 
-            type="number"
-            step="0.1"
-            placeholder="Total Weight KG"
-            value={kg}
-            onChange={(e) => setKg(e.target.value)}
-            className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
+            placeholder="Passenger Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
           />
-          <div className="flex-1 relative min-w-0">
-            <div className="absolute left-3 top-0 bottom-0 flex items-center text-[10px] font-mono text-[var(--color-muted)]">₦</div>
+          
+          <div className="flex space-x-3">
+            <input 
+              placeholder="Flight Number"
+              value={flight}
+              onChange={(e) => setFlight(e.target.value)}
+              className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
+            />
+            <input 
+              placeholder="Destination (Optional)"
+              value={dest}
+              onChange={(e) => setDest(e.target.value)}
+              className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
+            />
+          </div>
+
+          <div className="flex space-x-3">
             <input 
               type="number"
-              placeholder="Rate per KG"
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              className={`w-full h-11 pl-6 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
+              step="0.1"
+              placeholder="Total Weight KG"
+              value={kg}
+              onChange={(e) => setKg(e.target.value)}
+              className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
             />
-            <div className="absolute right-3 top-0 bottom-0 flex items-center text-[10px] font-mono text-[var(--color-muted)]">/kg</div>
-          </div>
-        </div>
-        
-        <select 
-          value={mode}
-          onChange={(e) => setMode(e.target.value as PaymentMode)}
-          className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
-        >
-          <option value="Cash">Cash</option>
-          <option value="POS">POS</option>
-          <option value="Transfer">Transfer</option>
-        </select>
-      </div>
-
-      {kgVal > 0 && (
-        <div className={`rounded p-4 transition-colors duration-300 ${excessKg > 0 ? 'bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.2)]' : 'bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.2)]'}`}>
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-[10px] font-mono text-[var(--color-muted)]">Total Weight</span>
-            <span className="text-[11px] font-mono text-white" style={{ fontFamily: 'JetBrains Mono' }}>{kgVal.toFixed(1)} kg</span>
-          </div>
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-[10px] font-mono text-[var(--color-muted)]">Free Allowance</span>
-            <span className="text-[11px] font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>– 20.0 kg</span>
-          </div>
-          <div className="flex justify-between items-center border-t border-[rgba(255,255,255,0.07)] mt-2 pt-2 mb-3">
-            <span className="text-[10px] font-mono font-bold text-white">Excess KG</span>
-            <span className={`text-[12px] font-bold font-mono ${excessKg > 0 ? 'text-[var(--color-accent-cobalt)]' : 'text-white'}`} style={{ fontFamily: 'JetBrains Mono' }}>{excessKg.toFixed(1)} kg</span>
+            <div className="flex-1 relative min-w-0">
+              <div className="absolute left-3 top-0 bottom-0 flex items-center text-[10px] font-mono text-[var(--color-muted)]">₦</div>
+              <input 
+                type="number"
+                placeholder="Rate per KG"
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                className={`w-full h-11 pl-6 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
+              />
+              <div className="absolute right-3 top-0 bottom-0 flex items-center text-[10px] font-mono text-[var(--color-muted)]">/kg</div>
+            </div>
           </div>
           
-          {excessKg > 0 ? (
-            <>
-              <div className="text-[28px] font-bold font-mono text-[var(--color-accent-cobalt)] leading-none mt-1" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalAmount)}</div>
-              <div className="text-[10px] font-mono text-[var(--color-light-muted)] mt-2">{excessKg.toFixed(1)} kg × ₦{rateVal}/kg</div>
-            </>
-          ) : (
-            <div className="text-[14px] font-bold font-mono text-[var(--color-success)] mt-2">₦0 — Within Limit ✓</div>
-          )}
+          <select 
+            value={mode}
+            onChange={(e) => setMode(e.target.value as PaymentMode)}
+            className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
+          >
+            <option value="Cash">Cash</option>
+            <option value="POS">POS</option>
+            <option value="Transfer">Transfer</option>
+          </select>
+          
+          {/* Submit button states */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!isValid || submitting}
+              style={
+                submitting ? { backgroundColor: 'rgba(59, 130, 246, 0.7)', color: '#FFFFFF', cursor: 'wait', pointerEvents: 'none' } :
+                isValid ? { backgroundColor: '#3B82F6', color: '#FFFFFF', cursor: 'pointer' } :
+                { backgroundColor: '#1E293B', color: '#64748B', cursor: 'not-allowed' }
+              }
+              className="w-full py-[14px] rounded font-bold font-mono text-[13px] flex items-center justify-center gap-2 transition-colors"
+            >
+              {submitting && <Loader2 size={16} className="animate-spin" />}
+              {submitting ? 'COMMITTING...' : 'COMMIT TRANSACTION'}
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* Improvement 4 Submit button states */}
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={!isValid || isLoading}
-        style={
-          isLoading ? { backgroundColor: 'rgba(59, 130, 246, 0.7)', color: '#FFFFFF', cursor: 'wait', pointerEvents: 'none' } :
-          isValid ? { backgroundColor: '#3B82F6', color: '#FFFFFF', cursor: 'pointer' } :
-          { backgroundColor: '#1E293B', color: '#64748B', cursor: 'not-allowed' }
-        }
-        className="w-full py-[14px] rounded font-bold font-mono text-[13px] flex items-center justify-center gap-2"
-      >
-        {isLoading && <Loader2 size={16} className="animate-spin" />}
-        {isLoading ? 'COMMITTING TRANSACTION...' : 'COMMIT TRANSACTION'}
-      </button>
+        {/* Right Column / Sticky Summary */}
+        <aside className="space-y-4">
+          <div className="sticky top-4">
+            <div className={`rounded p-4 transition-colors duration-300 ${excessKg > 0 ? 'bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.2)]' : 'bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.2)]'}`}>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] font-mono text-[var(--color-muted)]">Total Weight</span>
+                <span className="text-[12px] font-mono text-white" style={{ fontFamily: 'JetBrains Mono' }}>{kgVal.toFixed(1)} kg</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] font-mono text-[var(--color-muted)]">Free Allowance</span>
+                <span className="text-[12px] font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>– 20.0 kg</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-[rgba(255,255,255,0.07)] mt-3 pt-3 mb-4">
+                <span className="text-[10px] font-mono font-bold text-[var(--color-light-muted)]">Excess KG</span>
+                <span className={`text-[12px] font-bold font-mono ${excessKg > 0 ? 'text-[var(--color-accent-cobalt)]' : 'text-white'}`} style={{ fontFamily: 'JetBrains Mono' }}>{excessKg.toFixed(1)} kg</span>
+              </div>
+              
+              {excessKg > 0 ? (
+                <>
+                  <div className="text-[28px] font-bold font-mono text-[var(--color-accent-cobalt)] leading-none mt-2" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalAmount)}</div>
+                  <div className="text-[11px] font-mono text-[var(--color-light-muted)] mt-2">{excessKg.toFixed(1)} kg × ₦{rateVal}/kg</div>
+                </>
+              ) : (
+                <div className="text-[14px] font-bold font-mono text-[var(--color-success)] mt-4 mb-2">₦0 — Within Limit ✓</div>
+              )}
+            </div>
+          </div>
+        </aside>
 
+      </div>
     </div>
   );
 };

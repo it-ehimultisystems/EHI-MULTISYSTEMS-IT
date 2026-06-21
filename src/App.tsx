@@ -168,6 +168,9 @@ const AuthenticatedApp = () => {
     getSession().then((profile) => {
       if (profile) setUser(profile);
       setAuthLoading(false);
+    }).catch((err) => {
+      console.warn('getSession catch:', err);
+      setAuthLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(

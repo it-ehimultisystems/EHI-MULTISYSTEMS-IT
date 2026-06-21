@@ -147,7 +147,7 @@ export const Settings = ({
           <span className="text-[8px] font-mono text-[var(--color-muted)] bg-black/40 px-1.5 py-0.5 rounded uppercase">BB/MB/SB ONLY</span>
         </div>
 
-        <div className="space-y-3">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           {pricing.map((r: any) => (
             <div key={r.id} className="p-3 bg-black/30 rounded border border-[rgba(255,255,255,0.04)] space-y-2">
               <span className="text-[11px] font-bold text-white uppercase tracking-wide block">{r.route}</span>
@@ -186,8 +186,10 @@ export const Settings = ({
         </div>
       </div>
 
-      {/* regional station hubs management */}
-      <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
+      {/* regional and aviation grid container */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* regional station hubs management */}
+        <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
         <div className="text-[9px] font-mono text-white tracking-widest uppercase flex items-center space-x-1.5">
           <MapPin size={11} className="text-purple-400" />
           <span>MULTI-HUB OUTPOSTS</span>
@@ -213,10 +215,9 @@ export const Settings = ({
             </div>
           ))}
         </div>
-      </div>
-
-      {/* aviation air cargo carriers configuration list */}
-      <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
+        
+        {/* aviation air cargo carriers configuration list */}
+        <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
         <div className="text-[9px] font-mono text-white tracking-widest uppercase flex items-center space-x-1.5">
           <Plane size={11} className="text-[var(--color-accent-cobalt)]" />
           <span>AVIATION AIRLINE SUPPORTS</span>
@@ -243,7 +244,8 @@ export const Settings = ({
           ))}
         </div>
       </div>
-
+      </div>
+      </div>
     </div>
   );
 };

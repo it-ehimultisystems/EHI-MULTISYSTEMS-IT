@@ -79,29 +79,32 @@ export const Scanner = ({
 
   // Start camera scanner
   const startScanner = useCallback(() => {
-    if (scannerRef.current) return;
-
-    const scanner = new Html5QrcodeScanner(
-      'qr-reader-div',
-      {
-        fps: 15,
-        qrbox: { width: 220, height: 220 },
-        aspectRatio: 1.0,
-        showTorchButtonIfSupported: true,
-        showZoomSliderIfSupported: false,
-        defaultZoomValueIfSupported: 2,
-      },
-      false
-    );
-
-    scanner.render(
-      (decodedText) => processCode(decodedText),
-      () => { /* ignore scan failures — camera looking */ }
-    );
-
-    scannerRef.current = scanner;
     setIsScanning(true);
-  }, [processCode]);
+  }, []);
+
+  useEffect(() => {
+    if (isScanning && !scannerRef.current) {
+      const scanner = new Html5QrcodeScanner(
+        'qr-reader-div',
+        {
+          fps: 15,
+          qrbox: { width: 220, height: 220 },
+          aspectRatio: 1.0,
+          showTorchButtonIfSupported: true,
+          showZoomSliderIfSupported: false,
+          defaultZoomValueIfSupported: 2,
+        },
+        false
+      );
+
+      scanner.render(
+        (decodedText) => processCode(decodedText),
+        () => { /* ignore scan failures — camera looking */ }
+      );
+
+      scannerRef.current = scanner;
+    }
+  }, [isScanning, processCode]);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {

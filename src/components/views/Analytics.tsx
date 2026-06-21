@@ -260,7 +260,7 @@ export const Analytics = ({
       </div>
 
       {/* Revenue Stream KPI Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* KPI 1 : Cargo Revenue */}
         <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
           <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-accent-amber)]" />
@@ -352,7 +352,7 @@ export const Analytics = ({
       </div>
 
       {/* Route Performance & Payment Breakdown */}
-      <div className="space-y-4">
+      <div className="grid md:grid-cols-2 gap-4">
         {/* Horizontal Top Routes Table */}
         <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
           <div className="text-[9px] font-mono text-white uppercase tracking-wider flex items-center space-x-2">
@@ -427,8 +427,10 @@ export const Analytics = ({
         </div>
       </div>
 
-      {/* Cargo Intelligence Deep Dive */}
-      <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
+      {/* Intelligence & Matrix */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Cargo Intelligence Deep Dive */}
+        <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3 h-full">
         <div className="text-[9px] font-mono text-[var(--color-accent-amber)] uppercase tracking-wider flex items-center space-x-1.5 font-bold">
           <Package size={11} />
           <span>CARGO DESK REVENUE INTELLIGENCE</span>
@@ -480,7 +482,7 @@ export const Analytics = ({
       </div>
 
       {/* Field Marketing intelligence deep dive */}
-      <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
+      <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3 h-full">
         <div className="text-[9px] font-mono text-[var(--color-success)] uppercase tracking-wider flex items-center space-x-1.5 font-bold">
           <TrendingUp size={11} />
           <span>FIELD MARKETING AGENT RECORD</span>
@@ -516,8 +518,11 @@ export const Analytics = ({
         </div>
       </div>
 
-      {/* Multi-Hub Performance Matrix Section */}
-      <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Multi-Hub Performance Matrix Section */}
+        <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3 h-full">
         <div className="text-[9px] font-mono text-white uppercase tracking-wider flex items-center space-x-1.5 font-bold">
           <MapPin size={11} className="text-purple-400" />
           <span>MULTI-HUB LOGISTICS DISTRIBUTION</span>
@@ -547,7 +552,7 @@ export const Analytics = ({
       </div>
 
       {/* AI Insights panel Powered by Gemini */}
-      <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] overflow-hidden">
+      <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] overflow-hidden h-full flex flex-col">
         {/* Header bar */}
         <div className="bg-[rgba(16,185,129,0.08)] border-b border-[rgba(255,255,255,0.05)] p-3 flex justify-between items-center">
           <div className="flex items-center space-x-1.5">
@@ -617,6 +622,7 @@ export const Analytics = ({
         </div>
       </div>
 
+      </div>
     </div>
   );
 };
