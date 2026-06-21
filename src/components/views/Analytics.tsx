@@ -51,31 +51,64 @@ export const Analytics = ({
 
   // List of active hubs for Multi-Hub
   const activeHubs = useMemo(() => [
-    { id: 'all', name: 'All Hubs', state: 'NG', region: 'All' },
-    { id: 'hub-lagos', name: 'Lagos HQ', state: 'LOS', region: 'South West' },
-    { id: 'hub-murtala', name: 'Murtala Station', state: 'LOS', region: 'South West' },
-    { id: 'hub-abuja', name: 'Abuja Station', state: 'FCT', region: 'North Central' },
-    { id: 'hub-ph', name: 'PHC Station', state: 'RIV', region: 'South South' }
+    { id: 'all',    name: 'All Hubs',              code: 'ALL', region: 'Nigeria' },
+    { id: 'los',    name: 'Lagos Air Cargo',        code: 'LOS', region: 'South West' },
+    { id: 'abv',    name: 'Abuja Air Cargo',        code: 'ABV', region: 'North Central' },
+    { id: 'phc',    name: 'Port Harcourt',          code: 'PHC', region: 'South South' },
+    { id: 'kan',    name: 'Kano Station',           code: 'KAN', region: 'North West' },
+    { id: 'enu',    name: 'Enugu Station',          code: 'ENU', region: 'South East' },
+    { id: 'bni',    name: 'Benin City',             code: 'BNI', region: 'South South' },
+    { id: 'qrw',    name: 'Warri Station',          code: 'QRW', region: 'South South' },
+    { id: 'abb',    name: 'Asaba Station',          code: 'ABB', region: 'South South' },
+    { id: 'qow',    name: 'Owerri Station',         code: 'QOW', region: 'South East' },
+    { id: 'kad',    name: 'Kaduna Station',         code: 'KAD', region: 'North West' },
+    { id: 'jos',    name: 'Jos Station',            code: 'JOS', region: 'North Central' },
+    { id: 'oni',    name: 'Onitsha Hub',            code: 'ONI', region: 'South East' },
+    { id: 'mkd',    name: 'Makurdi Station',        code: 'MKD', region: 'North Central' },
+    { id: 'iba',    name: 'Ibadan Station',         code: 'IBA', region: 'South West' },
   ], []);
 
   // Filtered transactions based on selected Hub
   const hubFilteredTxs = useMemo(() => {
     if (selectedHub === 'all') return transactions;
-    // Map hub string
+    // Filter by transaction type based on which stream the hub supports
+    // Since hub data comes from user.hub in real mode,
+    // in demo mode show all transactions for 'all', stream-specific for others
     const hubObj = activeHubs.find(h => h.id === selectedHub);
     if (!hubObj) return transactions;
-    return transactions.filter(t => t.id.startsWith('CG') || Math.random() > 0.3); // simulation filter helper
+    // In demo: each hub shows a consistent subset by hash of tx.id
+    return transactions.filter(t => {
+      const charCode = t.id.charCodeAt(t.id.length - 1);
+      const hubIndex = activeHubs.findIndex(h => h.id === selectedHub);
+      return charCode % activeHubs.length === hubIndex % activeHubs.length;
+    });
   }, [transactions, selectedHub, activeHubs]);
 
   // Grouped Period Filtered Transactions
   const periodFilteredTxs = useMemo(() => {
-    // In real app, date filters are matched. Here we represent relative scopes:
-    if (period === 'today') {
-      return hubFilteredTxs; // Use active real-time dataset
-    } else if (period === 'week') {
-      return hubFilteredTxs; // Showcase with wider datasets
-    }
-    return hubFilteredTxs;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const monthAgo = new Date(today);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    const quarterAgo = new Date(today);
+    quarterAgo.setMonth(quarterAgo.getMonth() - 3);
+
+    return hubFilteredTxs.filter(t => {
+      // Try to parse time — transactions use tnow() which is HH:MM
+      // In demo mode all tx are from today, so 'today' shows all
+      // For week/month/quarter in demo we show a percentage of data
+      if (period === 'today') return true;
+
+      // Use the transaction index as a stable proxy for age
+      const idx = hubFilteredTxs.indexOf(t);
+      const total = hubFilteredTxs.length;
+      if (period === 'week')    return idx < Math.ceil(total * 0.7);
+      if (period === 'month')   return idx < Math.ceil(total * 0.85);
+      if (period === 'quarter') return true;
+      return true;
+    });
   }, [hubFilteredTxs, period]);
 
   // Calculations for current period (Today state is live)
@@ -139,42 +172,49 @@ export const Analytics = ({
   }, [periodFilteredTxs]);
 
   // Aggregate stats across simulated last 7 days for AreaChart
-  const trendData = useMemo(() => {
-    // Return last 7 dates starting from June 14 to today (June 20)
-    return [
-      { date: '14/06', Cargo: stats.cargoRev * 0.85 + 230000, Marketing: stats.mktgRev * 0.9 + 120000, ValueJet: stats.vjRev * 0.7 + 85000 },
-      { date: '15/06', Cargo: stats.cargoRev * 0.95 + 180000, Marketing: stats.mktgRev * 0.8 + 150000, ValueJet: stats.vjRev * 0.9 + 110000 },
-      { date: '16/06', Cargo: stats.cargoRev * 0.70 + 310000, Marketing: stats.mktgRev * 1.1 + 110000, ValueJet: stats.vjRev * 0.85 + 95000 },
-      { date: '17/06', Cargo: stats.cargoRev * 1.15 + 150000, Marketing: stats.mktgRev * 0.95 + 130000, ValueJet: stats.vjRev * 1.05 + 120000 },
-      { date: '18/06', Cargo: stats.cargoRev * 1.05 + 240000, Marketing: stats.mktgRev * 1.05 + 175000, ValueJet: stats.vjRev * 1.0 + 105000 },
-      { date: '19/06', Cargo: stats.cargoRev * 1.20 + 195000, Marketing: stats.mktgRev * 1.2 + 140000, ValueJet: stats.vjRev * 1.15 + 140000 },
-      { date: '20/06', Cargo: stats.cargoRev, Marketing: stats.mktgRev, ValueJet: stats.vjRev },
-    ];
-  }, [stats]);
+  const revenueChartData = useMemo(() => {
+    const hours = Array.from({ length: 12 }, (_, i) => {
+      const h = 7 + i; // 7am to 7pm
+      const label = h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
+      const txInHour = periodFilteredTxs.filter((_, idx) =>
+        idx % 12 === i
+      );
+      return {
+        time: label,
+        cargo: txInHour.filter(t => t.type === 'cargo').reduce((s, t) => s + t.amount, 0),
+        marketing: txInHour.filter(t => t.type === 'marketing').reduce((s, t) => s + t.amount, 0),
+        valuejet: txInHour.filter(t => t.type === 'baggage').reduce((s, t) => s + t.amount, 0),
+      };
+    });
+    return hours;
+  }, [periodFilteredTxs]);
 
   // Top Routes data
-  const topRoutesData = useMemo(() => {
-    return [
-      { name: 'LOS - ABV', value: stats.cargoRev * 0.45 + stats.mktgRev * 0.35 },
-      { name: 'LOS - PHC', value: stats.cargoRev * 0.25 + stats.mktgRev * 0.2 },
-      { name: 'ABV - LOS', value: stats.cargoRev * 0.15 + stats.mktgRev * 0.15 },
-      { name: 'PHC - LOS', value: stats.cargoRev * 0.1 + stats.mktgRev * 0.1 },
-      { name: 'LOS - KAN', value: stats.cargoRev * 0.05 + 45000 },
-      { name: 'LOS - ENU', value: stats.mktgRev * 0.12 + 35000 },
-      { name: 'ABV - PHC', value: stats.vjRev * 0.6 + 25000 },
-      { name: 'PHC - ABV', value: stats.vjRev * 0.4 + 15000 },
-    ].sort((a, b) => b.value - a.value);
-  }, [stats]);
+  const routeChartData = useMemo(() => {
+    const routeMap: Record<string, number> = {};
+    periodFilteredTxs.forEach(t => {
+      const route = t.route || t.detail?.split('·')[0]?.trim() || 'Unknown';
+      routeMap[route] = (routeMap[route] || 0) + t.amount;
+    });
+    return Object.entries(routeMap)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 8)
+      .map(([name, value]) => ({ name, value }));
+  }, [periodFilteredTxs]);
 
   // Pie chart data for payment break
-  const paymentBreakdownData = useMemo(() => {
-    const totalCollected = stats.cash + stats.transfer + stats.debt;
+  const paymentChartData = useMemo(() => {
+    const cash = periodFilteredTxs.filter(t => t.mode === 'Cash').reduce((s, t) => s + t.amount, 0);
+    const transfer = periodFilteredTxs.filter(t => t.mode === 'Transfer').reduce((s, t) => s + t.amount, 0);
+    const pos = periodFilteredTxs.filter(t => t.mode === 'POS').reduce((s, t) => s + t.amount, 0);
+    const debt = periodFilteredTxs.filter(t => t.mode === 'Debt').reduce((s, t) => s + t.amount, 0);
     return [
-      { name: 'Cash', value: stats.cash, color: 'var(--color-success)', pct: totalCollected > 0 ? Math.round((stats.cash / totalCollected) * 100) : 0 },
-      { name: 'Transfer', value: stats.transfer, color: 'var(--color-accent-cobalt)', pct: totalCollected > 0 ? Math.round((stats.transfer / totalCollected) * 100) : 0 },
-      { name: 'Debt', value: stats.debt, color: 'var(--color-error)', pct: totalCollected > 0 ? Math.round((stats.debt / totalCollected) * 100) : 0 },
-    ];
-  }, [stats]);
+      { name: 'Cash',     value: cash,     color: '#10B981' },
+      { name: 'Transfer', value: transfer,  color: '#3B82F6' },
+      { name: 'POS',      value: pos,       color: '#F59E0B' },
+      { name: 'Debt',     value: debt,      color: '#EF4444' },
+    ].filter(d => d.value > 0);
+  }, [periodFilteredTxs]);
 
   // Top consignees list
   const topConsignees = useMemo(() => {
@@ -317,8 +357,8 @@ export const Analytics = ({
         </div>
         <div className="h-[200px] w-full text-[9px] font-mono">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-              <XAxis dataKey="date" stroke="#64748B" strokeWidth={0.5} tickLine={false} />
+            <AreaChart data={revenueChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+              <XAxis dataKey="time" stroke="#64748B" strokeWidth={0.5} tickLine={false} />
               <YAxis 
                 stroke="#64748B" 
                 strokeWidth={0.5} 
@@ -329,9 +369,9 @@ export const Analytics = ({
                 contentStyle={{ backgroundColor: '#1E293B', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px' }}
                 formatter={(value: any) => [fmt(Number(value)), '']}
               />
-              <Area type="monotone" dataKey="Cargo" stroke="var(--color-accent-amber)" fill="rgba(245,158,11,0.05)" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="Marketing" stroke="var(--color-success)" fill="rgba(16,185,129,0.05)" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="ValueJet" stroke="var(--color-accent-cobalt)" fill="rgba(59,130,246,0.05)" strokeWidth={1.5} />
+              <Area type="monotone" dataKey="cargo" stroke="var(--color-accent-amber)" fill="rgba(245,158,11,0.05)" strokeWidth={1.5} />
+              <Area type="monotone" dataKey="marketing" stroke="var(--color-success)" fill="rgba(16,185,129,0.05)" strokeWidth={1.5} />
+              <Area type="monotone" dataKey="valuejet" stroke="var(--color-accent-cobalt)" fill="rgba(59,130,246,0.05)" strokeWidth={1.5} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -360,8 +400,8 @@ export const Analytics = ({
             <span>RANKED ROUTES BY REVENUE VOLUME</span>
           </div>
           <div className="space-y-2.5">
-            {topRoutesData.slice(0, 5).map((r, i) => {
-              const maxVal = topRoutesData[0].value || 1;
+            {routeChartData.slice(0, 5).map((r, i) => {
+              const maxVal = routeChartData[0]?.value || 1;
               const ratio = Math.max(8, Math.min(100, (r.value / maxVal) * 100));
               return (
                 <div key={i} className="space-y-1">
@@ -387,17 +427,20 @@ export const Analytics = ({
           <div className="flex items-center justify-between">
             {/* Legend Left */}
             <div className="space-y-3 w-[150px]">
-              {paymentBreakdownData.map((p, i) => (
+              {paymentChartData.map((p, i) => {
+                const total = paymentChartData.reduce((s, it) => s + it.value, 0);
+                const pct = total > 0 ? Math.round((p.value / total) * 100) : 0;
+                return (
                 <div key={i} className="flex flex-col">
                   <div className="flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />
                     <span className="text-[11px] font-mono font-bold text-white">{p.name}</span>
                   </div>
                   <span className="text-[10px] font-mono text-[var(--color-muted)] pl-3">
-                    {fmt(p.value)} ({p.pct}%)
+                    {fmt(p.value)} ({pct}%)
                   </span>
                 </div>
-              ))}
+              )})}
             </div>
 
             {/* Micro Pie representation layout */}
@@ -405,7 +448,7 @@ export const Analytics = ({
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={paymentBreakdownData}
+                    data={paymentChartData}
                     cx="50%"
                     cy="50%"
                     innerRadius={28}
@@ -413,7 +456,7 @@ export const Analytics = ({
                     paddingAngle={3}
                     dataKey="value"
                   >
-                    {paymentBreakdownData.map((entry, index) => (
+                    {paymentChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>

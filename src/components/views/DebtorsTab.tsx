@@ -16,11 +16,18 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
 
   const [statementPrint, setStatementPrint] = useState<Transaction | null>(null);
 
+  // Deterministic age from tx ID — stable across renders
+  const stableAge = (id: string): number => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash += id.charCodeAt(i);
+    return hash % 120;
+  };
+
   // Extract fake created_at from time, and determine clientType. 
   // Normally this would use actual typed DebtRecords from backend.
   const debts = transactions.filter(t => t.mode === 'Debt' || t.mode?.includes('Debt')).map(t => {
     // Fake aging purely for simulation UI
-    const randAge = Math.floor(Math.random() * 120);
+    const randAge = stableAge(t.id);
     let bucket: 'current' | 'overdue' | 'critical' | 'writeoff-risk' = 'current';
     if (randAge > 90) bucket = 'writeoff-risk';
     else if (randAge > 60) bucket = 'critical';
