@@ -36,6 +36,12 @@ export async function signIn(email: string, password: string): Promise<UserProfi
     } else if (email.includes('air')) {
       return { id: '5', email, name: 'Air Cargo Officer', role: 'cargo_agent', hub: 'Murtala Air Cargo Station', hubType: 'Cargo Station', active: true };
     }
+    
+    // In mock mode or when offline, prevent "Failed to fetch"
+    if (error?.message === 'Failed to fetch' || error instanceof TypeError) {
+      throw new Error('Invalid credentials. Please use one of the demo credentials below.');
+    }
+    
     throw error;
   }
 
