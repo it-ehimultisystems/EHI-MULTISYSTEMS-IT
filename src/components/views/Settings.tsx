@@ -9,8 +9,10 @@ import {
   Plane, 
   Check, 
   ArrowLeft,
-  DollarSign
+  DollarSign,
+  Eye, EyeOff, Wifi, WifiOff, Phone, Mail, Building2, Key
 } from 'lucide-react';
+import { reinitSupabase, getConnectionMode, testSupabaseConnection } from '../../lib/supabase';
 
 export const Settings = ({ 
   user, 
@@ -19,6 +21,94 @@ export const Settings = ({
   user: User; 
   onBack: () => void;
 }) => {
+  // Connection & API panel state
+  const [configTab, setConfigTab] = useState<
+    'CONNECTION' | 'PAYMENTS' | 'NOTIFICATIONS' | 'COMPANY'
+  >('CONNECTION');
+
+  // Connection tab
+  const [supabaseUrl, setSupabaseUrl] = useState(
+    () => localStorage.getItem('ehi_supabase_url') || ''
+  );
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState(
+    () => localStorage.getItem('ehi_supabase_anon_key') || ''
+  );
+  const [showAnonKey, setShowAnonKey] = useState(false);
+  const [testingConn, setTestingConn] = useState(false);
+  const [connResult, setConnResult] = useState<
+    null | { ok: boolean; error?: string }
+  >(null);
+
+  // Payments tab
+  const [paystackPublicKey, setPaystackPublicKey] = useState(
+    () => localStorage.getItem('ehi_paystack_public_key') || ''
+  );
+
+  // Notifications tab
+  const [adminPhone, setAdminPhone] = useState(
+    () => localStorage.getItem('ehi_admin_phone') || ''
+  );
+  const [adminEmail, setAdminEmail] = useState(
+    () => localStorage.getItem('ehi_admin_email') || ''
+  );
+
+  // Company tab
+  const [companyName, setCompanyName] = useState(
+    () => localStorage.getItem('ehi_company_name') ||
+         'EHI Multisystems Nigeria Limited'
+  );
+  const [companyPhone, setCompanyPhone] = useState(
+    () => localStorage.getItem('ehi_company_phone') || ''
+  );
+  const [companyAddress, setCompanyAddress] = useState(
+    () => localStorage.getItem('ehi_company_address') || ''
+  );
+  const [vjFreeKg, setVjFreeKg] = useState(
+    () => localStorage.getItem('ehi_vj_free_kg') || '20'
+  );
+  const [vjRatePerKg, setVjRatePerKg] = useState(
+    () => localStorage.getItem('ehi_vj_rate_per_kg') || '1000'
+  );
+
+  const connectionMode = getConnectionMode();
+
+  const handleSaveConnection = async () => {
+    localStorage.setItem('ehi_supabase_url', supabaseUrl.trim());
+    localStorage.setItem('ehi_supabase_anon_key', supabaseAnonKey.trim());
+    reinitSupabase();
+    setTestingConn(true);
+    setConnResult(null);
+    const result = await testSupabaseConnection();
+    setTestingConn(false);
+    setConnResult(result);
+  };
+
+  const handleClearConnection = () => {
+    localStorage.removeItem('ehi_supabase_url');
+    localStorage.removeItem('ehi_supabase_anon_key');
+    setSupabaseUrl('');
+    setSupabaseAnonKey('');
+    reinitSupabase();
+    setConnResult(null);
+  };
+
+  const handleSavePayments = () => {
+    localStorage.setItem('ehi_paystack_public_key', paystackPublicKey.trim());
+  };
+
+  const handleSaveNotifications = () => {
+    localStorage.setItem('ehi_admin_phone', adminPhone.trim());
+    localStorage.setItem('ehi_admin_email', adminEmail.trim());
+  };
+
+  const handleSaveCompany = () => {
+    localStorage.setItem('ehi_company_name', companyName.trim());
+    localStorage.setItem('ehi_company_phone', companyPhone.trim());
+    localStorage.setItem('ehi_company_address', companyAddress.trim());
+    localStorage.setItem('ehi_vj_free_kg', vjFreeKg);
+    localStorage.setItem('ehi_vj_rate_per_kg', vjRatePerKg);
+  };
+
   // Option Toggles (persisted locally)
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(() => {
     return localStorage.getItem('ehi_setting_notify_whatsapp') !== 'false';
@@ -103,6 +193,269 @@ export const Settings = ({
         </button>
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● SYSTEM ADMIN CONSOLE</span>
       </div>
+
+      {user.role === 'super_admin' && (
+        <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] overflow-hidden">
+          {/* Section header */}
+          <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.05)] flex items-center gap-2">
+            <Key size={13} className="text-[var(--color-accent-amber)]" />
+            <span className="text-[9px] font-mono text-[var(--color-accent-amber)] tracking-widest uppercase font-bold">
+              CONNECTION & API CONFIGURATION
+            </span>
+          </div>
+
+          {/* Sub-tabs */}
+          <div className="flex border-b border-[rgba(255,255,255,0.05)]">
+            {(['CONNECTION','PAYMENTS','NOTIFICATIONS','COMPANY'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setConfigTab(tab)}
+                className="flex-1 py-2.5 text-[9px] font-mono tracking-wider cursor-pointer border-none bg-transparent transition-colors"
+                style={{
+                  color: configTab === tab
+                    ? 'var(--color-accent-amber)'
+                    : 'var(--color-muted)',
+                  borderBottom: configTab === tab
+                    ? '2px solid var(--color-accent-amber)'
+                    : '2px solid transparent',
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-4 space-y-3">
+            {/* CONNECTION TAB */}
+            {configTab === 'CONNECTION' && (
+              <div className="space-y-3">
+                {/* Status indicator */}
+                <div className={`flex items-center gap-2 px-3 py-2 rounded text-[10px] font-mono ${
+                  connectionMode === 'live'
+                    ? 'bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.2)] text-[var(--color-success)]'
+                    : 'bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]'
+                }`}>
+                  {connectionMode === 'live'
+                    ? <><Wifi size={12} /> ● CONNECTED TO SUPABASE</>
+                    : <><WifiOff size={12} /> ◎ DEMO MODE — Data not persisted</>
+                  }
+                </div>
+
+                {/* URL input */}
+                <div>
+                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                    Supabase Project URL
+                  </label>
+                  <input
+                    type="text"
+                    value={supabaseUrl}
+                    onChange={e => setSupabaseUrl(e.target.value)}
+                    placeholder="https://your-project.supabase.co"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+
+                {/* Anon key input with show/hide */}
+                <div>
+                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                    Supabase Anon Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showAnonKey ? 'text' : 'password'}
+                      value={supabaseAnonKey}
+                      onChange={e => setSupabaseAnonKey(e.target.value)}
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      className="w-full h-10 px-3 pr-10 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    />
+                    <button
+                      onClick={() => setShowAnonKey(!showAnonKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] cursor-pointer bg-transparent border-none"
+                    >
+                      {showAnonKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Connection test result */}
+                {connResult && (
+                  <div className={`px-3 py-2 rounded text-[10px] font-mono ${
+                    connResult.ok
+                      ? 'bg-[rgba(16,185,129,0.1)] text-[var(--color-success)]'
+                      : 'bg-[rgba(239,68,68,0.1)] text-[var(--color-error)]'
+                  }`}>
+                    {connResult.ok
+                      ? '✓ Connected successfully'
+                      : `✗ ${connResult.error || 'Connection failed'}`}
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <button
+                  onClick={handleSaveConnection}
+                  disabled={testingConn || !supabaseUrl.trim()}
+                  className="w-full py-2.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded disabled:opacity-50 cursor-pointer"
+                >
+                  {testingConn ? 'TESTING CONNECTION...' : 'SAVE & RECONNECT'}
+                </button>
+
+                <button
+                  onClick={handleClearConnection}
+                  className="w-full text-[10px] font-mono text-[var(--color-error)] bg-transparent border-none cursor-pointer py-1"
+                >
+                  Clear credentials → return to demo mode
+                </button>
+
+                <p className="text-[9px] text-[var(--color-muted)] font-mono leading-relaxed pt-1">
+                  🔒 Credentials stored in browser localStorage only.
+                  Never leave this device. Secret keys (service role,
+                  Paystack secret, Termii) belong in server env vars only.
+                </p>
+              </div>
+            )}
+
+            {/* PAYMENTS TAB */}
+            {configTab === 'PAYMENTS' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                    Paystack Public Key
+                  </label>
+                  <input
+                    type="text"
+                    value={paystackPublicKey}
+                    onChange={e => setPaystackPublicKey(e.target.value)}
+                    placeholder="pk_live_..."
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+                <button
+                  onClick={handleSavePayments}
+                  className="w-full py-2.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer"
+                >
+                  SAVE
+                </button>
+                <p className="text-[9px] text-[var(--color-muted)] font-mono leading-relaxed">
+                  Public key is safe to store here.
+                  The secret key (sk_live_...) must be set in your
+                  server environment — never in the browser.
+                </p>
+              </div>
+            )}
+
+            {/* NOTIFICATIONS TAB */}
+            {configTab === 'NOTIFICATIONS' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                    Admin Phone (EOD SMS/WhatsApp)
+                  </label>
+                  <input
+                    type="tel"
+                    value={adminPhone}
+                    onChange={e => setAdminPhone(e.target.value)}
+                    placeholder="+2348012345678"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                    Admin Email (EOD Reports)
+                  </label>
+                  <input
+                    type="email"
+                    value={adminEmail}
+                    onChange={e => setAdminEmail(e.target.value)}
+                    placeholder="admin@ehimultisystems.com"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+                <p className="text-[9px] text-[var(--color-muted)] font-mono leading-relaxed">
+                  Termii API key must be set in server env vars.
+                  These contact details are used by the EOD system
+                  to send daily reports automatically.
+                </p>
+                <button
+                  onClick={handleSaveNotifications}
+                  className="w-full py-2.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer"
+                >
+                  SAVE
+                </button>
+              </div>
+            )}
+
+            {/* COMPANY TAB */}
+            {configTab === 'COMPANY' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                    Company Name
+                  </label>
+                  <input
+                    value={companyName}
+                    onChange={e => setCompanyName(e.target.value)}
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                    Company Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={companyPhone}
+                    onChange={e => setCompanyPhone(e.target.value)}
+                    placeholder="+234 1 234 5678"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                    Company Address
+                  </label>
+                  <textarea
+                    value={companyAddress}
+                    onChange={e => setCompanyAddress(e.target.value)}
+                    rows={2}
+                    placeholder="MMA2, Ikeja, Lagos"
+                    className="w-full px-3 py-2 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] resize-none"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                      VJ Free Allowance (KG)
+                    </label>
+                    <input
+                      type="number"
+                      value={vjFreeKg}
+                      onChange={e => setVjFreeKg(e.target.value)}
+                      className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                      VJ Rate ₦/KG
+                    </label>
+                    <input
+                      type="number"
+                      value={vjRatePerKg}
+                      onChange={e => setVjRatePerKg(e.target.value)}
+                      className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleSaveCompany}
+                  className="w-full py-2.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer"
+                >
+                  SAVE COMPANY SETTINGS
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Global Automation Switches Card */}
       <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-4">

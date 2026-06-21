@@ -153,6 +153,20 @@ export interface AppState {
   currentTab: TabView;
 }
 
+export interface DriverTrip {
+  id: string;
+  vehiclePlate: string;
+  driverName: string;
+  origin: string;
+  destination: string;
+  departureTime: string;
+  arrivalTime?: string;
+  status: 'Active' | 'Completed' | 'Cancelled';
+  cargoRefs: string[];   // AWB numbers on this vehicle
+  notes?: string;
+  createdAt: string;
+}
+
 // Daily Cash Register
 export interface CashRegister {
   id: string;

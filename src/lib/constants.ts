@@ -52,9 +52,16 @@ export const DEMO_USERS = {
   'aircargo@ehimultisystems.com': {
     password: 'AirCargo123',
     name: 'Air Cargo Officer',
-    role: 'cargo_agent' as UserRole, // The prompt mapped it to cargo_agent, but wait let's use air_cargo_agent to retain existing logic mostly? The prompt said: role: 'cargo_agent' as UserRole! Oh let's look at prompt again: "role: 'cargo_agent' as UserRole". I'll follow the prompt. But wait, I need to see what `BottomNav` expects. Let's just follow the prompt exactly for DEMO_USERS! Wait no, the prompt says "role: 'cargo_agent'". But earlier I added `air_cargo_agent`? Actually, let me use what it said.
+    role: 'cargo_agent' as UserRole,
     hubType: 'Cargo Station' as HubType,
     hub: 'Murtala Air Cargo Station',
+  },
+  'driver@ehimultisystems.com': {
+    password: 'Driver123',
+    name: 'EHI Driver',
+    role: 'driver' as UserRole,
+    hubType: 'Cargo Station' as HubType,
+    hub: 'Lagos Air Cargo Station',
   },
 } as const;
 

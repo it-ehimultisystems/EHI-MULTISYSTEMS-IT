@@ -19,6 +19,7 @@ const Analytics = lazy(() => import('./views/Analytics').then(m => ({ default: m
 const More = lazy(() => import('./views/More').then(m => ({ default: m.More })));
 const MarketingWorkspace = lazy(() => import('./views/MarketingWorkspace').then(m => ({ default: m.MarketingWorkspace })));
 const Scanner = lazy(() => import('./views/Scanner').then(m => ({ default: m.Scanner })));
+const MyTrips = lazy(() => import('./views/MyTrips').then(m => ({ default: m.MyTrips })));
 
 export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const getDefaultTab = (role: string): TabView => {
@@ -208,11 +209,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])} />}
               {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} />}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
-              {currentTab === 'MyTrips' && (
-                <div className="flex flex-col items-center justify-center h-full text-[var(--color-muted)] font-mono text-[10px]">
-                   MY TRIPS MODULE PENDING
-                </div>
-              )}
+              {currentTab === 'MyTrips' && <MyTrips user={user} />}
               {currentTab === 'More' && (
                 <More 
                   user={user} 

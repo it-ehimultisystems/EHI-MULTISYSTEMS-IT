@@ -6,156 +6,247 @@ import { UserProfile, getSession, signOut } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
 
-const PublicTrackingPage = () => {
-  const { waybillId: routeParam } = useParams();
-  const [searchQuery, setSearchQuery] = useState(routeParam || '');
-  const [activeRef, setActiveRef] = useState(routeParam || '');
+import { SEED_TRANSACTIONS } from './lib/constants';
 
-  const simulatedShipment = useMemo(() => {
-    if (!activeRef) return null;
-    
-    // Normalize code representation
-    const ref = activeRef.trim().toUpperCase();
-    
-    // Determine stream prefix/type
-    const isCargo = ref.startsWith('CG') || ref.startsWith('AWB');
-    const isMarketing = ref.startsWith('MK') || ref.startsWith('MKT');
-    
-    // Build simulated progressive state
-    return {
-      ref,
-      type: isCargo ? 'Air Cargo' : (isMarketing ? 'Marketing Bag' : 'Package Consignment'),
-      origin: isCargo ? 'Lagos Hub (HQ)' : 'Oyinbo Market Hub',
-      destination: isCargo ? 'Abuja Airport Depot' : 'Kano Central Terminal',
-      status: 'In Transit',
-      carrier: 'United Nigeria (UN-240)',
-      sender: 'Golden Nest Industrial Ltd',
-      recipient: 'Aza Food Distributors',
-      weight: isCargo ? '240 KG' : 'Big Bag (BB)',
-      pieces: isCargo ? 12 : 3,
-      date: '2026-06-20',
-      timeline: [
-        { title: 'Waybill Issued & Dispatched', status: 'completed', time: '08:30 AM', location: 'Lagos Hub Office' },
-        { title: 'Security Screened & Cleared', status: 'completed', time: '10:15 AM', location: 'Murtala Muhammed Cargo Wing' },
-        { title: 'Manifested on Flight UN-240', status: 'active', time: '01:45 PM', location: 'In-Transit to Abuja' },
-        { title: 'Terminal Destination Handover', status: 'pending', time: 'Estimation 05:00 PM', location: 'Abuja Airport Depot' }
-      ]
-    };
-  }, [activeRef]);
+const PublicTrackingPage = () => {
+  const { waybillId } = useParams<{ waybillId?: string }>();
+  const [ref, setRef] = useState(waybillId || '');
+  const [searched, setSearched] = useState(!!waybillId);
+  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSearch = async () => {
+    if (!ref.trim()) return;
+    setLoading(true);
+    setSearched(true);
+
+    // Demo: look up in seed transactions
+    const found = SEED_TRANSACTIONS.find(
+      t => t.id.toUpperCase() === ref.trim().toUpperCase() ||
+           t.awb_tag_number?.toUpperCase() === ref.trim().toUpperCase()
+    );
+
+    await new Promise(r => setTimeout(r, 600)); // simulate lookup delay
+
+    setResult(found || null);
+    setLoading(false);
+  };
+
+  // Auto-search if URL has waybillId
+  useEffect(() => {
+    if (waybillId) handleSearch();
+  }, []);
+
+  const statusColor = (status: string) => {
+    if (status === 'Delivered') return '#10B981';
+    if (status === 'In-Transit' || status === 'Departure') return '#3B82F6';
+    if (status === 'Arrived') return '#F59E0B';
+    return '#64748B';
+  };
+
+  const statusSteps = ['Intake', 'Departure', 'In-Transit', 'Arrived', 'Delivered'];
 
   return (
-    <div className="bg-slate-50 text-slate-900 font-sans flex flex-col items-center" style={{ minHeight: '100dvh' }}>
-      {/* Branding Header */}
-      <header className="w-full max-w-lg bg-white border-b border-slate-200 py-4 px-6 flex items-center justify-between shadow-xs">
-        <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-          <span className="text-sm font-mono tracking-widest font-black text-slate-800">EHI MULTISYSTEMS</span>
+    <div
+      className="min-h-screen flex flex-col items-center justify-start py-10 px-4"
+      style={{ background: '#F0F4F8' }}
+    >
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)' }}
+        >
+          <span style={{ fontSize: 22, fontWeight: 900, color: '#F59E0B', fontFamily: 'monospace' }}>
+            EHI
+          </span>
         </div>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Portal v4.1</span>
-      </header>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', margin: 0 }}>
+          EHI Cargo Tracking
+        </h1>
+        <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
+          Track your shipment by waybill or AWB number
+        </p>
+      </div>
 
-      {/* Main portal stage */}
-      <main className="w-full max-w-lg p-6 space-y-6">
-        
-        {/* Tracking Lookup Box */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 space-y-4">
-          <div className="text-center space-y-1">
-            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Consignment Tracking</h1>
-            <p className="text-xs text-slate-500 leading-relaxed">Enter your waybill or marketing bag barcode to trace logistics stream</p>
-          </div>
+      {/* Search box */}
+      <div
+        className="w-full max-w-md p-6 rounded-2xl mb-6"
+        style={{ background: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}
+      >
+        <div className="flex gap-3">
+          <input
+            value={ref}
+            onChange={e => setRef(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            placeholder="e.g. CG-20240614-001 or 14247"
+            style={{
+              flex: 1, height: 44, padding: '0 12px',
+              fontSize: 13, fontFamily: 'monospace',
+              border: '1px solid #E2E8F0', borderRadius: 10,
+              background: '#F8FAFC', color: '#0F172A',
+              outline: 'none',
+            }}
+          />
+          <button
+            onClick={handleSearch}
+            disabled={!ref.trim() || loading}
+            style={{
+              height: 44, padding: '0 20px',
+              background: '#F59E0B', border: 'none',
+              borderRadius: 10, color: '#0B0F19',
+              fontWeight: 800, fontFamily: 'monospace',
+              fontSize: 12, cursor: 'pointer',
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? '...' : 'TRACK'}
+          </button>
+        </div>
+      </div>
 
-          <div className="flex space-x-2">
-            <input 
-              type="text"
-              placeholder="e.g. CG-98443 or AWB-524"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && setActiveRef(searchQuery)}
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-mono focus:bg-white"
-            />
-            <button 
-              onClick={() => setActiveRef(searchQuery)}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold font-mono px-4 h-9.5 rounded-lg transition-colors cursor-pointer"
+      {/* Result */}
+      {searched && !loading && (
+        <div className="w-full max-w-md">
+          {result ? (
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}
             >
-              TRACK
-            </button>
-          </div>
-        </div>
-
-        {/* Tracking Details Page */}
-        {simulatedShipment ? (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            
-            {/* Status overview */}
-            <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 space-y-3">
-              <div className="flex justify-between items-start">
+              {/* Status banner */}
+              <div style={{
+                background: statusColor(result.status) + '15',
+                borderBottom: `1px solid ${statusColor(result.status)}30`,
+                padding: '16px 20px',
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <div style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: statusColor(result.status),
+                }} />
                 <div>
-                  <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-wider block">Waybill Ref</span>
-                  <span className="text-base font-mono font-bold text-slate-900 uppercase block">{simulatedShipment.ref}</span>
-                </div>
-                <span className="bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold font-mono px-2.5 py-1 rounded-full uppercase tracking-wider">
-                  {simulatedShipment.status}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 text-xs">
-                <div>
-                  <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold block">Consignment Type</span>
-                  <span className="font-semibold text-slate-800 mt-0.5 block">{simulatedShipment.type}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold block">Aviation Carrier</span>
-                  <span className="font-semibold text-slate-800 mt-0.5 block">{simulatedShipment.carrier}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold block">Route Path</span>
-                  <span className="font-semibold text-slate-800 mt-0.5 block">{simulatedShipment.origin} ▸ {simulatedShipment.destination}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold block">Shipment Payload</span>
-                  <span className="font-semibold text-slate-800 mt-0.5 block">{simulatedShipment.weight} ({simulatedShipment.pieces} pcs)</span>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+                    {result.name}
+                  </div>
+                  <div style={{
+                    fontSize: 11, fontFamily: 'monospace',
+                    color: statusColor(result.status), fontWeight: 700,
+                  }}>
+                    {result.status?.toUpperCase()}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Timeline progression */}
-            <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 space-y-4">
-              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Journey Timeline</div>
-              
-              <div className="relative border-l border-slate-200 pl-5 ml-2.5 space-y-5 py-1">
-                {simulatedShipment.timeline.map((step, index) => {
-                  const isActive = step.status === 'active';
-                  const isCompleted = step.status === 'completed';
-                  return (
-                    <div key={index} className="relative">
-                      {/* Timeline dot */}
-                      <span className={`absolute -left-[26px] top-1 w-3 h-3 rounded-full border-2 ${
-                        isActive ? 'bg-amber-500 border-amber-500 ring-4 ring-amber-100' :
-                        isCompleted ? 'bg-amber-500 border-amber-500' : 'bg-slate-200 border-slate-200'
-                      }`} />
-                      
-                      <div className="space-y-0.5">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className={`font-bold ${isActive ? 'text-slate-900 font-extrabold' : isCompleted ? 'text-slate-800' : 'text-slate-400'}`}>{step.title}</span>
-                          <span className="text-[10px] font-mono text-slate-400">{step.time}</span>
-                        </div>
-                        <div className="text-[10.5px] text-slate-500 font-mono">{step.location}</div>
+              {/* Details */}
+              <div style={{ padding: '16px 20px' }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1fr',
+                  gap: '12px', marginBottom: 16,
+                }}>
+                  {[
+                    { label: 'Reference', value: result.id },
+                    { label: 'AWB / Tag', value: result.awb_tag_number || '—' },
+                    { label: 'Route', value: result.route || result.detail?.split('·')[0] || '—' },
+                    { label: 'Content', value: result.contentType || result.detail?.split('·').pop()?.trim() || '—' },
+                    { label: 'Weight', value: result.kg ? `${result.kg} KG` : '—' },
+                    { label: 'Pieces', value: result.pieces || '—' },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <div style={{ fontSize: 9, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace' }}>
+                        {label}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginTop: 2, fontFamily: 'monospace' }}>
+                        {String(value)}
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+
+                {/* Progress steps */}
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 9, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace', marginBottom: 10 }}>
+                    Journey
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                    {statusSteps.map((step, i) => {
+                      const currentIdx = statusSteps.indexOf(result.status);
+                      const isReached = i <= currentIdx;
+                      const isCurrent = i === currentIdx;
+                      return (
+                        <div key={step} style={{ display: 'flex', alignItems: 'center', flex: i < statusSteps.length - 1 ? 1 : 'none' }}>
+                          <div style={{
+                            width: 20, height: 20, borderRadius: '50%',
+                            background: isReached
+                              ? statusColor(result.status)
+                              : '#E2E8F0',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            border: isCurrent ? `2px solid ${statusColor(result.status)}` : 'none',
+                            position: 'relative', flexShrink: 0,
+                          }}>
+                            {isReached && !isCurrent && (
+                              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
+                            )}
+                            {isCurrent && (
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor(result.status) }} />
+                            )}
+                          </div>
+                          {i < statusSteps.length - 1 && (
+                            <div style={{
+                              flex: 1, height: 2,
+                              background: i < currentIdx ? statusColor(result.status) : '#E2E8F0',
+                            }} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                    {statusSteps.map(step => (
+                      <div key={step} style={{
+                        fontSize: 8, fontFamily: 'monospace',
+                        color: step === result.status ? statusColor(result.status) : '#94A3B8',
+                        fontWeight: step === result.status ? 700 : 400,
+                        textAlign: 'center', flex: 1,
+                      }}>
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{
+                borderTop: '1px solid #F1F5F9',
+                padding: '12px 20px',
+                fontSize: 10, color: '#94A3B8',
+                fontFamily: 'monospace', textAlign: 'center',
+              }}>
+                Powered by EHI Multisystems Logistics Platform
               </div>
             </div>
+          ) : (
+            <div
+              className="rounded-2xl p-8 text-center"
+              style={{ background: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}
+            >
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📦</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+                No shipment found
+              </div>
+              <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>
+                Check the reference number and try again.
+                Contact EHI if you believe this is an error.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-          </div>
-        ) : (
-          <div className="py-12 text-center space-y-2 border-2 border-dashed border-slate-200 rounded-xl bg-slate-100/50">
-            <span className="text-3xl">📦</span>
-            <div className="text-xs text-slate-400 font-mono">No active tracking selected</div>
-          </div>
-        )}
-
-      </main>
+      {/* Footer */}
+      <div style={{ marginTop: 32, fontSize: 11, color: '#94A3B8', textAlign: 'center' }}>
+        EHI Multisystems Nigeria Limited · MMA2, Ikeja, Lagos
+      </div>
     </div>
   );
 };

@@ -9,7 +9,7 @@ export const fmt = (amount: number) => {
   }).format(amount).replace('NGN', '₦');
 };
 
-export const uid = (prefix: 'WB' | 'VJ' | 'AC' | 'MK' | 'CG'): string => {
+export const uid = (prefix: 'WB' | 'VJ' | 'AC' | 'MK' | 'CG' | 'TR'): string => {
   const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
   const randomHex = Math.floor(Math.random() * 65536).toString(16).toUpperCase().padStart(4, '0');
   return `${prefix}-${dateStr}-${randomHex}`;
