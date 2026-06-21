@@ -27,16 +27,16 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
   // Normally this would use actual typed DebtRecords from backend.
   const debts = transactions.filter(t => t.mode === 'Debt' || t.mode?.includes('Debt')).map(t => {
     // Fake aging purely for simulation UI
-    const randAge = stableAge(t.id);
+    const stableAgeInDays = stableAge(t.id);
     let bucket: 'current' | 'overdue' | 'critical' | 'writeoff-risk' = 'current';
-    if (randAge > 90) bucket = 'writeoff-risk';
-    else if (randAge > 60) bucket = 'critical';
-    else if (randAge > 30) bucket = 'overdue';
+    if (stableAgeInDays > 90) bucket = 'writeoff-risk';
+    else if (stableAgeInDays > 60) bucket = 'critical';
+    else if (stableAgeInDays > 30) bucket = 'overdue';
 
     return {
       ...t,
       clientType: ['Aramex', 'SAHCO', 'GlobaCom', 'ZeemMax', 'Slot'].includes(t.name) ? 'Corporate' : 'Individual',
-      ageInDays: randAge,
+      ageInDays: stableAgeInDays,
       agingBucket: bucket,
       balance: t.amount, // mock un-paid debt
       payments: [] // mock empty payments

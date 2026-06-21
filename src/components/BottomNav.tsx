@@ -8,7 +8,6 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: { user: User; curre
     { id: 'Cargo', title: 'Cargo', icon: 'box-alt', accent: 'var(--color-accent-amber)', roles: ['super_admin', 'admin', 'cargo_agent'] },
     { id: 'Marketing', title: 'Marketing', icon: 'chart-line-up', accent: 'var(--color-success)', roles: ['super_admin', 'admin', 'marketing_agent'] },
     { id: 'VJ POS', title: 'ValueJet', icon: 'plane', accent: 'var(--color-accent-cobalt)', roles: ['super_admin', 'admin', 'vj_agent'] },
-    { id: 'Accounting', title: 'Accounting', icon: 'home', accent: 'var(--color-accent-cobalt)', roles: ['accountant', 'auditor'] },
     { id: 'MyTrips', title: 'My Trips', icon: 'truck-side', accent: 'white', roles: ['driver'] },
     { id: 'Scan', title: 'Scanner', icon: 'qr-scan', accent: 'var(--color-success)', roles: ['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver'] },
     { id: 'More', title: 'More', icon: 'apps', accent: 'white', roles: ['super_admin', 'admin', 'accountant', 'auditor'] },

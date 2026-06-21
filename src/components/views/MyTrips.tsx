@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, DriverTrip } from '../../lib/types';
 import { uid, tnow } from '../../lib/helpers';
-import { Truck, MapPin, Clock, CheckCircle,
-         Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Truck, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 const NIGERIAN_HUBS = [
   'Lagos Air Cargo Station', 'Abuja Air Cargo Station',
@@ -12,8 +11,176 @@ const NIGERIAN_HUBS = [
   'Onitsha Hub', 'Makurdi Station', 'Ibadan Station',
 ];
 
+interface TripCardProps {
+  trip: DriverTrip;
+  expandedTrip: string | null;
+  onToggle: (id: string) => void;
+  onComplete: (id: string) => void;
+  onCancel: (id: string) => void;
+}
+
+const TripCard: React.FC<TripCardProps> = ({
+  trip, expandedTrip, onToggle, onComplete, onCancel
+}) => {
+  const isExpanded = expandedTrip === trip.id;
+  const statusColor =
+    trip.status === 'Active' ? '#F59E0B' :
+    trip.status === 'Completed' ? '#10B981' : '#EF4444';
+
+  return (
+    <div
+      className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl overflow-hidden mb-3"
+      style={{ borderLeft: `3px solid ${statusColor}` }}
+    >
+      {/* Card header */}
+      <div
+        className="p-4 flex items-center justify-between cursor-pointer"
+        onClick={() => onToggle(trip.id)}
+      >
+        <div className="flex items-center gap-3">
+          <Truck size={18} style={{ color: statusColor }} />
+          <div>
+            <div className="text-[13px] font-bold text-[var(--color-foreground)]">
+              {trip.vehiclePlate}
+            </div>
+            <div className="text-[10px] font-mono text-[var(--color-muted)] mt-0.5">
+              {trip.origin.split(' ')[0]} → {trip.destination.split(' ')[0]}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span
+            className="text-[9px] font-mono font-bold px-2 py-1 rounded"
+            style={{
+              background: `${statusColor}18`,
+              color: statusColor,
+              border: `1px solid ${statusColor}40`,
+            }}
+          >
+            {trip.status.toUpperCase()}
+          </span>
+          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </div>
+      </div>
+
+      {/* Expanded details */}
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-3 border-t border-[rgba(255,255,255,0.06)]">
+          <div className="grid grid-cols-2 gap-3 pt-3">
+            <div>
+              <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider">
+                Departed
+              </div>
+              <div className="text-[11px] font-mono text-[var(--color-foreground)] mt-0.5">
+                {trip.departureTime}
+              </div>
+            </div>
+            {trip.arrivalTime && (
+              <div>
+                <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider">
+                  Arrived
+                </div>
+                <div className="text-[11px] font-mono text-[var(--color-success)] mt-0.5">
+                  {trip.arrivalTime}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+              Cargo on Vehicle ({trip.cargoRefs.length} items)
+            </div>
+            {trip.cargoRefs.length === 0 ? (
+              <div className="text-[10px] font-mono text-[var(--color-muted)]">
+                No AWB refs logged
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {trip.cargoRefs.map(ref => (
+                  <span
+                    key={ref}
+                    className="text-[9px] font-mono px-2 py-0.5 rounded"
+                    style={{
+                      background: 'rgba(245,158,11,0.1)',
+                      color: 'var(--color-accent-amber)',
+                      border: '1px solid rgba(245,158,11,0.2)',
+                    }}
+                  >
+                    {ref}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {trip.notes && (
+            <div className="text-[10px] font-mono text-[var(--color-muted)]">
+              Note: {trip.notes}
+            </div>
+          )}
+
+          {/* Ref ID */}
+          <div className="text-[8px] font-mono text-[var(--color-muted)]">
+            Trip ID: {trip.id}
+          </div>
+
+          {/* Action buttons */}
+          {trip.status === 'Active' && (
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => onComplete(trip.id)}
+                className="flex-1 py-2 rounded text-[11px] font-bold font-mono cursor-pointer"
+                style={{
+                  background: 'rgba(16,185,129,0.1)',
+                  border: '1px solid rgba(16,185,129,0.3)',
+                  color: 'var(--color-success)',
+                }}
+              >
+                ✓ MARK ARRIVED
+              </button>
+              <button
+                onClick={() => onCancel(trip.id)}
+                className="flex-1 py-2 rounded text-[11px] font-mono cursor-pointer"
+                style={{
+                  background: 'rgba(239,68,68,0.05)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  color: 'var(--color-error)',
+                }}
+              >
+                CANCEL
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const MyTrips = ({ user }: { user: User }) => {
-  const [trips, setTrips] = useState<DriverTrip[]>([]);
+  const TRIPS_KEY = `ehi_driver_trips_${new Date().toISOString().split('T')[0]}`;
+
+  const [trips, setTrips] = useState<DriverTrip[]>(() => {
+    try {
+      const saved = localStorage.getItem(TRIPS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist on every change
+  useEffect(() => {
+    localStorage.setItem(TRIPS_KEY, JSON.stringify(trips));
+  }, [trips, TRIPS_KEY]);
+
+  // Clean up yesterday's key on mount
+  useEffect(() => {
+    const yesterday = new Date(Date.now() - 86400000)
+      .toISOString().split('T')[0];
+    localStorage.removeItem(`ehi_driver_trips_${yesterday}`);
+  }, []);
   const [showNewTripForm, setShowNewTripForm] = useState(false);
   const [expandedTrip, setExpandedTrip] = useState<string | null>(null);
 
@@ -68,143 +235,6 @@ export const MyTrips = ({ user }: { user: User }) => {
     ));
   };
 
-  // RENDER: trip card component
-  const TripCard: React.FC<{ trip: DriverTrip }> = ({ trip }) => {
-    const isExpanded = expandedTrip === trip.id;
-    const statusColor =
-      trip.status === 'Active' ? '#F59E0B' :
-      trip.status === 'Completed' ? '#10B981' : '#EF4444';
-
-    return (
-      <div
-        className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl overflow-hidden mb-3"
-        style={{ borderLeft: `3px solid ${statusColor}` }}
-      >
-        {/* Card header */}
-        <div
-          className="p-4 flex items-center justify-between cursor-pointer"
-          onClick={() => setExpandedTrip(isExpanded ? null : trip.id)}
-        >
-          <div className="flex items-center gap-3">
-            <Truck size={18} style={{ color: statusColor }} />
-            <div>
-              <div className="text-[13px] font-bold text-[var(--color-foreground)]">
-                {trip.vehiclePlate}
-              </div>
-              <div className="text-[10px] font-mono text-[var(--color-muted)] mt-0.5">
-                {trip.origin.split(' ')[0]} → {trip.destination.split(' ')[0]}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span
-              className="text-[9px] font-mono font-bold px-2 py-1 rounded"
-              style={{
-                background: `${statusColor}18`,
-                color: statusColor,
-                border: `1px solid ${statusColor}40`,
-              }}
-            >
-              {trip.status.toUpperCase()}
-            </span>
-            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </div>
-        </div>
-
-        {/* Expanded details */}
-        {isExpanded && (
-          <div className="px-4 pb-4 space-y-3 border-t border-[rgba(255,255,255,0.06)]">
-            <div className="grid grid-cols-2 gap-3 pt-3">
-              <div>
-                <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider">
-                  Departed
-                </div>
-                <div className="text-[11px] font-mono text-[var(--color-foreground)] mt-0.5">
-                  {trip.departureTime}
-                </div>
-              </div>
-              {trip.arrivalTime && (
-                <div>
-                  <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider">
-                    Arrived
-                  </div>
-                  <div className="text-[11px] font-mono text-[var(--color-success)] mt-0.5">
-                    {trip.arrivalTime}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
-                Cargo on Vehicle ({trip.cargoRefs.length} items)
-              </div>
-              {trip.cargoRefs.length === 0 ? (
-                <div className="text-[10px] font-mono text-[var(--color-muted)]">
-                  No AWB refs logged
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1">
-                  {trip.cargoRefs.map(ref => (
-                    <span
-                      key={ref}
-                      className="text-[9px] font-mono px-2 py-0.5 rounded"
-                      style={{
-                        background: 'rgba(245,158,11,0.1)',
-                        color: 'var(--color-accent-amber)',
-                        border: '1px solid rgba(245,158,11,0.2)',
-                      }}
-                    >
-                      {ref}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {trip.notes && (
-              <div className="text-[10px] font-mono text-[var(--color-muted)]">
-                Note: {trip.notes}
-              </div>
-            )}
-
-            {/* Ref ID */}
-            <div className="text-[8px] font-mono text-[var(--color-muted)]">
-              Trip ID: {trip.id}
-            </div>
-
-            {/* Action buttons */}
-            {trip.status === 'Active' && (
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => handleCompleteTrip(trip.id)}
-                  className="flex-1 py-2 rounded text-[11px] font-bold font-mono cursor-pointer"
-                  style={{
-                    background: 'rgba(16,185,129,0.1)',
-                    border: '1px solid rgba(16,185,129,0.3)',
-                    color: 'var(--color-success)',
-                  }}
-                >
-                  ✓ MARK ARRIVED
-                </button>
-                <button
-                  onClick={() => handleCancelTrip(trip.id)}
-                  className="flex-1 py-2 rounded text-[11px] font-mono cursor-pointer"
-                  style={{
-                    background: 'rgba(239,68,68,0.05)',
-                    border: '1px solid rgba(239,68,68,0.2)',
-                    color: 'var(--color-error)',
-                  }}
-                >
-                  CANCEL
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="p-4 pb-20 space-y-4">
@@ -350,7 +380,16 @@ export const MyTrips = ({ user }: { user: User }) => {
           <div className="text-[9px] font-mono text-[var(--color-accent-amber)] uppercase tracking-widest mb-2">
             ▸ ACTIVE TRIPS
           </div>
-          {activeTrips.map(t => <TripCard key={t.id} trip={t} />)}
+          {activeTrips.map(t => (
+            <TripCard
+              key={t.id}
+              trip={t}
+              expandedTrip={expandedTrip}
+              onToggle={(id) => setExpandedTrip(prev => prev === id ? null : id)}
+              onComplete={handleCompleteTrip}
+              onCancel={handleCancelTrip}
+            />
+          ))}
         </div>
       )}
 
@@ -360,7 +399,16 @@ export const MyTrips = ({ user }: { user: User }) => {
           <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-widest mb-2">
             ▸ COMPLETED TODAY
           </div>
-          {completedTrips.map(t => <TripCard key={t.id} trip={t} />)}
+          {completedTrips.map(t => (
+            <TripCard
+              key={t.id}
+              trip={t}
+              expandedTrip={expandedTrip}
+              onToggle={(id) => setExpandedTrip(prev => prev === id ? null : id)}
+              onComplete={handleCompleteTrip}
+              onCancel={handleCancelTrip}
+            />
+          ))}
         </div>
       )}
 

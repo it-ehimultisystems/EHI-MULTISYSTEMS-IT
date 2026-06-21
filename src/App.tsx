@@ -15,27 +15,20 @@ const PublicTrackingPage = () => {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSearch = async () => {
-    if (!ref.trim()) return;
+  useEffect(() => {
+    if (!waybillId) return;
     setLoading(true);
     setSearched(true);
-
-    // Demo: look up in seed transactions
+    const query = waybillId.trim().toUpperCase();
     const found = SEED_TRANSACTIONS.find(
-      t => t.id.toUpperCase() === ref.trim().toUpperCase() ||
-           t.awb_tag_number?.toUpperCase() === ref.trim().toUpperCase()
+      t => t.id.toUpperCase() === query ||
+           (t.awb_tag_number?.toUpperCase() ?? '') === query
     );
-
-    await new Promise(r => setTimeout(r, 600)); // simulate lookup delay
-
-    setResult(found || null);
-    setLoading(false);
-  };
-
-  // Auto-search if URL has waybillId
-  useEffect(() => {
-    if (waybillId) handleSearch();
-  }, []);
+    setTimeout(() => {
+      setResult(found || null);
+      setLoading(false);
+    }, 600);
+  }, [waybillId]);
 
   const statusColor = (status: string) => {
     if (status === 'Delivered') return '#10B981';
@@ -77,9 +70,24 @@ const PublicTrackingPage = () => {
         <div className="flex gap-3">
           <input
             value={ref}
-            onChange={e => setRef(e.target.value.toUpperCase())}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            placeholder="e.g. CG-20240614-001 or 14247"
+            onChange={e => setRef(e.target.value.toUpperCase().replace(/[\s-]/g, ''))}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                if (!ref.trim()) return;
+                setLoading(true);
+                setSearched(true);
+                const query = ref.trim().toUpperCase();
+                const found = SEED_TRANSACTIONS.find(
+                  t => t.id.toUpperCase() === query ||
+                       (t.awb_tag_number?.toUpperCase() ?? '') === query
+                );
+                setTimeout(() => {
+                  setResult(found || null);
+                  setLoading(false);
+                }, 600);
+              }
+            }}
+            placeholder="e.g. AC240619X9Y8 or 14153"
             style={{
               flex: 1, height: 44, padding: '0 12px',
               fontSize: 13, fontFamily: 'monospace',
@@ -89,7 +97,20 @@ const PublicTrackingPage = () => {
             }}
           />
           <button
-            onClick={handleSearch}
+            onClick={() => {
+              if (!ref.trim()) return;
+              setLoading(true);
+              setSearched(true);
+              const query = ref.trim().toUpperCase();
+              const found = SEED_TRANSACTIONS.find(
+                t => t.id.toUpperCase() === query ||
+                     (t.awb_tag_number?.toUpperCase() ?? '') === query
+              );
+              setTimeout(() => {
+                setResult(found || null);
+                setLoading(false);
+              }, 600);
+            }}
             disabled={!ref.trim() || loading}
             style={{
               height: 44, padding: '0 20px',
@@ -299,6 +320,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/track/:waybillId" element={<PublicTrackingPage />} />
+        <Route path="/track" element={<PublicTrackingPage />} />
         <Route path="/*" element={<AuthenticatedApp />} />
       </Routes>
     </BrowserRouter>
