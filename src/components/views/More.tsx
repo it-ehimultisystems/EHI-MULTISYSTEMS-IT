@@ -233,7 +233,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
               <span>Demand Forecasting AI</span>
               <span className="text-[8px] font-mono bg-amber-500/10 text-[var(--color-accent-amber)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase">Gemini Intel</span>
             </div>
-            <div className="text-[10px] font-mono text(--color-muted)">Capacity heatmap and busy periods projections</div>
+            <div className="text-[10px] font-mono text-[var(--color-muted)]">Capacity heatmap and busy periods projections</div>
           </div>
         </div>
       </button>

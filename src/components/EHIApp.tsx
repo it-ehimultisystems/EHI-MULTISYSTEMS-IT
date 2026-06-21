@@ -13,6 +13,8 @@ import { Dashboard } from './views/Dashboard';
 import { CargoForm } from './views/CargoForm';
 import { ValueJetForm } from './views/ValueJetForm';
 
+import { SEED_TRANSACTIONS } from '../lib/constants';
+
 const Analytics = lazy(() => import('./views/Analytics').then(m => ({ default: m.Analytics })));
 const More = lazy(() => import('./views/More').then(m => ({ default: m.More })));
 const MarketingWorkspace = lazy(() => import('./views/MarketingWorkspace').then(m => ({ default: m.MarketingWorkspace })));
@@ -25,7 +27,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     return 'Tower';
   };
   const [currentTab, setCurrentTab] = useState<TabView>(getDefaultTab(user.role));
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(SEED_TRANSACTIONS);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
@@ -87,7 +89,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           amount: newTx.amount_paid || 0,
           mode: newTx.payment_mode || 'Cash',
           time: new Date(newTx.log_date || Date.now()).toLocaleTimeString(),
-          type: 'vj', status: 'Intake'
+          type: 'baggage', status: 'Intake'
         });
         if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
         flushTimerRef.current = setTimeout(flushPendingTx, 300);
