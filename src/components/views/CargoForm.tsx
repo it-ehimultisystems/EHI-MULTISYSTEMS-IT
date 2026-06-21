@@ -5,6 +5,7 @@ import { fmt, uid, tnow } from '../../lib/helpers';
 import { CheckCircle, Loader2, User as UserIcon, Plane, Hash, Package, MapPin, Layers, Banknote, CreditCard, Landmark, MessageSquare } from 'lucide-react';
 import { downloadCargoReceipt } from './CargoReceipt';
 import { motion } from 'motion/react';
+import { sendReceiptWhatsApp, buildCargoWhatsApp } from '../../lib/notifications';
 
 const CARGO_ROUTES = [
   'ABV/Abuja', 'PHC/Port Harcourt', 'BNI/Benin', 'KAN/Kano',
@@ -50,6 +51,7 @@ export const CargoForm = ({ onAddTx, user }: {
   const [mode, setMode] = useState<'Cash' | 'Transfer' | 'POS' | 'Debt'>('Cash');
   const [bank, setBank] = useState(BANKS[0] as string);
   const [remark, setRemark] = useState('');
+  const [senderPhone, setSenderPhone] = useState('');
   
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -90,6 +92,24 @@ export const CargoForm = ({ onAddTx, user }: {
     setSubmitting(false);
 
     onAddTx(tx);
+
+    if (senderPhone.trim().length > 0) {
+      sendReceiptWhatsApp({
+        phone: senderPhone.trim(),
+        ref: tx.id,
+        message: buildCargoWhatsApp({
+          ref: tx.id,
+          consignee: actualConsignee,
+          awb,
+          route,
+          kg,
+          pcs,
+          amount: parsedAmount,
+          mode,
+          bank: mode === 'Transfer' ? bank : undefined,
+        }),
+      });
+    }
   };
 
   const handleReset = () => {
@@ -105,6 +125,7 @@ export const CargoForm = ({ onAddTx, user }: {
     setMode('Cash');
     setBank(BANKS[0] as string);
     setRemark('');
+    setSenderPhone('');
     setSuccessTx(null);
   };
 
@@ -437,6 +458,17 @@ export const CargoForm = ({ onAddTx, user }: {
                  onChange={(e) => setRemark(e.target.value)}
                  className={formInputClass}
                />
+            </div>
+
+            <div>
+              {renderLabel(MessageSquare, "Sender Phone — WhatsApp Receipt (Optional)")}
+              <input
+                type="tel"
+                placeholder="e.g. 08012345678"
+                value={senderPhone}
+                onChange={(e) => setSenderPhone(e.target.value)}
+                className={formInputClass}
+              />
             </div>
           </div>
 

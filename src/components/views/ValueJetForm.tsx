@@ -4,22 +4,27 @@ import { fmt, uid, tnow } from '../../lib/helpers';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { QRCode } from '../QRCode';
 import { motion } from 'motion/react';
+import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notifications';
+
+const VJ_RATE_PER_KG = 1000;
+const VJ_FREE_ALLOWANCE = parseFloat(
+  localStorage.getItem('ehi_vj_free_kg') || '20'
+);
 
 export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) => {
   const [name, setName] = useState('');
   const [flight, setFlight] = useState('');
   const [dest, setDest] = useState('');
   const [kg, setKg] = useState('');
-  const [rate, setRate] = useState('5000');
+  const [phone, setPhone] = useState('');
   const [mode, setMode] = useState<PaymentMode>('POS');
 
   const [successTx, setSuccessTx] = useState<{ tx: Transaction, kgs: number, exc: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const kgVal = parseFloat(kg) || 0;
-  const rateVal = parseFloat(rate) || 0;
-  const excessKg = Math.max(0, kgVal - 20.0);
-  const totalAmount = excessKg * rateVal;
+  const excessKg = Math.max(0, kgVal - VJ_FREE_ALLOWANCE);
+  const totalAmount = excessKg * VJ_RATE_PER_KG;
 
   const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0;
 
@@ -43,6 +48,22 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
     setSubmitting(false);
 
     onAddTx(tx);
+
+    if (phone.trim().length > 0) {
+      sendReceiptWhatsApp({
+        phone: phone.trim(),
+        ref: tx.id,
+        message: buildValueJetWhatsApp({
+          ref: tx.id,
+          passenger: name.trim(),
+          flight: flight.toUpperCase(),
+          totalKg: kgVal,
+          excessKg,
+          amount: totalAmount,
+          mode,
+        }),
+      });
+    }
   };
 
   const handleReset = () => {
@@ -50,7 +71,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
     setFlight('');
     setDest('');
     setKg('');
-    setRate('5000');
+    setPhone('');
     setSuccessTx(null);
   };
 
@@ -66,9 +87,9 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
         flightNumber: flight.toUpperCase(),
         destination: dest || 'Unknown',
         totalBaggage: successTx.kgs,
-        freeAllowance: 20,
+        freeAllowance: VJ_FREE_ALLOWANCE,
         excessKg: successTx.exc,
-        ratePerKg: rateVal,
+        ratePerKg: VJ_RATE_PER_KG,
         amount: successTx.tx.amount,
         paymentMode: successTx.tx.mode,
       };
@@ -184,6 +205,14 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
             onChange={(e) => setName(e.target.value)}
             className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
           />
+
+          <input
+            type="tel"
+            placeholder="Passenger Phone (optional — for WhatsApp receipt)"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
+          />
           
           <div className="flex space-x-3">
             <input 
@@ -209,16 +238,15 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
               onChange={(e) => setKg(e.target.value)}
               className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
             />
-            <div className="flex-1 relative min-w-0">
-              <div className="absolute left-3 top-0 bottom-0 flex items-center text-[10px] font-mono text-[var(--color-muted)]">₦</div>
-              <input 
-                type="number"
-                placeholder="Rate per KG"
-                value={rate}
-                onChange={(e) => setRate(e.target.value)}
-                className={`w-full h-11 pl-6 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
-              />
-              <div className="absolute right-3 top-0 bottom-0 flex items-center text-[10px] font-mono text-[var(--color-muted)]">/kg</div>
+            <div
+              className="flex-1 h-11 px-3 flex items-center justify-between rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.04)] min-w-0"
+            >
+              <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                RATE
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent-cobalt)' }}>
+                ₦1,000<span style={{ fontSize: 9, fontWeight: 400, color: 'var(--color-muted)' }}>/kg</span>
+              </span>
             </div>
           </div>
           
@@ -271,7 +299,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
               {excessKg > 0 ? (
                 <>
                   <div className="text-[28px] font-bold font-mono text-[var(--color-accent-cobalt)] leading-none mt-2" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalAmount)}</div>
-                  <div className="text-[11px] font-mono text-[var(--color-light-muted)] mt-2">{excessKg.toFixed(1)} kg × ₦{rateVal}/kg</div>
+                  <div className="text-[11px] font-mono text-[var(--color-light-muted)] mt-2">{excessKg.toFixed(1)} kg × ₦1,000/kg</div>
                 </>
               ) : (
                 <div className="text-[14px] font-bold font-mono text-[var(--color-success)] mt-4 mb-2">₦0 — Within Limit ✓</div>

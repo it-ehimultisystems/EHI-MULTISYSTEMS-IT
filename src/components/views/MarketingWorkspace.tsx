@@ -5,6 +5,8 @@ import { fmt, uid, tnow } from '../../lib/helpers';
 import { Plus, CheckCircle, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { sendReceiptWhatsApp, buildMarketingWhatsApp } from '../../lib/notifications';
+
 export const MarketingWorkspace = ({ 
   user, 
   transactions, 
@@ -129,6 +131,26 @@ export const MarketingWorkspace = ({
     setSubmitting(false);
 
     onAddTx(tx);
+
+    if (phone.trim().length > 0) {
+      let bagsList: string[] = [];
+      if (bb > 0) bagsList.push(`${bb} BB`);
+      if (mb > 0) bagsList.push(`${mb} MB`);
+      if (sb > 0) bagsList.push(`${sb} SB`);
+      sendReceiptWhatsApp({
+        phone: phone.trim(),
+        ref: tx.id,
+        message: buildMarketingWhatsApp({
+          ref: tx.id,
+          customer: name.trim(),
+          route,
+          bags: bagsList.join(' · '),
+          amount: totalAmount,
+          mode,
+          bank: mode === 'Transfer' ? bank : undefined,
+        }),
+      });
+    }
   };
 
   const handleReset = () => {
@@ -210,12 +232,12 @@ export const MarketingWorkspace = ({
                 </div>
               </div>
 
-              <div className="flex w-full space-x-2">
-                <button onClick={handleReset} className="flex-1 py-3 bg-[var(--color-success)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer">
+              <div className="flex w-full">
+                <button
+                  onClick={handleReset}
+                  className="flex-1 py-3 bg-[var(--color-success)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer"
+                >
                   Add Another
-                </button>
-                <button onClick={() => setSuccessTx(null)} className="flex-1 py-3 bg-[var(--color-surface-1)] text-white text-[11px] font-mono rounded border border-[rgba(255,255,255,0.1)] cursor-pointer">
-                  View List
                 </button>
               </div>
               <button

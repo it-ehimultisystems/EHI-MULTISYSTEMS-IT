@@ -65,9 +65,9 @@ export const Scanner = ({
 
       } else {
         // Error — show alert modal, pause scanner
-        if (scannerRef.current) {
-          try { await scannerRef.current.pause(true); } catch { /* ignore */ }
-        }
+        document.querySelectorAll<HTMLVideoElement>(
+          '#qr-reader-div video'
+        ).forEach(v => { v.pause(); });
         setCurrentResult(result);
         setProcessing(false);
         processingRef.current = false;
@@ -123,20 +123,53 @@ export const Scanner = ({
   }, [isScanning, processCode]);
 
   const stopScanner = useCallback(async () => {
+    // Step 1: Stop all video tracks directly on the DOM element
+    // This is the only 100% reliable way to turn the camera off.
+    // Do this BEFORE calling clear() so the camera LED turns off
+    // immediately when the button is tapped.
+    const videoEls = document.querySelectorAll<HTMLVideoElement>(
+      '#qr-reader-div video'
+    );
+    videoEls.forEach(video => {
+      if (video.srcObject instanceof MediaStream) {
+        video.srcObject.getTracks().forEach(track => {
+          track.stop();  // ← this actually turns off the camera
+        });
+        video.srcObject = null;
+      }
+      video.load(); // reset the video element state
+    });
+
+    // Step 2: Tell the library to clean up its DOM and internal state.
+    // This may throw if the DOM was already modified — that is fine
+    // because the camera is already off from step 1.
     if (scannerRef.current) {
-      try { await scannerRef.current.clear(); } catch { /* ignore */ }
+      try {
+        await scannerRef.current.clear();
+      } catch {
+        // Acceptable — camera is already stopped above
+      }
       scannerRef.current = null;
     }
+
+    // Step 3: Reset all scanning state
     setIsScanning(false);
+    setProcessing(false);
+    processingRef.current = false;
+    setCurrentResult(null);
+    setSuccessFlash(null);
   }, []);
 
   // Resume scanner after alert dismissed
   const dismissAlert = useCallback(async () => {
     setCurrentResult(null);
     processingRef.current = false;
-    if (scannerRef.current) {
-      try { scannerRef.current.resume(); } catch { /* ignore */ }
-    }
+    // Resume video playback directly
+    document.querySelectorAll<HTMLVideoElement>(
+      '#qr-reader-div video'
+    ).forEach(v => {
+      v.play().catch(() => { /* ignore autoplay errors */ });
+    });
   }, []);
 
   const switchToArriveAndDismiss = useCallback(() => {
@@ -153,8 +186,23 @@ export const Scanner = ({
 
   // Stop scanner on unmount
   useEffect(() => {
-    return () => { stopScanner(); };
-  }, [stopScanner]);
+    return () => {
+      // On unmount: stop camera tracks directly
+      document.querySelectorAll<HTMLVideoElement>(
+        '#qr-reader-div video'
+      ).forEach(video => {
+        if (video.srcObject instanceof MediaStream) {
+          video.srcObject.getTracks().forEach(t => t.stop());
+          video.srcObject = null;
+        }
+      });
+      // Then clear the library instance
+      if (scannerRef.current) {
+        try { scannerRef.current.clear(); } catch { /* ignore */ }
+        scannerRef.current = null;
+      }
+    };
+  }, []);
 
   // Batch list view
   if (showBatch) {
