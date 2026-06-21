@@ -63,6 +63,20 @@ export const DEMO_USERS = {
     hubType: 'Cargo Station' as HubType,
     hub: 'Lagos Air Cargo Station',
   },
+  'accountant@ehimultisystems.com': {
+    password: 'Account123',
+    name: 'EHI Accountant',
+    role: 'accountant' as UserRole,
+    hubType: 'Head Office' as HubType,
+    hub: 'Lagos HQ',
+  },
+  'auditor@ehimultisystems.com': {
+    password: 'Audit123',
+    name: 'EHI Auditor',
+    role: 'auditor' as UserRole,
+    hubType: 'Head Office' as HubType,
+    hub: 'Lagos HQ',
+  },
 } as const;
 
 export const CORPORATE_CLIENTS = ['Aramex', 'SAHCO', 'GlobaCom', 'ZeemMax', 'EHI', 'Salco', 'Slot', 'Prosper', 'Evergreen', 'Wellcare', 'Other'] as const;

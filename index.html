@@ -25,6 +25,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.6.0/uicons-bold-rounded/css/uicons-bold-rounded.css'>
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('ehi-theme') || 'dark';
+          document.documentElement.classList.add(t);
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -183,11 +183,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
         >
           <div
-            className="mx-auto"
-            style={{
-              maxWidth: 'var(--content-max-width)',
-              padding: 'var(--content-padding)',
-            }}
+            className="mx-auto w-full"
+            style={{ maxWidth: 'var(--content-max-width)' }}
           >
             <Suspense fallback={
               <div style={{

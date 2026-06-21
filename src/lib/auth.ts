@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { UserRole, HubType } from './types';
+import { DEMO_USERS } from './constants';
 
 export interface UserProfile {
   id: string;
@@ -25,25 +26,28 @@ export async function signIn(email: string, password: string): Promise<UserProfi
   }
 
   if (error || !data?.user) {
-    if (email.includes('admin')) {
-      return { id: '1', email, name: 'Geosan — Super Admin', role: 'super_admin', hub: 'Lagos HQ', hubType: 'Head Office', active: true };
-    } else if (email.includes('cargo')) {
-      return { id: '2', email, name: 'Cargo Agent', role: 'cargo_agent', hub: 'Lagos Cargo Station', hubType: 'Cargo Station', active: true };
-    } else if (email.includes('vj')) {
-      return { id: '3', email, name: 'VJ Counter', role: 'vj_agent', hub: 'Murtala Airport Terminal', hubType: 'Cargo Station', active: true };
-    } else if (email.includes('marketing')) {
-      return { id: '4', email, name: 'Marketing Agent', role: 'marketing_agent', hub: 'Lagos Market Run', hubType: 'Cargo Station', active: true };
-    } else if (email.includes('air')) {
-      return { id: '5', email, name: 'Air Cargo Officer', role: 'cargo_agent', hub: 'Murtala Air Cargo Station', hubType: 'Cargo Station', active: true };
-    }
+    // Look up the email directly in DEMO_USERS
+    // This is the single source of truth for all demo accounts
+    const demoUser = DEMO_USERS[email as keyof typeof DEMO_USERS];
     
-    // In mock mode or when offline, prevent "Failed to fetch"
-    if (error?.message === 'Failed to fetch' || error instanceof TypeError) {
-      if (email.includes('admin')) return { id: '1', email, name: 'Geosan — Super Admin', role: 'super_admin', hub: 'Lagos HQ', hubType: 'Head Office', active: true };
-      throw new Error('Invalid credentials. Please use one of the demo credentials below.');
+    if (demoUser) {
+      // Optionally verify password in demo mode
+      if (password !== demoUser.password) {
+        throw new Error('Incorrect password. Check the demo credentials below.');
+      }
+      return {
+        id: `demo-${email.split('@')[0]}`,
+        email,
+        name: demoUser.name,
+        role: demoUser.role,
+        hub: demoUser.hub,
+        hubType: demoUser.hubType,
+        active: true,
+      };
     }
-    
-    throw error;
+
+    // Not a demo user and Supabase failed
+    throw new Error('Invalid credentials. Please use one of the demo credentials below.');
   }
 
   try {

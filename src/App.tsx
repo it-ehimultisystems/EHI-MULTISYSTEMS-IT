@@ -41,8 +41,8 @@ const PublicTrackingPage = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-start py-10 px-4"
-      style={{ background: '#F0F4F8' }}
+      className="flex flex-col items-center justify-start py-10 px-4"
+      style={{ background: '#F0F4F8', minHeight: '100dvh' }}
     >
       {/* Header */}
       <div className="text-center mb-8">

@@ -345,7 +345,7 @@ export const Scanner = ({
         <div
           onClick={startScanner}
           style={{
-            height: 180,
+            height: 'clamp(160px, 35vw, 240px)',
             background: 'var(--color-surface-1)',
             border: '2px dashed var(--color-border-strong)',
             borderRadius: 12,

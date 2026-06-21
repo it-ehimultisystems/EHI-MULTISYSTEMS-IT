@@ -119,7 +119,7 @@ export const Dashboard = React.memo(({ user, transactions }: { user: User; trans
       </div>
 
       {/* Score Cards */}
-      <div className="grid gap-3 shrink-0" style={{ gridTemplateColumns: 'var(--card-grid)' }}>
+      <div className="grid gap-3 shrink-0" style={{ gridTemplateColumns: 'var(--card-grid, repeat(2, 1fr))' }}>
         {showCargo && (
           <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-4 relative overflow-hidden flex flex-col justify-between">
             <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[var(--color-accent-amber)]" />

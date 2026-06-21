@@ -392,7 +392,7 @@ export const CargoForm = ({ onAddTx, user }: {
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full h-14 pl-9 pr-4 text-[22px] font-bold text-[var(--color-accent-amber)] rounded-xl bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-amber)] focus:border-[var(--color-accent-amber)] transition-all"
+                  className="w-full h-14 pl-9 pr-4 text-[18px] md:text-[22px] font-bold text-[var(--color-accent-amber)] rounded-xl bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-amber)] focus:border-[var(--color-accent-amber)] transition-all"
                 />
               </div>
             </div>

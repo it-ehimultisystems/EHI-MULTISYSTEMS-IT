@@ -45,7 +45,13 @@ export const Analytics = ({
   const [selectedHub, setSelectedHub] = useState<string>('all');
   
   // AI Insights State
-  const [insights, setInsights] = useState<GeminiInsight[]>([]);
+  const [insights, setInsights] = useState<GeminiInsight[]>([
+    {
+      title: "AI Insights Ready",
+      insight: "Tap ↻ REFRESH to load AI-powered analysis for the current data period.",
+      priority: "low"
+    }
+  ]);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [insightError, setInsightError] = useState<string | null>(null);
 
@@ -259,11 +265,6 @@ export const Analytics = ({
     }
   }, [stats]);
 
-  // Auto load AI insights when date selection changes
-  useEffect(() => {
-    fetchAIInsights();
-  }, [period, selectedHub]);
-
   return (
     <div className="flex flex-col p-4 space-y-6 pb-20 select-none animate-in fade-in duration-300">
       
@@ -276,6 +277,7 @@ export const Analytics = ({
           <select 
             value={selectedHub}
             onChange={(e) => setSelectedHub(e.target.value)}
+            style={{ maxWidth: '160px' }}
             className="bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[10px] font-mono h-7 pl-2 pr-6 rounded border border-[rgba(255,255,255,0.15)] appearance-none cursor-pointer"
           >
             {activeHubs.map(hub => (
@@ -355,8 +357,8 @@ export const Analytics = ({
           <TrendingUp size={11} className="text-[var(--color-accent-cobalt)]" />
           <span>REVENUE PERFORMANCE TREND (Last 7 Days)</span>
         </div>
-        <div className="h-[200px] w-full text-[9px] font-mono">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full text-[9px] font-mono">
+          <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={revenueChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
               <XAxis dataKey="time" stroke="#64748B" strokeWidth={0.5} tickLine={false} />
               <YAxis 
@@ -444,8 +446,8 @@ export const Analytics = ({
             </div>
 
             {/* Micro Pie representation layout */}
-            <div className="h-[100px] w-[100px] text-[9px] font-mono shrink-0 relative flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ width: 100, height: 100 }} className="text-[9px] font-mono shrink-0 relative flex items-center justify-center">
+              <ResponsiveContainer width={100} height={100}>
                 <PieChart>
                   <Pie
                     data={paymentChartData}
@@ -608,9 +610,26 @@ export const Analytics = ({
               AI INSIGHTS & AUDIT LOG
             </span>
           </div>
-          <span className="text-[8px] font-mono text-[var(--color-success)] px-1.5 py-0.5 bg-[rgba(16,185,129,0.15)] rounded uppercase font-bold">
-            Gemini 3.5
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchAIInsights}
+              disabled={loadingInsights}
+              style={{
+                fontSize: 9, fontFamily: 'monospace',
+                color: 'var(--color-success)',
+                background: 'rgba(16,185,129,0.1)',
+                border: '1px solid rgba(16,185,129,0.2)',
+                borderRadius: 4, padding: '3px 8px',
+                cursor: loadingInsights ? 'wait' : 'pointer',
+                opacity: loadingInsights ? 0.6 : 1,
+              }}
+            >
+              {loadingInsights ? 'LOADING...' : '↻ REFRESH'}
+            </button>
+            <span className="text-[8px] font-mono text-[var(--color-success)] px-1.5 py-0.5 bg-[rgba(16,185,129,0.15)] rounded uppercase font-bold">
+              Gemini 2.0
+            </span>
+          </div>
         </div>
 
         {/* Content body */}

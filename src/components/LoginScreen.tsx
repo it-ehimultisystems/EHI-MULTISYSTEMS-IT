@@ -108,12 +108,16 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
           {showDemo && (
             <div className="bg-[var(--color-surface-1)] rounded-xl mt-2 border border-[rgba(255,255,255,0.07)] flex flex-col divide-y divide-[rgba(255,255,255,0.07)] max-h-[160px] overflow-y-auto">
               {(Object.entries(DEMO_USERS)).map(([demoEmail, user]) => {
-                const roleDisplay = user.role === 'super_admin' ? 'SUPER ADMIN' : 
-                                    user.role === 'admin' ? 'ADMIN' : 
-                                    user.role === 'cargo_agent' && demoEmail.includes('air') ? 'AIR OPS' :
-                                    user.role === 'cargo_agent' ? 'CARGO' : 
-                                    user.role === 'vj_agent' ? 'VJ POS' : 
-                                    user.role === 'marketing_agent' ? 'MKTG' : 'AGENT';
+                const roleDisplay =
+                  user.role === 'super_admin' ? 'SUPER ADMIN' :
+                  user.role === 'cargo_agent' && demoEmail.includes('air') ? 'AIR OPS' :
+                  user.role === 'cargo_agent' ? 'CARGO' :
+                  user.role === 'vj_agent' ? 'VALUEJET POS' :
+                  user.role === 'marketing_agent' ? 'MARKETING' :
+                  user.role === 'driver' ? 'DRIVER' :
+                  user.role === 'accountant' ? 'ACCOUNTANT' :
+                  user.role === 'auditor' ? 'AUDITOR' :
+                  user.role.toUpperCase();
                 return (
                   <div 
                     key={demoEmail}
