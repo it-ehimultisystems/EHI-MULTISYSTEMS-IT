@@ -406,8 +406,10 @@ export const Scanner = ({
       {currentResult?.type === 'NOT_LOGGED_IN' && (
         <NotLoggedInAlert
           result={currentResult}
+          mode={mode}
           onOk={dismissAlert}
           onSwitchToArrive={switchToArriveAndDismiss}
+          onSwitchToDepart={() => { setMode('DEPART'); dismissAlert(); }}
         />
       )}
       {currentResult?.type === 'ALREADY_PROCESSED' && (
@@ -419,6 +421,7 @@ export const Scanner = ({
       {currentResult?.type === 'NOT_FOUND' && (
         <NotLoggedInAlert
           result={{ ...currentResult, message: currentResult.message }}
+          mode={mode}
           onOk={dismissAlert}
           onSwitchToArrive={dismissAlert}
         />

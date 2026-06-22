@@ -153,12 +153,16 @@ export const WrongDestinationAlert = ({
 // ── NOT LOGGED IN ALERT ───────────────────────────────
 export const NotLoggedInAlert = ({
   result,
+  mode,
   onOk,
   onSwitchToArrive,
+  onSwitchToDepart,
 }: {
   result: ScanValidationResult;
+  mode?: string;
   onOk: () => void;
   onSwitchToArrive: () => void;
+  onSwitchToDepart?: () => void;
 }) => (
   <div
     style={{
@@ -206,9 +210,13 @@ export const NotLoggedInAlert = ({
 
         {/* Message */}
         <div style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.6, marginBottom: 14 }}>
-          This cargo has no <strong style={{ color: '#F1F5F9' }}>ARRIVE</strong> record
-          at <strong style={{ color: '#F1F5F9' }}>{result.currentHub}</strong>.
-          Scan ARRIVE first before departing.
+          {result.message ? result.message : (
+            <>
+              This cargo has no <strong style={{ color: '#F1F5F9' }}>ARRIVE</strong> record
+              at <strong style={{ color: '#F1F5F9' }}>{result.currentHub}</strong>.
+              Scan ARRIVE first before departing.
+            </>
+          )}
         </div>
 
         {/* Last known location */}
@@ -243,16 +251,30 @@ export const NotLoggedInAlert = ({
           }}>
             OK
           </button>
-          <button onClick={onSwitchToArrive} style={{
-            flex: 1, padding: 12,
-            background: '#F59E0B',
-            border: 'none',
-            borderRadius: 8, color: '#0B0F19',
-            fontSize: 11, fontFamily: 'monospace',
-            fontWeight: 700, cursor: 'pointer',
-          }}>
-            SCAN ARRIVE →
-          </button>
+          
+          {mode === 'ARRIVE' && onSwitchToDepart ? (
+            <button onClick={onSwitchToDepart} style={{
+              flex: 1, padding: 12,
+              background: '#F59E0B',
+              border: 'none',
+              borderRadius: 8, color: '#0B0F19',
+              fontSize: 11, fontFamily: 'monospace',
+              fontWeight: 700, cursor: 'pointer',
+            }}>
+              SCAN DEPART →
+            </button>
+          ) : (
+            <button onClick={onSwitchToArrive} style={{
+              flex: 1, padding: 12,
+              background: '#F59E0B',
+              border: 'none',
+              borderRadius: 8, color: '#0B0F19',
+              fontSize: 11, fontFamily: 'monospace',
+              fontWeight: 700, cursor: 'pointer',
+            }}>
+              SCAN ARRIVE →
+            </button>
+          )}
         </div>
       </div>
     </div>

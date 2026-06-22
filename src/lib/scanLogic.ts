@@ -140,6 +140,16 @@ export async function validateScan(
   // 4. ARRIVE MODE validation
   if (mode === 'ARRIVE') {
 
+    const lastAnyForArrive = await getLastEventAnywhere(ref);
+    if (!lastAnyForArrive) {
+      return {
+        type: 'NOT_LOGGED_IN',
+        cargo: cargoInfo,
+        currentHub,
+        message: `Data hasn't been logged from depart.`
+      };
+    }
+
     // Check if cargo belongs here (final dest or valid transit)
     if (!isCorrectDestination) {
       const isTransit = await isValidTransitHub('Lagos', destination, currentHub);
