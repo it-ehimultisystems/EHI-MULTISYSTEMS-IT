@@ -281,7 +281,7 @@ export const CargoForm = ({ onAddTx, user }: {
   }
 
   return (
-    <div className="p-4 pb-24 h-full">
+    <div className="p-4 pb-24 h-full" style={{ width: '100%', boxSizing: 'border-box' }}>
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">
         <div>
           <div className="flex flex-col mb-4">

@@ -188,7 +188,7 @@ select option {
 #qr-reader-div__scan_region { background: transparent !important; }
 #qr-reader-div__dashboard { display: none !important; }
 
-/* ── IOS SAFARI FIXES ──────────────────────── */
+/* IOS SAFARI FIXES */
 @supports (padding: env(safe-area-inset-bottom)) {
   body {
     padding-left: env(safe-area-inset-left);
@@ -221,4 +221,68 @@ input[type="tel"],
 input[type="number"],
 input[type="password"] {
   font-size: 16px;
+}
+
+/* ── MOBILE LAYOUT (< 768px) ─────────────────── */
+@media (max-width: 767px) {
+  /* Hide SideNav completely on mobile */
+  .ehi-sidenav {
+    display: none !important;
+  }
+
+  /* Show BottomNav on mobile */
+  .ehi-bottomnav-wrapper {
+    display: block;
+  }
+
+  /* Show mobile Header */
+  .ehi-mobile-header {
+    display: block;
+  }
+
+  /* Content fills full screen width */
+  .ehi-main-content {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Main scroll area fills available height */
+  main {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ── TABLET (768px - 1199px) ────────────────── */
+@media (min-width: 768px) {
+  /* Show SideNav as 64px icon sidebar */
+  .ehi-sidenav {
+    display: flex !important;
+  }
+
+  /* Hide BottomNav on tablet/desktop */
+  .ehi-bottomnav-wrapper {
+    display: none !important;
+  }
+
+  /* Hide mobile Header (sidebar shows brand) */
+  .ehi-mobile-header {
+    display: none !important;
+  }
+
+  /* Remove mobile bottom padding */
+  main {
+    padding-bottom: 0 !important;
+  }
+}
+
+/* ── DESKTOP (≥ 1200px) ─────────────────────── */
+@media (min-width: 1200px) {
+  /* SideNav expands to 220px with labels — handled by CSS var */
+}
+
+.ehi-main-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }

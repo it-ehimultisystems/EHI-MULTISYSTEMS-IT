@@ -210,7 +210,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
   }
 
   return (
-    <div className="p-4 pb-12 h-full">
+    <div className="p-4 pb-12 h-full" style={{ width: '100%', boxSizing: 'border-box' }}>
       <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-4">
         <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#3B82F6', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           ▸ VALUEJET EXCESS BAGGAGE POS

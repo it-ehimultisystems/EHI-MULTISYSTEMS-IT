@@ -195,7 +195,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     <div style={{
       display: 'flex',
       height: '100dvh',
-      width: '100%',
+      width: '100vw',
+      maxWidth: '100vw',
       background: 'var(--color-background)',
       overflow: 'hidden',
       fontFamily: "'Inter', system-ui, sans-serif",
@@ -210,15 +211,18 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         onToggleTheme={toggle}
       />
 
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minWidth: 0,
-        overflow: 'hidden',
-      }}>
+      <div
+        className="ehi-main-content"
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          overflow: 'hidden',
+        }}
+      >
         {/* Header — mobile only */}
-        <div className="md:hidden">
+        <div className="ehi-mobile-header">
           <Header
             user={user}
             isOffline={isOffline}
@@ -277,7 +281,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         </main>
       </div>
 
-      <div className="md:hidden">
+      <div className="ehi-bottomnav-wrapper">
         <BottomNav user={user} currentTab={currentTab} onChangeTab={setCurrentTab} />
       </div>
 

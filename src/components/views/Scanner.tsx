@@ -274,7 +274,7 @@ export const Scanner = ({
       </div>
 
       {/* Mode Toggle — ARRIVE / DEPART */}
-      <div className="flex rounded overflow-hidden border border-[var(--color-border)]">
+      <div className="flex rounded overflow-hidden border border-[var(--color-border)]" style={{ width: '100%' }}>
         {(['ARRIVE', 'DEPART'] as ScanMode[]).map((m) => {
           const active = mode === m;
           const isArrive = m === 'ARRIVE';
@@ -286,7 +286,7 @@ export const Scanner = ({
               key={m}
               onClick={() => { setMode(m); dismissAlert(); }}
               style={{
-                flex: 1, padding: '12px 8px',
+                flex: 1, minWidth: 0, padding: '12px 8px',
                 background: active ? activeBg : 'transparent',
                 border: 'none',
                 borderRight: m === 'ARRIVE' ? '1px solid var(--color-border)' : 'none',

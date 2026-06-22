@@ -183,7 +183,7 @@ export const MarketingWorkspace = ({
   const mktgFocusClasses = "focus:outline-none focus:ring-2 focus:ring-[rgba(16,185,129,0.5)] focus:border-[rgba(16,185,129,0.5)] transition-[border-color,box-shadow]";
 
   return (
-    <div className="p-4 h-full pb-12">
+    <div className="p-4 h-full pb-12" style={{ width: '100%', boxSizing: 'border-box' }}>
       {/* Workspace Header */}
       <div className="flex justify-between items-center text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-widest border-b border-[rgba(255,255,255,0.07)] pb-2 mb-6">
         <div>{new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
@@ -309,13 +309,13 @@ export const MarketingWorkspace = ({
                   </select>
                 )}
 
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2">
                   {[ 
                     { key: 'bb', label: 'BB', val: bb, set: setBb },
                     { key: 'mb', label: 'MB', val: mb, set: setMb },
                     { key: 'sb', label: 'SB', val: sb, set: setSb }
                   ].map(bag => (
-                    <div key={bag.key} className="flex-1 bg-[var(--color-surface-1)] rounded p-2 flex items-center justify-between border border-[rgba(255,255,255,0.07)]">
+                    <div key={bag.key} className="bg-[var(--color-surface-1)] rounded p-2 flex items-center justify-between border border-[rgba(255,255,255,0.07)]" style={{ flex: '1 1 calc(33% - 8px)', minWidth: 90 }}>
                       <span className="text-[11px] font-bold font-mono text-[var(--color-muted)]">{bag.label}</span>
                       <input 
                         type="number"

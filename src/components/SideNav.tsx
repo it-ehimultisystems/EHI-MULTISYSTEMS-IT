@@ -48,11 +48,13 @@ export const SideNav = ({
 
   return (
     <aside
-      className="hidden md:flex flex-col"
+      className="ehi-sidenav"
       style={{
+        display: 'flex',
+        flexDirection: 'column',
         width: 'var(--sidebar-width)',
         background: 'var(--color-nav-bg, var(--color-obsidian))',
-        borderRight: '1px solid var(--color-border, rgba(255,255,255,0.07))',
+        borderRight: '1px solid var(--color-nav-border, var(--color-border))',
         flexShrink: 0,
         height: '100vh',
         overflowY: 'auto',
