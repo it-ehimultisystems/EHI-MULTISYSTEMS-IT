@@ -11,31 +11,64 @@
 :root,
 :root.dark {
   --app-height: 100dvh;
-  --color-obsidian:      #0B0F19;
-  --color-surface-1:     #1E293B;
-  --color-surface-2:     #253347;
-  --color-surface-3:     #2D3F57;
-  --color-surface-card:  #1A2535;
+
+  /* ── BACKGROUNDS ── */
+  --color-obsidian:      #0D1117;
+  --color-surface-1:     #161B22;
+  --color-surface-2:     #1C2333;
+  --color-surface-3:     #21293B;
+  --color-surface-card:  #1A2232;
+  --color-nav-bg:        #0F141D;
+
+  /* ── ACCENTS ── */
   --color-accent-amber:  #F59E0B;
   --color-accent-cobalt: #3B82F6;
   --color-success:       #10B981;
   --color-error:         #EF4444;
   --color-warning:       #F59E0B;
-  --color-muted:         #64748B;
-  --color-light-muted:   #94A3B8;
-  --color-foreground:    #F1F5F9;
-  --color-background:    #0B0F19;
-  --color-border:        rgba(255,255,255,0.07);
-  --color-border-strong: rgba(255,255,255,0.12);
-  --color-overlay:       rgba(0,0,0,0.85);
-  --color-on-amber:      #0B0F19; /* dark text on vibrant yellow-orange */
-  --color-input-bg:      #1E293B;
-  --color-input-text:    #F1F5F9;
-  --color-nav-bg:        #0F1827;
-  --color-nav-border:    rgba(255,255,255,0.07);
-  --shadow-card:         0 1px 3px rgba(0,0,0,0.4);
+  --color-purple:        #8B5CF6;
+  --color-on-amber:      #0D1117;
 
-  /* ── RESPONSIVE LAYOUT ─────────────── */
+  /* ── GLOWS (for hover/active states) ── */
+  --glow-amber:   rgba(245,158,11,0.20);
+  --glow-cobalt:  rgba(59,130,246,0.20);
+  --glow-success: rgba(16,185,129,0.20);
+  --glow-error:   rgba(239,68,68,0.20);
+
+  /* ── TEXT ── */
+  --color-foreground:    #E6EDF3;
+  --color-muted:         #6E7B8D;
+  --color-light-muted:   #8B9AB1;
+
+  /* ── BORDERS ── */
+  --color-border:        rgba(255,255,255,0.09);
+  --color-border-strong: rgba(255,255,255,0.16);
+  --color-nav-border:    rgba(255,255,255,0.08);
+
+  /* ── INPUTS ── */
+  --color-input-bg:      #1C2333;
+  --color-input-text:    #E6EDF3;
+
+  /* ── OVERLAYS ── */
+  --color-overlay:       rgba(0,0,0,0.75);
+  --color-background:    #0D1117;
+
+  /* ── SHADOWS ── */
+  --shadow-card:    0 1px 3px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.25);
+  --shadow-nav:     0 -4px 24px rgba(0,0,0,0.35);
+  --shadow-dropdown:0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-button:  0 4px 12px rgba(0,0,0,0.25);
+  --shadow-input:   0 0 0 3px var(--glow-amber);
+
+  /* ── BORDER RADIUS ── */
+  --radius-xs:  4px;
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-full: 9999px;
+
+  /* ── RESPONSIVE LAYOUT ── */
   --sidebar-width:     0px;
   --content-padding:   0px;
   --content-max-width: 100%;
@@ -44,31 +77,63 @@
 
 /* ── LIGHT MODE ─────────────────────────── */
 :root.light {
-  --color-obsidian:      #F1F5F9; /* Standard grey background */
-  --color-surface-1:     #FFFFFF; /* White cards */
-  --color-surface-2:     #F8FAFC;
-  --color-surface-3:     #E2E8F0;
+  /* ── BACKGROUNDS ── */
+  --color-obsidian:      #F5F7FA;
+  --color-surface-1:     #FFFFFF;
+  --color-surface-2:     #F3F4F6;
+  --color-surface-3:     #E5E7EB;
   --color-surface-card:  #FFFFFF;
-  --color-accent-amber:  #EA580C; /* High contrast orange */
+  --color-nav-bg:        #FFFFFF;
+
+  /* ── ACCENTS ── */
+  --color-accent-amber:  #D97706;
   --color-accent-cobalt: #2563EB;
   --color-success:       #059669;
   --color-error:         #DC2626;
-  --color-warning:       #EA580C;
-  --color-muted:         #64748B; /* Darker slate 500 for better contrast */
-  --color-light-muted:   #475569; /* slate 600 */
-  --color-foreground:    #0F172A; /* Slate 900 */
-  --color-background:    #F1F5F9; /* Slate 100 base */
-  --color-border:        #CBD5E1; /* Slate 300 */
-  --color-border-strong: #94A3B8; /* Slate 400 */
-  --color-overlay:       rgba(15, 23, 42, 0.5);
-  --color-on-amber:      #FFFFFF; /* white text on dark orange */
-  --color-input-bg:      #FFFFFF;
-  --color-input-text:    #0F172A;
-  --color-nav-bg:        #FFFFFF;
-  --color-nav-border:    #E2E8F0;
-  --shadow-card:         0 -1px 3px 0 rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.04), 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.08); /* Stronger, softer shadow */
+  --color-warning:       #D97706;
+  --color-purple:        #7C3AED;
+  --color-on-amber:      #FFFFFF;
 
-  /* ── RESPONSIVE LAYOUT ─────────────── */
+  /* ── GLOWS ── */
+  --glow-amber:   rgba(217,119,6,0.15);
+  --glow-cobalt:  rgba(37,99,235,0.15);
+  --glow-success: rgba(5,150,105,0.15);
+  --glow-error:   rgba(220,38,38,0.15);
+
+  /* ── TEXT ── */
+  --color-foreground:    #111827;
+  --color-muted:         #6B7280;
+  --color-light-muted:   #4B5563;
+
+  /* ── BORDERS ── */
+  --color-border:        #CBD5E1; /* Slate 300 for visible borders */
+  --color-border-strong: #94A3B8; /* Slate 400 */
+  --color-nav-border:    #E2E8F0;
+
+  /* ── INPUTS ── */
+  --color-input-bg:      #FFFFFF;
+  --color-input-text:    #111827;
+
+  /* ── OVERLAYS ── */
+  --color-overlay:       rgba(0,0,0,0.55);
+  --color-background:    #F5F7FA;
+
+  /* ── SHADOWS ── */
+  --shadow-card:    0 1px 4px rgba(0,0,0,0.07), 0 6px 20px rgba(0,0,0,0.05);
+  --shadow-nav:     0 -2px 16px rgba(0,0,0,0.08);
+  --shadow-dropdown:0 8px 32px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);
+  --shadow-button:  0 2px 8px rgba(0,0,0,0.12);
+  --shadow-input:   0 0 0 3px var(--glow-amber);
+
+  /* ── BORDER RADIUS (same as dark) ── */
+  --radius-xs:  4px;
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-full: 9999px;
+
+  /* ── RESPONSIVE LAYOUT ── */
   --sidebar-width:     0px;
   --content-padding:   0px;
   --content-max-width: 100%;
@@ -117,19 +182,34 @@ body,
 input, select, textarea {
   background-color: var(--color-input-bg);
   color: var(--color-input-text);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
   transition: border-color 0.15s ease, background-color 0.2s ease, box-shadow 0.15s ease;
-  border-radius: 10px; /* Friendly radius */
   padding: 12px 14px; /* Proper padding */
+  font-size: 16px; /* prevents iOS zoom */
 }
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--color-accent-cobalt);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  border-color: var(--color-accent-amber);
+  box-shadow: 0 0 0 3px var(--glow-amber);
 }
 input::placeholder, textarea::placeholder {
   color: var(--color-muted);
-  opacity: 0.7;
+  opacity: 0.8;
+}
+
+/* Custom chevron for select — restores the arrow removed by -webkit-appearance */
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236E7B8D' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px !important;
+  cursor: pointer;
+}
+
+/* Light mode chevron */
+:root.light select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
 
 /* ── SELECT OPTION STYLING ───────────────── */
@@ -232,35 +312,12 @@ button {
 select {
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px;
-  padding-right: 36px;
 }
 
 div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(3) {
   padding-top: 0px;
   margin-top: 0px;
   margin-bottom: -17px;
-}
-
-input[class*="rounded"],
-select[class*="rounded"],
-button[class*="rounded"] {
-  border-radius: inherit;
-}
-
-select {
-  font-size: 16px;
-}
-
-input[type="text"],
-input[type="email"],
-input[type="tel"],
-input[type="number"],
-input[type="password"] {
-  font-size: 16px;
 }
 
 /* ── MOBILE LAYOUT (< 768px) ─────────────────── */

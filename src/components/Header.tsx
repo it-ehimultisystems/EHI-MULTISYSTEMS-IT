@@ -37,54 +37,160 @@ export const Header = ({
   };
 
   return (
-    <div className="flex flex-col w-full z-10 shrink-0 border-b border-[var(--color-border)]">
-      <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-obsidian)] text-[var(--color-foreground)] transition-colors">
-        <div>
-          <div className="text-[14px] font-bold font-sans">EHI Multisystems</div>
-          <div className="text-[10px] font-sans font-medium text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)] inline-block px-1.5 py-0.5 rounded mt-0.5">
-            {getRoleDisplay(user.role)}
+    <div
+      className="ehi-mobile-header flex flex-col w-full shrink-0 z-40"
+      style={{
+        background: 'linear-gradient(180deg, rgba(245,158,11,0.04) 0%, var(--color-obsidian) 100%)',
+        borderBottom: '1px solid var(--color-border)',
+      }}
+    >
+      <div className="flex items-center justify-between px-4 py-3">
+
+        {/* Brand */}
+        <div className="flex items-center gap-2.5">
+          <div
+            style={{
+              width: 36, height: 36,
+              borderRadius: 'var(--radius-sm)',
+              background: 'rgba(245,158,11,0.12)',
+              border: '1px solid rgba(245,158,11,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{
+              fontSize: 12, fontWeight: 900,
+              color: 'var(--color-accent-amber)',
+              fontFamily: 'monospace', letterSpacing: '-0.02em',
+            }}>EHI</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-foreground)' }}>
+              EHI Multisystems
+            </div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'rgba(245,158,11,0.12)',
+              border: '1px solid rgba(245,158,11,0.2)',
+              borderRadius: 'var(--radius-full)',
+              padding: '1px 8px', marginTop: 2,
+            }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-accent-amber)' }}>
+                {getRoleDisplay(user.role)}
+              </span>
+            </div>
           </div>
         </div>
-        
-        <div className="flex items-center space-x-3">
-          <div className="text-right">
-            <div className="text-[12px] font-sans font-medium">{user.name}</div>
-            <div className="text-[10px] font-sans text-[var(--color-muted)]">{user.hub}</div>
+
+        {/* Right controls */}
+        <div className="flex items-center gap-2">
+
+          {/* User info */}
+          <div className="text-right mr-1 hidden sm:block">
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-foreground)' }}>
+              {user.name}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>
+              {user.hub}
+            </div>
           </div>
-          
-          <button onClick={onToggleTheme} className="p-1.5 focus:outline-none text-[var(--color-light-muted)] hover:text-[var(--color-foreground)] transition-colors">
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+
+          {/* Theme toggle */}
+          <button
+            onClick={onToggleTheme}
+            style={{
+              width: 34, height: 34,
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--color-surface-2)',
+              border: '1px solid var(--color-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {theme === 'dark'
+              ? <Sun size={16} color="var(--color-accent-amber)" />
+              : <Moon size={16} color="var(--color-light-muted)" />
+            }
           </button>
 
-          <button onClick={onToggleWifi} className="p-1.5 focus:outline-none">
-            {isOffline ? <WifiOff size={18} className="text-[var(--color-warning)]" /> : <Wifi size={18} className="text-[var(--color-light-muted)]" />}
+          {/* Wifi */}
+          <button
+            onClick={onToggleWifi}
+            style={{
+              width: 34, height: 34,
+              borderRadius: 'var(--radius-sm)',
+              background: isOffline ? 'rgba(239,68,68,0.1)' : 'var(--color-surface-2)',
+              border: `1px solid ${isOffline ? 'rgba(239,68,68,0.3)' : 'var(--color-border)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            {isOffline
+              ? <WifiOff size={16} color="var(--color-error)" />
+              : <Wifi size={16} color="var(--color-muted)" />
+            }
           </button>
-          
+
+          {/* Avatar + dropdown */}
           <div className="relative">
-            <button onClick={() => setShowDropdown(!showDropdown)} className="flex items-center space-x-2 pl-1 pr-2 py-1 rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] focus:outline-none hover:bg-[var(--color-surface-3)] transition-colors active:scale-95">
-              <div className="w-7 h-7 rounded-full bg-[var(--color-accent-amber)] flex items-center justify-center text-[var(--color-obsidian)]">
-                <span className="text-[12px] font-bold font-sans">{user.name.charAt(0).toUpperCase()}</span>
-              </div>
-              <ChevronDown size={14} className="text-[var(--color-light-muted)]" />
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              style={{
+                width: 34, height: 34,
+                borderRadius: 'var(--radius-full)',
+                background: 'linear-gradient(135deg, var(--color-accent-amber) 0%, #D97706 100%)',
+                border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: showDropdown ? '0 0 0 3px var(--glow-amber)' : 'none',
+                transition: 'box-shadow 0.15s ease',
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 800, color: '#0D1117' }}>
+                {user.name.charAt(0).toUpperCase()}
+              </span>
             </button>
-            
+
             {showDropdown && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} aria-hidden="true" role="presentation" tabIndex={-1} />
-                <div className="absolute right-0 top-11 w-48 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl shadow-xl z-20 overflow-hidden flex flex-col transition-colors">
-                  <div className="px-3 py-3 border-b border-[var(--color-border)]">
-                    <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">{user.name}</div>
-                    <div className="text-[11px] font-sans text-[var(--color-muted)]">{user.hub}</div>
+                <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} />
+                <div
+                  style={{
+                    position: 'absolute', right: 0, top: 42, width: 200,
+                    background: 'var(--color-surface-1)',
+                    border: '1px solid var(--color-border-strong)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-dropdown)',
+                    zIndex: 20, overflow: 'hidden',
+                  }}
+                >
+                  <div style={{
+                    padding: '12px 14px',
+                    borderBottom: '1px solid var(--color-border)',
+                    background: 'linear-gradient(135deg, rgba(245,158,11,0.06) 0%, transparent 100%)',
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-foreground)' }}>
+                      {user.name}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--color-accent-amber)', marginTop: 2 }}>
+                      {user.hub}
+                    </div>
                   </div>
-                  <button 
-                    onClick={() => { 
-                      setShowDropdown(false); 
-                      onLogout(); 
+                  <button
+                    onClick={() => { setShowDropdown(false); onLogout(); }}
+                    style={{
+                      width: '100%', padding: '12px 14px',
+                      background: 'transparent', border: 'none',
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      cursor: 'pointer', color: 'var(--color-error)',
+                      transition: 'background 0.15s',
                     }}
-                    className="px-3 py-3 w-full text-left flex items-center space-x-2 bg-transparent hover:bg-[var(--color-surface-2)] transition-colors text-[var(--color-error)] focus:outline-none"
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <LogOut size={16} />
-                    <span className="text-[13px] font-sans">Sign Out</span>
+                    <LogOut size={15} />
+                    <span style={{ fontSize: 13 }}>Sign Out</span>
                   </button>
                 </div>
               </>
@@ -92,17 +198,26 @@ export const Header = ({
           </div>
         </div>
       </div>
-      
+
+      {/* Offline banner */}
       <AnimatePresence>
         {isOffline && (
-          <motion.div 
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="w-full bg-[#D97706] text-[var(--color-foreground)] text-[12px] font-sans font-medium text-center py-1.5 overflow-hidden"
+            transition={{ duration: 0.25 }}
+            style={{
+              background: 'rgba(239,68,68,0.1)',
+              borderTop: '1px solid rgba(239,68,68,0.2)',
+              color: 'var(--color-error)',
+              fontSize: 11, fontWeight: 600,
+              textAlign: 'center', padding: '6px 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
           >
-            No Internet — entries will sync when reconnected
+            <WifiOff size={12} />
+            Offline — entries queued for sync
           </motion.div>
         )}
       </AnimatePresence>

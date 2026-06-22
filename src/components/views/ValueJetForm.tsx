@@ -210,121 +210,174 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
   }
 
   return (
-    <div className="p-4 pb-12 h-full" style={{ width: '100%', boxSizing: 'border-box' }}>
-      <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-4">
-        <span style={{ fontFamily: 'JetBrains Mono', fontSize: 10, color: '#3B82F6', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-          ▸ VALUEJET EXCESS BAGGAGE POS
+    <div className="p-4 pb-24 h-full" style={{ width: '100%', boxSizing: 'border-box' }}>
+      <div className="border-b border-[var(--color-border)] pb-2 mb-4 flex items-center justify-between">
+        <span style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 700, color: 'var(--color-accent-cobalt)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          ▸ VALUEJET EXCESS BAGGAGE TICKETING
         </span>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">
         {/* Left Column */}
         <div className="space-y-4">
-          <input 
-            placeholder="Passenger Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${vjFocusClasses}`}
-          />
-
-          <input
-            type="tel"
-            placeholder="Passenger Phone (optional — for WhatsApp receipt)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${vjFocusClasses}`}
-          />
-          
-          <div className="flex space-x-3">
+          <div className="space-y-1.5">
+            <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Passenger Name</span>
             <input 
-              placeholder="Flight Number"
-              value={flight}
-              onChange={(e) => setFlight(e.target.value)}
-              className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
-            />
-            <input 
-              placeholder="Destination (Optional)"
-              value={dest}
-              onChange={(e) => setDest(e.target.value)}
-              className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
+              placeholder="Enter Passenger Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all"
             />
           </div>
 
-          <div className="flex space-x-3">
-            <input 
-              type="number"
-              step="0.1"
-              placeholder="Total Weight KG"
-              value={kg}
-              onChange={(e) => setKg(e.target.value)}
-              className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${vjFocusClasses}`}
+          <div className="space-y-1.5">
+            <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)] font-bold">Passenger Phone — WhatsApp Receipt (Optional)</span>
+            <input
+              type="tel"
+              placeholder="e.g. 08012345678"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all"
             />
-            <div
-              className="flex-1 h-11 px-3 flex items-center justify-between rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] min-w-0"
-            >
-              <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                RATE
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent-cobalt)' }}>
-                ₦1,000<span style={{ fontSize: 9, fontWeight: 400, color: 'var(--color-muted)' }}>/kg</span>
-              </span>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Flight Number</span>
+              <input 
+                placeholder="e.g. VJ102"
+                value={flight}
+                onChange={(e) => setFlight(e.target.value)}
+                className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all uppercase"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)] font-bold">Destination</span>
+              <input 
+                placeholder="e.g. Abuja"
+                value={dest}
+                onChange={(e) => setDest(e.target.value)}
+                className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Total Weight (KG)</span>
+              <input 
+                type="number"
+                step="0.1"
+                placeholder="0.0"
+                value={kg}
+                onChange={(e) => setKg(e.target.value)}
+                className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Excess Rate</span>
+              <div
+                className="h-12 px-4 flex items-center justify-between rounded-[var(--radius-sm)] bg-[var(--color-surface-3)] border border-[var(--color-border-strong)]"
+              >
+                <span className="text-[12px] font-bold font-mono text-[var(--color-accent-cobalt)]">
+                  ₦1,000<span className="text-[10px] font-normal text-[var(--color-muted)]">/kg</span>
+                </span>
+              </div>
             </div>
           </div>
           
-          <select 
-            value={mode}
-            onChange={(e) => setMode(e.target.value as PaymentMode)}
-            className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${vjFocusClasses}`}
-          >
-            <option value="Cash">Cash</option>
-            <option value="POS">POS</option>
-            <option value="Transfer">Transfer</option>
-          </select>
+          <div className="space-y-1.5">
+            <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Payment Mode</span>
+            <div className="flex bg-[var(--color-surface-3)] rounded-[var(--radius-sm)] p-1 border border-[var(--color-border)]">
+              {['Cash', 'POS', 'Transfer'].map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m as PaymentMode)}
+                  style={{
+                    background: mode === m ? 'var(--color-surface-1)' : 'transparent',
+                    color: mode === m ? 'var(--color-accent-cobalt)' : 'var(--color-muted)',
+                    border: 'none',
+                  }}
+                  className={`flex-1 py-2 text-[13px] font-sans font-semibold rounded-[var(--radius-xs)] shadow-sm transition-all focus:outline-none cursor-pointer`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
           
           {/* Submit button states */}
-          <div className="pt-2">
+          <div className="pt-4">
             <button
               type="button"
               onClick={handleSubmit}
               disabled={!isValid || submitting}
-              style={
-                submitting ? { backgroundColor: 'rgba(59, 130, 246, 0.7)', color: '#FFFFFF', cursor: 'wait', pointerEvents: 'none' } :
-                isValid ? { backgroundColor: '#3B82F6', color: '#FFFFFF', cursor: 'pointer' } :
-                { backgroundColor: '#1E293B', color: '#64748B', cursor: 'not-allowed' }
-              }
-              className="w-full py-[14px] rounded font-bold font-mono text-[13px] flex items-center justify-center gap-2 transition-colors"
+              className={`w-full py-4 rounded-[var(--radius-sm)] font-sans font-bold text-[16px] flex items-center justify-center gap-2 transition-all focus:outline-none ${
+                submitting ? 'opacity-80 cursor-wait bg-[var(--color-accent-cobalt)] text-white' :
+                !isValid ? 'bg-[var(--color-surface-3)] text-[var(--color-muted)] cursor-not-allowed border border-[var(--color-border)]' :
+                'bg-[var(--color-accent-cobalt)] text-white cursor-pointer hover:bg-opacity-95'
+              }`}
             >
-              {submitting && <Loader2 size={16} className="animate-spin" />}
+              {submitting && <Loader2 size={18} className="animate-spin" />}
               {submitting ? 'COMMITTING...' : 'COMMIT TRANSACTION'}
             </button>
           </div>
         </div>
 
         {/* Right Column / Sticky Summary */}
-        <aside className="space-y-4">
+        <aside className="hidden md:block">
           <div className="sticky top-4">
-            <div className={`rounded p-4 transition-colors duration-300 ${excessKg > 0 ? 'bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.2)]' : 'bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.2)]'}`}>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-mono text-[var(--color-muted)]">Total Weight</span>
-                <span className="text-[12px] font-mono text-white" style={{ fontFamily: 'JetBrains Mono' }}>{kgVal.toFixed(1)} kg</span>
+            <div style={{
+              background: 'var(--color-surface-1)',
+              border: '1.5px solid var(--color-border-strong)',
+              borderRadius: 'var(--radius-md)', padding: 20,
+              boxShadow: 'var(--shadow-card)',
+            }}>
+              <div style={{
+                fontSize: 10, fontFamily: 'monospace',
+                color: 'var(--color-accent-cobalt)',
+                textTransform: 'uppercase', letterSpacing: '0.12em',
+                marginBottom: 16, fontWeight: 700
+              }}>
+                ▸ TICKETING SUMMARY
               </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-mono text-[var(--color-muted)]">Free Allowance</span>
-                <span className="text-[12px] font-mono text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>– {vjFreeAllowance.toFixed(1)} kg</span>
+              <div style={{ fontSize: 13, fontFamily: 'monospace', lineHeight: 2.2, color: 'var(--color-foreground)' }}>
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Passenger</span><span className="truncate ml-4 font-semibold text-[var(--color-foreground)]" style={{ maxWidth: '140px' }}>{name || '—'}</span></div>
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Flight</span><span className="font-bold text-[var(--color-accent-cobalt)]">{flight.toUpperCase() || '—'}</span></div>
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Total Weight</span><span className="font-semibold text-[var(--color-foreground)]">{kgVal.toFixed(1)} kg</span></div>
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Free Limit</span><span className="font-semibold text-[var(--color-success)]">– {vjFreeAllowance.toFixed(1)} kg</span></div>
+                <div className="flex justify-between"><span style={{ color: 'var(--color-muted)' }}>Excess KG</span><span className={`font-bold ${excessKg > 0 ? 'text-[var(--color-accent-cobalt)]' : 'text-[var(--color-muted)]'}`}>{excessKg.toFixed(1)} kg</span></div>
               </div>
-              <div className="flex justify-between items-center border-t border-[rgba(255,255,255,0.07)] mt-3 pt-3 mb-4">
-                <span className="text-[10px] font-mono font-bold text-[var(--color-light-muted)]">Excess KG</span>
-                <span className={`text-[12px] font-bold font-mono ${excessKg > 0 ? 'text-[var(--color-accent-cobalt)]' : 'text-white'}`} style={{ fontFamily: 'JetBrains Mono' }}>{excessKg.toFixed(1)} kg</span>
+
+              <div style={{
+                borderTop: '1.5px dashed var(--color-border-strong)',
+                paddingTop: 16, marginTop: 16,
+              }}>
+                <div style={{
+                  fontSize: 10, fontFamily: 'monospace',
+                  color: 'var(--color-muted)', marginBottom: 6,
+                  fontWeight: 700, letterSpacing: '0.05em'
+                }}>TOTAL DUE</div>
+                <div style={{
+                  fontSize: 28, fontWeight: 800, fontFamily: 'monospace',
+                  color: excessKg > 0
+                    ? 'var(--color-accent-cobalt)'
+                    : 'var(--color-muted)',
+                }}>
+                  {excessKg > 0
+                    ? '₦' + totalAmount.toLocaleString('en-NG')
+                    : '₦0'}
+                </div>
+                {excessKg > 0 && (
+                  <div style={{
+                    fontSize: 10, fontFamily: 'monospace',
+                    color: 'var(--color-muted)', marginTop: 6,
+                  }}>
+                    {excessKg.toFixed(1)} kg × ₦1,000/kg
+                  </div>
+                )}
               </div>
-              
-              {excessKg > 0 ? (
-                <>
-                  <div className="text-[28px] font-bold font-mono text-[var(--color-accent-cobalt)] leading-none mt-2" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalAmount)}</div>
-                  <div className="text-[11px] font-mono text-[var(--color-light-muted)] mt-2">{excessKg.toFixed(1)} kg × ₦1,000/kg</div>
-                </>
-              ) : (
-                <div className="text-[14px] font-bold font-mono text-[var(--color-success)] mt-4 mb-2">₦0 — Within Limit ✓</div>
-              )}
             </div>
           </div>
         </aside>

@@ -187,14 +187,14 @@ export const CargoForm = ({ onAddTx, user }: {
     }
   };
 
-  const formInputClass = "w-full h-12 px-3 text-[14px] rounded-xl bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[var(--color-border)] font-sans focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-amber)] focus:border-[var(--color-accent-amber)] transition-all";
+  const formInputClass = "w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all";
 
   const renderLabel = (icon: any, text: string) => {
     const Icon = icon;
     return (
       <div className="flex items-center space-x-1.5 mb-1.5">
-        <Icon size={14} className="text-[var(--color-light-muted)]" />
-        <label className="text-[13px] font-sans font-medium text-[var(--color-light-muted)]">{text}</label>
+        <Icon size={14} style={{ color: 'var(--color-light-muted)' }} />
+        <label className="text-[13px] font-sans font-semibold text-[var(--color-light-muted)]">{text}</label>
       </div>
     );
   };
@@ -202,7 +202,7 @@ export const CargoForm = ({ onAddTx, user }: {
   if (successTx) {
     return (
       <div className="p-4 space-y-4 max-w-md mx-auto">
-        <div className="border-b border-[rgba(255,255,255,0.07)] pb-2 mb-2">
+        <div className="border-b border-[var(--color-border)] pb-2 mb-2">
           <span className="text-[14px] font-sans font-semibold text-[var(--color-foreground)]">Cargo Receipt</span>
         </div>
 
@@ -210,7 +210,7 @@ export const CargoForm = ({ onAddTx, user }: {
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 15, stiffness: 200 }}
-          className="bg-[rgba(16,185,129,0.05)] border border-[var(--color-success)] rounded-xl text-center p-8 flex flex-col items-center"
+          className="bg-[rgba(16,185,129,0.05)] border border-[var(--color-success)] rounded-[var(--radius-md)] text-center p-8 flex flex-col items-center"
         >
           <motion.div
             animate={{ scale: [1, 1.15, 1] }}
@@ -218,43 +218,43 @@ export const CargoForm = ({ onAddTx, user }: {
           >
             <CheckCircle size={40} className="text-[var(--color-success)] mb-3" />
           </motion.div>
-          <div className="text-[14px] font-medium font-sans text-[var(--color-success)] mb-1">Cargo entry saved successfully!</div>
+          <div className="text-[14px] font-semibold font-sans text-[var(--color-success)] mb-1">Cargo entry saved successfully!</div>
           <div className="text-[12px] font-mono text-[var(--color-muted)] mb-6">
             REF: {successTx.id}
           </div>
           
-          <div className="w-full bg-[var(--color-surface-card)] rounded-xl p-4 mb-8 border border-[var(--color-border)] text-left space-y-3">
-             <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-2">
+          <div className="w-full bg-[var(--color-surface-card)] rounded-[var(--radius-md)] p-4 mb-8 border border-[var(--color-border)] text-left space-y-3 shadow-md">
+             <div className="flex justify-between border-b border-[var(--color-border)] pb-2">
                <span className="text-[13px] font-sans text-[var(--color-muted)]">Consignee</span>
                <span className="text-[14px] font-sans font-medium text-[var(--color-foreground)]">{successTx.name}</span>
              </div>
-             <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-2">
+             <div className="flex justify-between border-b border-[var(--color-border)] pb-2">
                <span className="text-[13px] font-sans text-[var(--color-muted)]">AWB / Tag No</span>
-               <span className="text-[14px] font-sans font-medium text-[var(--color-accent-amber)]">{successTx.awb_tag_number}</span>
+               <span className="text-[14px] font-sans font-semibold text-[var(--color-accent-amber)]">{successTx.awb_tag_number}</span>
              </div>
-             <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-2">
+             <div className="flex justify-between border-b border-[var(--color-border)] pb-2">
                <span className="text-[13px] font-sans text-[var(--color-muted)]">Weight / Route</span>
-               <span className="text-[14px] font-sans font-medium text-white">{successTx.kg} KG — {successTx.detail.split(' · ')[4]}</span>
+               <span className="text-[14px] font-sans font-medium text-[var(--color-foreground)]">{successTx.kg} KG — {successTx.detail.split(' · ')[4]}</span>
              </div>
-             <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-2">
+             <div className="flex justify-between border-b border-[var(--color-border)] pb-2">
                <span className="text-[13px] font-sans text-[var(--color-muted)]">Content</span>
-               <span className="text-[14px] font-sans font-medium text-white">{successTx.detail.split(' · ')[5]}</span>
+               <span className="text-[14px] font-sans font-medium text-[var(--color-foreground)]">{successTx.detail.split(' · ')[5]}</span>
              </div>
-             <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-2">
+             <div className="flex justify-between border-b border-[var(--color-border)] pb-2">
                <span className="text-[13px] font-sans text-[var(--color-muted)]">Amount</span>
-               <span className="text-[15px] font-bold font-mono text-[var(--color-accent-amber)]">{fmt(successTx.amount)}</span>
+               <span className="text-[15px] font-extrabold font-mono text-[var(--color-accent-amber)]">{fmt(successTx.amount)}</span>
              </div>
              <div className="flex justify-between pt-1">
                <span className="text-[13px] font-sans text-[var(--color-muted)]">Payment</span>
-               <span className="text-[14px] font-sans text-white">{successTx.mode} {successTx.bank && `(${successTx.bank})`}</span>
+               <span className="text-[14px] font-sans font-medium text-[var(--color-foreground)]">{successTx.mode} {successTx.bank && `(${successTx.bank})`}</span>
              </div>
           </div>
 
           <div className="flex w-full space-x-3">
-            <button onClick={handleReset} className="flex-1 py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] text-white text-[14px] font-sans font-medium rounded-xl transition-colors cursor-pointer focus:outline-none">
+            <button onClick={handleReset} className="flex-1 py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[14px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none">
               New Entry
             </button>
-            <button onClick={handlePrintReceipt} className="flex-1 py-3.5 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[var(--color-obsidian)] text-[14px] font-bold font-sans rounded-xl transition-opacity cursor-pointer focus:outline-none">
+            <button onClick={handlePrintReceipt} className="flex-1 py-3.5 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[14px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none">
               Print Receipt
             </button>
           </div>
@@ -264,16 +264,16 @@ export const CargoForm = ({ onAddTx, user }: {
             style={{
               width: '100%', padding: '11px',
               background: 'transparent',
-              border: '1px solid rgba(245,158,11,0.3)',
-              borderRadius: 8, cursor: 'pointer',
+              border: '1.5px solid rgba(245,158,11,0.3)',
+              borderRadius: 'var(--radius-sm)', cursor: 'pointer',
               fontSize: 11, fontFamily: 'monospace',
               fontWeight: 700, color: 'var(--color-accent-amber)',
               display: 'flex', alignItems: 'center',
               justifyContent: 'center', gap: 6,
-              marginTop: 8,
+              marginTop: 10,
             }}
           >
-            ↓ DOWNLOAD RECEIPT
+            ↓ DOWNLOAD PDF RECEIPT
           </button>
         </motion.div>
       </div>
@@ -285,7 +285,7 @@ export const CargoForm = ({ onAddTx, user }: {
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">
         <div>
           <div className="flex flex-col mb-4">
-            <h1 className="text-[18px] font-sans font-bold text-white leading-tight">New Cargo Entry</h1>
+            <h1 className="text-[18px] font-sans font-bold text-[var(--color-foreground)] leading-tight">New Cargo Entry</h1>
           </div>
           
           <div className="space-y-4">
@@ -334,7 +334,7 @@ export const CargoForm = ({ onAddTx, user }: {
                 className={`${formInputClass} font-mono`}
               />
               {awb.includes('-') && (
-                <div className="text-[11px] font-sans text-[var(--color-accent-amber)] mt-1 text-right">Range detected</div>
+                <div className="text-[11px] font-sans font-semibold text-[var(--color-accent-amber)] mt-1 text-right">Range detected</div>
               )}
             </div>
 
@@ -385,10 +385,20 @@ export const CargoForm = ({ onAddTx, user }: {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 my-6">
-            <div className="w-1 h-5 bg-[var(--color-accent-amber)] rounded-full"></div>
-            <div className="text-[14px] font-sans font-medium text-[var(--color-accent-amber)]">Payment Details</div>
-            <div className="flex-1 h-px bg-[rgba(255,255,255,0.07)]"></div>
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '12px 14px', margin: '24px 0 16px 0',
+              background: 'linear-gradient(90deg, rgba(245,158,11,0.06) 0%, transparent 100%)',
+              borderLeft: '3px solid var(--color-accent-amber)',
+              borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
+            }}
+          >
+            <span style={{
+              fontSize: 12, fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+              color: 'var(--color-accent-amber)'
+            }}>Payment Details</span>
           </div>
 
           <div className="space-y-4">
@@ -400,20 +410,25 @@ export const CargoForm = ({ onAddTx, user }: {
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full h-14 pl-9 pr-4 text-[18px] md:text-[22px] font-bold text-[var(--color-accent-amber)] rounded-xl bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-amber)] focus:border-[var(--color-accent-amber)] transition-all"
+                  className="w-full h-14 pl-9 pr-4 text-[20px] font-bold text-[var(--color-accent-amber)] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] border border-[var(--color-border-strong)] font-mono focus:outline-none transition-all"
                 />
               </div>
             </div>
 
             <div>
               {renderLabel(CreditCard, "Receipt / Payment Mode")}
-              <div className="flex bg-[var(--color-surface-1)] rounded-xl p-1.5 border border-[rgba(255,255,255,0.07)] mb-3">
+              <div className="flex bg-[var(--color-surface-3)] rounded-[var(--radius-sm)] p-1 border border-[var(--color-border)] mb-3">
                 {['Cash', 'Transfer', 'POS'].map(m => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => setMode(m as any)}
-                    className={`flex-1 py-2.5 text-[13px] font-sans font-medium rounded-lg transition-colors cursor-pointer focus:outline-none ${mode === m ? 'bg-[var(--color-surface-2)] text-white shadow-sm' : 'text-[var(--color-muted)] hover:text-white'}`}
+                    style={{
+                      background: mode === m ? 'var(--color-surface-1)' : 'transparent',
+                      color: mode === m ? 'var(--color-accent-amber)' : 'var(--color-muted)',
+                      border: 'none',
+                    }}
+                    className={`flex-1 py-2 text-[13px] font-sans font-semibold rounded-[var(--radius-xs)] shadow-sm transition-all focus:outline-none cursor-pointer`}
                   >
                     {m}
                   </button>
@@ -421,21 +436,21 @@ export const CargoForm = ({ onAddTx, user }: {
               </div>
 
               <div className="flex items-center justify-center space-x-3 my-3">
-                 <div className="flex-1 h-px bg-[rgba(255,255,255,0.05)]" />
-                 <div className="text-[11px] font-sans text-[var(--color-muted)] uppercase tracking-wider">OR</div>
-                 <div className="flex-1 h-px bg-[rgba(255,255,255,0.05)]" />
+                 <div className="flex-1 h-px bg-[var(--color-border)]" />
+                 <div className="text-[11px] font-mono text-[var(--color-muted)] tracking-wider">OR</div>
+                 <div className="flex-1 h-px bg-[var(--color-border)]" />
               </div>
 
               <button
                 type="button"
                 onClick={() => setMode('Debt')}
-                className={`w-full py-2.5 text-[13px] font-sans font-medium rounded-lg border transition-colors cursor-pointer focus:outline-none ${mode === 'Debt' ? 'bg-[rgba(239,68,68,0.1)] border-[var(--color-error)] text-[var(--color-error)] shadow-sm' : 'bg-transparent border-[rgba(239,68,68,0.3)] text-[var(--color-error)] hover:bg-[rgba(239,68,68,0.05)]'}`}
+                className={`w-full py-2.5 text-[13px] font-sans font-semibold rounded-[var(--radius-sm)] border transition-colors cursor-pointer focus:outline-none ${mode === 'Debt' ? 'bg-[rgba(239,68,68,0.1)] border-[var(--color-error)] text-[var(--color-error)] shadow-sm' : 'bg-transparent border-[var(--color-border-strong)] text-[var(--color-error)] hover:bg-[rgba(239,68,68,0.05)]'}`}
               >
                 Log as Credit Sale (Debt)
               </button>
               
               {mode === 'Debt' && (
-                <div className="mt-2 text-[12px] font-sans text-[var(--color-error)] bg-[rgba(239,68,68,0.05)] p-2.5 rounded-lg border border-[rgba(239,68,68,0.1)]">
+                <div className="mt-2 text-[12px] font-sans text-[var(--color-error)] bg-[rgba(239,68,68,0.05)] p-2.5 rounded-[var(--radius-sm)] border border-[rgba(239,68,68,0.1)]">
                   This sale will be logged as a credit. Collect payment before dispatch or arrange with management.
                 </div>
               )}
@@ -501,10 +516,10 @@ export const CargoForm = ({ onAddTx, user }: {
             <button
               onClick={handleSubmit}
               disabled={!isValid || submitting}
-              className={`w-full py-4 rounded-xl font-sans font-bold text-[16px] flex items-center justify-center gap-2 transition-all focus:outline-none ${
-                submitting ? 'opacity-80 cursor-wait bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' :
-                !isValid ? 'bg-[var(--color-surface-2)] text-[var(--color-muted)] cursor-not-allowed' :
-                'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] cursor-pointer hover:bg-opacity-90'
+              className={`w-full py-4 rounded-[var(--radius-sm)] font-sans font-bold text-[16px] flex items-center justify-center gap-2 transition-all focus:outline-none ${
+                submitting ? 'opacity-80 cursor-wait bg-[var(--color-accent-amber)] text-[#030712]' :
+                !isValid ? 'bg-[var(--color-surface-3)] text-[var(--color-muted)] cursor-not-allowed border border-[var(--color-border)]' :
+                'bg-[var(--color-accent-amber)] text-[#030712] cursor-pointer hover:bg-opacity-95'
               }`}
             >
               {submitting && <Loader2 size={18} className="animate-spin" />}
@@ -517,39 +532,40 @@ export const CargoForm = ({ onAddTx, user }: {
         <aside className="hidden md:block">
           <div style={{
             position: 'sticky', top: 16,
-            background: 'var(--color-surface-card)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 12, padding: 20,
+            background: 'var(--color-surface-1)',
+            border: '1.5px solid var(--color-border-strong)',
+            borderRadius: 'var(--radius-md)', padding: 20,
+            boxShadow: 'var(--shadow-card)',
           }}>
             <div style={{
               fontSize: 10, fontFamily: 'monospace',
               color: 'var(--color-muted)',
               textTransform: 'uppercase', letterSpacing: '0.1em',
-              marginBottom: 16, fontWeight: 600
+              marginBottom: 16, fontWeight: 700
             }}>
               ENTRY SUMMARY
             </div>
             <div style={{ fontSize: 13, fontFamily: 'monospace', lineHeight: 2.2, color: 'var(--color-foreground)' }}>
-              <div className="flex justify-between"><span style={{ color: 'var(--color-muted)' }}>Consignee</span><span className="truncate ml-4 font-medium" style={{ maxWidth: '140px' }}>{actualConsignee || '—'}</span></div>
-              <div className="flex justify-between"><span style={{ color: 'var(--color-muted)' }}>AWB</span><span className="font-semibold text-[var(--color-accent-amber)]">{awb || '—'}</span></div>
-              <div className="flex justify-between"><span style={{ color: 'var(--color-muted)' }}>Route</span><span className="font-medium">{route}</span></div>
-              <div className="flex justify-between"><span style={{ color: 'var(--color-muted)' }}>Content</span><span className="font-medium">{contentType}</span></div>
-              <div className="flex justify-between"><span style={{ color: 'var(--color-muted)' }}>Pcs / KG</span><span className="font-medium">{pcs || '—'} / {kg || '—'}</span></div>
+              <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Consignee</span><span className="truncate ml-4 font-semibold text-[var(--color-foreground)]" style={{ maxWidth: '140px' }}>{actualConsignee || '—'}</span></div>
+              <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>AWB</span><span className="font-bold text-[var(--color-accent-amber)]">{awb || '—'}</span></div>
+              <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Route</span><span className="font-semibold text-[var(--color-foreground)]">{route}</span></div>
+              <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Content</span><span className="font-semibold text-[var(--color-foreground)]">{contentType}</span></div>
+              <div className="flex justify-between"><span style={{ color: 'var(--color-muted)' }}>Pcs / KG</span><span className="font-semibold text-[var(--color-foreground)]">{pcs || '—'} / {kg || '—'}</span></div>
             </div>
             <div style={{
-              borderTop: '1px solid var(--color-border)',
+              borderTop: '1.5px dashed var(--color-border-strong)',
               paddingTop: 16, marginTop: 16,
             }}>
               <div style={{
                 fontSize: 10, fontFamily: 'monospace',
                 color: 'var(--color-muted)', marginBottom: 6,
-                fontWeight: 600, letterSpacing: '0.05em'
+                fontWeight: 700, letterSpacing: '0.05em'
               }}>AMOUNT</div>
               <div style={{
                 fontSize: 28, fontWeight: 800, fontFamily: 'monospace',
                 color: parsedAmount > 0
                   ? 'var(--color-accent-amber)'
-                  : 'var(--color-light-muted)',
+                  : 'var(--color-muted)',
               }}>
                 {parsedAmount > 0
                   ? '₦' + parsedAmount.toLocaleString('en-NG')
@@ -558,6 +574,7 @@ export const CargoForm = ({ onAddTx, user }: {
               <div style={{
                 fontSize: 11, fontFamily: 'monospace',
                 color: 'var(--color-muted)', marginTop: 6,
+                fontWeight: 600,
               }}>
                 {mode}{mode === 'Transfer' && bank ? ` · ${bank}` : ''}
               </div>

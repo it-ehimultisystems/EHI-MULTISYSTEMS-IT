@@ -5,6 +5,34 @@ import { User, ScanMode, ScanValidationResult, BatchScanItem } from '../../lib/t
 import { validateScan, logScanEvent } from '../../lib/scanLogic';
 import { WrongDestinationAlert, NotLoggedInAlert, AlreadyProcessedAlert, SuccessFlash } from '../ScanAlerts';
 
+// Standard Web Audio API synthesizer for a subtle, high-pitched electronic confirmation blip
+const playBeep = () => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const audioCtx = new AudioContextClass();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.type = 'sine';
+    // Clean, crisp note at 900Hz sliding slightly to 1100Hz
+    oscillator.frequency.setValueAtTime(900, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(1100, audioCtx.currentTime + 0.05);
+
+    gainNode.gain.setValueAtTime(0.0, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+
+    oscillator.start(audioCtx.currentTime);
+    oscillator.stop(audioCtx.currentTime + 0.13);
+  } catch (error) {
+    console.warn('Audio feedback failed to play:', error);
+  }
+};
+
 export const Scanner = ({
   user,
   transactions,
@@ -28,6 +56,9 @@ export const Scanner = ({
   const currentHub = user.hub;
   const batchSuccess = batchItems.filter(b => b.result.startsWith('SUCCESS')).length;
   const batchAlerts = batchItems.filter(b => !b.result.startsWith('SUCCESS') && b.result !== 'ALREADY_PROCESSED').length;
+  const successfulScans = batchItems
+    .filter(item => item.result === 'SUCCESS_ARRIVE' || item.result === 'SUCCESS_DEPART')
+    .slice(0, 5);
 
   const processCode = useCallback(async (code: string) => {
     if (processingRef.current) return;
@@ -38,6 +69,7 @@ export const Scanner = ({
       const result = await validateScan(code, mode, currentHub);
 
       if (result.type === 'SUCCESS_ARRIVE' || result.type === 'SUCCESS_DEPART') {
+        playBeep();
         // Log the event to database
         await logScanEvent(
           code,
@@ -395,6 +427,70 @@ export const Scanner = ({
           </div>
         </div>
       )}
+
+      {/* Recent Scans List */}
+      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3 border-b border-[var(--color-border)] pb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[12px] font-sans font-bold text-[var(--color-foreground)]">Recent Scans</span>
+            <span className="text-[9px] font-mono bg-[var(--color-surface-2)] text-[var(--color-muted)] px-1.5 py-0.5 rounded-full">
+              Last 5
+            </span>
+          </div>
+          {successfulScans.length > 0 && (
+            <button
+              onClick={() => setShowBatch(true)}
+              className="text-[10px] font-mono text-[var(--color-accent-amber)] hover:underline focus:outline-none cursor-pointer"
+            >
+              View Session ({batchItems.length})
+            </button>
+          )}
+        </div>
+
+        {successfulScans.length === 0 ? (
+          <div className="text-center py-6 text-[var(--color-muted)] font-mono text-[11px]">
+            No successful scans logged in this session yet
+          </div>
+        ) : (
+          <div className="divide-y divide-[var(--color-border)]">
+            {successfulScans.map((item, index) => {
+              const isArrive = item.result === 'SUCCESS_ARRIVE';
+              const badgeBg = isArrive ? 'rgba(16,185,129,0.1)' : 'rgba(37,99,235,0.1)';
+              const badgeText = isArrive ? 'var(--color-success)' : 'var(--color-accent-cobalt)';
+              const label = isArrive ? 'ARRIVE' : 'DEPART';
+
+              return (
+                <div key={index} className="flex items-center justify-between py-2 text-[12px]">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-1.5 rounded-lg bg-[var(--color-surface-2)] shrink-0">
+                      <Package size={14} className="text-[var(--color-light-muted)]" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-[var(--color-foreground)] truncate">
+                        {item.name}
+                      </div>
+                      <div className="font-mono text-[10px] text-[var(--color-muted)] truncate">
+                        {item.ref}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <span 
+                      className="px-2 py-0.5 text-[9px] font-mono font-bold rounded uppercase"
+                      style={{ backgroundColor: badgeBg, color: badgeText }}
+                    >
+                      {label}
+                    </span>
+                    <span className="text-[10px] font-mono text-[var(--color-muted)]">
+                      {item.time}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Alert modals */}
       {currentResult?.type === 'WRONG_DESTINATION' && (

@@ -16,39 +16,59 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: { user: User; curre
   const visibleTabs = allTabs.filter(t => t.roles.includes(user.role));
 
   return (
-    <div 
-      className="w-full bg-[var(--color-obsidian)] flex items-center justify-around border-t border-[var(--color-border)] shrink-0 z-50"
+    <div
+      className="w-full flex items-center justify-around shrink-0 z-50"
       style={{
+        background: 'var(--color-nav-bg)',
+        borderTop: '1px solid var(--color-border-strong)',
+        boxShadow: 'var(--shadow-nav)',
         paddingBottom: 'env(safe-area-inset-bottom)',
-        height: 'calc(60px + env(safe-area-inset-bottom))',
+        height: 'calc(62px + env(safe-area-inset-bottom))',
       }}
     >
       {visibleTabs.map(tab => {
         const isActive = currentTab === tab.id;
-        
         return (
           <button
             key={tab.id}
             onClick={() => onChangeTab(tab.id)}
-            className="flex-1 h-full flex flex-col items-center justify-center relative focus:outline-none"
+            className="flex-1 h-full flex flex-col items-center justify-center relative gap-0.5"
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
+            {/* Active pill background on icon */}
             {isActive && (
-              <motion.div 
-                layoutId="activeTabBorder"
-                className="absolute bottom-0 left-[25%] right-[25%] h-[4px] z-[5] rounded-t-full shadow-[0_-1px_6px_var(--color-border-strong)]" 
-                style={{ backgroundColor: tab.accent }} 
-                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              <motion.div
+                layoutId="nav-pill"
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  width: 44, height: 28,
+                  borderRadius: 'var(--radius-full)',
+                  background: tab.accent === 'white' || tab.accent === 'var(--color-foreground)'
+                    ? 'rgba(255,255,255,0.1)'
+                    : `${tab.accent}1A`,
+                  border: tab.accent === 'white' || tab.accent === 'var(--color-foreground)'
+                    ? '1px solid rgba(255,255,255,0.12)'
+                    : `1px solid ${tab.accent}40`,
+                }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />
             )}
-            <FiIcon 
+            <FiIcon
               name={tab.icon}
               size={isActive ? 20 : 18}
-              className="mb-1 transition-all"
-              style={{ color: isActive ? tab.accent : 'var(--color-muted)' }}
+              style={{
+                color: isActive ? tab.accent : 'var(--color-muted)',
+                transition: 'all 0.2s',
+                position: 'relative', zIndex: 1,
+              }}
             />
-            <span 
-              className="text-[11px] font-sans font-medium"
-              style={{ color: isActive ? tab.accent : 'var(--color-muted)' }}
+            <span
+              style={{
+                fontSize: 10, fontWeight: isActive ? 700 : 500,
+                color: isActive ? tab.accent : 'var(--color-muted)',
+                transition: 'all 0.2s',
+              }}
             >
               {tab.title}
             </span>
