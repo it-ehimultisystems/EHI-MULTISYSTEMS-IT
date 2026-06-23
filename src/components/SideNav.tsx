@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Package, TrendingUp, Plane, QrCode,
-  MoreHorizontal, Truck, LogOut, Sun, Moon
+  MoreHorizontal, Truck, LogOut, Sun, Moon, Cpu
 } from 'lucide-react';
 import { User, TabView } from '../lib/types';
 import { Theme } from '../lib/useTheme';
@@ -41,6 +41,7 @@ export const SideNav = ({
     { id: 'VJ POS',    icon: Plane,            label: 'ValueJet POS',  accent: 'cobalt',  roles: ['super_admin','admin','vj_agent'] },
     { id: 'Scan',      icon: QrCode,           label: 'QR Scanner',    accent: 'success', roles: ['super_admin','admin','cargo_agent','vj_agent','marketing_agent','driver'] },
     { id: 'MyTrips',   icon: Truck,            label: 'My Trips',      accent: 'neutral', roles: ['driver'] },
+    { id: 'IT Debug',  icon: Cpu,              label: 'IT Debug',      accent: 'amber',   roles: ['super_admin','admin'] },
     { id: 'More',      icon: MoreHorizontal,   label: 'More',          accent: 'neutral', roles: ['super_admin','admin','accountant','auditor'] },
   ];
 
@@ -80,7 +81,7 @@ export const SideNav = ({
               fontSize: 11, fontWeight: 800, color: '#F59E0B',
             }}>EHI</span>
           </div>
-          <div className="hidden lg:block">
+          <div className="ehi-sidebar-brand">
             <div style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11, fontWeight: 800,
@@ -100,7 +101,7 @@ export const SideNav = ({
           </div>
         </div>
 
-        <div className="hidden lg:block" style={{ marginTop: 12 }}>
+        <div className="ehi-sidebar-brand" style={{ marginTop: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-foreground, #F1F5F9)' }}>
             {user.name}
           </div>
@@ -146,7 +147,7 @@ export const SideNav = ({
                 style={{ flexShrink: 0 }}
               />
               <span
-                className="hidden lg:block"
+                className="ehi-sidebar-text"
                 style={{
                   fontSize: 12,
                   fontWeight: isActive ? 700 : 400,
@@ -180,7 +181,7 @@ export const SideNav = ({
         >
           {theme === 'dark' ? <Sun size={17} color="var(--color-light-muted)" /> : <Moon size={17} color="var(--color-light-muted)" />}
           <span
-            className="hidden lg:block text-left"
+            className="ehi-sidebar-text text-left"
             style={{ fontSize: 12, color: 'var(--color-foreground)' }}
           >
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
@@ -199,7 +200,7 @@ export const SideNav = ({
         >
           <LogOut size={17} color="var(--color-error)" />
           <span
-            className="hidden lg:block"
+            className="ehi-sidebar-text"
             style={{ fontSize: 12, color: 'var(--color-error)' }}
           >
             Sign Out

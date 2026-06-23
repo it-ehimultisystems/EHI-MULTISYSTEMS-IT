@@ -161,7 +161,7 @@ export interface Expense {
   status?: 'pending' | 'approved' | 'rejected';
 }
 
-export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Scan' | 'More' | 'MyTrips';
+export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Scan' | 'More' | 'MyTrips' | 'IT Debug';
 
 export interface AppState {
   user: User | null;

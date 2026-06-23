@@ -12,7 +12,7 @@ import { PODLog } from './PODLog';
 import { Dispatch } from './Dispatch';
 
 import { useState } from 'react';
-import { User, Transaction, Expense } from '../../lib/types';
+import { User, TabView, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { 
   FileText, 
@@ -29,10 +29,11 @@ import {
   ShieldAlert, 
   Key, 
   History,
-  MapPin
+  MapPin,
+  Cpu
 } from 'lucide-react';
 
-export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onAddExpense }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD: () => void; onAddTx: (tx: Transaction) => void; onAddExpense: (e: Expense) => void }) => {
+export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onAddExpense, onChangeTab }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD: () => void; onAddTx: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onChangeTab: (t: TabView) => void }) => {
   const [eodView, setEodView] = useState(false);
   const [accountingView, setAccountingView] = useState(false);
   const [reportsView, setReportsView] = useState(false);
@@ -449,6 +450,20 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           <div className="text-left">
             <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Platform Settings</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">Automation and route pricing configuration</div>
+          </div>
+        </div>
+      </button>
+
+      {/* IT Systems Debugging (Accessible to Admins and Super Admins) */}
+      <button 
+        onClick={() => { onChangeTab('IT Debug'); }}
+        className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] hover:border-[var(--color-accent-amber)] hover:bg-[var(--color-surface-2)] rounded p-4 flex items-center justify-between transition-colors cursor-pointer"
+      >
+        <div className="flex items-center space-x-3">
+          <Cpu size={18} className="text-[var(--color-accent-amber)]" />
+          <div className="text-left">
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">IT Systems Debugging & Fallbacks</div>
+            <div className="text-[10px] font-mono text-[var(--color-muted)]">Check real-time timeouts, database schemas, and offline logs</div>
           </div>
         </div>
       </button>

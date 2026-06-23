@@ -47,7 +47,7 @@ export const Header = ({
       <div className="flex items-center justify-between px-4 py-3 min-h-[60px]">
 
         {/* Brand */}
-        <div className="flex items-center gap-2.5 md:hidden">
+        <div className="flex items-center gap-2.5 ehi-header-brand">
           <div
             style={{
               width: 36, height: 36,

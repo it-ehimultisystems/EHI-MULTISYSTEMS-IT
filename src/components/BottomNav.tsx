@@ -10,6 +10,7 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: { user: User; curre
     { id: 'VJ POS', title: 'ValueJet', icon: 'plane', accent: 'var(--color-accent-cobalt)', roles: ['super_admin', 'admin', 'vj_agent'] },
     { id: 'MyTrips', title: 'My Trips', icon: 'truck-side', accent: 'var(--color-foreground)', roles: ['driver'] },
     { id: 'Scan', title: 'Scanner', icon: 'qr-scan', accent: 'var(--color-success)', roles: ['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver'] },
+    { id: 'IT Debug', title: 'IT Debug', icon: 'bug', accent: 'var(--color-accent-amber)', roles: ['super_admin', 'admin'] },
     { id: 'More', title: 'More', icon: 'apps', accent: 'var(--color-foreground)', roles: ['super_admin', 'admin', 'accountant', 'auditor'] },
   ];
 

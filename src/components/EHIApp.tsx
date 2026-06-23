@@ -17,6 +17,7 @@ import { More } from './views/More';
 import { MarketingWorkspace } from './views/MarketingWorkspace';
 import { Scanner } from './views/Scanner';
 import { MyTrips } from './views/MyTrips';
+import { ITDashboard } from './views/ITDashboard';
 import { ErrorBoundary } from './ErrorBoundary';
 
 import { SEED_TRANSACTIONS } from '../lib/constants';
@@ -251,6 +252,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} />}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
               {currentTab === 'MyTrips' && <MyTrips user={user} />}
+              {currentTab === 'IT Debug' && <ITDashboard user={user} />}
               {currentTab === 'More' && (
                 <More 
                   user={user} 
@@ -258,6 +260,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                   expenses={expenses}
                   onLogout={onLogout} 
                   onAddTx={handleAddTx}
+                  onChangeTab={setCurrentTab}
                   onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])}
                   onEOD={() => {
                     showToast({ message: 'EOD Report Dispatched — Saved to Drive · Emailed to management', type: 'success' });

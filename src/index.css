@@ -296,5 +296,47 @@ button:active:not(:disabled) { transform: scale(0.98); }
 .ehi-card,
 .ehi-input,
 .ehi-sidenav {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, width 0.2s ease;
+}
+
+/* Custom Sidebar text display aligned with --sidebar-width */
+.ehi-sidebar-text, .ehi-sidebar-brand {
+  display: none !important;
+}
+
+@media (min-width: 1200px) {
+  .ehi-sidebar-text {
+    display: inline-block !important;
+  }
+  .ehi-sidebar-brand {
+    display: block !important;
+  }
+}
+
+/* Custom hover-expansion behavior on tablet and medium devices (768px to 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .ehi-sidenav {
+    position: relative;
+    z-index: 50;
+  }
+  .ehi-sidenav:hover {
+    width: 220px !important;
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.45);
+  }
+  .ehi-sidenav:hover .ehi-sidebar-text {
+    display: inline-block !important;
+  }
+  .ehi-sidenav:hover .ehi-sidebar-brand {
+    display: block !important;
+  }
+}
+
+/* Custom Header brand showing when sidebar is narrow < 1200px */
+.ehi-header-brand {
+  display: flex !important;
+}
+@media (min-width: 1200px) {
+  .ehi-header-brand {
+    display: none !important;
+  }
 }
