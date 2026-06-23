@@ -118,8 +118,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
     });
   };
 
-  // Focus visible styles for ValueJet (cobalt stream)
-  const vjFocusClasses = "focus:outline-none focus:ring-2 focus:ring-[rgba(59,130,246,0.5)] focus:border-[rgba(59,130,246,0.5)] transition-[border-color,box-shadow]";
+  const formInputClass = "w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-2 focus:ring-[var(--glow-cobalt)] transition-colors";
 
   if (successTx) {
     const s = successTx;
@@ -177,7 +176,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
             <button onClick={handleReset} className="flex-1 py-3 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-mono rounded cursor-pointer">
               Next Passenger
             </button>
-            <button onClick={handlePrintReceipt} className="flex-1 py-3 bg-[var(--color-accent-cobalt)] text-[var(--color-foreground)] text-[11px] font-bold font-mono rounded cursor-pointer">
+            <button onClick={handlePrintReceipt} className="flex-1 py-3 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer">
               Print Receipt
             </button>
           </div>
@@ -219,7 +218,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
               placeholder="Enter Passenger Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all"
+              className={formInputClass}
             />
           </div>
 
@@ -230,7 +229,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
               placeholder="e.g. 08012345678"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all"
+              className={formInputClass}
             />
           </div>
           
@@ -241,7 +240,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
                 placeholder="e.g. VJ102"
                 value={flight}
                 onChange={(e) => setFlight(e.target.value)}
-                className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all uppercase"
+                className={`${formInputClass} uppercase`}
               />
             </div>
             <div className="space-y-1.5">
@@ -250,7 +249,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
                 placeholder="e.g. Abuja"
                 value={dest}
                 onChange={(e) => setDest(e.target.value)}
-                className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all"
+                className={formInputClass}
               />
             </div>
           </div>
@@ -264,7 +263,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
                 placeholder="0.0"
                 value={kg}
                 onChange={(e) => setKg(e.target.value)}
-                className="w-full h-12 px-4 text-[14px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none transition-all"
+                className={formInputClass}
               />
             </div>
             <div className="space-y-1.5">

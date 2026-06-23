@@ -8,6 +8,8 @@ import { FraudAlerts } from './FraudAlerts';
 import { AuditLog } from './AuditLog';
 import { APIDashboard } from './APIDashboard';
 import { TransactionLedger } from './TransactionLedger';
+import { PODLog } from './PODLog';
+import { Dispatch } from './Dispatch';
 
 import { useState } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
@@ -26,7 +28,8 @@ import {
   Brain, 
   ShieldAlert, 
   Key, 
-  History 
+  History,
+  MapPin
 } from 'lucide-react';
 
 export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onAddExpense }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD: () => void; onAddTx: (tx: Transaction) => void; onAddExpense: (e: Expense) => void }) => {
@@ -43,6 +46,8 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   const [auditLogView, setAuditLogView] = useState(false);
   const [apiDashboardView, setApiDashboardView] = useState(false);
   const [ledgerView, setLedgerView] = useState(false);
+  const [podLogView, setPodLogView] = useState(false);
+  const [dispatchView, setDispatchView] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -124,7 +129,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (ledgerView) {
-    return <TransactionLedger user={user} transactions={transactions} onBack={() => setLedgerView(false)} onUpdateTx={onAddTx} />;
+    return <TransactionLedger user={user} transactions={transactions} expenses={expenses} onBack={() => setLedgerView(false)} onUpdateTx={onAddTx} />;
   }
 
   if (auditLogView) {
@@ -133,6 +138,14 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
   if (apiDashboardView) {
     return <APIDashboard onBack={() => setApiDashboardView(false)} />;
+  }
+
+  if (podLogView) {
+    return <PODLog onBack={() => setPodLogView(false)} />;
+  }
+
+  if (dispatchView) {
+    return <Dispatch onBack={() => setDispatchView(false)} />;
   }
 
   if (eodView) {
@@ -180,16 +193,16 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           <div className="p-4 flex flex-col space-y-2 bg-[var(--color-surface-1)]">
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-mono text-[var(--color-muted)]">Cash</span>
-              <span className="text-[12px] font-mono text-white">{fmt(cashTotal)}</span>
+              <span className="text-[12px] font-mono text-[var(--color-foreground)]">{fmt(cashTotal)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-mono text-[var(--color-muted)]">Transfer</span>
-              <span className="text-[12px] font-mono text-white">{fmt(transferTotal)}</span>
+              <span className="text-[12px] font-mono text-[var(--color-foreground)]">{fmt(transferTotal)}</span>
             </div>
           </div>
           <div className="p-3 border-t border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.02)] flex justify-between items-center">
             <span className="text-[10px] font-mono text-[var(--color-muted)]">Total Transactions</span>
-            <span className="text-[11px] font-bold font-mono text-white">{transactions.length}</span>
+            <span className="text-[11px] font-bold font-mono text-[var(--color-foreground)]">{transactions.length}</span>
           </div>
         </div>
 
@@ -254,7 +267,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <FileText size={18} className="text-[var(--color-accent-amber)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">EOD Daily Close</div>
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">EOD Daily Close</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">Generate and dispatch end of day reports</div>
           </div>
         </div>
@@ -268,7 +281,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <Layers size={18} className="text-[var(--color-accent-cobalt)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white flex items-center space-x-1.5">
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)] flex items-center space-x-1.5">
               <span>Bank Reconciliation</span>
               <span className="text-[8px] font-mono bg-blue-500/10 text-[var(--color-accent-cobalt)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase">CSV AUTO</span>
             </div>
@@ -285,7 +298,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <Truck size={18} className="text-purple-400" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Fleet Management</div>
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Fleet Management</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">Vehicles registration, service scheduler, fuel expense log</div>
           </div>
         </div>
@@ -299,7 +312,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <Brain size={18} className="text-[var(--color-accent-amber)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white flex items-center space-x-1.5">
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)] flex items-center space-x-1.5">
               <span>Demand Forecasting AI</span>
               <span className="text-[8px] font-mono bg-amber-500/10 text-[var(--color-accent-amber)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase">Gemini Intel</span>
             </div>
@@ -316,7 +329,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <ShieldAlert size={18} className="text-[var(--color-error)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white flex items-center space-x-2">
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)] flex items-center space-x-2">
               <span>Fraud & Anomalies Feed</span>
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -336,7 +349,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <Activity size={18} className="text-[var(--color-accent-amber)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Transaction Ledger</div>
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Transaction Ledger</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">{transactions.length} total records logged</div>
           </div>
         </div>
@@ -350,7 +363,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <Database size={18} className="text-[var(--color-success)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Central Accounting ERP</div>
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Central Accounting ERP</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">Check balance sheets and cash flows dashboard</div>
           </div>
         </div>
@@ -364,8 +377,22 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <BarChart size={18} className="text-[var(--color-success)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Advanced Reports</div>
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Advanced Reports</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">Operational audits and trend sheets</div>
+          </div>
+        </div>
+      </button>
+
+      {/* Proof of Delivery Log */}
+      <button 
+        onClick={() => { if (canAccessFraud) setPodLogView(true); }}
+        className={`w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center justify-between transition-colors ${canAccessFraud ? 'hover:border-[var(--color-success)] hover:bg-[var(--color-surface-2)] cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+      >
+        <div className="flex items-center space-x-3">
+          <Shield size={18} className="text-[var(--color-success)]" />
+          <div className="text-left">
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Proof of Delivery Log</div>
+            <div className="text-[10px] font-mono text-[var(--color-muted)]">GPS trace, signatures and photo evidence</div>
           </div>
         </div>
       </button>
@@ -378,8 +405,22 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <History size={18} className="text-purple-400" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Revision Audit Log</div>
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Revision Audit Log</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">Strict NDPR/Financial compliance trace log</div>
+          </div>
+        </div>
+      </button>
+
+      {/* Dispatch Console */}
+      <button 
+        onClick={() => { if (canAccessFleetAndForecast) setDispatchView(true); }}
+        className={`w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center justify-between transition-colors ${canAccessFleetAndForecast ? 'hover:border-[var(--color-accent-blue)] hover:bg-[var(--color-surface-2)] cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+      >
+        <div className="flex items-center space-x-3">
+          <MapPin size={18} className="text-[var(--color-accent-blue)]" />
+          <div className="text-left">
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Dispatch & Fleet Tracking</div>
+            <div className="text-[10px] font-mono text-[var(--color-muted)]">Live driver tracking on active routes</div>
           </div>
         </div>
       </button>
@@ -392,7 +433,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <Key size={18} className="text-[var(--color-accent-cobalt)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Partners API Keys & Webhooks</div>
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Partners API Keys & Webhooks</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">Key-hashes, scopes limit, and integration documentation</div>
           </div>
         </div>
@@ -406,7 +447,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
         <div className="flex items-center space-x-3">
           <SettingsIcon size={18} className="text-[var(--color-accent-amber)]" />
           <div className="text-left">
-            <div className="text-[13px] font-bold font-sans text-white">Platform Settings</div>
+            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">Platform Settings</div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">Automation and route pricing configuration</div>
           </div>
         </div>

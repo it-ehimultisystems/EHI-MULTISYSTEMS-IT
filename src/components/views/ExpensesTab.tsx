@@ -139,7 +139,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                value={desc}
                onChange={e => setDesc(e.target.value)}
                placeholder="e.g. Fuel for bus, Toll gate..."
-               className="w-full h-11 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 text-white font-sans text-[13px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+               className="w-full h-11 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none focus:border-[var(--color-accent-amber)]"
              />
            </div>
 
@@ -165,7 +165,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
 
       {/* BUDGET VS ACTUAL */}
       <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
-         <div className="text-[15px] font-sans font-bold text-white mb-4">Budget Tracker</div>
+         <div className="text-[15px] font-sans font-bold text-[var(--color-foreground)] mb-4">Budget Tracker</div>
          <div className="space-y-4">
            {categories.map(c => {
              const budget = budgets[c];
@@ -180,7 +180,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
              return (
                <div key={c} className="space-y-1.5">
                  <div className="flex justify-between items-center text-[12px] font-sans">
-                   <div className="flex items-center space-x-2 text-white">
+                   <div className="flex items-center space-x-2 text-[var(--color-foreground)]">
                      <span className="text-[var(--color-muted)]">{getIcon(c)}</span>
                      <span className="font-medium">{c}</span>
                    </div>
@@ -193,7 +193,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                          <input 
                            type="number" 
                            autoFocus
-                           className="w-20 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.2)] rounded px-1 text-[11px] text-white font-mono h-6 outline-none"
+                           className="w-20 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.2)] rounded px-1 text-[11px] text-[var(--color-foreground)] font-mono h-6 outline-none"
                            value={budgetInput}
                            onChange={e => setBudgetInput(e.target.value)}
                            onBlur={() => saveBudget(c, parseFloat(budgetInput) || budget)}
@@ -202,8 +202,8 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                        </div>
                      ) : (
                        <div className="flex items-center space-x-1 group">
-                         <span className="font-mono text-white">{fmt(budget)}</span>
-                         <button onClick={() => { setEditingBudget(c); setBudgetInput(budget.toString()); }} className="opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:text-white transition-opacity focus:outline-none">
+                         <span className="font-mono text-[var(--color-foreground)]">{fmt(budget)}</span>
+                         <button onClick={() => { setEditingBudget(c); setBudgetInput(budget.toString()); }} className="opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-opacity focus:outline-none">
                            <Edit2 size={12} />
                          </button>
                        </div>
@@ -223,7 +223,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
       {/* EXPENSE LOG */}
       <div>
          <div className="flex justify-between items-center mb-3">
-           <span className="text-[14px] font-sans font-semibold text-white">Expense Log</span>
+           <span className="text-[14px] font-sans font-semibold text-[var(--color-foreground)]">Expense Log</span>
            <button className="flex items-center space-x-1 text-[11px] font-sans text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.1)] px-2 py-1 rounded focus:outline-none hover:bg-opacity-20 transition-colors">
              <Download size={12} />
              <span>CSV</span>
@@ -233,7 +233,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
          {expenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-6 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)]">
                <Briefcase size={24} className="text-[#64748B] mb-2" />
-               <div className="text-[13px] font-medium text-white font-sans">No expenses logged yet.</div>
+               <div className="text-[13px] font-medium text-[var(--color-foreground)] font-sans">No expenses logged yet.</div>
             </div>
          ) : (
             <div className="space-y-2">
@@ -244,7 +244,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between">
-                      <span className="text-[14px] font-sans font-medium text-white break-words pr-2 leading-tight">{e.description}</span>
+                      <span className="text-[14px] font-sans font-medium text-[var(--color-foreground)] break-words pr-2 leading-tight">{e.description}</span>
                       <span className="text-[15px] font-mono font-bold text-[var(--color-accent-amber)] shrink-0">{fmt(e.amount)}</span>
                     </div>
                     <div className="flex items-center space-x-2 mt-2">

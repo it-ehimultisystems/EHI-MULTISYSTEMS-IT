@@ -26,7 +26,7 @@ export const WrongDestinationAlert = ({
       border: '2px solid rgba(239,68,68,0.4)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       marginBottom: 24,
-      animation: 'pulse 1.5s ease-in-out infinite',
+      animation: 'customPulse 1.5s ease-in-out infinite',
     }}>
       <XCircle size={40} color="#EF4444" />
     </div>

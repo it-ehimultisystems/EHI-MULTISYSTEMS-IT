@@ -464,7 +464,7 @@ export const Settings = ({
         {/* Toggle WhatsApp Notifications */}
         <div className="flex justify-between items-center py-1">
           <div className="space-y-0.5">
-            <span className="text-[12px] font-bold text-white block">WhatsApp Business Integrations</span>
+            <span className="text-[12px] font-bold text-[var(--color-foreground)] block">WhatsApp Business Integrations</span>
             <span className="text-[9px] text-[var(--color-muted)] font-mono block">SMS auto triggers on customer creation / delivery</span>
           </div>
           <button 
@@ -478,7 +478,7 @@ export const Settings = ({
         {/* Toggle Google Drive Sync */}
         <div className="flex justify-between items-center py-1 border-t border-[rgba(255,255,255,0.05)] pt-3">
           <div className="space-y-0.5">
-            <span className="text-[12px] font-bold text-white block">Google Drive EOD dispatch</span>
+            <span className="text-[12px] font-bold text-[var(--color-foreground)] block">Google Drive EOD dispatch</span>
             <span className="text-[9px] text-[var(--color-muted)] font-mono block font-mono">Archive daily PDF reports to cloud folder automatically</span>
           </div>
           <button 
@@ -493,7 +493,7 @@ export const Settings = ({
       {/* Routing Matrix Pricing Configuration List */}
       <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-4">
         <div className="flex justify-between items-center">
-          <div className="text-[9px] font-mono text-white tracking-widest uppercase flex items-center space-x-1.5">
+          <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
             <DollarSign size={12} className="text-[var(--color-accent-amber)]" />
             <span>ROUTE PRICING MATRIX (STREAM 1)</span>
           </div>
@@ -503,7 +503,7 @@ export const Settings = ({
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           {pricing.map((r: any) => (
             <div key={r.id} className="p-3 bg-black/30 rounded border border-[rgba(255,255,255,0.04)] space-y-2">
-              <span className="text-[11px] font-bold text-white uppercase tracking-wide block">{r.route}</span>
+              <span className="text-[11px] font-bold text-[var(--color-foreground)] uppercase tracking-wide block">{r.route}</span>
               
               <div className="grid grid-cols-3 gap-2">
                 <div>
@@ -512,7 +512,7 @@ export const Settings = ({
                     type="number"
                     value={r.bb}
                     onChange={(e) => handlePriceUpdate(r.id, 'bb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-white text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <div>
@@ -521,7 +521,7 @@ export const Settings = ({
                     type="number"
                     value={r.mb}
                     onChange={(e) => handlePriceUpdate(r.id, 'mb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-white text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <div>
@@ -530,7 +530,7 @@ export const Settings = ({
                     type="number"
                     value={r.sb}
                     onChange={(e) => handlePriceUpdate(r.id, 'sb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-white text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
               </div>
@@ -543,7 +543,7 @@ export const Settings = ({
       <div className="grid md:grid-cols-2 gap-4">
         {/* regional station hubs management */}
         <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
-        <div className="text-[9px] font-mono text-white tracking-widest uppercase flex items-center space-x-1.5">
+        <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
           <MapPin size={11} className="text-purple-400" />
           <span>MULTI-HUB OUTPOSTS</span>
         </div>
@@ -552,7 +552,7 @@ export const Settings = ({
           {hubs.map((hub: any) => (
             <div key={hub.id} className="p-2.5 bg-black/40 rounded border border-[rgba(255,255,255,0.04)] flex justify-between items-center text-[11px]">
               <div>
-                <span className="font-bold text-white block">{hub.name}</span>
+                <span className="font-bold text-[var(--color-foreground)] block">{hub.name}</span>
                 <span className="text-[8px] font-mono text-[var(--color-muted)] uppercase block">{hub.type} · ID: {hub.code}</span>
               </div>
               
@@ -571,7 +571,7 @@ export const Settings = ({
         
         {/* aviation air cargo carriers configuration list */}
         <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
-        <div className="text-[9px] font-mono text-white tracking-widest uppercase flex items-center space-x-1.5">
+        <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
           <Plane size={11} className="text-[var(--color-accent-cobalt)]" />
           <span>AVIATION AIRLINE SUPPORTS</span>
         </div>
@@ -580,7 +580,7 @@ export const Settings = ({
           {carriers.map((c: any) => (
             <div key={c.code} className="p-2.5 bg-black/40 rounded border border-[rgba(255,255,255,0.04)] flex justify-between items-center text-[11px]">
               <div>
-                <span className="font-bold text-white block">{c.name}</span>
+                <span className="font-bold text-[var(--color-foreground)] block">{c.name}</span>
                 <span className="text-[8.5px] font-mono text-[var(--color-muted)] block">Carrier Code: {c.code}</span>
               </div>
               

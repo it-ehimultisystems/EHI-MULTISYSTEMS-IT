@@ -93,7 +93,7 @@ export const FraudAlerts = ({
           <AlertOctagon size={18} className="text-[var(--color-error)] animate-pulse" />
           <div>
             <span className="text-[8px] font-mono text-slate-400 uppercase block">Active Anomalies</span>
-            <span className="text-sm font-mono font-bold text-white block">{pendingAlerts.length}</span>
+            <span className="text-sm font-mono font-bold text-[var(--color-foreground)] block">{pendingAlerts.length}</span>
           </div>
         </div>
 
@@ -101,7 +101,7 @@ export const FraudAlerts = ({
           <CheckCircle size={18} className="text-[var(--color-success)]" />
           <div>
             <span className="text-[8px] font-mono text-slate-400 uppercase block">Reviewed Today</span>
-            <span className="text-sm font-mono font-bold text-white block">{reviewedAlerts.length}</span>
+            <span className="text-sm font-mono font-bold text-[var(--color-foreground)] block">{reviewedAlerts.length}</span>
           </div>
         </div>
 
@@ -119,7 +119,7 @@ export const FraudAlerts = ({
         <button 
           onClick={() => setActiveTab('pending')}
           className={`pb-2.5 px-4 font-bold border-b-2 flex items-center space-x-1.5 transition-all cursor-pointer ${
-            activeTab === 'pending' ? 'border-[var(--color-error)] text-[var(--color-error)] font-black' : 'border-transparent text-slate-400 hover:text-white'
+            activeTab === 'pending' ? 'border-[var(--color-error)] text-[var(--color-error)] font-black' : 'border-transparent text-slate-400 hover:text-[var(--color-foreground)]'
           }`}
         >
           <span>Unresolved Alarms</span>
@@ -129,7 +129,7 @@ export const FraudAlerts = ({
         <button 
           onClick={() => setActiveTab('reviewed')}
           className={`pb-2.5 px-4 font-bold border-b-2 flex items-center space-x-1.5 transition-all cursor-pointer ${
-            activeTab === 'reviewed' ? 'border-[var(--color-success)] text-[var(--color-success)]' : 'border-transparent text-slate-400 hover:text-white'
+            activeTab === 'reviewed' ? 'border-[var(--color-success)] text-[var(--color-success)]' : 'border-transparent text-slate-400 hover:text-[var(--color-foreground)]'
           }`}
         >
           <span>Audit Log Archive</span>
@@ -167,7 +167,7 @@ export const FraudAlerts = ({
                 </div>
 
                 <div className="space-y-0.5">
-                  <h4 className="text-[13px] font-bold text-white block">{alert.title}</h4>
+                  <h4 className="text-[13px] font-bold text-[var(--color-foreground)] block">{alert.title}</h4>
                   <p className="text-[11.5px] text-slate-400 leading-relaxed font-mono">{alert.description}</p>
                 </div>
 
@@ -182,7 +182,7 @@ export const FraudAlerts = ({
               {!alert.reviewed && (
                 <button 
                   onClick={() => setSelectedAlert(alert)}
-                  className="bg-neutral-800 hover:bg-neutral-700 text-slate-300 hover:text-white font-mono text-[9px] uppercase font-bold px-3 py-2 rounded flex items-center space-x-1 cursor-pointer self-start sm:self-center"
+                  className="bg-neutral-800 hover:bg-neutral-700 text-slate-300 hover:text-[var(--color-foreground)] font-mono text-[9px] uppercase font-bold px-3 py-2 rounded flex items-center space-x-1 cursor-pointer self-start sm:self-center"
                 >
                   <Eye size={12} />
                   <span>Log Resolution</span>
@@ -195,11 +195,11 @@ export const FraudAlerts = ({
 
       {/* Evaluation Log Modals */}
       {selectedAlert && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-55">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-55">
           <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex justify-between items-center bg-black/40">
               <span className="text-[9px] font-mono text-[var(--color-error)] uppercase font-bold tracking-wider">SECURE SECURITY ANOMALY EVALUATION</span>
-              <button onClick={() => setSelectedAlert(null)} className="text-slate-400 hover:text-white font-mono text-xs cursor-pointer">✕</button>
+              <button onClick={() => setSelectedAlert(null)} className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
             </div>
 
             <form onSubmit={handleReviewAlert} className="p-4 space-y-4 font-mono text-xs">
@@ -216,7 +216,7 @@ export const FraudAlerts = ({
                   value={resolutionText}
                   onChange={(e) => setResolutionText(e.target.value)}
                   placeholder="e.g. Cleared. Confirmed corresponding bank deposit statement matches duplicated tags series."
-                  className="w-full bg-[var(--color-obsidian)] border border-[var(--color-border-strong)] p-2 rounded text-[11px] font-mono text-white placeholder-slate-600 focus:outline-none focus:border-[var(--color-error)]"
+                  className="w-full bg-[var(--color-obsidian)] border border-[var(--color-border-strong)] p-2 rounded text-[11px] font-mono text-[var(--color-foreground)] placeholder-slate-600 focus:outline-none focus:border-[var(--color-error)]"
                 />
               </div>
 

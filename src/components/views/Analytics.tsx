@@ -294,7 +294,7 @@ export const Analytics = ({
           <button 
             key={tab}
             onClick={() => setPeriod(tab)}
-            className={`flex-1 text-center py-1.5 text-[9px] font-mono uppercase tracking-wider rounded transition-all ${period === tab ? 'bg-[var(--color-accent-cobalt)] text-[var(--color-foreground)] font-bold' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+            className={`flex-1 text-center py-1.5 text-[9px] font-mono uppercase tracking-wider rounded transition-all ${period === tab ? 'bg-[var(--color-accent-cobalt)] text-white font-bold' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
             {tab}
           </button>
@@ -345,7 +345,7 @@ export const Analytics = ({
       {/* Grand Combined Revenue Card */}
       <div className="w-full bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.25)] rounded p-4 text-center">
         <div className="text-[8px] font-mono text-[var(--color-success)] uppercase tracking-widest font-bold">● COMBINED PORTFOLIO REVENUE</div>
-        <div className="text-[26px] font-bold font-mono text-white mt-1.5">{fmt(stats.totalRev)}</div>
+        <div className="text-[26px] font-bold font-mono text-[var(--color-foreground)] mt-1.5">{fmt(stats.totalRev)}</div>
         <div className="text-[8px] font-mono text-[var(--color-light-muted)] mt-1 uppercase">
           Consolidated across all 3 streams for {period}
         </div>
@@ -353,7 +353,7 @@ export const Analytics = ({
 
       {/* Revenue Trend Chart Section */}
       <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
-        <div className="text-[9px] font-mono text-white uppercase tracking-wider flex items-center space-x-1.5">
+        <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-1.5">
           <TrendingUp size={11} className="text-[var(--color-accent-cobalt)]" />
           <span>REVENUE PERFORMANCE TREND (Last 7 Days)</span>
         </div>
@@ -397,7 +397,7 @@ export const Analytics = ({
       <div className="grid md:grid-cols-2 gap-4">
         {/* Horizontal Top Routes Table */}
         <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
-          <div className="text-[9px] font-mono text-white uppercase tracking-wider flex items-center space-x-2">
+          <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-2">
             <Layers size={11} className="text-purple-400" />
             <span>RANKED ROUTES BY REVENUE VOLUME</span>
           </div>
@@ -409,7 +409,7 @@ export const Analytics = ({
                 <div key={i} className="space-y-1">
                   <div className="flex justify-between text-[11px] font-mono">
                     <span className="text-[var(--color-light-muted)]">{r.name}</span>
-                    <span className="text-white font-bold">{fmt(r.value)}</span>
+                    <span className="text-[var(--color-foreground)] font-bold">{fmt(r.value)}</span>
                   </div>
                   <div className="w-full bg-[rgba(255,255,255,0.03)] h-1.5 rounded-full overflow-hidden">
                     <div 
@@ -425,7 +425,7 @@ export const Analytics = ({
 
         {/* Payment breakdown Donut style mapping */}
         <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3">
-          <div className="text-[9px] font-mono text-white uppercase tracking-wider">PAYMENT INSTRUMENT BREAKDOWN</div>
+          <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider">PAYMENT INSTRUMENT BREAKDOWN</div>
           <div className="flex items-center justify-between">
             {/* Legend Left */}
             <div className="space-y-3 w-[150px]">
@@ -436,7 +436,7 @@ export const Analytics = ({
                 <div key={i} className="flex flex-col">
                   <div className="flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />
-                    <span className="text-[11px] font-mono font-bold text-white">{p.name}</span>
+                    <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)]">{p.name}</span>
                   </div>
                   <span className="text-[10px] font-mono text-[var(--color-muted)] pl-3">
                     {fmt(p.value)} ({pct}%)
@@ -497,9 +497,9 @@ export const Analytics = ({
             <tbody>
               {topConsignees.map((c, i) => (
                 <tr key={i} className="border-b border-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.02)]">
-                  <td className="py-2 text-white truncate max-w-[125px]">{c.name}</td>
+                  <td className="py-2 text-[var(--color-foreground)] truncate max-w-[125px]">{c.name}</td>
                   <td className="text-center text-[var(--color-muted)] py-2">{c.entries}</td>
-                  <td className={`text-right py-2 font-bold ${i === 0 ? 'text-[var(--color-accent-amber)]' : 'text-white'}`}>{fmt(c.revenue)}</td>
+                  <td className={`text-right py-2 font-bold ${i === 0 ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-foreground)]'}`}>{fmt(c.revenue)}</td>
                 </tr>
               ))}
             </tbody>
@@ -518,7 +518,7 @@ export const Analytics = ({
               className="border rounded p-2 text-center"
             >
               <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase truncate">{item.name}</div>
-              <div className="text-[12px] font-bold font-mono text-white mt-1">
+              <div className="text-[12px] font-bold font-mono text-[var(--color-foreground)] mt-1">
                 {index === 0 ? '43%' : (index === 1 ? '32%' : '25%')}
               </div>
             </div>
@@ -550,9 +550,9 @@ export const Analytics = ({
                 { name: 'F. Adebayo', entries: 5, revenue: stats.mktgRev * 0.20 + 5000, expenses: 8000, remit: stats.mktgRev * 0.20 + 5000 - 8000 }
               ].map((agent, i) => (
                 <tr key={i} className="border-b border-[rgba(255,255,255,0.03)] text-[10px]">
-                  <td className="py-2 text-white font-bold">{agent.name}</td>
+                  <td className="py-2 text-[var(--color-foreground)] font-bold">{agent.name}</td>
                   <td className="text-center py-2 text-[var(--color-light-muted)]">{agent.entries}</td>
-                  <td className="text-right py-2 text-white">{fmt(agent.revenue)}</td>
+                  <td className="text-right py-2 text-[var(--color-foreground)]">{fmt(agent.revenue)}</td>
                   <td className={`text-right py-2 font-bold ${agent.remit >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'}`}>
                     {fmt(agent.remit)}
                   </td>
@@ -568,7 +568,7 @@ export const Analytics = ({
       <div className="grid md:grid-cols-2 gap-4">
         {/* Multi-Hub Performance Matrix Section */}
         <div className="bg-[var(--color-surface-1)] rounded border border-[rgba(255,255,255,0.05)] p-4 space-y-3 h-full">
-        <div className="text-[9px] font-mono text-white uppercase tracking-wider flex items-center space-x-1.5 font-bold">
+        <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-1.5 font-bold">
           <MapPin size={11} className="text-purple-400" />
           <span>MULTI-HUB LOGISTICS DISTRIBUTION</span>
         </div>
@@ -583,12 +583,12 @@ export const Analytics = ({
                 className={`bg-[rgba(255,255,255,0.02)] p-2.5 rounded border border-[rgba(255,255,255,0.05)] flex flex-col justify-between cursor-pointer hover:border-[var(--color-accent-cobalt)] transition-colors ${selectedHub === hub.id ? 'border-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.05)]' : ''}`}
               >
                 <div>
-                  <div className="text-[10px] font-sans font-bold text-white truncate">{hub.name}</div>
+                  <div className="text-[10px] font-sans font-bold text-[var(--color-foreground)] truncate">{hub.name}</div>
                   <div className="text-[8px] font-mono text-[var(--color-muted)] truncate">{hub.region}</div>
                 </div>
                 <div className="mt-2 flex justify-between items-end border-t border-[rgba(255,255,255,0.04)] pt-1.5">
                   <span className="text-[7.5px] font-mono text-[var(--color-success)] uppercase">● Active</span>
-                  <span className="text-[11px] font-mono font-bold text-white">{fmt(hubRevenue)}</span>
+                  <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)]">{fmt(hubRevenue)}</span>
                 </div>
               </div>
             );
@@ -605,7 +605,7 @@ export const Analytics = ({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-success)] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-success)]"></span>
             </span>
-            <span className="text-[10px] font-mono text-white tracking-[0.05em] uppercase font-bold flex items-center gap-1.5">
+            <span className="text-[10px] font-mono text-[var(--color-foreground)] tracking-[0.05em] uppercase font-bold flex items-center gap-1.5">
               <Sparkles size={11} className="text-[var(--color-success)] animate-pulse" />
               AI INSIGHTS & AUDIT LOG
             </span>
@@ -665,7 +665,7 @@ export const Analytics = ({
                   className="p-2.5 rounded bg-[rgba(255,255,255,0.015)] border border-[rgba(255,255,255,0.05)] space-y-1.5"
                 >
                   <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-sans font-bold text-white uppercase">{ins.title}</span>
+                    <span className="text-[11px] font-sans font-bold text-[var(--color-foreground)] uppercase">{ins.title}</span>
                     <span className={`text-[7px] font-mono px-1.5 py-0.5 rounded font-bold uppercase ${
                       ins.priority === 'high' ? 'bg-[rgba(239,68,68,0.15)] text-[var(--color-error)] border border-[rgba(239,68,68,0.3)]' :
                       ins.priority === 'medium' ? 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)] border border-[rgba(245,158,11,0.3)]' :

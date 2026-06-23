@@ -117,7 +117,7 @@ export const AuditLog = ({
               {filteredLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-black/10">
                   <td className="py-3 px-4 text-slate-400 whitespace-nowrap">{log.timestamp}</td>
-                  <td className="py-3 px-4 font-semibold text-white whitespace-nowrap">{log.userName}</td>
+                  <td className="py-3 px-4 font-semibold text-[var(--color-foreground)] whitespace-nowrap">{log.userName}</td>
                   <td className="py-3 px-4">
                     <span className="text-slate-300 block max-w-[250px] truncate">{log.description}</span>
                   </td>
@@ -147,26 +147,26 @@ export const AuditLog = ({
 
       {/* Difference Audit Inspect Modal */}
       {selectedEntry && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-55">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-55">
           <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded-xl max-w-lg w-full overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex justify-between items-center bg-black/40">
               <span className="text-[9px] font-mono text-purple-400 uppercase font-bold tracking-wider">EHI SECURITY AUDIT LOG DIFFERENCE ANALYSIS</span>
-              <button onClick={() => setSelectedEntry(null)} className="text-slate-400 hover:text-white font-mono text-xs cursor-pointer">✕</button>
+              <button onClick={() => setSelectedEntry(null)} className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
             </div>
 
             <div className="p-5 space-y-4 font-mono text-xs">
               <div className="grid grid-cols-2 gap-4 text-[10px] pb-3 border-b border-solid border-[rgba(255,255,255,0.03)]">
                 <div>
                   <span className="text-slate-500 uppercase block">Log Reference:</span>
-                  <span className="text-white font-bold block">{selectedEntry.id}</span>
+                  <span className="text-[var(--color-foreground)] font-bold block">{selectedEntry.id}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 uppercase block">Execution Date:</span>
-                  <span className="text-white font-bold block">{selectedEntry.timestamp}</span>
+                  <span className="text-[var(--color-foreground)] font-bold block">{selectedEntry.timestamp}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 uppercase block">Modifier Account:</span>
-                  <span className="text-white font-bold block">{selectedEntry.userName} ({selectedEntry.userId})</span>
+                  <span className="text-[var(--color-foreground)] font-bold block">{selectedEntry.userName} ({selectedEntry.userId})</span>
                 </div>
                 <div>
                   <span className="text-slate-500 uppercase block">Target Ledger database table:</span>
@@ -193,7 +193,7 @@ export const AuditLog = ({
               <div className="pt-2 flex justify-end">
                 <button 
                   onClick={() => setSelectedEntry(null)} 
-                  className="bg-purple-900 border border-purple-500/30 text-white font-mono text-[10.5px] uppercase font-bold px-4 py-2 rounded-lg cursor-pointer"
+                  className="bg-purple-900 border border-purple-500/30 text-[var(--color-foreground)] font-mono text-[10.5px] uppercase font-bold px-4 py-2 rounded-lg cursor-pointer"
                 >
                   Close evaluation window
                 </button>

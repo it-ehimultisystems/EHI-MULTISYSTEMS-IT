@@ -98,7 +98,7 @@ export const APIDashboard = ({
         <button
           onClick={() => setActiveSubTab('console')}
           className={`flex-1 py-1.5 text-center text-[10px] font-mono uppercase font-bold rounded-md flex items-center justify-center space-x-1.5 transition-colors ${
-            activeSubTab === 'console' ? 'bg-[var(--color-accent-cobalt)] text-white' : 'text-slate-400 hover:text-white'
+            activeSubTab === 'console' ? 'bg-[var(--color-accent-cobalt)] text-white' : 'text-slate-400 hover:text-[var(--color-foreground)]'
           }`}
         >
           <Key size={12} />
@@ -107,7 +107,7 @@ export const APIDashboard = ({
         <button
           onClick={() => setActiveSubTab('docs')}
           className={`flex-1 py-1.5 text-center text-[10px] font-mono uppercase font-bold rounded-md flex items-center justify-center space-x-1.5 transition-colors ${
-            activeSubTab === 'docs' ? 'bg-[var(--color-accent-cobalt)] text-white' : 'text-slate-400 hover:text-white'
+            activeSubTab === 'docs' ? 'bg-[var(--color-accent-cobalt)] text-white' : 'text-slate-400 hover:text-[var(--color-foreground)]'
           }`}
         >
           <HelpCircle size={12} />
@@ -125,7 +125,7 @@ export const APIDashboard = ({
               {keys.map((k) => (
                 <div key={k.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-black/5">
                   <div className="space-y-1">
-                    <span className="text-[12px] font-black text-white">{k.label}</span>
+                    <span className="text-[12px] font-black text-[var(--color-foreground)]">{k.label}</span>
                     <div className="flex space-x-3 text-[10px] text-slate-500">
                       <span>Prefix: <code className="text-blue-300">{k.prefix}xxxxxx</code></span>
                       <span>Scope: <code className="text-emerald-400">{k.permissions}</code></span>
@@ -153,7 +153,7 @@ export const APIDashboard = ({
       ) : (
         <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-xl p-4 space-y-6 font-mono text-xs text-slate-300">
           <div className="space-y-2">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
+            <h3 className="text-sm font-bold text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-1.5">
               <Shield size={14} className="text-[var(--color-accent-cobalt)]" />
               <span>Developer API specifications</span>
             </h3>
@@ -172,7 +172,7 @@ export const APIDashboard = ({
 
             {/* Endpoints specs */}
             <div className="space-y-4">
-              <span className="text-[10.5px] font-black text-white uppercase block">ENDPOINT SPECIFICATIONS</span>
+              <span className="text-[10.5px] font-black text-[var(--color-foreground)] uppercase block">ENDPOINT SPECIFICATIONS</span>
 
               {/* Endpoint 1 */}
               <div className="p-3 bg-black/25 rounded border border-[rgba(255,255,255,0.02)] space-y-2">
@@ -212,11 +212,11 @@ export const APIDashboard = ({
 
       {/* Generate Key Modal */}
       {showAddKeyModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-55">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-55">
           <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex justify-between items-center bg-black/40">
               <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] uppercase font-bold tracking-wider">GENERATE API CREDENTIALS</span>
-              <button onClick={() => setShowAddKeyModal(false)} className="text-slate-400 hover:text-white font-mono text-xs cursor-pointer">✕</button>
+              <button onClick={() => setShowAddKeyModal(false)} className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
             </div>
 
             <form onSubmit={handleGenerateKey} className="p-4 space-y-4 font-mono text-xs">
@@ -224,7 +224,7 @@ export const APIDashboard = ({
               {generatedKeyResult ? (
                 <div className="space-y-3 animate-in zoom-in-95 duration-450 text-center">
                   <span className="text-2xl block">🔑</span>
-                  <span className="text-[11px] font-black text-white block">Copy your API Key now!</span>
+                  <span className="text-[11px] font-black text-[var(--color-foreground)] block">Copy your API Key now!</span>
                   <p className="text-[10px] text-[var(--color-muted)] leading-relaxed">For security compliance, this is your only window to view and write down this raw key token:</p>
                   
                   <textarea 
@@ -257,7 +257,7 @@ export const APIDashboard = ({
                       required
                       value={newLabel}
                       onChange={(e) => setNewLabel(e.target.value)}
-                      className="w-full bg-[var(--color-obsidian)] border border-[var(--color-border-strong)] p-2 rounded text-xs text-white"
+                      className="w-full bg-[var(--color-obsidian)] border border-[var(--color-border-strong)] p-2 rounded text-xs text-[var(--color-foreground)]"
                     />
                   </div>
 
@@ -267,7 +267,7 @@ export const APIDashboard = ({
                       <select 
                         value={newPermissions} 
                         onChange={(e: any) => setNewPermissions(e.target.value)}
-                        className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-white"
+                        className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)]"
                       >
                         <option value="read">READ-ONLY</option>
                         <option value="write">WRITE Manifests</option>
@@ -282,7 +282,7 @@ export const APIDashboard = ({
                         required
                         value={newLimit}
                         onChange={(e) => setNewLimit(e.target.value)}
-                        className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-white"
+                        className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)]"
                       />
                     </div>
                   </div>

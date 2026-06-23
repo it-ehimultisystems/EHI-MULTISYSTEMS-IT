@@ -234,8 +234,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         </div>
 
         <main
-          className="flex-1 overflow-y-auto md:pb-0"
-          style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+          className="flex-1 overflow-y-auto"
         >
           <div
             className="mx-auto w-full"
@@ -272,7 +271,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         </main>
       </div>
 
-      <div className="ehi-bottomnav-wrapper">
+      <div className="fixed bottom-0 left-0 right-0 w-full z-50 md:hidden block bg-[var(--color-nav-bg)]">
         <BottomNav user={user} currentTab={currentTab} onChangeTab={setCurrentTab} />
       </div>
 

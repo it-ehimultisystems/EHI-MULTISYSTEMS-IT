@@ -126,7 +126,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
           <button
             key={t}
             onClick={() => setActiveTab(t as any)}
-            className={`px-4 py-2 text-[13px] font-sans font-medium rounded-full whitespace-nowrap transition-colors focus:outline-none ${activeTab === t ? 'bg-[var(--color-accent-cobalt)] text-[var(--color-foreground)]' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+            className={`px-4 py-2 text-[13px] font-sans font-medium rounded-full whitespace-nowrap transition-colors focus:outline-none ${activeTab === t ? 'bg-[var(--color-accent-cobalt)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
             {t}
           </button>
@@ -141,7 +141,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                <button
                  key={p}
                  onClick={() => setPeriod(p as any)}
-                 className={`px-3 py-1.5 text-[12px] font-sans font-medium rounded-full transition-colors focus:outline-none ${period === p ? 'bg-[var(--color-surface-2)] text-white' : 'text-[var(--color-muted)] hover:bg-[var(--color-border)]'}`}
+                 className={`px-3 py-1.5 text-[12px] font-sans font-medium rounded-full transition-colors focus:outline-none ${period === p ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)]' : 'text-[var(--color-muted)] hover:bg-[var(--color-border)]'}`}
                >
                  {p}
                </button>
@@ -185,7 +185,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
           <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
             <div className="flex justify-between items-center mb-3">
               <span className="text-[13px] font-sans text-[var(--color-muted)]">Grand Revenue</span>
-              <span className="text-[15px] font-mono text-white">{fmt(grandRevenue)}</span>
+              <span className="text-[15px] font-mono text-[var(--color-foreground)]">{fmt(grandRevenue)}</span>
             </div>
             <div className="flex justify-between items-center mb-4 border-b border-[rgba(255,255,255,0.05)] pb-4">
               <span className="text-[13px] font-sans text-[var(--color-muted)]">Total Expenses</span>
@@ -222,7 +222,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                 <div className="mt-4 flex items-center justify-between">
                    <div className="flex flex-col">
                      <span className="text-[12px] font-sans text-[var(--color-muted)]">Total Collected</span>
-                     <span className="text-[20px] font-bold font-mono text-white mt-1">{fmt(cashTotal + transferTotal + posTotal)}</span>
+                     <span className="text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">{fmt(cashTotal + transferTotal + posTotal)}</span>
                    </div>
                    <div className={`flex items-center justify-center w-16 h-16 rounded-full border-4 ${collectionEff >= 90 ? 'border-[var(--color-success)] text-[var(--color-success)] bg-[rgba(16,185,129,0.1)]' : collectionEff >= 70 ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)]' : 'border-[var(--color-error)] text-[var(--color-error)] bg-[rgba(239,68,68,0.1)]'}`}>
                      <span className="text-[18px] font-bold font-mono">{collectionEff.toFixed(0)}%</span>
@@ -248,14 +248,14 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
         <div className="space-y-6 pb-24">
            {showOpeningModal && (
              <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5 animate-in fade-in zoom-in-95">
-               <h3 className="text-[16px] font-sans font-bold text-white mb-2">Set Opening Balance</h3>
+               <h3 className="text-[16px] font-sans font-bold text-[var(--color-foreground)] mb-2">Set Opening Balance</h3>
                <p className="text-[13px] font-sans text-[var(--color-muted)] mb-4">Enter the cash carried over from yesterday's closing count.</p>
                <input 
                  type="number"
                  placeholder="e.g. 15000"
                  value={openingInput}
                  onChange={e => setOpeningInput(e.target.value)}
-                 className="w-full h-12 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-4 text-white font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-1 focus:ring-[var(--color-accent-cobalt)] transition-all mb-4"
+                 className="w-full h-12 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-4 text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-1 focus:ring-[var(--color-accent-cobalt)] transition-all mb-4"
                />
                <button 
                  onClick={handleSetOpening}
@@ -273,7 +273,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                    type="date" 
                    value={regDate}
                    onChange={e => setRegDate(e.target.value)}
-                   className="bg-transparent text-[14px] font-sans font-medium text-white focus:outline-none"
+                   className="bg-transparent text-[14px] font-sans font-medium text-[var(--color-foreground)] focus:outline-none"
                  />
                  <div className={`px-2.5 py-1 rounded-md text-[11px] font-sans font-bold uppercase ${isLocked ? 'bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]' : 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]'}`}>
                    {isLocked ? 'LOCKED' : 'OPEN'}
@@ -283,7 +283,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5 space-y-4">
                  <div className="flex justify-between items-center pb-3 border-b border-[rgba(255,255,255,0.05)]">
                    <div className="text-[13px] font-sans text-[var(--color-muted)]">Opening Balance</div>
-                   <div className="text-[15px] font-mono text-white">{fmt(openingBalance || 0)}</div>
+                   <div className="text-[15px] font-mono text-[var(--color-foreground)]">{fmt(openingBalance || 0)}</div>
                  </div>
                  <div className="flex justify-between items-center pb-3 border-b border-[rgba(255,255,255,0.05)]">
                    <div className="text-[13px] font-sans text-[var(--color-muted)]">Total Cash Receipts</div>
@@ -295,7 +295,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                  </div>
                  <div className="flex justify-between items-center pt-2">
                    <div className="text-[15px] font-sans font-semibold text-[var(--color-light-muted)]">Expected Closing</div>
-                   <div className="text-[20px] font-mono font-bold text-white">{fmt(expectedClosing)}</div>
+                   <div className="text-[20px] font-mono font-bold text-[var(--color-foreground)]">{fmt(expectedClosing)}</div>
                  </div>
                </div>
 
@@ -305,7 +305,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                      <div className="space-y-4">
                        <div className="flex justify-between items-center">
                          <div className="text-[13px] font-sans text-[var(--color-muted)]">Physical Count</div>
-                         <div className="text-[16px] font-mono text-white font-bold">{fmt(physicalCount!)}</div>
+                         <div className="text-[16px] font-mono text-[var(--color-foreground)] font-bold">{fmt(physicalCount!)}</div>
                        </div>
                        <div className="flex justify-between items-center">
                          <div className="text-[13px] font-sans text-[var(--color-muted)]">Variance</div>
@@ -327,7 +327,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                            placeholder="Enter actual cash in till"
                            value={physicalInput}
                            onChange={e => setPhysicalInput(e.target.value)}
-                           className="w-full h-12 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-4 text-white font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-1 focus:ring-[var(--color-accent-cobalt)] transition-all"
+                           className="w-full h-12 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-4 text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-1 focus:ring-[var(--color-accent-cobalt)] transition-all"
                          />
                        </div>
                        {physicalInput && (
@@ -360,7 +360,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       {activeTab === 'Remittances' && (
         <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)] mt-4">
            <Unlock size={36} className="text-[var(--color-muted)] mb-3" />
-           <div className="text-[15px] font-sans font-medium text-white mb-1">Coming Next</div>
+           <div className="text-[15px] font-sans font-medium text-[var(--color-foreground)] mb-1">Coming Next</div>
            <div className="text-[13px] font-sans text-[var(--color-muted)]">Hub Remittances module will be available soon.</div>
         </div>
       )}

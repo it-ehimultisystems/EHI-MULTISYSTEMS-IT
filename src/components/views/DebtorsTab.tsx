@@ -203,7 +203,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
              <button
                key={f}
                onClick={() => setFilter(f as any)}
-               className={`px-3 py-1.5 text-[12px] font-sans font-medium rounded-lg transition-colors focus:outline-none ${filter === f ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)] hover:text-white'}`}
+               className={`px-3 py-1.5 text-[12px] font-sans font-medium rounded-lg transition-colors focus:outline-none ${filter === f ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
              >
                {f}
              </button>
@@ -213,7 +213,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
         <select 
           value={sort}
           onChange={e => setSort(e.target.value as any)}
-          className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 py-2 text-[12px] font-sans text-white focus:outline-none min-w-[150px]"
+          className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 py-2 text-[12px] font-sans text-[var(--color-foreground)] focus:outline-none min-w-[150px]"
         >
           <option value="Highest Amount">Highest Amount</option>
           <option value="Oldest First">Oldest First</option>
@@ -228,7 +228,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
            <div className="w-12 h-12 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.2)] mb-3">
              <div className="w-5 h-5 border-b-2 border-r-2 border-[var(--color-success)] transform rotate-45 mb-1" />
            </div>
-           <div className="text-[15px] font-sans font-medium text-white mb-1">No outstanding debts</div>
+           <div className="text-[15px] font-sans font-medium text-[var(--color-foreground)] mb-1">No outstanding debts</div>
            <div className="text-[13px] font-sans text-[var(--color-muted)]">All accounts are settled and up to date.</div>
         </div>
       ) : (
@@ -251,7 +251,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                     <div className="flex-1 min-w-0 pr-4">
                       <div className="flex items-center space-x-2 mb-1">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${getBucketDot(d.agingBucket)}`} />
-                        <span className="text-[14px] font-sans font-bold text-white truncate">{d.name}</span>
+                        <span className="text-[14px] font-sans font-bold text-[var(--color-foreground)] truncate">{d.name}</span>
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-sans font-medium uppercase tracking-wider bg-[var(--color-surface-2)] text-[var(--color-muted)] shrink-0">
                           {d.clientType}
                         </span>
@@ -283,11 +283,11 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                            <div className="grid grid-cols-2 gap-4">
                              <div>
                                <div className="text-[11px] font-sans text-[var(--color-muted)] mb-1">Service Detail</div>
-                               <div className="text-[13px] font-sans text-white">{d.detail}</div>
+                               <div className="text-[13px] font-sans text-[var(--color-foreground)]">{d.detail}</div>
                              </div>
                              <div>
                                <div className="text-[11px] font-sans text-[var(--color-muted)] mb-1">Original Date</div>
-                               <div className="text-[13px] font-sans text-white">{d.time} (Simulated)</div>
+                               <div className="text-[13px] font-sans text-[var(--color-foreground)]">{d.time} (Simulated)</div>
                              </div>
                            </div>
 
@@ -296,7 +296,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                              <div className="text-[11px] font-sans text-[var(--color-muted)] mb-1">Notes</div>
                              <textarea 
                                placeholder="Add notes about this debt..."
-                               className="w-full h-20 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl p-3 text-[13px] font-sans text-white focus:outline-none focus:border-[var(--color-accent-cobalt)] transition-colors resize-none"
+                               className="w-full h-20 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl p-3 text-[13px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-cobalt)] transition-colors resize-none"
                              />
                            </div>
 
@@ -310,7 +310,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                              </button>
                              <button 
                                onClick={() => setStatementPrint(d as unknown as Transaction)}
-                               className="flex-1 py-2.5 bg-[var(--color-surface-2)] text-white text-[13px] font-sans font-medium rounded-lg hover:bg-[var(--color-surface-1)] transition-colors focus:outline-none"
+                               className="flex-1 py-2.5 bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[13px] font-sans font-medium rounded-lg hover:bg-[var(--color-surface-1)] transition-colors focus:outline-none"
                              >
                                View Statement
                              </button>
@@ -335,7 +335,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                                          value={paymentAmount}
                                          onChange={e => setPaymentAmount(e.target.value)}
                                          placeholder={d.balance.toString()}
-                                         className="w-full h-10 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 text-white font-mono text-[14px] focus:outline-none focus:border-[var(--color-success)] focus:ring-1 focus:ring-[var(--color-success)]"
+                                         className="w-full h-10 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 text-[var(--color-foreground)] font-mono text-[14px] focus:outline-none focus:border-[var(--color-success)] focus:ring-1 focus:ring-[var(--color-success)]"
                                        />
                                      </div>
                                      <div className="flex-1">
@@ -343,7 +343,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                                        <select 
                                          value={paymentMode}
                                          onChange={e => setPaymentMode(e.target.value as any)}
-                                         className="w-full h-10 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 text-white font-sans text-[13px] focus:outline-none"
+                                         className="w-full h-10 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none"
                                        >
                                          <option value="Cash">Cash</option>
                                          <option value="Transfer">Transfer</option>

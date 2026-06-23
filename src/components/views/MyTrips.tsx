@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { User, DriverTrip } from '../../lib/types';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, DriverTrip, TripPing } from '../../lib/types';
 import { uid, tnow } from '../../lib/helpers';
-import { Truck, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { db } from '../../lib/db';
+import { Truck, Plus, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 
 const NIGERIAN_HUBS = [
   'Lagos Air Cargo Station', 'Abuja Air Cargo Station',
@@ -26,6 +27,8 @@ const TripCard: React.FC<TripCardProps> = ({
   const statusColor =
     trip.status === 'Active' ? '#F59E0B' :
     trip.status === 'Completed' ? '#10B981' : '#EF4444';
+
+  const timeAgo = trip.lastPingAt ? Math.floor((Date.now() - new Date(trip.lastPingAt).getTime()) / 60000) : null;
 
   return (
     <div
@@ -62,6 +65,15 @@ const TripCard: React.FC<TripCardProps> = ({
           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </div>
       </div>
+
+      {trip.status === 'Active' && trip.gpsTrackingEnabled && (
+        <div className="px-4 pb-3 flex items-center gap-2 text-[10px] font-mono">
+          <MapPin size={12} className="text-emerald-500 animate-pulse" />
+          <span className="text-[var(--color-muted)]">
+            Tracking active · {timeAgo === null ? 'Waiting for ping...' : timeAgo === 0 ? 'Last ping: just now' : `Last ping: ${timeAgo} min ago`}
+          </span>
+        </div>
+      )}
 
       {/* Expanded details */}
       {isExpanded && (
@@ -173,10 +185,88 @@ export const MyTrips = ({ user }: { user: User }) => {
     }
   });
 
+  // Track active watches
+  const watchRefs = useRef<Record<string, number>>({});
+
   // Persist on every change
   useEffect(() => {
     localStorage.setItem(TRIPS_KEY, JSON.stringify(trips));
   }, [trips]);
+
+  // Handle GPS watcher lifecycle
+  useEffect(() => {
+    const handleLocation = async (tripId: string, pos: GeolocationPosition) => {
+      const ping: TripPing = {
+        id: 'PING-' + Date.now().toString(36).toUpperCase(),
+        tripId,
+        timestamp: new Date().toISOString(),
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        speed: pos.coords.speed || undefined,
+        accuracy: pos.coords.accuracy || undefined
+      };
+
+      try {
+        await db.trip_pings.add(ping);
+        await db.sync_queue.add({
+          table_name: 'trip_pings',
+          record_id: ping.id,
+          action: 'INSERT',
+          payload: ping as any,
+          synced: 0,
+          created_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error(err);
+      }
+
+      setTrips(prev => prev.map(t => 
+        t.id === tripId ? {
+          ...t, 
+          lastPingAt: ping.timestamp,
+          lastLatitude: ping.latitude,
+          lastLongitude: ping.longitude,
+          lastSpeed: ping.speed
+        } : t
+      ));
+    };
+
+    activeTrips.forEach(trip => {
+      if (trip.gpsTrackingEnabled && trip.status === 'Active') {
+        if (!watchRefs.current[trip.id]) {
+          navigator.geolocation.getCurrentPosition((pos) => handleLocation(trip.id, pos), () => {}, { enableHighAccuracy: false });
+          const watchId = navigator.geolocation.watchPosition(
+            (pos) => handleLocation(trip.id, pos),
+            (err) => console.warn(err),
+            { enableHighAccuracy: false, maximumAge: 30000, timeout: 27000 }
+          );
+          watchRefs.current[trip.id] = watchId;
+        }
+      } else {
+        if (watchRefs.current[trip.id]) {
+          navigator.geolocation.clearWatch(watchRefs.current[trip.id]);
+          delete watchRefs.current[trip.id];
+        }
+      }
+    });
+
+    completedTrips.forEach(trip => {
+      if (watchRefs.current[trip.id]) {
+        navigator.geolocation.clearWatch(watchRefs.current[trip.id]);
+        delete watchRefs.current[trip.id];
+      }
+    });
+
+    return () => {};
+  }, [trips]);
+
+  useEffect(() => {
+    return () => {
+      Object.keys(watchRefs.current).forEach(key => {
+        navigator.geolocation.clearWatch(watchRefs.current[key]);
+      });
+    };
+  }, []);
 
   // Clean up yesterday's key on mount
   useEffect(() => {
@@ -193,9 +283,10 @@ export const MyTrips = ({ user }: { user: User }) => {
   const [destination, setDestination] = useState(NIGERIAN_HUBS[1]);
   const [cargoRefsInput, setCargoRefsInput] = useState('');
   const [notes, setNotes] = useState('');
+  const [gpsEnabled, setGpsEnabled] = useState(false);
 
   const activeTrips = trips.filter(t => t.status === 'Active');
-  const completedTrips = trips.filter(t => t.status === 'Completed');
+  const completedTrips = trips.filter(t => t.status === 'Completed' || t.status === 'Cancelled');
 
   const handleStartTrip = () => {
     if (!vehiclePlate.trim() || !destination) return;
@@ -215,6 +306,7 @@ export const MyTrips = ({ user }: { user: User }) => {
       cargoRefs: refs,
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
+      gpsTrackingEnabled: gpsEnabled,
     };
 
     setTrips(prev => [trip, ...prev]);
@@ -222,19 +314,20 @@ export const MyTrips = ({ user }: { user: User }) => {
     setVehiclePlate('');
     setCargoRefsInput('');
     setNotes('');
+    setGpsEnabled(false);
   };
 
   const handleCompleteTrip = (tripId: string) => {
     setTrips(prev => prev.map(t =>
       t.id === tripId
-        ? { ...t, status: 'Completed', arrivalTime: tnow() }
+        ? { ...t, status: 'Completed', arrivalTime: tnow(), gpsTrackingEnabled: false }
         : t
     ));
   };
 
   const handleCancelTrip = (tripId: string) => {
     setTrips(prev => prev.map(t =>
-      t.id === tripId ? { ...t, status: 'Cancelled' } : t
+      t.id === tripId ? { ...t, status: 'Cancelled', gpsTrackingEnabled: false } : t
     ));
   };
 
@@ -321,6 +414,20 @@ export const MyTrips = ({ user }: { user: User }) => {
             className="w-full h-10 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none"
           />
 
+          <div className="flex items-start gap-2 bg-[rgba(255,255,255,0.02)] p-3 rounded">
+            <input 
+              type="checkbox" 
+              checked={gpsEnabled} 
+              onChange={e => setGpsEnabled(e.target.checked)} 
+              className="mt-0.5 accent-[var(--color-accent-amber)]"
+              id="gpsCheck"
+            />
+            <label htmlFor="gpsCheck" className="text-[11px] font-sans text-[var(--color-light-muted)] cursor-pointer">
+              <span className="font-bold text-[var(--color-foreground)] block mb-0.5">Enable GPS tracking for this trip</span>
+              <span className="text-[10px] text-[var(--color-muted)]">Your location will be shared with EHI dispatch while this trip is active. Battery use slightly increased.</span>
+            </label>
+          </div>
+
           <div className="flex gap-2">
             <button
               onClick={() => setShowNewTripForm(false)}
@@ -361,7 +468,7 @@ export const MyTrips = ({ user }: { user: User }) => {
         </div>
         <div className="flex-1 bg-[rgba(16,185,129,0.07)] border border-[rgba(16,185,129,0.2)] rounded-lg p-3 text-center">
           <div className="text-[22px] font-bold font-mono text-[var(--color-success)]">
-            {completedTrips.length}
+            {completedTrips.filter(t => t.status === 'Completed').length}
           </div>
           <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider">
             Completed

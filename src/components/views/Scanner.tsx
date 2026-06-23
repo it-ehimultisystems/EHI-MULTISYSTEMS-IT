@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { QrCode, RefreshCw, Package, Plane, TrendingUp, ArrowDown, ArrowUp, List } from 'lucide-react';
-import { User, ScanMode, ScanValidationResult, BatchScanItem, ScanResultType } from '../../lib/types';
+import { QrCode, RefreshCw, Package, Plane, TrendingUp, ArrowDown, ArrowUp, List, CheckCircle } from 'lucide-react';
+import { User, ScanMode, ScanValidationResult, BatchScanItem, ScanResultType, ProofOfDelivery } from '../../lib/types';
 import { validateScan, logScanEvent } from '../../lib/scanLogic';
 import { WrongDestinationAlert, NotLoggedInAlert, AlreadyProcessedAlert, SuccessFlash } from '../ScanAlerts';
+import { ProofOfDeliveryForm } from './ProofOfDelivery';
 
 // Standard Web Audio API synthesizer for a subtle, high-pitched electronic confirmation blip
 const playBeep = () => {
@@ -66,6 +67,7 @@ export const Scanner = ({
   }[]>([]);
   const [submittingBatch, setSubmittingBatch] = useState(false);
   const [showQueueSummary, setShowQueueSummary] = useState(false);
+  const [activeDeliverCargo, setActiveDeliverCargo] = useState<{awbNumber: string, consigneeName: string} | null>(null);
 
   const currentHub = user.hub;
   const batchSuccess = batchItems.filter(b => b.result.startsWith('SUCCESS')).length;
@@ -131,6 +133,21 @@ export const Scanner = ({
 
     try {
       const result = await validateScan(code, mode, currentHub);
+
+      if (result.type === 'SUCCESS_DELIVER') {
+        playBeep();
+        
+        // Pause scanner video
+        document.querySelectorAll<HTMLVideoElement>('#qr-reader-div video').forEach(v => { v.pause(); });
+        setProcessing(false);
+        processingRef.current = false;
+        
+        setActiveDeliverCargo({
+          awbNumber: result.cargo?.awb || code,
+          consigneeName: result.cargo?.name || 'Unknown'
+        });
+        return;
+      }
 
       if (result.type === 'SUCCESS_ARRIVE' || result.type === 'SUCCESS_DEPART') {
         playBeep();
@@ -305,6 +322,7 @@ export const Scanner = ({
   // Resume scanner after alert dismissed
   const dismissAlert = useCallback(async () => {
     setCurrentResult(null);
+    setActiveDeliverCargo(null);
     processingRef.current = false;
     // Resume video playback directly
     document.querySelectorAll<HTMLVideoElement>(
@@ -516,14 +534,13 @@ export const Scanner = ({
         )}
       </div>
 
-      {/* Mode Toggle — ARRIVE / DEPART */}
+      {/* Mode Toggle — ARRIVE / DEPART / DELIVER */}
       <div className="flex bg-[var(--color-surface-2)] p-1 rounded-xl mb-6 shadow-inner" style={{ width: '100%' }}>
-        {(['ARRIVE', 'DEPART'] as ScanMode[]).map((m) => {
+        {(['ARRIVE', 'DEPART', 'DELIVER'] as ScanMode[]).map((m) => {
           const active = mode === m;
-          const isArrive = m === 'ARRIVE';
-          const activeColor = isArrive ? 'var(--color-success)' : 'var(--color-accent-cobalt)';
+          const activeColor = m === 'ARRIVE' ? 'var(--color-success)' : m === 'DEPART' ? 'var(--color-accent-cobalt)' : '#a855f7';
           const activeBg = 'var(--color-surface-1)';
-          const Icon = isArrive ? ArrowDown : ArrowUp;
+          const Icon = m === 'ARRIVE' ? ArrowDown : m === 'DEPART' ? ArrowUp : CheckCircle;
           return (
             <button
               key={m}
@@ -558,7 +575,9 @@ export const Scanner = ({
       <div className="text-[10px] font-mono text-[var(--color-muted)] text-center mb-1">
         {mode === 'ARRIVE'
           ? 'Scan cargo arriving at this hub'
-          : 'Scan cargo departing from this hub'}
+          : mode === 'DEPART'
+          ? 'Scan cargo departing from this hub'
+          : 'Capture proof of delivery for recipient'}
       </div>
 
       {/* Scan Logic Option Toggle: Instant vs Batch Queue */}
@@ -819,6 +838,23 @@ export const Scanner = ({
       {/* Success flash */}
       {successFlash && <SuccessFlash result={successFlash} />}
 
+      {/* POD Overlay */}
+      {activeDeliverCargo && (
+        <ProofOfDeliveryForm
+          awbNumber={activeDeliverCargo.awbNumber}
+          consigneeName={activeDeliverCargo.consigneeName}
+          user={user}
+          onComplete={async (pod) => {
+            // Also log the final event in supabase tracking_events
+            await logScanEvent(activeDeliverCargo.awbNumber, 'DELIVER', currentHub, user.name, undefined);
+            if (showToast) {
+              showToast({ message: `Proof of Delivery saved for ${activeDeliverCargo.awbNumber}!`, type: 'success' });
+            }
+            dismissAlert();
+          }}
+          onCancel={dismissAlert}
+        />
+      )}
     </div>
   );
 };

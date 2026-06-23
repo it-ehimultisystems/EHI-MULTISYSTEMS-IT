@@ -194,7 +194,7 @@ export const Forecasting = ({
                 <Calendar size={16} />
                 <span className="text-[12px] uppercase">Peak Operational Day</span>
               </div>
-              <div className="text-xl font-bold font-mono tracking-tight text-white">{peakDay || 'Wednesday'}</div>
+              <div className="text-xl font-bold font-mono tracking-tight text-[var(--color-foreground)]">{peakDay || 'Wednesday'}</div>
               <p className="text-[11px] text-slate-400 leading-relaxed font-mono">High-volume baggage bookings and marketing collections coincide, putting stress on local airport desks.</p>
             </div>
 
@@ -222,7 +222,7 @@ export const Forecasting = ({
         <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-xl p-4 space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <span className="text-[10px] font-mono font-bold text-white uppercase tracking-wider block">ROUTE STATIONS CAPACITY CALENDAR</span>
+              <span className="text-[10px] font-mono font-bold text-[var(--color-foreground)] uppercase tracking-wider block">ROUTE STATIONS CAPACITY CALENDAR</span>
               <span className="text-[8px] text-[var(--color-muted)] font-mono uppercase block">Historical averages by routes vs weekday load</span>
             </div>
             
@@ -259,7 +259,7 @@ export const Forecasting = ({
               <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
                 {routesHeatmap.map((heatmap, idx) => (
                   <tr key={idx} className="hover:bg-black/10">
-                    <td className="py-3 font-semibold text-white uppercase truncate max-w-[200px]">{heatmap.route}</td>
+                    <td className="py-3 font-semibold text-[var(--color-foreground)] uppercase truncate max-w-[200px]">{heatmap.route}</td>
                     <td className="py-3 px-2">
                       <span className={`px-2 py-1 rounded text-[9.5px] uppercase font-bold block text-center max-w-[50px] ${
                         heatmap.Mon === 'high' ? 'bg-amber-500/20 text-[var(--color-accent-amber)]' :

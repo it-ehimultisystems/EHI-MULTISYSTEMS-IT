@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { cleanupOldPings } from './lib/privacy';
 
 // Suppress Vite HMR WebSocket error in embedded previews
 // (AI Studio iframe blocks the WebSocket — not a production issue)
@@ -13,6 +14,9 @@ window.addEventListener('unhandledrejection', (event) => {
     event.preventDefault();
   }
 });
+
+// Run data retention policies
+cleanupOldPings();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

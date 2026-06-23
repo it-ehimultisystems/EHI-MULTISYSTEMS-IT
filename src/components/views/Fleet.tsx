@@ -149,7 +149,7 @@ export const Fleet = ({
         <button
           onClick={() => setActiveTab('vehicles')}
           className={`flex-1 py-2 text-center text-[10px] font-mono uppercase font-bold rounded-md flex items-center justify-center space-x-1.5 transition-colors ${
-            activeTab === 'vehicles' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-white'
+            activeTab === 'vehicles' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-[var(--color-foreground)]'
           }`}
         >
           <Truck size={12} />
@@ -158,7 +158,7 @@ export const Fleet = ({
         <button
           onClick={() => setActiveTab('maintenance')}
           className={`flex-1 py-2 text-center text-[10px] font-mono uppercase font-bold rounded-md flex items-center justify-center space-x-1.5 transition-colors ${
-            activeTab === 'maintenance' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-white'
+            activeTab === 'maintenance' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-[var(--color-foreground)]'
           }`}
         >
           <Wrench size={12} />
@@ -167,7 +167,7 @@ export const Fleet = ({
         <button
           onClick={() => setActiveTab('fuel')}
           className={`flex-1 py-2 text-center text-[10px] font-mono uppercase font-bold rounded-md flex items-center justify-center space-x-1.5 transition-colors ${
-            activeTab === 'fuel' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-white'
+            activeTab === 'fuel' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-[var(--color-foreground)]'
           }`}
         >
           <Fuel size={12} />
@@ -190,7 +190,7 @@ export const Fleet = ({
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-[9px] font-mono font-bold text-slate-500 block uppercase tracking-wider">{v.type} ({v.capacity}KG Limit)</span>
-                    <h3 className="text-base font-mono font-black text-white mt-0.5">{v.plate}</h3>
+                    <h3 className="text-base font-mono font-black text-[var(--color-foreground)] mt-0.5">{v.plate}</h3>
                   </div>
                   <button 
                     onClick={() => handleToggleStatus(v.id, v.status)}
@@ -233,7 +233,7 @@ export const Fleet = ({
       {activeTab === 'maintenance' && (
         <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-xl overflow-hidden">
           <div className="p-3 border-b border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] flex justify-between items-center">
-            <span className="text-[10px] font-mono text-white uppercase tracking-wider">Scheduled Fleet Services</span>
+            <span className="text-[10px] font-mono text-[var(--color-foreground)] uppercase tracking-wider">Scheduled Fleet Services</span>
             <span className="text-[9px] text-[var(--color-muted)] font-mono uppercase">Interval Checklist (90-Day Standard)</span>
           </div>
 
@@ -246,7 +246,7 @@ export const Fleet = ({
                 <div key={v.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center space-x-1.5">
-                      <span className="text-[12px] font-bold text-white">{v.plate}</span>
+                      <span className="text-[12px] font-bold text-[var(--color-foreground)]">{v.plate}</span>
                       <span className="text-[8px] bg-black/40 text-slate-400 px-1 py-0.5 rounded uppercase">{v.make} {v.model}</span>
                     </div>
                     <div className="flex space-x-4 text-[10px] text-slate-500">
@@ -346,7 +346,7 @@ export const Fleet = ({
           {/* Historical Log list */}
           <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-xl md:col-span-8 overflow-hidden">
             <div className="p-3 border-b border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] flex justify-between items-center">
-              <span className="text-[10px] font-mono text-white uppercase tracking-wider font-bold">Historical Fuel Expenditures</span>
+              <span className="text-[10px] font-mono text-[var(--color-foreground)] uppercase tracking-wider font-bold">Historical Fuel Expenditures</span>
               <span className="text-[9px] text-[var(--color-muted)] font-mono uppercase">Fleet records</span>
             </div>
 
@@ -355,7 +355,7 @@ export const Fleet = ({
                 <div key={log.id} className="p-3.5 flex justify-between items-center hover:bg-black/10">
                   <div className="space-y-1">
                     <div className="flex items-center space-x-1.5">
-                      <span className="text-[12px] font-bold text-white">{log.plate}</span>
+                      <span className="text-[12px] font-bold text-[var(--color-foreground)]">{log.plate}</span>
                       <span className="text-[8px] bg-amber-500/10 text-[var(--color-accent-amber)] px-1 py-0.5 rounded uppercase">{log.id}</span>
                     </div>
                     <div className="flex space-x-4 text-[10px] text-slate-500">
@@ -377,11 +377,11 @@ export const Fleet = ({
 
       {/* Add Vehicle Modal Overlay */}
       {showAddVehicleModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-55">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-55">
           <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex justify-between items-center bg-black/40">
               <span className="text-[10px] font-mono text-[var(--color-accent-amber)] uppercase font-bold tracking-wider">ADD VEHICLE TO FLEET</span>
-              <button onClick={() => setShowAddVehicleModal(false)} className="text-slate-400 hover:text-white font-mono text-xs cursor-pointer">✕</button>
+              <button onClick={() => setShowAddVehicleModal(false)} className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
             </div>
 
             <form onSubmit={handleAddVehicle} className="p-4 space-y-4">
@@ -390,7 +390,7 @@ export const Fleet = ({
                 <select 
                   value={type} 
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full bg-[var(--color-obsidian)] border border-[var(--color-border-strong)] p-2 rounded text-xs text-white"
+                  className="w-full bg-[var(--color-obsidian)] border border-[var(--color-border-strong)] p-2 rounded text-xs text-[var(--color-foreground)]"
                 >
                   <option value="Van">Van Delivery</option>
                   <option value="Truck">Truck Logistic Trailer</option>
@@ -409,7 +409,7 @@ export const Fleet = ({
                     required
                     value={plate}
                     onChange={(e) => setPlate(e.target.value)}
-                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-white uppercase placeholder-slate-600"
+                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] uppercase placeholder-slate-600"
                   />
                 </div>
                 <div className="space-y-1">
@@ -420,7 +420,7 @@ export const Fleet = ({
                     required
                     value={capacity}
                     onChange={(e) => setCapacity(e.target.value)}
-                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-white placeholder-slate-600"
+                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] placeholder-slate-600"
                   />
                 </div>
               </div>
@@ -434,7 +434,7 @@ export const Fleet = ({
                     required
                     value={make}
                     onChange={(e) => setMake(e.target.value)}
-                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-white placeholder-slate-600"
+                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] placeholder-slate-600"
                   />
                 </div>
                 <div className="space-y-1">
@@ -444,7 +444,7 @@ export const Fleet = ({
                     placeholder="e.g. Hiace"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-white placeholder-slate-600"
+                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] placeholder-slate-600"
                   />
                 </div>
               </div>
@@ -456,7 +456,7 @@ export const Fleet = ({
                   placeholder="e.g. Driver Tunde"
                   value={driver}
                   onChange={(e) => setDriver(e.target.value)}
-                  className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-white placeholder-slate-600"
+                  className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] placeholder-slate-600"
                 />
               </div>
 

@@ -1,3 +1,21 @@
+export interface ProofOfDelivery {
+  id:                string;
+  awbNumber:         string;
+  consigneeName:     string;
+  deliveredBy:       string;        // EHI staff member
+  receivedByName:    string;        // person who received
+  receivedByPhone?:  string;
+  receivedByIdType?: 'NIN' | 'Driving License' | 'Voter Card' | 'Staff ID';
+  receivedByIdNumber?: string;
+  signatureData:     string;        // base64 PNG of signature
+  photoData?:        string;        // base64 JPEG of recipient/package
+  deliveredAt:       string;        // ISO timestamp
+  hubName:           string;
+  notes?:            string;
+  gpsLatitude?:      number;
+  gpsLongitude?:     number;
+}
+
 export type HubType = 'Cargo Station' | 'Head Office';
 
 export type UserRole =
@@ -39,11 +57,12 @@ export type ContentType =
   | 'Courier'
   | 'Other';
 
-export type ScanMode = 'ARRIVE' | 'DEPART';
+export type ScanMode = 'ARRIVE' | 'DEPART' | 'DELIVER';
 
 export type ScanResultType =
   | 'SUCCESS_ARRIVE'
   | 'SUCCESS_DEPART'
+  | 'SUCCESS_DELIVER'
   | 'WRONG_DESTINATION'
   | 'NOT_LOGGED_IN'
   | 'ALREADY_PROCESSED'
@@ -153,6 +172,16 @@ export interface AppState {
   currentTab: TabView;
 }
 
+export interface TripPing {
+  id: string;
+  tripId: string;
+  timestamp: string;
+  latitude: number;
+  longitude: number;
+  speed?: number;
+  accuracy?: number;
+}
+
 export interface DriverTrip {
   id: string;
   vehiclePlate: string;
@@ -165,6 +194,11 @@ export interface DriverTrip {
   cargoRefs: string[];   // AWB numbers on this vehicle
   notes?: string;
   createdAt: string;
+  gpsTrackingEnabled?: boolean;
+  lastPingAt?: string;
+  lastLatitude?: number;
+  lastLongitude?: number;
+  lastSpeed?: number;
 }
 
 // Daily Cash Register

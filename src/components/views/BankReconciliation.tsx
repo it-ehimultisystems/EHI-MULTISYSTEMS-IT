@@ -277,7 +277,7 @@ export const BankReconciliation = ({
            <button onClick={downloadReport} className="flex items-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-[var(--color-foreground)] font-sans text-[13px] font-medium px-5 py-2.5 rounded-lg transition-colors">
              <Download size={16} /> <span>Download Report</span>
            </button>
-           <button onClick={onBack} className="flex items-center space-x-2 bg-[var(--color-accent-cobalt)] hover:bg-opacity-90 text-[var(--color-foreground)] font-sans text-[13px] font-bold px-5 py-2.5 rounded-lg transition-colors">
+           <button onClick={onBack} className="flex items-center space-x-2 bg-[var(--color-accent-cobalt)] hover:bg-opacity-90 text-white font-sans text-[13px] font-bold px-5 py-2.5 rounded-lg transition-colors">
              <span>Return</span>
            </button>
          </div>
@@ -286,16 +286,16 @@ export const BankReconciliation = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-white overflow-y-auto pb-[80px]">
+    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] overflow-y-auto pb-[80px]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4 mb-4">
-        <button onClick={onBack} className="flex items-center space-x-2 text-[var(--color-muted)] hover:text-white transition-colors">
+        <button onClick={onBack} className="flex items-center space-x-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
           <ArrowLeft size={18} />
           <span className="text-[14px] font-sans font-medium">Back</span>
         </button>
       </div>
 
       <div className="mb-6">
-        <h1 className="text-[18px] font-sans font-bold text-white leading-tight">Bank Reconciliation</h1>
+        <h1 className="text-[18px] font-sans font-bold text-[var(--color-foreground)] leading-tight">Bank Reconciliation</h1>
         <div className="text-[13px] font-sans text-[var(--color-muted)]">Match bank deposits with your system records</div>
       </div>
 
@@ -303,8 +303,8 @@ export const BankReconciliation = ({
         <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl p-5 space-y-4">
           <div className="flex justify-between items-center mb-2">
             <div className="flex bg-[var(--color-surface-1)] rounded-lg p-1 border border-[rgba(255,255,255,0.07)]">
-               <button onClick={() => setMethod('CSV')} className={`px-4 py-1.5 text-[12px] font-sans font-medium rounded-md ${method === 'CSV' ? 'bg-[var(--color-surface-2)] text-white shadow-sm' : 'text-[var(--color-muted)]'}`}>CSV</button>
-               <button onClick={() => setMethod('PDF')} className={`px-4 py-1.5 text-[12px] font-sans font-medium rounded-md ${method === 'PDF' ? 'bg-[var(--color-surface-2)] text-white shadow-sm' : 'text-[var(--color-muted)]'}`}>PDF Parser</button>
+               <button onClick={() => setMethod('CSV')} className={`px-4 py-1.5 text-[12px] font-sans font-medium rounded-md ${method === 'CSV' ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)]'}`}>CSV</button>
+               <button onClick={() => setMethod('PDF')} className={`px-4 py-1.5 text-[12px] font-sans font-medium rounded-md ${method === 'PDF' ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)]'}`}>PDF Parser</button>
             </div>
             {method === 'CSV' && (
               <select 
@@ -336,7 +336,7 @@ export const BankReconciliation = ({
             )}
             
             <div className="space-y-1">
-              <span className="text-[14px] font-sans font-semibold text-white block">
+              <span className="text-[14px] font-sans font-semibold text-[var(--color-foreground)] block">
                 {loadingPdf ? 'Processing PDF with Gemini AI...' : `Drag and drop ${method} statement`}
               </span>
               <span className="text-[12px] text-[var(--color-muted)] font-sans block">
@@ -354,7 +354,7 @@ export const BankReconciliation = ({
                   onChange={handleFileUpload}
                   className="absolute inset-0 opacity-0 w-full cursor-pointer h-full"
                 />
-                <button className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] text-white font-sans text-[13px] font-medium px-6 py-2.5 rounded-lg pointer-events-none">
+                <button className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] text-[var(--color-foreground)] font-sans text-[13px] font-medium px-6 py-2.5 rounded-lg pointer-events-none">
                   Select File
                 </button>
               </div>
@@ -366,7 +366,7 @@ export const BankReconciliation = ({
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] p-4 rounded-xl">
               <span className="text-[12px] font-sans font-medium text-[var(--color-muted)] block">Statement Credits</span>
-              <span className="text-[20px] font-bold font-mono text-white mt-1 block">{fmt(totalCredits)}</span>
+              <span className="text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1 block">{fmt(totalCredits)}</span>
               <span className="text-[11px] font-sans text-slate-500 block mt-1">{bankTxList.length} transactions</span>
             </div>
             
@@ -393,7 +393,7 @@ export const BankReconciliation = ({
                 <FileSpreadsheet size={20} />
               </div>
               <div>
-                <span className="text-[14px] font-sans font-bold text-white block">{fileName || 'Imported Statement'}</span>
+                <span className="text-[14px] font-sans font-bold text-[var(--color-foreground)] block">{fileName || 'Imported Statement'}</span>
                 <span className="text-[12px] font-sans text-[var(--color-muted)] block mt-0.5">Matched {matchedBtxCount}/{bankTxList.length}</span>
               </div>
             </div>
@@ -437,7 +437,7 @@ export const BankReconciliation = ({
                            </span>
                         )}
                       </div>
-                      <span className="text-[13px] font-sans font-medium text-white block leading-snug">{btx.description}</span>
+                      <span className="text-[13px] font-sans font-medium text-[var(--color-foreground)] block leading-snug">{btx.description}</span>
                     </div>
 
                     <div className="md:col-span-2 flex flex-col md:items-center">

@@ -23,9 +23,9 @@ export const MarketingWorkspace = ({
   // New Entry State
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [route, setRoute] = useState(Object.keys(PRICING)[0]);
-  const [mode, setMode] = useState('Transfer');
-  const [bank, setBank] = useState(BANKS[0]);
+  const [route, setRoute] = useState<string>(Object.keys(PRICING)[0]);
+  const [mode, setMode] = useState<string>('Transfer');
+  const [bank, setBank] = useState<string>(BANKS[0]);
   const [bb, setBb] = useState(0);
   const [mb, setMb] = useState(0);
   const [sb, setSb] = useState(0);
@@ -34,7 +34,7 @@ export const MarketingWorkspace = ({
   const [submitting, setSubmitting] = useState(false);
 
   // Expense State
-  const [expType, setExpType] = useState(EXPENSE_CATEGORIES[0]);
+  const [expType, setExpType] = useState<string>(EXPENSE_CATEGORIES[0]);
   const [expAmount, setExpAmount] = useState('');
   const [expDesc, setExpDesc] = useState('');
 
@@ -180,7 +180,7 @@ export const MarketingWorkspace = ({
   };
 
   // Focus visible styles for marketing form (green stream)
-  const mktgFocusClasses = "focus:outline-none focus:ring-2 focus:ring-[rgba(16,185,129,0.5)] focus:border-[rgba(16,185,129,0.5)] transition-[border-color,box-shadow]";
+  const mktgFocusClasses = "focus:outline-none focus:ring-2 focus:ring-[rgba(16,185,129,0.5)] focus:border-[rgba(16,185,129,0.5)] transition-colors";
 
   return (
     <div className="p-4 h-full pb-12" style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -223,7 +223,7 @@ export const MarketingWorkspace = ({
                 </div>
                 <div className="flex justify-between pt-1">
                    <span className="text-[10px] font-mono text-[var(--color-muted)]">Payment</span>
-                   <span className="text-[11px] font-mono text-white">{successTx.mode} {successTx.bank && `(${successTx.bank})`}</span>
+                   <span className="text-[11px] font-mono text-[var(--color-foreground)]">{successTx.mode} {successTx.bank && `(${successTx.bank})`}</span>
                 </div>
               </div>
 
@@ -265,28 +265,28 @@ export const MarketingWorkspace = ({
                   placeholder="Customer Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                 />
                 <input 
                   type="tel"
                   placeholder="Phone Number"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                 />
                 
                 <div className="flex space-x-3">
                   <select 
                     value={route}
                     onChange={(e) => setRoute(e.target.value)}
-                    className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${mktgFocusClasses}`}
+                    className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans min-w-0 ${mktgFocusClasses}`}
                   >
                     {Object.keys(PRICING).map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                   <select 
                     value={mode}
                     onChange={(e) => setMode(e.target.value)}
-                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans min-w-0 ${mktgFocusClasses}`}
+                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans min-w-0 ${mktgFocusClasses}`}
                   >
                     <option value="Cash">Cash</option>
                     <option value="Transfer">Transfer</option>
@@ -298,7 +298,7 @@ export const MarketingWorkspace = ({
                   <select 
                     value={bank}
                     onChange={(e) => setBank(e.target.value)}
-                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                   >
                     {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
@@ -317,7 +317,7 @@ export const MarketingWorkspace = ({
                         min="0"
                         value={bag.val || ''}
                         onChange={(e) => bag.set(parseInt(e.target.value) || 0)}
-                        className="w-10 h-7 text-center text-sm font-bold bg-transparent border-none p-0 focus:ring-0 text-white"
+                        className="w-10 h-7 text-center text-sm font-bold bg-transparent border-none p-0 focus:ring-0 text-[var(--color-foreground)]"
                         placeholder="0"
                       />
                     </div>
@@ -359,7 +359,7 @@ export const MarketingWorkspace = ({
               <select 
                 value={expType}
                 onChange={(e) => setExpType(e.target.value)}
-                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
               >
                 {EXPENSE_CATEGORIES.map(e => <option key={e} value={e}>{e}</option>)}
               </select>
@@ -368,7 +368,7 @@ export const MarketingWorkspace = ({
                 placeholder="Amount"
                 value={expAmount}
                 onChange={(e) => setExpAmount(e.target.value)}
-                className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
               />
             </div>
             <div className="flex space-x-2">
@@ -376,12 +376,12 @@ export const MarketingWorkspace = ({
                 placeholder="Description (optional)"
                 value={expDesc}
                 onChange={(e) => setExpDesc(e.target.value)}
-                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-white font-sans ${mktgFocusClasses}`}
+                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
               />
               <button 
                 onClick={handleAddExpense}
                 disabled={!expAmount}
-                className="h-11 px-4 bg-[var(--color-surface-2)] text-white text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors"
+                className="h-11 px-4 bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors"
               >
                 LOG
               </button>
@@ -446,7 +446,7 @@ export const MarketingWorkspace = ({
                   {marketingTxs.map(t => (
                     <div key={t.id} className="flex justify-between items-center bg-[var(--color-surface-1)] p-3 rounded border border-[rgba(255,255,255,0.05)]">
                       <div className="flex-1 min-w-0 pr-3">
-                        <div className="text-[12px] font-bold text-white truncate">{t.name}</div>
+                        <div className="text-[12px] font-bold text-[var(--color-foreground)] truncate">{t.name}</div>
                         <div className="text-[10px] font-mono text-[var(--color-muted)]">{t.detail}</div>
                       </div>
                       <div className="text-right shrink-0">
@@ -510,11 +510,11 @@ export const MarketingWorkspace = ({
               <div style={{ fontSize: 10, color: 'var(--color-light-muted)', marginBottom: 8, letterSpacing: '0.05em' }}>ENTRIES THIS SESSION</div>
               <div className="flex justify-between" style={{ fontSize: 13, marginBottom: 4 }}>
                 <span className="text-[var(--color-muted)]">Customers served:</span>
-                <span className="text-white">{marketingTxs.length}</span>
+                <span className="text-[var(--color-foreground)]">{marketingTxs.length}</span>
               </div>
               <div className="flex justify-between" style={{ fontSize: 13 }}>
                 <span className="text-[var(--color-muted)]">Routes covered:</span>
-                <span className="text-white text-right max-w-[200px] truncate">{[...new Set(marketingTxs.map(t => t.detail.split(' · ')[0]))].join(', ')}</span>
+                <span className="text-[var(--color-foreground)] text-right max-w-[200px] truncate">{[...new Set(marketingTxs.map(t => t.detail.split(' · ')[0]))].join(', ')}</span>
               </div>
             </div>
 
@@ -522,7 +522,7 @@ export const MarketingWorkspace = ({
               <div style={{ fontSize: 10, color: 'var(--color-light-muted)', marginBottom: 8, letterSpacing: '0.05em' }}>REVENUE BREAKDOWN</div>
               <div className="flex justify-between" style={{ fontSize: 13, marginBottom: 4 }}>
                 <span className="text-[var(--color-muted)]">Total Sales:</span>
-                <span className="text-white font-mono font-bold">{fmt(totalSales)}</span>
+                <span className="text-[var(--color-foreground)] font-mono font-bold">{fmt(totalSales)}</span>
               </div>
               <div className="flex justify-between" style={{ fontSize: 13, marginBottom: 4 }}>
                 <span className="text-[var(--color-muted)]">Cash Sales:</span>
@@ -545,7 +545,7 @@ export const MarketingWorkspace = ({
                 <div style={{ fontSize: 12, color: 'var(--color-muted)', fontStyle: 'italic' }}>No expenses logged.</div>
               )}
               <div className="flex justify-between" style={{ fontSize: 13, marginTop: 8, paddingTop: 8, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-                <span className="text-white">TOTAL EXPENSES:</span>
+                <span className="text-[var(--color-foreground)]">TOTAL EXPENSES:</span>
                 <span className="text-[var(--color-error)] font-mono font-bold">{fmt(totalExpenses)}</span>
               </div>
             </div>

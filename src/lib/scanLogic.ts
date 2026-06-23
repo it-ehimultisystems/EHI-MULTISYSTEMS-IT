@@ -257,6 +257,53 @@ export async function validateScan(
     return { type: 'SUCCESS_DEPART', cargo: cargoInfo, currentHub };
   }
 
+  // 6. DELIVER MODE validation
+  if (mode === 'DELIVER') {
+    const arriveEvent = await getLastEventAtHub(ref, currentHub);
+
+    if (!arriveEvent || arriveEvent.event_type !== 'ARRIVE') {
+      const lastAny = await getLastEventAnywhere(ref);
+      return {
+        type: 'NOT_LOGGED_IN',
+        cargo: cargoInfo,
+        lastEvent: lastAny ? {
+          type: lastAny.event_type,
+          hub: lastAny.hub_name,
+          time: new Date(lastAny.created_at).toLocaleString('en-NG'),
+          by: lastAny.scanned_by_name || 'Unknown',
+        } : undefined,
+        currentHub,
+        message: `Cargo has no ARRIVE record at ${currentHub}. Scan ARRIVE first before Delivery.`
+      };
+    }
+
+    // Check if already delivered
+    const recentEvents = await supabase
+      .from('tracking_events')
+      .select('*')
+      .eq('cargo_ref', ref)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    const events = recentEvents.data || [];
+    if (events[0]?.event_type === 'DELIVER') {
+      return {
+        type: 'ALREADY_PROCESSED',
+        cargo: cargoInfo,
+        lastEvent: {
+          type: 'DELIVER',
+          hub: events[0].hub_name,
+          time: new Date(events[0].created_at).toLocaleString('en-NG'),
+          by: events[0].scanned_by_name || 'Unknown',
+        },
+        currentHub,
+        message: `Already logged as DELIVERED.`
+      };
+    }
+
+    return { type: 'SUCCESS_DELIVER', cargo: cargoInfo, currentHub };
+  }
+
   return { type: 'ERROR', currentHub, message: 'Unknown scan mode.' };
 }
 
