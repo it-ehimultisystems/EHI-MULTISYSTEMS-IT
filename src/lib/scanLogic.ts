@@ -15,7 +15,7 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
       return {
         ...localMatch,
         _table: localMatch.type === 'cargo' ? 'cargo_entries' : 
-                localMatch.type === 'baggage' ? 'manifests' : 'shipments',
+                localMatch.type === 'baggage' ? 'manifests' : 'marketing_entries',
         awb_tag_number: localMatch.awb_tag_number || localMatch.id,
         route: localMatch.detail?.split(' · ')[4] || '',
         destination: localMatch.detail?.split(' · ')[4] || '',
@@ -53,7 +53,7 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
   const { data: mktData } = await supabase
     .from('marketing_entries')
     .select('*')
-    .eq('id', cleanRef)
+    .eq('entry_ref', cleanRef)
     .limit(1)
     .maybeSingle();
 
@@ -68,21 +68,9 @@ export async function isValidTransitHub(
   destination: string,
   transitHub: string
 ): Promise<boolean> {
-  const { data } = await supabase
-    .from('route_definitions')
-    .select('valid_transit_hubs, direct_flight')
-    .eq('destination', destination)
-    .maybeSingle();
-
-  if (!data) return false;
-
-  // Direct flight routes have no valid transit hubs
-  if (data.direct_flight) return false;
-
-  return (data.valid_transit_hubs as string[]).some(h =>
-    h.toLowerCase().includes(transitHub.toLowerCase()) ||
-    transitHub.toLowerCase().includes(h.toLowerCase())
-  );
+  // Route definitions table not yet configured.
+  // Always returns false — cargo must go directly to destination.
+  return false;
 }
 
 // Get the last tracking event for a cargo ref at a specific hub

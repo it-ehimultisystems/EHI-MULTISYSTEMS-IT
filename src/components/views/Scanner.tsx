@@ -241,6 +241,12 @@ export const Scanner = ({
     }
   }, [mode, currentHub, user.name, isBatchQueueMode, showToast]);
 
+  const processCodeRef = useRef(processCode);
+
+  useEffect(() => {
+    processCodeRef.current = processCode;
+  }, [processCode]);
+
   // Start camera scanner
   const startScanner = useCallback(async () => {
     // Request camera permission explicitly on iOS
@@ -271,7 +277,7 @@ export const Scanner = ({
           qrbox: { width: 220, height: 220 },
           aspectRatio: 1.0,
         },
-        (decodedText) => processCode(decodedText),
+        (decodedText) => processCodeRef.current(decodedText),
         () => { /* ignore */ }
       ).catch(err => {
         console.error("Scanner start error:", err);
@@ -280,7 +286,7 @@ export const Scanner = ({
 
       scannerRef.current = scanner as any;
     }
-  }, [isScanning, processCode]);
+  }, [isScanning]);
 
   const stopScanner = useCallback(async () => {
     // Step 1: Stop all video tracks directly on the DOM element
