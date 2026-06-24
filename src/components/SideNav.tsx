@@ -31,7 +31,6 @@ export const SideNav = ({
   const visibleTabs = allTabs.filter(t => t.roles.includes(user.role));
 
   const activeColor = 'var(--color-accent-amber)';
-  const activeBg = 'rgba(245,158,11,0.10)';
 
   return (
     <aside
@@ -116,7 +115,7 @@ export const SideNav = ({
                 width: '100%',
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '11px 14px',
-                background: isActive ? activeBg : 'transparent',
+                background: 'transparent',
                 border: 'none',
                 borderLeft: isActive
                   ? `2px solid ${activeColor}`
@@ -126,13 +125,15 @@ export const SideNav = ({
                 textAlign: 'left',
               }}
             >
-              <Icon
-                size={18}
-                color={isActive ? activeColor : 'var(--color-muted)'}
-                strokeWidth={isActive ? 2.5 : 1.5}
-                style={{ flexShrink: 0, transition: 'color 0.15s ease' }}
-                className={isActive ? '' : 'group-hover:text-[var(--color-accent-amber)]'}
-              />
+              <div style={{ width: 20, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <Icon
+                  size={isActive ? 20 : 18}
+                  color={isActive ? activeColor : 'var(--color-muted)'}
+                  strokeWidth={isActive ? 2.5 : 1.5}
+                  style={{ flexShrink: 0, transition: 'all 0.15s ease' }}
+                  className={isActive ? '' : 'group-hover:text-[var(--color-accent-amber)]'}
+                />
+              </div>
               <span
                 className={`ehi-sidebar-text ${isActive ? '' : 'group-hover:text-[var(--color-accent-amber)]'}`}
                 style={{

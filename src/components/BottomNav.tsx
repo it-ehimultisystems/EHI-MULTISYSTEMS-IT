@@ -1,17 +1,16 @@
 import { User, TabView } from '../lib/types';
-import { motion } from 'motion/react';
-import { FiIcon } from './FiIcon';
+import { LayoutDashboard, Package, TrendingUp, Plane, QrCode, Cpu, MoreHorizontal, Truck } from 'lucide-react';
 
 export const BottomNav = ({ user, currentTab, onChangeTab }: { user: User; currentTab: TabView; onChangeTab: (t: TabView) => void }) => {
-  const allTabs: { id: TabView; title: string, icon: string; roles: string[] }[] = [
-    { id: 'Tower', title: 'Home', icon: 'home', roles: ['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'accountant', 'auditor'] },
-    { id: 'Cargo', title: 'Cargo', icon: 'box-alt', roles: ['super_admin', 'admin', 'cargo_agent'] },
-    { id: 'Marketing', title: 'Marketing', icon: 'chart-line-up', roles: ['super_admin', 'admin', 'marketing_agent'] },
-    { id: 'VJ POS', title: 'ValueJet', icon: 'plane', roles: ['super_admin', 'admin', 'vj_agent'] },
-    { id: 'MyTrips', title: 'My Trips', icon: 'truck-side', roles: ['driver'] },
-    { id: 'Scan', title: 'Scanner', icon: 'qr-scan', roles: ['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver'] },
-    { id: 'IT Debug', title: 'IT Debug', icon: 'bug', roles: ['super_admin', 'admin'] },
-    { id: 'More', title: 'More', icon: 'apps', roles: ['super_admin', 'admin', 'accountant', 'auditor'] },
+  const allTabs: { id: TabView; title: string, icon: any; roles: string[] }[] = [
+    { id: 'Tower', title: 'Home', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'accountant', 'auditor'] },
+    { id: 'Cargo', title: 'Cargo', icon: Package, roles: ['super_admin', 'admin', 'cargo_agent'] },
+    { id: 'Marketing', title: 'Marketing', icon: TrendingUp, roles: ['super_admin', 'admin', 'marketing_agent'] },
+    { id: 'VJ POS', title: 'ValueJet', icon: Plane, roles: ['super_admin', 'admin', 'vj_agent'] },
+    { id: 'MyTrips', title: 'My Trips', icon: Truck, roles: ['driver'] },
+    { id: 'Scan', title: 'Scanner', icon: QrCode, roles: ['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver'] },
+    { id: 'IT Debug', title: 'IT Debug', icon: Cpu, roles: ['super_admin', 'admin'] },
+    { id: 'More', title: 'More', icon: MoreHorizontal, roles: ['super_admin', 'admin', 'accountant', 'auditor'] },
   ];
 
   const visibleTabs = allTabs.filter(t => t.roles.includes(user.role));
@@ -31,45 +30,33 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: { user: User; curre
     >
       {visibleTabs.map(tab => {
         const isActive = currentTab === tab.id;
+        const Icon = tab.icon;
         return (
           <button
             key={tab.id}
             onClick={() => onChangeTab(tab.id)}
-            className="flex-1 h-full flex flex-col items-center justify-center relative gap-0.5 transition-colors hover:text-[var(--color-accent-amber)]"
+            className="group flex-1 h-full flex flex-col items-center justify-center relative gap-0.5 transition-colors hover:text-[var(--color-accent-amber)]"
             style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            {/* Active pill background on icon */}
-            {isActive && (
-              <motion.div
-                layoutId="nav-pill"
+            <div style={{ height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon
+                size={isActive ? 20 : 18}
+                strokeWidth={isActive ? 2.5 : 1.5}
                 style={{
-                  position: 'absolute',
-                  top: 10,
-                  width: 44, height: 28,
-                  borderRadius: 'var(--radius-full)',
-                  background: `color-mix(in srgb, ${activeColor} 20%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${activeColor} 30%, transparent)`,
+                  color: isActive ? activeColor : 'var(--color-muted)',
+                  transition: 'all 0.2s',
+                  position: 'relative', zIndex: 1,
                 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className={isActive ? '' : 'group-hover:text-[var(--color-accent-amber)]'}
               />
-            )}
-            <FiIcon
-              name={tab.icon}
-              size={isActive ? 20 : 18}
-              style={{
-                color: isActive ? activeColor : 'var(--color-muted)',
-                transition: 'all 0.2s',
-                position: 'relative', zIndex: 1,
-              }}
-              className={isActive ? '' : 'hover:text-[var(--color-accent-amber)]'}
-            />
+            </div>
             <span
               style={{
-                fontSize: 10, fontWeight: isActive ? 700 : 500,
+                fontSize: 10, fontWeight: isActive ? 600 : 500,
                 color: isActive ? activeColor : 'var(--color-muted)',
                 transition: 'all 0.2s',
               }}
-              className={isActive ? '' : 'hover:text-[var(--color-accent-amber)]'}
+              className={isActive ? '' : 'group-hover:text-[var(--color-accent-amber)]'}
             >
               {tab.title}
             </span>
