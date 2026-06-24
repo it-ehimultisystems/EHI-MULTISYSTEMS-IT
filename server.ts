@@ -6,6 +6,7 @@ import notificationRoutes from './server/notifications';
 
 import eodRoutes from './server/eod';
 import geminiRoutes from './server/gemini';
+import { parseBankAlert } from './server/emailParser';
 
 async function startServer() {
   const app = express();
@@ -33,6 +34,36 @@ async function startServer() {
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post('/api/validate-payment/parse', (req, res) => {
+    try {
+      const { emailText } = req.body;
+      if (!emailText) {
+        return res.status(400).json({ error: "Missing emailText" });
+      }
+      const parsed = parseBankAlert(emailText);
+      res.json(parsed);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message || "Failed to parse bank alert" });
+    }
+  });
+
+  app.post('/api/validate-payment/inbound', (req, res) => {
+    try {
+      const { TextBody, HtmlBody } = req.body;
+      const emailText = TextBody || (HtmlBody ? HtmlBody.replace(/<[^>]+>/g, '') : '');
+      if (!emailText) {
+        return res.status(400).json({ error: "Missing email body" });
+      }
+      const parsed = parseBankAlert(emailText);
+      
+      // If server has DB access, we could auto-match here.
+      // For now, just return parsed data. Client can also poll or we let client do it.
+      res.json(parsed);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message || "Failed to parse inbound email" });
+    }
   });
 
   // Vite middleware for development

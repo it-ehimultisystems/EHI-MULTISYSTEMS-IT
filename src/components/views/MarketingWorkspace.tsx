@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
 import { PRICING, BANKS, EXPENSE_CATEGORIES } from '../../lib/constants';
 import { fmt, uid, tnow } from '../../lib/helpers';
@@ -6,6 +6,7 @@ import { Plus, CheckCircle, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { sendReceiptWhatsApp, buildMarketingWhatsApp } from '../../lib/notifications';
+import { PaymentNarrationBox } from '../PaymentNarrationBox';
 
 export const MarketingWorkspace = ({ 
   user, 
@@ -29,6 +30,17 @@ export const MarketingWorkspace = ({
   const [bb, setBb] = useState(0);
   const [mb, setMb] = useState(0);
   const [sb, setSb] = useState(0);
+
+  const [narrationCode, setNarrationCode] = useState<string>('');
+
+  useEffect(() => {
+    if (mode === 'Transfer' && !narrationCode) {
+      import('../../lib/helpers').then(({ generatePaymentNarration }) => {
+        // use a random serial for marketing if none exists
+        setNarrationCode(generatePaymentNarration(user.hub, Math.floor(Math.random() * 900) + 100));
+      });
+    }
+  }, [mode, narrationCode, user.hub]);
 
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +80,7 @@ export const MarketingWorkspace = ({
         smallBags: sb,
         amount: successTx.amount,
         paymentMode: successTx.mode,
+        paymentNarration: successTx.paymentNarration,
         bankName: bank || undefined,
       };
       downloadMarketingReceipt(data);
@@ -122,6 +135,7 @@ export const MarketingWorkspace = ({
       amount: totalAmount,
       mode,
       bank: mode === 'Transfer' ? bank : undefined,
+      paymentNarration: mode === 'Transfer' ? narrationCode : undefined,
       time: tnow(),
       type: 'marketing',
       status: 'Intake'
@@ -295,13 +309,16 @@ export const MarketingWorkspace = ({
                 </div>
 
                 {mode === 'Transfer' && (
-                  <select 
-                    value={bank}
-                    onChange={(e) => setBank(e.target.value)}
-                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
-                  >
-                    {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                  <div className="space-y-2">
+                    <select 
+                      value={bank}
+                      onChange={(e) => setBank(e.target.value)}
+                      className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                    >
+                      {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    <PaymentNarrationBox narrationCode={narrationCode} />
+                  </div>
                 )}
 
                 <div className="flex flex-wrap gap-2">

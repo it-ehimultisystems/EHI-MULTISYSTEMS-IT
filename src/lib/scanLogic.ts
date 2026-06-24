@@ -8,7 +8,7 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
   // Try local transactions first (for demo mode)
   if (localTransactions && localTransactions.length > 0) {
     const localMatch = localTransactions.find(t => 
-      t.id === cleanRef || 
+      t.id?.toUpperCase() === cleanRef || 
       (t.awb_tag_number && t.awb_tag_number.toUpperCase() === cleanRef)
     );
     if (localMatch) {
@@ -33,7 +33,7 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
   const { data: cargoData } = await supabase
     .from('cargo_entries')
     .select('*')
-    .or(`entry_ref.eq.${cleanRef},awb_tag_number.eq.${cleanRef}`)
+    .or(`id.eq.${cleanRef},awb_tag_number.eq.${cleanRef}`)
     .limit(1)
     .maybeSingle();
 
@@ -43,21 +43,21 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
   const { data: vjData } = await supabase
     .from('manifests')
     .select('*')
-    .eq('transaction_id', cleanRef)
+    .eq('id', cleanRef)
     .limit(1)
     .maybeSingle();
 
   if (vjData) return { ...vjData, _table: 'manifests' };
 
-  // Try shipments (marketing)
+  // Try marketing_entries (marketing)
   const { data: mktData } = await supabase
-    .from('shipments')
+    .from('marketing_entries')
     .select('*')
-    .eq('entry_ref', cleanRef)
+    .eq('id', cleanRef)
     .limit(1)
     .maybeSingle();
 
-  if (mktData) return { ...mktData, _table: 'shipments' };
+  if (mktData) return { ...mktData, _table: 'marketing_entries' };
 
   return null;
 }

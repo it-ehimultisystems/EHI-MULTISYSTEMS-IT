@@ -1,11 +1,11 @@
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 export const QRCode = ({ id, size = 150 }: { id: string; size?: number }) => {
   return (
-    <QRCodeSVG 
+    <QRCodeCanvas 
       value={id} 
       size={size}
-      level="M"
+      level="H"
       includeMargin={true}
       bgColor="#FFFFFF"
       fgColor="#000000"

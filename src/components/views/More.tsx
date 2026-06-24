@@ -61,7 +61,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (accountingView) {
-    return <AccountingConsole user={user} transactions={transactions} expenses={expenses} onBack={() => setAccountingView(false)} onAddExpense={onAddExpense} onOpenBankRecon={() => setBankReconView(true)} />;
+    return <AccountingConsole user={user} transactions={transactions} expenses={expenses} onBack={() => setAccountingView(false)} onAddExpense={onAddExpense} onOpenBankRecon={() => setBankReconView(true)} onFullUpdateTx={onAddTx} />;
   }
 
   if (reportsView) {

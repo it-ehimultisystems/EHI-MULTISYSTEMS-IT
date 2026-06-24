@@ -167,12 +167,22 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   }, [isOffline, flushPendingTx]);
 
   const handleAddTx = useCallback(async (tx: Transaction) => {
-    setTransactions(prev => [tx, ...prev].slice(0, 200));
+    setTransactions(prev => {
+      const idx = prev.findIndex(t => t.id === tx.id);
+      if (idx !== -1) {
+        const next = [...prev];
+        next[idx] = tx;
+        return next;
+      }
+      return [tx, ...prev].slice(0, 200);
+    });
     const tableName = tx.type === 'marketing' ? 'marketing_entries' 
       : tx.type === 'cargo' ? 'cargo_entries' 
       : tx.type === 'baggage' ? 'manifests' 
       : 'shipments';
     
+    // We only try to write/update if possible, for now writeWithOfflineSupport 
+    // handles upsert if configured, but let's just use it as is
     const payload = { ...tx };
     const { offline } = await writeWithOfflineSupport(tableName as any, payload);
     
@@ -250,7 +260,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               )}
               {currentTab === 'Cargo' && <CargoForm onAddTx={handleAddTx} user={user} />}
               {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])} />}
-              {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} />}
+              {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} user={user} />}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
               {currentTab === 'MyTrips' && <MyTrips user={user} />}
               {currentTab === 'IT Debug' && <ITDashboard user={user} />}

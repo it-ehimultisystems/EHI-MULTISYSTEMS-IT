@@ -152,6 +152,37 @@ export interface Transaction {
   kg?: number;
   contentType?: string;
   remarks?: string;
+  
+  // Payment Validation
+  paymentConfirmed?: boolean;
+  confirmedAt?: string;
+  bankReference?: string;
+  bankSender?: string;
+  bankAlertText?: string;
+  bankAlertSnippet?: string;
+  paymentNarration?: string;
+  confirmedBy?: string;
+  posApprovalCode?: string;
+}
+
+export interface ParsedBankAlert {
+  bankName: string;
+  amount: number;
+  senderName: string;
+  reference: string;
+  dateString: string;
+  parsedDate: string;
+  rawText: string;
+  confidence: 'exact' | 'high' | 'medium' | 'low';
+  narrationCode?: string;
+}
+
+export interface PaymentMatch {
+  transaction: Transaction;
+  alert: ParsedBankAlert;
+  matchScore: number;
+  matchReasons: string[];
+  status: 'confirmed' | 'pending' | 'rejected';
 }
 
 export interface Expense {
@@ -162,6 +193,7 @@ export interface Expense {
   time: string;
   status?: 'pending' | 'approved' | 'rejected';
   mode?: string;
+  posApprovalCode?: string;
 }
 
 export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Scan' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit';

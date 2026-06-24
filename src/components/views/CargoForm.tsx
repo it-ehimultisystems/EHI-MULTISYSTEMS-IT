@@ -65,6 +65,7 @@ function incrementLocalSerial(): number {
 }
 
 import { QRCode } from '../QRCode';
+import { PaymentNarrationBox } from '../PaymentNarrationBox';
 
 export const CargoForm = ({ onAddTx, user }: {
   onAddTx: (tx: Transaction) => void;
@@ -89,6 +90,16 @@ export const CargoForm = ({ onAddTx, user }: {
   const [bank, setBank] = useState(BANKS[0] as string);
   const [remark, setRemark] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
+  
+  const [narrationCode, setNarrationCode] = useState<string>('');
+
+  useEffect(() => {
+    if (mode === 'Transfer' && !narrationCode) {
+      import('../../lib/helpers').then(({ generatePaymentNarration }) => {
+        setNarrationCode(generatePaymentNarration(user.hub, serialNumber));
+      });
+    }
+  }, [mode, narrationCode, user.hub, serialNumber]);
   
   const [availableAirlines, setAvailableAirlines] = useState<string[]>(['Arik Air', 'Green Africa', 'United Nigeria', 'Other']);
 
@@ -399,6 +410,7 @@ export const CargoForm = ({ onAddTx, user }: {
       amount: parsedAmount,
       mode,
       bank: (mode === 'Transfer' || mode === 'POS') ? bank : undefined,
+      paymentNarration: mode === 'Transfer' ? narrationCode : undefined,
       remarks: remark.trim(),
       time: tnow(),
       type: 'cargo',
@@ -429,6 +441,7 @@ export const CargoForm = ({ onAddTx, user }: {
           amount: parsedAmount,
           mode,
           bank: (mode === 'Transfer' || mode === 'POS') ? bank : undefined,
+          paymentNarration: mode === 'Transfer' ? narrationCode : undefined,
         }),
       });
     }
@@ -473,6 +486,7 @@ export const CargoForm = ({ onAddTx, user }: {
         contentType: successTx.detail.split(' · ')[5] || contentType,
         amount: successTx.amount,
         paymentMode: successTx.mode,
+        paymentNarration: successTx.paymentNarration,
         bankName: successTx.bank || undefined,
         remark: successTx.remarks || undefined,
       };
@@ -502,6 +516,7 @@ export const CargoForm = ({ onAddTx, user }: {
         contentType: successTx.detail.split(' · ')[5] || contentType,
         amount: successTx.amount,
         paymentMode: successTx.mode,
+        paymentNarration: successTx.paymentNarration,
         bankName: successTx.bank || undefined,
         remark: successTx.remarks || undefined,
       };
@@ -826,6 +841,7 @@ export const CargoForm = ({ onAddTx, user }: {
                   >
                     {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
+                  <PaymentNarrationBox narrationCode={narrationCode} />
                 </div>
               )}
 

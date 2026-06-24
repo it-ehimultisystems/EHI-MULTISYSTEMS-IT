@@ -17,6 +17,7 @@ export interface MarketingReceiptData {
   smallBags: number;
   amount: number;
   paymentMode: string;
+  paymentNarration?: string;
   bankName?: string;
 }
 
@@ -129,6 +130,12 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => (
           <View style={styles.row}>
             <Text style={styles.label}>Bank:</Text>
             <Text style={styles.value}>{data.bankName}</Text>
+          </View>
+        )}
+        {data.paymentMode === 'Transfer' && data.paymentNarration && (
+          <View style={styles.row}>
+            <Text style={styles.label}>Bank Transfer Narration:</Text>
+            <Text style={styles.value}>{data.paymentNarration}</Text>
           </View>
         )}
       </View>

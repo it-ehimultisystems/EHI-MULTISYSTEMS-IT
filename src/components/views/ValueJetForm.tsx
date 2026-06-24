@@ -1,23 +1,34 @@
-import { useState } from 'react';
-import { PaymentMode, Transaction } from '../../lib/types';
+import { useState, useEffect } from 'react';
+import { PaymentMode, Transaction, User } from '../../lib/types';
 import { fmt, uid, tnow } from '../../lib/helpers';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { QRCode } from '../QRCode';
 import { motion } from 'motion/react';
 import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notifications';
+import { PaymentNarrationBox } from '../PaymentNarrationBox';
 
 const VJ_RATE_PER_KG = 1000;
 
-export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }) => {
+export const ValueJetForm = ({ onAddTx, user }: { onAddTx: (tx: Transaction) => void, user: User }) => {
   const [name, setName] = useState('');
   const [flight, setFlight] = useState('');
   const [dest, setDest] = useState('');
   const [kg, setKg] = useState('');
   const [phone, setPhone] = useState('');
   const [mode, setMode] = useState<PaymentMode>('POS');
+  const [narrationCode, setNarrationCode] = useState<string>('');
 
   const [successTx, setSuccessTx] = useState<{ tx: Transaction, kgs: number, exc: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (mode === 'Transfer' && !narrationCode) {
+      import('../../lib/helpers').then(({ generatePaymentNarration }) => {
+        // use a random serial for VJ if none exists since we don't track VJ serials the same way
+        setNarrationCode(generatePaymentNarration(user.hub, Math.floor(Math.random() * 900) + 100));
+      });
+    }
+  }, [mode, narrationCode, user.hub]);
 
   const vjFreeAllowance = parseFloat(
     localStorage.getItem('ehi_vj_free_kg') || '20'
@@ -40,6 +51,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
       detail: `${flight.toUpperCase()} · +${excessKg.toFixed(1)}kg excess`,
       amount: totalAmount,
       mode,
+      paymentNarration: mode === 'Transfer' ? narrationCode : undefined,
       airline: 'ValueJet',
       time: tnow(),
       type: 'baggage',
@@ -94,6 +106,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
         ratePerKg: VJ_RATE_PER_KG,
         amount: successTx.tx.amount,
         paymentMode: successTx.tx.mode,
+        paymentNarration: successTx.tx.paymentNarration,
       };
       downloadVJReceipt(data);
     }
@@ -116,6 +129,7 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
       ratePerKg: VJ_RATE_PER_KG,
       amount: successTx.tx.amount,
       paymentMode: successTx.tx.mode,
+      paymentNarration: successTx.tx.paymentNarration,
     });
   };
 
@@ -298,6 +312,9 @@ export const ValueJetForm = ({ onAddTx }: { onAddTx: (tx: Transaction) => void }
                 </button>
               ))}
             </div>
+            {mode === 'Transfer' && (
+              <PaymentNarrationBox narrationCode={narrationCode} />
+            )}
           </div>
           
           {/* Submit button states */}

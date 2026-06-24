@@ -5,6 +5,7 @@ import { ArrowLeft, Box, Plane, TrendingUp, Lock, Unlock, AlertCircle } from 'lu
 import { DebtorsTab } from './DebtorsTab';
 import { ExpensesTab } from './ExpensesTab';
 import { BankReconciliation } from './BankReconciliation';
+import { PaymentValidation } from './PaymentValidation';
 
 export interface AccountingConsoleProps {
   user: User;
@@ -14,11 +15,16 @@ export interface AccountingConsoleProps {
   onAddExpense: (exp: Expense) => void;
   onUpdateTx?: (id: string, update: Partial<Transaction>) => void;
   onOpenBankRecon: () => void;
+  onFullUpdateTx?: (tx: Transaction) => void;
 }
 
-export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddExpense, onUpdateTx, onOpenBankRecon }: AccountingConsoleProps) => {
-  const [activeTab, setActiveTab] = useState<'Summary' | 'Cash Register' | 'Credit Sales' | 'Expenses' | 'Remittances'>('Summary');
+export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddExpense, onUpdateTx, onOpenBankRecon, onFullUpdateTx }: AccountingConsoleProps) => {
+  const [activeTab, setActiveTab] = useState<'Summary' | 'Cash Register' | 'Credit Sales' | 'Expenses' | 'Remittances' | 'Payment Validation'>('Summary');
   const [period, setPeriod] = useState<'Today' | 'This Week' | 'This Month' | 'Custom'>('Today');
+
+  const unconfirmedCount = useMemo(() => {
+    return transactions.filter(t => t.mode === 'Transfer' && !t.paymentConfirmed).length;
+  }, [transactions]);
 
   const { filteredTx, filteredExp } = useMemo(() => {
     const now = new Date();
@@ -144,13 +150,18 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
 
       {/* TABS HEADER */}
       <div className="flex space-x-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-        {['Summary', 'Cash Register', 'Credit Sales', 'Expenses', 'Remittances'].map((t) => (
+        {['Summary', 'Cash Register', 'Credit Sales', 'Expenses', 'Payment Validation', 'Remittances'].map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t as any)}
-            className={`px-4 py-2 text-[13px] font-sans font-medium rounded-full whitespace-nowrap transition-colors focus:outline-none ${activeTab === t ? 'bg-[var(--color-accent-cobalt)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+            className={`px-4 py-2 text-[13px] font-sans font-medium rounded-full whitespace-nowrap transition-colors focus:outline-none flex items-center ${activeTab === t ? 'bg-[var(--color-accent-cobalt)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
             {t}
+            {t === 'Payment Validation' && unconfirmedCount > 0 && (
+              <span className="ml-2 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                {unconfirmedCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -379,6 +390,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
 
       {activeTab === 'Credit Sales' && <DebtorsTab />}
       {activeTab === 'Expenses' && <ExpensesTab />}
+      {activeTab === 'Payment Validation' && <PaymentValidation transactions={transactions} onUpdateTx={onFullUpdateTx!} />}
       {activeTab === 'Remittances' && (
         <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)] mt-4">
            <Unlock size={36} className="text-[var(--color-muted)] mb-3" />

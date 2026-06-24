@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Transaction, User, Expense } from "../../lib/types";
-import { fmt } from "../../lib/helpers";
+import { fmt, tnow } from "../../lib/helpers";
 import {
   ArrowLeft,
   Edit2,
@@ -9,6 +9,12 @@ import {
   Filter,
   Search,
   QrCode,
+  CheckSquare,
+  Package,
+  Plane,
+  TrendingUp,
+  Minus,
+  ChevronRight,
 } from "lucide-react";
 import { QRCode } from "../QRCode";
 
@@ -23,6 +29,8 @@ type Entry = {
   status: string;
   source: "transaction" | "expense";
   raw: any;
+  paymentConfirmed?: boolean;
+  posApprovalCode?: string;
 };
 
 export const TransactionLedger = ({
@@ -40,9 +48,11 @@ export const TransactionLedger = ({
 }) => {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [viewingQrTx, setViewingQrTx] = useState<Entry | null>(null);
+  const [viewingDetail, setViewingDetail] = useState<Entry | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [modeFilter, setModeFilter] = useState("All");
+  const [posCodeInput, setPosCodeInput] = useState<{ id: string; code: string }>({ id: '', code: '' });
 
   const entries = useMemo(() => {
     const list: Entry[] = [
@@ -55,18 +65,18 @@ export const TransactionLedger = ({
         id: e.id,
         time: e.time,
         type: "expense",
-        name: e.type,
+        name: e.type || 'Expense',
         detail: e.description,
         amount: e.amount,
-        mode: "Expense",
-        status: "N/A",
+        mode: e.mode || "Expense",
+        status: e.status || "N/A",
         source: "expense" as const,
         raw: e,
+        paymentConfirmed: e.posApprovalCode ? true : false, // or from actual e.paymentConfirmed if added
+        posApprovalCode: e.posApprovalCode,
       })),
     ];
     return list.sort((a, b) => {
-      // Sort by time descending (this assumes time format HH:MM which sorts lexically)
-      // Since there's no full date, sorting string time is simple enough
       if (a.time > b.time) return -1;
       if (a.time < b.time) return 1;
       return 0;
@@ -80,6 +90,8 @@ export const TransactionLedger = ({
     if (modeFilter !== "All") {
       if (modeFilter === "Revenue") {
         if (e.source === "expense" || e.mode === "Debt") return false;
+      } else if (modeFilter === "Expense") {
+        if (e.source !== "expense") return false;
       } else {
         if (e.mode.toLowerCase() !== modeFilter.toLowerCase()) return false;
       }
@@ -95,7 +107,8 @@ export const TransactionLedger = ({
     return true;
   });
 
-  const handleEditClick = (e: Entry) => {
+  const handleEditClick = (e: Entry, evt: React.MouseEvent) => {
+    evt.stopPropagation();
     if (e.source === "transaction") {
       setEditingTx({ ...e.raw });
     }
@@ -107,6 +120,56 @@ export const TransactionLedger = ({
       setEditingTx(null);
     }
   };
+
+  const toggleConfirm = (e: Entry, evt: React.MouseEvent) => {
+    evt.stopPropagation();
+    if (e.source !== 'transaction') return;
+    const updated = { ...e.raw };
+    if (!e.raw.paymentConfirmed) {
+      updated.paymentConfirmed = true;
+      updated.confirmedAt = tnow();
+      updated.confirmedBy = user.name;
+    } else {
+      updated.paymentConfirmed = false;
+      updated.confirmedAt = undefined;
+      updated.confirmedBy = undefined;
+    }
+    onUpdateTx(updated);
+  };
+
+  const savePosCode = (e: Entry, evt: React.MouseEvent) => {
+    evt.stopPropagation();
+    if (e.source !== 'transaction') return;
+    if (!posCodeInput.code.trim()) return;
+    const updated = { ...e.raw };
+    updated.posApprovalCode = posCodeInput.code.trim();
+    updated.paymentConfirmed = true;
+    updated.confirmedAt = tnow();
+    updated.confirmedBy = user.name;
+    onUpdateTx(updated);
+    setPosCodeInput({ id: '', code: '' });
+  };
+
+  const isAccountantOrAdmin = ['accountant', 'admin', 'super_admin'].includes(user.role);
+
+  const unverifiedCash = filteredEntries.filter(e => e.mode === 'Cash' && !e.raw.paymentConfirmed);
+  const unconfirmedTransfer = filteredEntries.filter(e => e.mode === 'Transfer' && !e.raw.paymentConfirmed);
+
+  const selectAllCash = () => {
+    unverifiedCash.forEach(e => {
+      if (e.source !== 'transaction') return;
+      const updated = { ...e.raw };
+      updated.paymentConfirmed = true;
+      updated.confirmedAt = tnow();
+      updated.confirmedBy = user.name;
+      onUpdateTx(updated);
+    });
+  };
+
+  const totalAmount = filteredEntries.reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
+  const cashAmount = filteredEntries.filter(e => e.mode === 'Cash').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
+  const transferAmount = filteredEntries.filter(e => e.mode === 'Transfer').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
+  const posAmount = filteredEntries.filter(e => e.mode === 'POS').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
@@ -124,8 +187,39 @@ export const TransactionLedger = ({
         </span>
       </div>
 
+      {/* Summary Strip */}
+      <div className="px-4 py-2 bg-[#111827] border-b border-[var(--color-border)] flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0">
+        <div className="px-2 py-1 rounded-full bg-[rgba(255,255,255,0.05)] text-[10px] font-mono border border-[rgba(255,255,255,0.05)] text-white">
+          Total: <span className="font-bold">{fmt(totalAmount)}</span>
+        </div>
+        <div 
+          className="px-2 py-1 rounded-full bg-[rgba(16,185,129,0.1)] text-[10px] font-mono border border-[rgba(16,185,129,0.2)] text-[var(--color-success)] cursor-pointer"
+          onClick={() => setModeFilter("Cash")}
+        >
+          Cash: <span className="font-bold">{fmt(cashAmount)}</span>
+          {isAccountantOrAdmin && unverifiedCash.length > 0 && (
+            <span className="text-[var(--color-accent-amber)] ml-1">({unverifiedCash.length} unverified)</span>
+          )}
+        </div>
+        <div 
+          className="px-2 py-1 rounded-full bg-[rgba(59,130,246,0.1)] text-[10px] font-mono border border-[rgba(59,130,246,0.2)] text-[var(--color-accent-cobalt)] cursor-pointer"
+          onClick={() => setModeFilter("Transfer")}
+        >
+          Transfer: <span className="font-bold">{fmt(transferAmount)}</span>
+          {isAccountantOrAdmin && unconfirmedTransfer.length > 0 && (
+            <span className="text-[var(--color-accent-amber)] ml-1">({unconfirmedTransfer.length} unconfirmed)</span>
+          )}
+        </div>
+        <div 
+          className="px-2 py-1 rounded-full bg-[rgba(245,158,11,0.1)] text-[10px] font-mono border border-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] cursor-pointer"
+          onClick={() => setModeFilter("POS")}
+        >
+          POS: <span className="font-bold">{fmt(posAmount)}</span>
+        </div>
+      </div>
+
       {/* Filters */}
-      <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-3">
+      <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-3 shrink-0">
         <div className="flex-1 relative">
           <Search
             size={14}
@@ -174,27 +268,42 @@ export const TransactionLedger = ({
         </div>
       </div>
 
+      {/* Bulk Cash Verification Header */}
+      {modeFilter === 'Cash' && unverifiedCash.length > 0 && isAccountantOrAdmin && (
+        <div className="px-4 py-3 bg-[rgba(245,158,11,0.05)] border-b border-[rgba(245,158,11,0.2)] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 text-[11px] font-sans text-[var(--color-accent-amber)]">
+            <CheckSquare size={14} className="cursor-pointer" onClick={selectAllCash} />
+            <span>Select all Cash entries for today —</span>
+            <button 
+              onClick={selectAllCash}
+              className="ml-2 bg-[var(--color-success)] text-[var(--color-obsidian)] px-2 py-1 rounded font-bold hover:bg-emerald-600 transition-colors"
+            >
+              CONFIRM SELECTED
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table Container */}
-      <div className="flex-1 overflow-auto p-4 pb-20">
+      <div className="flex-1 overflow-auto p-4 pb-20 relative">
         <div className="ehi-card overflow-hidden shadow-sm">
           <table className="w-full text-left font-mono text-[10px]">
             <thead className="bg-[#111827]">
               <tr className="text-[var(--color-muted)] border-b border-[rgba(255,255,255,0.05)] uppercase">
-                <th className="py-3 px-3 font-medium">Ref ID</th>
-                <th className="py-3 px-2 font-medium">Time/Date</th>
-                <th className="py-3 px-2 font-medium">Type</th>
-                <th className="py-3 px-2 font-medium">Detail</th>
-                <th className="py-3 px-2 font-medium text-center">Mode</th>
-                <th className="py-3 px-2 font-medium text-right">Amount</th>
-                <th className="py-3 px-2 font-medium text-center">Status</th>
-                <th className="py-3 px-3 font-medium text-center">Action</th>
+                {isAccountantOrAdmin && <th className="py-3 px-3 w-[36px]"></th>}
+                <th className="py-3 px-2 w-[64px] font-medium">ID</th>
+                <th className="py-3 px-2 w-[44px] font-medium hidden sm:table-cell">Time</th>
+                <th className="py-3 px-2 font-medium w-full min-w-[120px]">Customer</th>
+                <th className="py-3 px-2 w-[80px] font-medium text-right">Amount</th>
+                <th className="py-3 px-2 w-[56px] font-medium text-center">Mode</th>
+                <th className="py-3 px-3 w-[48px] font-medium text-center"></th>
               </tr>
             </thead>
             <tbody>
               {filteredEntries.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={isAccountantOrAdmin ? 7 : 6}
                     className="py-8 text-center text-[var(--color-muted)]"
                   >
                     No entries found matching filters.
@@ -204,38 +313,66 @@ export const TransactionLedger = ({
                 filteredEntries.map((e) => (
                   <tr
                     key={e.id}
-                    className="border-b border-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+                    onClick={() => setViewingDetail(e)}
+                    className="border-b border-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.05)] transition-colors cursor-pointer group"
                   >
-                    <td className="py-2.5 px-3 text-[var(--color-light-muted)] whitespace-nowrap">
-                      {e.id}
+                    {isAccountantOrAdmin && (
+                      <td className="py-2.5 px-3">
+                        {(e.mode === 'Cash' || e.mode === 'POS') && (
+                          <div onClick={(evt) => evt.stopPropagation()}>
+                            {e.mode === 'POS' && !e.posApprovalCode ? (
+                              posCodeInput.id === e.id ? (
+                                <div className="flex items-center gap-1">
+                                  <input 
+                                    autoFocus
+                                    type="text" 
+                                    className="w-16 bg-[var(--color-surface-1)] border border-[var(--color-accent-amber)] rounded px-1 py-0.5 text-[9px] text-white outline-none" 
+                                    placeholder="Code"
+                                    value={posCodeInput.code}
+                                    onChange={evt => setPosCodeInput({ id: e.id, code: evt.target.value })}
+                                    onKeyDown={evt => { if(evt.key === 'Enter') savePosCode(e, evt as any); }}
+                                  />
+                                  <button onClick={(evt) => savePosCode(e, evt)} className="text-[var(--color-success)]"><Check size={12}/></button>
+                                </div>
+                              ) : (
+                                <button 
+                                  onClick={(evt) => { evt.stopPropagation(); setPosCodeInput({ id: e.id, code: '' }); }}
+                                  className="text-[var(--color-accent-amber)] hover:underline whitespace-nowrap text-[9px]"
+                                >
+                                  Enter code
+                                </button>
+                              )
+                            ) : (
+                              <button 
+                                onClick={(evt) => toggleConfirm(e, evt)}
+                                className="flex items-center justify-center text-[var(--color-accent-amber)] hover:text-amber-400"
+                              >
+                                {e.raw.paymentConfirmed ? (
+                                  <div className="w-4 h-4 bg-[var(--color-accent-amber)] rounded flex items-center justify-center">
+                                    <Check size={12} className="text-white" strokeWidth={3} />
+                                  </div>
+                                ) : (
+                                  <div className="w-4 h-4 border border-[var(--color-accent-amber)] rounded" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    )}
+                    <td className="py-2.5 px-2 text-[var(--color-light-muted)] whitespace-nowrap">
+                      {e.id.slice(-8)}
                     </td>
-                    <td className="py-2.5 px-2 text-[var(--color-muted)] whitespace-nowrap">
-                      {e.time}
+                    <td className="py-2.5 px-2 text-[var(--color-muted)] whitespace-nowrap hidden sm:table-cell">
+                      {e.time.split(' ')[1] || e.time}
                     </td>
-                    <td
-                      className={`py-2.5 px-2 capitalize font-bold ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-foreground)]"}`}
-                    >
-                      {e.type}
-                    </td>
-                    <td className="py-2.5 px-2 text-[var(--color-foreground)] truncate max-w-[150px]">
-                      {e.name} &middot; {e.detail}
-                    </td>
-                    <td className="py-2.5 px-2 text-center">
-                      <span
-                        className={`px-1.5 py-0.5 rounded font-sans text-[9px] font-medium whitespace-nowrap ${
-                          e.mode === "Cash"
-                            ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]"
-                            : e.mode === "Transfer"
-                              ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]"
-                              : e.mode === "POS"
-                                ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]"
-                                : e.mode === "Expense"
-                                  ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]"
-                                  : "border border-[var(--color-error)] text-[var(--color-error)]"
-                        }`}
-                      >
-                        {e.mode === "Debt" ? "Credit" : e.mode}
-                      </span>
+                    <td className="py-2.5 px-2">
+                      <div className={`font-sans font-bold ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-foreground)]"}`}>
+                        {e.name}
+                      </div>
+                      <div className="text-[9px] text-[var(--color-muted)] mt-0.5 whitespace-normal">
+                        {e.detail}
+                      </div>
                     </td>
                     <td
                       className={`py-2.5 px-2 text-right font-bold whitespace-nowrap ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-success)]"}`}
@@ -244,68 +381,35 @@ export const TransactionLedger = ({
                       {fmt(e.amount)}
                     </td>
                     <td className="py-2.5 px-2 text-center">
-                      {e.status !== "N/A" ? (
-                        <div className="flex items-center justify-center gap-1.5">
-                          <div
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              e.status === "Delivered"
-                                ? "bg-emerald-500"
-                                : [
-                                      "In-Transit",
-                                      "Departure",
-                                      "Dispatched",
-                                    ].includes(e.status)
-                                  ? "bg-blue-500"
-                                  : e.status === "Arrived"
-                                    ? "bg-amber-500"
-                                    : "bg-slate-400"
-                            }`}
-                          />
-                          <span
-                            className={`font-medium ${
-                              e.status === "Delivered"
-                                ? "text-emerald-500"
-                                : [
-                                      "In-Transit",
-                                      "Departure",
-                                      "Dispatched",
-                                    ].includes(e.status)
-                                  ? "text-blue-500"
-                                  : e.status === "Arrived"
-                                    ? "text-amber-500"
-                                    : "text-slate-400"
-                            }`}
-                          >
-                            {e.status}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-600">N/A</span>
-                      )}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-sans text-[9px] font-medium flex items-center gap-1 ${
+                            e.mode === "Cash"
+                              ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]"
+                              : e.mode === "Transfer"
+                                ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]"
+                                : e.mode === "POS"
+                                  ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]"
+                                  : e.mode === "Expense"
+                                    ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]"
+                                    : "border border-[var(--color-error)] text-[var(--color-error)]"
+                          }`}
+                        >
+                          {e.mode === "Debt" ? "Credit" : e.mode}
+                          {e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && (
+                            <Check size={10} strokeWidth={3} className="text-current opacity-80" />
+                          )}
+                          {!e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-amber)] animate-pulse" />
+                          )}
+                        </span>
+                        {e.mode === 'POS' && e.posApprovalCode && (
+                          <span className="text-[8px] text-[var(--color-muted)]">**{e.posApprovalCode.slice(-4)}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 text-center">
-                      {e.source === "transaction" ? (
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => setViewingQrTx(e)}
-                            className="text-[var(--color-muted)] hover:text-white p-1 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors inline-flex cursor-pointer border-none bg-transparent"
-                            title="View QR Code"
-                          >
-                            <QrCode size={12} />
-                          </button>
-                          <button
-                            onClick={() => handleEditClick(e)}
-                            className="text-[var(--color-muted)] hover:text-white p-1 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors inline-flex cursor-pointer border-none bg-transparent"
-                            title="Edit"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-[var(--color-muted)] text-[8px] uppercase">
-                          N/A
-                        </span>
-                      )}
+                      <ChevronRight size={14} className="text-[var(--color-muted)] group-hover:text-white transition-colors ml-auto" />
                     </td>
                   </tr>
                 ))
@@ -315,10 +419,204 @@ export const TransactionLedger = ({
         </div>
       </div>
 
+      {/* Detail Popup Overlay */}
+      {viewingDetail && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in"
+          onClick={() => setViewingDetail(null)}
+        >
+          <div 
+            className="bg-[#111827] sm:border sm:border-[rgba(255,255,255,0.1)] sm:rounded-xl w-full sm:max-w-md max-h-[85vh] sm:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 rounded-t-2xl sm:rounded-b-xl"
+            onClick={evt => evt.stopPropagation()}
+          >
+            {/* Handle bar for mobile */}
+            <div className="w-full flex justify-center py-2 sm:hidden shrink-0">
+              <div className="w-12 h-1.5 bg-[rgba(255,255,255,0.2)] rounded-full" />
+            </div>
+
+            <div className="p-4 sm:p-5 flex justify-between items-start shrink-0 border-b border-[rgba(255,255,255,0.05)]">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  viewingDetail.type === 'cargo' ? 'bg-blue-500/20 text-blue-400' :
+                  viewingDetail.type === 'baggage' ? 'bg-amber-500/20 text-amber-400' :
+                  viewingDetail.type === 'marketing' ? 'bg-emerald-500/20 text-emerald-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {viewingDetail.type === 'cargo' && <Package size={20} />}
+                  {viewingDetail.type === 'baggage' && <Plane size={20} />}
+                  {viewingDetail.type === 'marketing' && <TrendingUp size={20} />}
+                  {viewingDetail.source === 'expense' && <Minus size={20} />}
+                </div>
+                <div>
+                  <h3 className="font-mono text-[var(--color-accent-amber)] text-[14px] font-bold">{viewingDetail.id}</h3>
+                  <span className="text-[10px] text-[var(--color-muted)] uppercase tracking-wider">{viewingDetail.type}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewingDetail(null)}
+                className="text-[var(--color-muted)] hover:text-white p-1 rounded-full bg-[rgba(255,255,255,0.05)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-6">
+              {/* Customer Section */}
+              <section>
+                <h4 className="text-[10px] font-mono text-[var(--color-muted)] uppercase mb-2">Details</h4>
+                <div className="bg-[var(--color-surface-1)] rounded-lg p-3 border border-[rgba(255,255,255,0.03)]">
+                  <div className={`font-sans font-bold text-lg mb-1 ${viewingDetail.source === 'expense' ? 'text-[var(--color-error)]' : 'text-white'}`}>
+                    {viewingDetail.name}
+                  </div>
+                  <div className="text-[12px] text-[var(--color-light-muted)] leading-relaxed">
+                    {viewingDetail.detail}
+                  </div>
+                  {viewingDetail.raw.phone && (
+                    <div className="text-[11px] text-[var(--color-muted)] mt-2 font-mono">
+                      📞 {viewingDetail.raw.phone}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Payment Section */}
+              <section>
+                <h4 className="text-[10px] font-mono text-[var(--color-muted)] uppercase mb-2">Payment Info</h4>
+                <div className="bg-[var(--color-surface-1)] rounded-lg p-4 border border-[rgba(255,255,255,0.03)] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-[var(--color-muted)]">Amount</span>
+                    <span className={`text-xl font-bold font-mono ${viewingDetail.source === 'expense' ? 'text-[var(--color-error)]' : 'text-[var(--color-success)]'}`}>
+                      {viewingDetail.source === 'expense' ? '-' : ''}₦{viewingDetail.amount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.05)] pt-3">
+                    <span className="text-[12px] text-[var(--color-muted)]">Mode</span>
+                    <span className={`px-2 py-0.5 rounded font-sans text-[11px] font-bold ${
+                      viewingDetail.mode === "Cash" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" : 
+                      viewingDetail.mode === "Transfer" ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]" : 
+                      viewingDetail.mode === "POS" ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]" : 
+                      viewingDetail.mode === "Expense" ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]" : 
+                      "border border-[var(--color-error)] text-[var(--color-error)]"
+                    }`}>
+                      {viewingDetail.mode === "Debt" ? "Credit" : viewingDetail.mode}
+                    </span>
+                  </div>
+                  
+                  {viewingDetail.mode === 'Transfer' && viewingDetail.raw.bank && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[var(--color-muted)]">Bank</span>
+                      <span className="text-[12px] text-white font-medium">{viewingDetail.raw.bank}</span>
+                    </div>
+                  )}
+                  {viewingDetail.mode === 'Transfer' && viewingDetail.raw.paymentNarration && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[var(--color-muted)]">Narration Ref</span>
+                      <span className="text-[10px] font-mono bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded text-white">{viewingDetail.raw.paymentNarration}</span>
+                    </div>
+                  )}
+                  {viewingDetail.mode === 'POS' && viewingDetail.posApprovalCode && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[var(--color-muted)]">Approval Code</span>
+                      <span className="text-[12px] font-mono font-bold text-white tracking-widest">{viewingDetail.posApprovalCode}</span>
+                    </div>
+                  )}
+
+                  <div className="mt-2 pt-3 border-t border-[rgba(255,255,255,0.05)]">
+                    {viewingDetail.mode === 'Debt' ? (
+                      <div className="text-[11px] text-[var(--color-error)] flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-error)]" />
+                        Outstanding — not yet paid
+                      </div>
+                    ) : viewingDetail.raw.paymentConfirmed ? (
+                      <div className="text-[11px] text-[var(--color-success)] flex items-center gap-1.5 font-medium">
+                        <Check size={14} />
+                        {viewingDetail.mode === 'Transfer' 
+                          ? `Confirmed via bank alert at ${viewingDetail.raw.confirmedAt || ''}`
+                          : viewingDetail.mode === 'POS'
+                          ? `Approval code ${viewingDetail.posApprovalCode} verified`
+                          : `Verified by ${viewingDetail.raw.confirmedBy || 'system'} at ${viewingDetail.raw.confirmedAt || ''}`
+                        }
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-[var(--color-accent-amber)] flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-amber)] animate-pulse" />
+                        {viewingDetail.mode === 'Transfer' ? "Awaiting bank confirmation" : 
+                         viewingDetail.mode === 'POS' ? "Enter approval code to confirm" : 
+                         "Pending verification"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* Status Section */}
+              {viewingDetail.source === 'transaction' && (
+                <section>
+                  <h4 className="text-[10px] font-mono text-[var(--color-muted)] uppercase mb-2">Status & Tracking</h4>
+                  <div className="bg-[var(--color-surface-1)] rounded-lg p-3 border border-[rgba(255,255,255,0.03)] flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        viewingDetail.status === "Delivered" ? "bg-emerald-500" : 
+                        ["In-Transit", "Departure", "Dispatched"].includes(viewingDetail.status) ? "bg-blue-500" : 
+                        viewingDetail.status === "Arrived" ? "bg-amber-500" : "bg-slate-400"
+                      }`} />
+                      <span className="text-[13px] font-bold text-white">{viewingDetail.status}</span>
+                    </div>
+                    {(viewingDetail.raw.hub || viewingDetail.raw.destination) && (
+                      <div className="text-[11px] text-[var(--color-muted)] flex items-center gap-1.5 mt-1 font-sans">
+                        <span>{viewingDetail.raw.hub || 'Origin'}</span>
+                        <ChevronRight size={10} />
+                        <span>{viewingDetail.raw.destination || 'Destination'}</span>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* Timestamps */}
+              <section className="text-[10px] font-mono text-[var(--color-muted)] space-y-1 pb-4">
+                <div>Logged at: {viewingDetail.time} {viewingDetail.raw.loggedBy ? `by ${viewingDetail.raw.loggedBy}` : ''}</div>
+                {viewingDetail.raw.paymentConfirmed && viewingDetail.raw.confirmedAt && (
+                  <div>Confirmed at: {viewingDetail.raw.confirmedAt}</div>
+                )}
+              </section>
+            </div>
+
+            {/* Actions Footer */}
+            <div className="p-4 bg-[var(--color-obsidian)] border-t border-[rgba(255,255,255,0.05)] flex gap-2 shrink-0">
+              {viewingDetail.source === 'transaction' && (
+                <>
+                  <button 
+                    onClick={() => setViewingQrTx(viewingDetail)}
+                    className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[rgba(255,255,255,0.05)] text-[12px] font-medium"
+                  >
+                    <QrCode size={14} /> Scan
+                  </button>
+                  {viewingDetail.mode !== 'Debt' && viewingDetail.mode !== 'Transfer' && !viewingDetail.raw.paymentConfirmed && isAccountantOrAdmin && (
+                    <button 
+                      onClick={(evt) => toggleConfirm(viewingDetail, evt)}
+                      className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold"
+                    >
+                      <CheckSquare size={14} /> Confirm
+                    </button>
+                  )}
+                  <button 
+                    onClick={(evt) => handleEditClick(viewingDetail, evt)}
+                    className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[rgba(255,255,255,0.05)] text-[12px] font-medium"
+                  >
+                    <Edit2 size={14} /> Edit
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Modal Dialog */}
       {editingTx && (
-        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in" onClick={() => setEditingTx(null)}>
+          <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[#111827]">
               <h3 className="font-bold font-sans text-[var(--color-foreground)]">
                 Edit Transaction
@@ -433,8 +731,8 @@ export const TransactionLedger = ({
 
       {/* QR Code Modal Dialog */}
       {viewingQrTx && (
-        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in" onClick={() => setViewingQrTx(null)}>
+          <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[#111827]">
               <h3 className="font-bold font-sans text-[var(--color-foreground)]">
                 Scan to View
