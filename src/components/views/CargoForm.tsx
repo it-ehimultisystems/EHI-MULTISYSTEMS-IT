@@ -88,6 +88,26 @@ export const CargoForm = ({ onAddTx, user }: {
   const [remark, setRemark] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
   
+  const [availableAirlines, setAvailableAirlines] = useState<string[]>(['Arik Air', 'Green Africa', 'United Nigeria', 'Other']);
+
+  useEffect(() => {
+    const rawCommissions = localStorage.getItem('ehi_airline_commissions');
+    if (rawCommissions) {
+      try {
+        const parsed = JSON.parse(rawCommissions);
+        const keys = Object.keys(parsed);
+        if (keys.length > 0) {
+          setAvailableAirlines(keys);
+          if (!keys.includes(airline)) {
+            setAirline(keys[0]);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, []);
+
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -160,6 +180,15 @@ export const CargoForm = ({ onAddTx, user }: {
   // --- PHASE 1 STATE FIELDS ---
   const [intakeConsignee, setIntakeConsignee] = useState(corpClients[0]?.company_name || 'Aramex');
   const [intakeAirline, setIntakeAirline] = useState('Arik Air');
+  
+  useEffect(() => {
+    if (availableAirlines.length > 0) {
+      if (!availableAirlines.includes(intakeAirline)) {
+        setIntakeAirline(availableAirlines[0]);
+      }
+    }
+  }, [availableAirlines]);
+
   const [intakeAwb, setIntakeAwb] = useState('');
   const [intakePcs, setIntakePcs] = useState('1');
   const [intakeRoute, setIntakeRoute] = useState(CARGO_ROUTES[0]);
@@ -644,10 +673,9 @@ export const CargoForm = ({ onAddTx, user }: {
                   onChange={(e) => setAirline(e.target.value)}
                   className={formInputClass}
                 >
-                  <option value="Arik Air">Arik Air</option>
-                  <option value="Green Africa">Green Africa</option>
-                  <option value="United Nigeria">United Nigeria</option>
-                  <option value="Other">Other</option>
+                  {availableAirlines.map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
                 </select>
               </div>
 
@@ -987,10 +1015,9 @@ export const CargoForm = ({ onAddTx, user }: {
                       onChange={(e) => setIntakeAirline(e.target.value)}
                       className={formInputClass}
                     >
-                      <option value="Arik Air">Arik Air</option>
-                      <option value="Green Africa">Green Africa</option>
-                      <option value="United Nigeria">United Nigeria</option>
-                      <option value="Other">Other</option>
+                      {availableAirlines.map(a => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
                     </select>
                   </div>
 
