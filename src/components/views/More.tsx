@@ -11,6 +11,7 @@ import { TransactionLedger } from './TransactionLedger';
 import { PODLog } from './PODLog';
 import { Dispatch } from './Dispatch';
 import { EODReconciliation } from './EODReconciliation';
+import { SupportTickets } from './SupportTickets';
 
 import { AirlineCommissions } from './AirlineCommissions';
 
@@ -54,6 +55,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   const [podLogView, setPodLogView] = useState(false);
   const [dispatchView, setDispatchView] = useState(false);
   const [airlineCommissionsView, setAirlineCommissionsView] = useState(false);
+  const [supportView, setSupportView] = useState(false);
 
   // View controllers
   if (eodView) {
@@ -110,6 +112,10 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
   if (airlineCommissionsView) {
     return <AirlineCommissions onBack={() => setAirlineCommissionsView(false)} />;
+  }
+
+  if (supportView) {
+    return <SupportTickets user={user} onBack={() => setSupportView(false)} />;
   }
 
   // Role checking helpers
@@ -319,10 +325,22 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
       {/* Sign Out Trigger */}
       <button 
+        onClick={() => setSupportView(true)}
+        className="w-full mt-4 bg-[var(--color-surface-1)] transition-colors border border-[rgba(255,255,255,0.07)] hover:bg-[var(--color-surface-2)] hover:border-[var(--color-accent-amber)] rounded p-4 flex items-center space-x-3 cursor-pointer group"
+      >
+        <ShieldAlert size={18} strokeWidth={1.5} className="text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] transition-colors" />
+        <div className="text-left flex-1">
+          <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)] group-hover:text-[var(--color-accent-amber)] transition-colors">Help Desk & Issue Resolution</div>
+          <div className="text-[10px] font-mono text-[var(--color-muted)]">Report operational complaints or bugs</div>
+        </div>
+      </button>
+
+      {/* Sign Out Trigger */}
+      <button 
         onClick={() => {
           onLogout();
         }}
-        className="w-full mt-4 bg-[var(--color-surface-1)] transition-colors border border-[rgba(255,255,255,0.07)] hover:bg-[var(--color-surface-2)] hover:border-[var(--color-accent-amber)] rounded p-4 flex items-center space-x-3 cursor-pointer group"
+        className="w-full mt-4 bg-[var(--color-surface-1)] transition-colors border border-[rgba(255,255,255,0.07)] hover:bg-[rgba(239,68,68,0.1)] hover:border-[rgba(239,68,68,0.3)] rounded p-4 flex items-center space-x-3 cursor-pointer group"
       >
         <LogOut size={18} strokeWidth={1.5} className="text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] transition-colors" />
         <div className="text-left flex-1">

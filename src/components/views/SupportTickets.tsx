@@ -1,0 +1,256 @@
+import { useState, useMemo } from 'react';
+import { User } from '../../lib/types';
+import { ArrowLeft, MessageSquarePlus, CheckCircle2, Circle, Clock, MessageSquare } from 'lucide-react';
+import { fmt, tnow } from '../../lib/helpers';
+
+export interface Ticket {
+  id: string;
+  userId: string;
+  userName: string;
+  subject: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'resolved';
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => void }) => {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+  const canManage = user.role === 'admin' || user.role === 'super_admin';
+
+  // If regular user, only show their tickets. If admin, show all.
+  const visibleTickets = useMemo(() => {
+    let list = tickets;
+    if (!canManage) {
+      list = list.filter(t => t.userId === user.id);
+    }
+    return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [tickets, user.id, canManage]);
+
+  const handleCreate = () => {
+    if (!subject.trim() || !description.trim()) return;
+    
+    const newTicket: Ticket = {
+      id: `TCK-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: user.id,
+      userName: user.name,
+      subject: subject.trim(),
+      description: description.trim(),
+      status: 'open',
+      createdAt: tnow()
+    };
+    
+    setTickets([newTicket, ...tickets]);
+    setIsCreating(false);
+    setSubject('');
+    setDescription('');
+  };
+
+  const handleUpdateStatus = (id: string, newStatus: 'open' | 'in_progress' | 'resolved') => {
+    setTickets(prev => prev.map(t => {
+      if (t.id === id) {
+        return {
+          ...t,
+          status: newStatus,
+          resolvedAt: newStatus === 'resolved' ? tnow() : undefined
+        };
+      }
+      return t;
+    }));
+    if (selectedTicket && selectedTicket.id === id) {
+      setSelectedTicket({ ...selectedTicket, status: newStatus, resolvedAt: newStatus === 'resolved' ? tnow() : undefined });
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
+        <button
+          onClick={onBack}
+          className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent"
+        >
+          <ArrowLeft size={16} />
+          <span className="text-[11px] font-mono">Back</span>
+        </button>
+        <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">
+          ● ISSUE RESOLUTION
+        </span>
+      </div>
+
+      {!isCreating && !selectedTicket ? (
+        <div className="p-4 flex-1 overflow-y-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[16px] font-bold font-sans text-white">Complain Box</h2>
+            <button 
+              onClick={() => setIsCreating(true)}
+              className="px-3 py-1.5 bg-[var(--color-accent-amber)] hover:bg-amber-500 text-[var(--color-obsidian)] text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <MessageSquarePlus size={14} />
+              <span>Report Issue</span>
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {visibleTickets.length === 0 ? (
+              <div className="text-center py-12 border border-[rgba(255,255,255,0.05)] rounded-lg bg-[rgba(255,255,255,0.02)] text-[var(--color-muted)]">
+                <MessageSquare size={32} className="mx-auto mb-3 opacity-20" />
+                <p className="text-[13px] font-medium font-sans">No complaints or issues reported.</p>
+                <p className="text-[11px] font-mono mt-1 opacity-60">You can use this box to report system or operational issues.</p>
+              </div>
+            ) : (
+              visibleTickets.map(t => (
+                <div 
+                  key={t.id} 
+                  onClick={() => setSelectedTicket(t)}
+                  className="p-3 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] hover:border-[rgba(255,255,255,0.1)] rounded-lg cursor-pointer transition-colors"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-[13px] font-bold text-white">{t.subject}</h3>
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold">
+                      {t.status === 'open' && <span className="text-red-400 flex items-center gap-1"><Circle size={10} /> Open</span>}
+                      {t.status === 'in_progress' && <span className="text-amber-400 flex items-center gap-1"><Clock size={10} /> In Progress</span>}
+                      {t.status === 'resolved' && <span className="text-emerald-400 flex items-center gap-1"><CheckCircle2 size={10} /> Resolved</span>}
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-[var(--color-light-muted)] line-clamp-1 mb-2">
+                    {t.description}
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] font-mono text-[var(--color-muted)]">
+                    <span>{t.id} · {t.createdAt}</span>
+                    {canManage && <span>Reported by: {t.userName}</span>}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : isCreating ? (
+        <div className="p-4 flex-1 overflow-y-auto">
+          <h2 className="text-[16px] font-bold font-sans text-white mb-4">Report an Issue</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-mono text-[var(--color-muted)] mb-1">Subject</label>
+              <input 
+                type="text" 
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                placeholder="Brief summary of the issue..."
+                className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-2 text-[13px] text-white focus:outline-none focus:border-[var(--color-accent-amber)]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-mono text-[var(--color-muted)] mb-1">Description</label>
+              <textarea 
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Detailed description of what happened..."
+                className="w-full h-32 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-2 text-[13px] text-white focus:outline-none focus:border-[var(--color-accent-amber)] resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={() => setIsCreating(false)}
+                className="flex-1 py-2 bg-[var(--color-surface-2)] text-white text-[12px] font-bold rounded-lg border border-[rgba(255,255,255,0.1)]"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreate}
+                disabled={!subject.trim() || !description.trim()}
+                className="flex-1 py-2 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[12px] font-bold rounded-lg disabled:opacity-50"
+              >
+                Submit Issue
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : selectedTicket ? (
+        <div className="p-4 flex-1 overflow-y-auto">
+          <button 
+            onClick={() => setSelectedTicket(null)}
+            className="text-[11px] font-mono text-[var(--color-accent-amber)] hover:underline mb-4 inline-block"
+          >
+            &larr; Back to list
+          </button>
+
+          <div className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-start mb-4 border-b border-[rgba(255,255,255,0.05)] pb-4">
+              <div>
+                <h2 className="text-[15px] font-bold text-white mb-1">{selectedTicket.subject}</h2>
+                <div className="text-[10px] font-mono text-[var(--color-muted)]">
+                  Ticket ID: {selectedTicket.id}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold px-2 py-1 bg-[rgba(255,255,255,0.05)] rounded">
+                {selectedTicket.status === 'open' && <span className="text-red-400 flex items-center gap-1"><Circle size={12} /> Open</span>}
+                {selectedTicket.status === 'in_progress' && <span className="text-amber-400 flex items-center gap-1"><Clock size={12} /> In Progress</span>}
+                {selectedTicket.status === 'resolved' && <span className="text-emerald-400 flex items-center gap-1"><CheckCircle2 size={12} /> Resolved</span>}
+              </div>
+            </div>
+
+            <div className="space-y-4 text-[13px] text-[var(--color-light-muted)]">
+              <div>
+                <strong className="text-[11px] font-mono text-[var(--color-muted)] uppercase block mb-1">Description</strong>
+                <p className="whitespace-pre-wrap">{selectedTicket.description}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 border-t border-[rgba(255,255,255,0.05)] pt-4 mt-4">
+                <div>
+                  <strong className="text-[10px] font-mono text-[var(--color-muted)] uppercase block mb-1">Reported By</strong>
+                  <span className="font-medium text-white">{selectedTicket.userName}</span>
+                </div>
+                <div>
+                  <strong className="text-[10px] font-mono text-[var(--color-muted)] uppercase block mb-1">Created At</strong>
+                  <span className="font-medium text-white">{selectedTicket.createdAt}</span>
+                </div>
+                {selectedTicket.resolvedAt && (
+                  <div className="col-span-2">
+                    <strong className="text-[10px] font-mono text-[var(--color-muted)] uppercase block mb-1">Resolved At</strong>
+                    <span className="font-medium text-emerald-400">{selectedTicket.resolvedAt}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {canManage && (
+            <div className="bg-[#111827] border border-[rgba(255,255,255,0.05)] rounded-lg p-4">
+              <h3 className="text-[11px] font-mono text-[var(--color-muted)] uppercase mb-3">Admin Actions</h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleUpdateStatus(selectedTicket.id, 'open')}
+                  disabled={selectedTicket.status === 'open'}
+                  className="flex-1 py-2 bg-[rgba(239,68,68,0.1)] text-red-400 text-[11px] font-bold rounded-lg border border-[rgba(239,68,68,0.2)] disabled:opacity-50"
+                >
+                  Mark Open
+                </button>
+                <button 
+                  onClick={() => handleUpdateStatus(selectedTicket.id, 'in_progress')}
+                  disabled={selectedTicket.status === 'in_progress'}
+                  className="flex-1 py-2 bg-[rgba(245,158,11,0.1)] text-amber-400 text-[11px] font-bold rounded-lg border border-[rgba(245,158,11,0.2)] disabled:opacity-50"
+                >
+                  In Progress
+                </button>
+                <button 
+                  onClick={() => handleUpdateStatus(selectedTicket.id, 'resolved')}
+                  disabled={selectedTicket.status === 'resolved'}
+                  className="flex-1 py-2 bg-[rgba(16,185,129,0.1)] text-emerald-400 text-[11px] font-bold rounded-lg border border-[rgba(16,185,129,0.2)] disabled:opacity-50"
+                >
+                  Resolve
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+};
