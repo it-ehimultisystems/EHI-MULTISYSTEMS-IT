@@ -251,7 +251,8 @@ export const Scanner = ({
   const startScanner = useCallback(async () => {
     // Request camera permission explicitly on iOS
     try {
-      await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      stream.getTracks().forEach(track => track.stop());
     } catch (err) {
       if (showToast) {
         showToast({
@@ -289,10 +290,23 @@ export const Scanner = ({
   }, [isScanning]);
 
   const stopScanner = useCallback(async () => {
-    // Step 1: Stop all video tracks directly on the DOM element
-    // This is the only 100% reliable way to turn the camera off.
-    // Do this BEFORE calling clear() so the camera LED turns off
-    // immediately when the button is tapped.
+    // Step 1: Tell the library to clean up its DOM and internal state.
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+      } catch {
+        // Acceptable if it throws
+      }
+      try {
+        scannerRef.current.clear();
+      } catch {
+        // ignore
+      }
+      scannerRef.current = null;
+    }
+
+    // Step 2: Stop all video tracks directly on the DOM element as a fallback
+    // This ensures the camera LED turns off even if the library failed.
     const videoEls = document.querySelectorAll<HTMLVideoElement>(
       '#qr-reader-div video'
     );
@@ -305,17 +319,6 @@ export const Scanner = ({
       }
       video.load(); // reset the video element state
     });
-
-    // Step 2: Tell the library to clean up its DOM and internal state.
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-      } catch {
-        // Acceptable — camera is already stopped above
-      }
-      scannerRef.current = null;
-    }
 
     // Step 3: Reset all scanning state
     setIsScanning(false);
@@ -353,7 +356,16 @@ export const Scanner = ({
   // Stop scanner on unmount
   useEffect(() => {
     return () => {
-      // On unmount: stop camera tracks directly
+      // Step 1: Tell the library to stop
+      if (scannerRef.current) {
+        try { 
+          scannerRef.current.stop().catch(() => {});
+        } catch { /* ignore */ }
+        try { scannerRef.current.clear(); } catch { /* ignore */ }
+        scannerRef.current = null;
+      }
+      
+      // Step 2: Stop camera tracks directly
       document.querySelectorAll<HTMLVideoElement>(
         '#qr-reader-div video'
       ).forEach(video => {
@@ -362,11 +374,6 @@ export const Scanner = ({
           video.srcObject = null;
         }
       });
-      // Then clear the library instance
-      if (scannerRef.current) {
-        try { scannerRef.current.clear(); } catch { /* ignore */ }
-        scannerRef.current = null;
-      }
     };
   }, []);
 
