@@ -6,6 +6,8 @@ import { validateScan, logScanEvent } from '../../lib/scanLogic';
 import { WrongDestinationAlert, NotLoggedInAlert, AlreadyProcessedAlert, SuccessFlash } from '../ScanAlerts';
 import { ProofOfDeliveryForm } from './ProofOfDelivery';
 
+import { ArrivalsView } from './ArrivalsView';
+
 // Standard Web Audio API synthesizer for a subtle, high-pitched electronic confirmation blip
 const playBeep = () => {
   try {
@@ -68,13 +70,14 @@ export const Scanner = ({
   const [submittingBatch, setSubmittingBatch] = useState(false);
   const [showQueueSummary, setShowQueueSummary] = useState(false);
   const [activeDeliverCargo, setActiveDeliverCargo] = useState<{awbNumber: string, consigneeName: string} | null>(null);
+  const [showArrivalsView, setShowArrivalsView] = useState(false);
 
   const currentHub = user.hub;
   const batchSuccess = batchItems.filter(b => b.result.startsWith('SUCCESS')).length;
   const batchAlerts = batchItems.filter(b => !b.result.startsWith('SUCCESS') && b.result !== 'ALREADY_PROCESSED').length;
   const successfulScans = batchItems
     .filter(item => item.result === 'SUCCESS_ARRIVE' || item.result === 'SUCCESS_DEPART')
-    .slice(0, 5);
+    .slice(0, 10);
 
   const handleConfirmSubmitBatch = async (itemsToSubmit = batchQueue) => {
     if (itemsToSubmit.length === 0) return;
@@ -377,6 +380,11 @@ export const Scanner = ({
     };
   }, []);
 
+  // Arrivals List View
+  if (showArrivalsView) {
+    return <ArrivalsView user={user} onBack={() => setShowArrivalsView(false)} />;
+  }
+
   // Batch Queue Summary View
   if (showQueueSummary) {
     return (
@@ -536,15 +544,24 @@ export const Scanner = ({
         <div className="text-[10px] font-mono text-[var(--color-accent-amber)]">
           📍 {currentHub}
         </div>
-        {batchItems.length > 0 && (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowBatch(true)}
-            className="flex items-center gap-1.5 text-[10px] font-mono text-[var(--color-light-muted)]"
+            onClick={() => setShowArrivalsView(true)}
+            className="flex items-center gap-1.5 text-[10px] font-mono text-[var(--color-success)] hover:underline cursor-pointer border-none bg-transparent"
           >
-            <List size={11} />
-            {batchSuccess} ✓ {batchAlerts > 0 && <span className="text-[var(--color-error)]">| {batchAlerts} alerts</span>}
+            <ArrowDown size={11} />
+            Hub Arrivals
           </button>
-        )}
+          {batchItems.length > 0 && (
+            <button
+              onClick={() => setShowBatch(true)}
+              className="flex items-center gap-1.5 text-[10px] font-mono text-[var(--color-light-muted)] border-none bg-transparent cursor-pointer"
+            >
+              <List size={11} />
+              {batchSuccess} ✓ {batchAlerts > 0 && <span className="text-[var(--color-error)]">| {batchAlerts} alerts</span>}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Mode Toggle — ARRIVE / DEPART / DELIVER */}
@@ -759,7 +776,7 @@ export const Scanner = ({
           <div className="flex items-center gap-2 ml-1">
             <span className="text-[13px] font-sans font-bold text-[var(--color-foreground)] tracking-wide">Recent Scans</span>
             <span className="text-[9px] font-mono bg-[var(--color-surface-2)] text-[var(--color-muted)] px-1.5 py-0.5 rounded-full ml-1">
-              Last 5
+              Last 10
             </span>
           </div>
           {successfulScans.length > 0 && (

@@ -102,7 +102,7 @@ export const CreditDebit = ({ user, transactions }: { user: User; transactions: 
               <div className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-2 relative z-10 flex items-center gap-2">
                 <ArrowDownLeft size={14} className="text-[var(--color-accent-amber)]" /> Total Outstanding Debt
               </div>
-              <div className="text-[32px] font-sans font-bold text-[var(--color-accent-amber)] relative z-10">₦{fmt(totalDebt)}</div>
+              <div className="text-[32px] font-sans font-bold text-[var(--color-accent-amber)] relative z-10">{fmt(totalDebt)}</div>
             </div>
 
             <div className="space-y-3">
@@ -116,7 +116,7 @@ export const CreditDebit = ({ user, transactions }: { user: User; transactions: 
                     </div>
                     <div className="font-sans font-bold text-[14px] text-white">{d.name}</div>
                   </div>
-                  <div className="font-mono text-[14px] font-bold text-[var(--color-accent-amber)] tracking-tight">₦{fmt(d.amount)}</div>
+                  <div className="font-mono text-[14px] font-bold text-[var(--color-accent-amber)] tracking-tight">{fmt(d.amount)}</div>
                 </div>
               ))}
             </div>
@@ -127,7 +127,7 @@ export const CreditDebit = ({ user, transactions }: { user: User; transactions: 
                 <div key={i} className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg p-4 hover:border-[rgba(255,255,255,0.1)] transition-colors">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-[14px] font-sans font-bold text-white">{tx.name}</span>
-                    <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">₦{fmt(tx.amount)}</span>
+                    <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(tx.amount)}</span>
                   </div>
                   <div className="text-[12px] font-sans text-[var(--color-muted)] mb-3">{tx.detail}</div>
                   <div className="flex justify-between pt-3 border-t border-[rgba(255,255,255,0.05)] text-[10px] font-mono text-[var(--color-muted)] uppercase">
@@ -149,7 +149,7 @@ export const CreditDebit = ({ user, transactions }: { user: User; transactions: 
               <div className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-2 relative z-10 flex items-center gap-2">
                 <ArrowUpRight size={14} className="text-emerald-400" /> Total Due to Airlines
               </div>
-              <div className="text-[32px] font-sans font-bold text-emerald-400 relative z-10">₦{fmt(totalCredit)}</div>
+              <div className="text-[32px] font-sans font-bold text-emerald-400 relative z-10">{fmt(totalCredit)}</div>
             </div>
 
             <div className="space-y-3">
@@ -163,7 +163,7 @@ export const CreditDebit = ({ user, transactions }: { user: User; transactions: 
                     </div>
                     <div className="font-sans font-bold text-[14px] text-white">{c.airline}</div>
                   </div>
-                  <div className="font-mono text-[14px] font-bold text-emerald-400 tracking-tight">₦{fmt(c.amount)}</div>
+                  <div className="font-mono text-[14px] font-bold text-emerald-400 tracking-tight">{fmt(c.amount)}</div>
                 </div>
               ))}
             </div>
@@ -177,10 +177,10 @@ export const CreditDebit = ({ user, transactions }: { user: User; transactions: 
                   <div key={i} className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg p-4 hover:border-[rgba(255,255,255,0.1)] transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-[14px] font-sans font-bold text-white">{tx.airline} <span className="opacity-50 text-[11px] font-mono ml-1">({tx.id})</span></span>
-                      <span className="text-[13px] font-mono font-bold text-emerald-400">₦{fmt(weOwe)}</span>
+                      <span className="text-[13px] font-mono font-bold text-emerald-400">{fmt(weOwe)}</span>
                     </div>
                     <div className="text-[11px] font-mono text-[var(--color-muted)] mb-3 bg-[var(--color-surface-2)] inline-block px-2 py-1 rounded">
-                      Base: ₦{fmt(tx.amount)} <span className="mx-1 opacity-50">&middot;</span> Comm: {commRate}% <span className="text-[var(--color-accent-amber)]">(₦{fmt(tx.amount * commRate / 100)})</span>
+                      Base: {fmt(tx.amount)} <span className="mx-1 opacity-50">&middot;</span> Comm: {commRate}% <span className="text-[var(--color-accent-amber)]">({fmt(tx.amount * commRate / 100)})</span>
                     </div>
                     <div className="text-[12px] font-sans text-[var(--color-muted)] line-clamp-1 pt-1">
                       {tx.detail}

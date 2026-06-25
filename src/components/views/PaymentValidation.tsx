@@ -203,7 +203,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
                 </span>
               </div>
               <div className="text-[20px] font-bold font-mono text-[var(--color-foreground)] mb-2">
-                ₦{fmt(parsedResult.amount)}
+                {fmt(parsedResult.amount)}
               </div>
               <div className="text-[12px] text-[var(--color-muted)] space-y-1">
                 <div><span className="opacity-60">Sender:</span> <span className="text-[var(--color-foreground)]">{parsedResult.senderName}</span></div>
@@ -229,7 +229,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
               <div className="bg-[var(--color-surface-1)] p-3 rounded-lg border border-[var(--color-border)] mb-4">
                 <div className="flex justify-between items-start mb-2">
                   <div className="text-[13px] font-bold text-[var(--color-foreground)]">{matchResult.transaction.name}</div>
-                  <div className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">₦{fmt(matchResult.transaction.amount)}</div>
+                  <div className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(matchResult.transaction.amount)}</div>
                 </div>
                 <div className="text-[11px] text-[var(--color-muted)] mb-2">{matchResult.transaction.detail}</div>
                 <div className="flex flex-wrap gap-1">
@@ -284,7 +284,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
                   <div key={tx.id} className="bg-[var(--color-surface-1)] p-3 rounded-lg border border-[var(--color-border)]">
                     <div className="flex justify-between items-start mb-1">
                       <div className="text-[13px] font-bold text-[var(--color-foreground)] truncate max-w-[60%]">{tx.name}</div>
-                      <div className="text-[13px] font-mono font-bold text-amber-500">₦{fmt(tx.amount)}</div>
+                      <div className="text-[13px] font-mono font-bold text-amber-500">{fmt(tx.amount)}</div>
                     </div>
                     <div className="text-[10px] text-[var(--color-muted)] mb-3">{new Date(tx.time).toLocaleString()} · {tx.detail?.split('·')[0] || ''}</div>
                     <div className="flex justify-between items-center">
@@ -320,7 +320,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
               ) : (
                 recentlyConfirmed.map(tx => (
                   <div key={tx.id} className="text-[11px] border-l-2 border-green-500 pl-2">
-                    <div className="text-[var(--color-foreground)] font-medium truncate">{tx.name} <span className="font-mono text-green-400 ml-1">₦{fmt(tx.amount)}</span></div>
+                    <div className="text-[var(--color-foreground)] font-medium truncate">{tx.name} <span className="font-mono text-green-400 ml-1">{fmt(tx.amount)}</span></div>
                     <div className="text-[9px] text-[var(--color-muted)] truncate">{tx.bankSender || 'Manual'} · {tx.bankReference || 'N/A'}</div>
                   </div>
                 ))

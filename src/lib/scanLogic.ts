@@ -107,14 +107,44 @@ export async function getLastEventAnywhere(
 
 // Core validation function
 export async function validateScan(
-  ref: string,
+  rawRef: string,
   mode: ScanMode,
   currentHub: string,
   localTransactions?: any[]
 ): Promise<ScanValidationResult> {
 
+  let ref = rawRef;
+  let inlineCargoData: any = null;
+
+  // Try parsing the QR code as JSON to support offline payloads
+  if (rawRef.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(rawRef);
+      if (parsed.ref || parsed.id || parsed.awb) {
+        ref = parsed.ref || parsed.id || parsed.awb;
+        inlineCargoData = parsed;
+      }
+    } catch {
+      // ignore, fall back to string
+    }
+  }
+
   // 1. Fetch cargo record
-  const cargo = await fetchCargoByRef(ref, localTransactions);
+  let cargo = await fetchCargoByRef(ref, localTransactions);
+
+  // If not found in DB but we have inline payload from QR code, use it!
+  if (!cargo && inlineCargoData) {
+    cargo = {
+      id: ref,
+      awb_tag_number: ref,
+      route: inlineCargoData.destination || inlineCargoData.route || '',
+      consignee_name: inlineCargoData.name || inlineCargoData.customerName || 'Unknown',
+      content_type: inlineCargoData.content || inlineCargoData.type || 'Baggage',
+      total_pcs: inlineCargoData.pieces || inlineCargoData.pcs || 1,
+      total_kg: inlineCargoData.kg || inlineCargoData.weight || 0,
+      _table: 'inline_qr_payload',
+    };
+  }
 
   if (!cargo) {
     return {
