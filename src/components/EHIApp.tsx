@@ -194,7 +194,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         qty_small_bag: sb,
         amount_paid: tx.amount,
         payment_mode: tx.mode,
-        payment_bank: tx.bank,
+        bank: tx.bank,
         hub_id: hubId,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
         created_at: new Date().toISOString()
@@ -214,11 +214,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         total_pcs: parseInt(pcsStr) || 1,
         total_kg: parseFloat(kgStr) || 0,
         content_type: content,
-        amount_paid: tx.amount,
-        payment_mode: tx.mode,
-        payment_bank: tx.bank,
+        amount: tx.amount,
+        receipt_mode: tx.mode,
+        bank: tx.bank,
         hub_id: hubId,
-        airline: 'ValueJet',
+        airline: tx.airline || 'Unknown',
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
         created_at: new Date().toISOString()
       };
@@ -233,16 +233,15 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         id: tx.id,
         transaction_id: tx.id,
         passenger_name: tx.name,
-        flight_no: 'VJ100', // Mock flight
+        flight_no: tx.flight || tx.detail?.split(' · ')[0] || 'Unknown',
         excess_kg: parseFloat(kgStr) || 0,
         amount: tx.amount,
         pnr: pnr,
         destination: dest,
         total_pcs: parseInt(pcsStr) || 1,
         total_kg: parseFloat(kgStr) || 0,
-        amount_paid: tx.amount,
         payment_mode: tx.mode,
-        payment_bank: tx.bank,
+        bank: tx.bank,
         hub_id: hubId,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
         created_at: new Date().toISOString()
