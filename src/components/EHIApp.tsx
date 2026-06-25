@@ -181,9 +181,74 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       : tx.type === 'baggage' ? 'manifests' 
       : 'shipments';
     
-    // We only try to write/update if possible, for now writeWithOfflineSupport 
-    // handles upsert if configured, but let's just use it as is
-    const payload = { ...tx };
+    // Map internal Transaction type to Supabase table schema
+    let payload: any = { id: tx.id };
+    
+    if (tx.type === 'marketing') {
+      const parts = tx.detail.split(' · ');
+      const route = parts[0] || '';
+      const bagsStr = parts[1] || '';
+      const bb = parseInt(bagsStr.match(/(\d+)\s*BB/)?.[1] || '0');
+      const mb = parseInt(bagsStr.match(/(\d+)\s*MB/)?.[1] || '0');
+      const sb = parseInt(bagsStr.match(/(\d+)\s*SB/)?.[1] || '0');
+
+      payload = {
+        id: tx.id,
+        entry_ref: tx.id,
+        customer_name: tx.name,
+        route: route,
+        qty_big_bag: bb,
+        qty_med_bag: mb,
+        qty_small_bag: sb,
+        amount_paid: tx.amount,
+        payment_mode: tx.mode,
+        payment_bank: tx.bank,
+        created_at: new Date().toISOString()
+      };
+    } else if (tx.type === 'cargo') {
+      const parts = tx.detail.split(' · ');
+      const route = parts[0] || '';
+      const pcsStr = parts[1] || '';
+      const kgStr = parts[2] || '';
+      const content = parts[3] || '';
+      
+      payload = {
+        id: tx.id,
+        entry_ref: tx.id,
+        consignee_name: tx.name,
+        route: route,
+        total_pcs: parseInt(pcsStr) || 1,
+        total_kg: parseFloat(kgStr) || 0,
+        content_type: content,
+        amount_paid: tx.amount,
+        payment_mode: tx.mode,
+        payment_bank: tx.bank,
+        created_at: new Date().toISOString()
+      };
+    } else if (tx.type === 'baggage') {
+      const parts = tx.detail.split(' · ');
+      const pnr = parts[0] || '';
+      const dest = parts[1] || '';
+      const pcsStr = parts[2] || '';
+      const kgStr = parts[3] || '';
+
+      payload = {
+        id: tx.id,
+        transaction_id: tx.id,
+        passenger_name: tx.name,
+        pnr: pnr,
+        destination: dest,
+        total_pcs: parseInt(pcsStr) || 1,
+        total_kg: parseFloat(kgStr) || 0,
+        amount_paid: tx.amount,
+        payment_mode: tx.mode,
+        payment_bank: tx.bank,
+        created_at: new Date().toISOString()
+      };
+    } else {
+      payload = { ...tx, created_at: new Date().toISOString() };
+    }
+
     const { offline } = await writeWithOfflineSupport(tableName as any, payload);
     
     if (offline) {

@@ -36,8 +36,11 @@ export async function writeWithOfflineSupport(
       await db.sync_queue.where('record_id').equals(payload.id as string).delete();
       await (db[tableName] as Dexie.Table).where('id').equals(payload.id as string).modify({ synced: 1 });
       return { success: true, offline: false };
+    } else {
+      console.error('Supabase insert error (falling back to offline queue):', error);
     }
-  } catch {
+  } catch (err) {
+    console.error('Network exception in writeWithOfflineSupport:', err);
     // Network unavailable — leave in queue
   }
 
