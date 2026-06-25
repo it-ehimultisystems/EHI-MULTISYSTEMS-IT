@@ -1,26 +1,15 @@
-import { Svg, Path, Rect, Text } from '@react-pdf/renderer';
+import { View, Text, Svg, Path } from '@react-pdf/renderer';
 
 export const EHILogoPDF = ({ width = 120 }: { width?: number }) => (
-  <Svg viewBox="0 0 400 350" width={width} height={width * (350 / 400)}>
-    {/* Left Gold Swoosh */}
-    <Path d="M 180 140 C 140 140 90 110 70 95 C 110 115 150 160 170 170 Z" fill="#F59E0B" />
-    {/* Right Blue Swoosh */}
-    <Path d="M 170 170 C 190 120 250 80 350 70 C 290 90 220 130 180 180 Z" fill="#025AAA" />
-
-    {/* EHI Text */}
-    <Text x="210" y="240" fontSize="110" fill="#025AAA" textAnchor="middle">
-      EHI
-    </Text>
-    
-    {/* MULTISYSTEMS box */}
-    <Rect x="95" y="255" width="230" height="30" fill="#F59E0B" />
-    <Text x="210" y="277" fontSize="19" fill="#000000" textAnchor="middle">
-      MULTISYSTEMS
-    </Text>
-
-    {/* NIGERIA LIMITED */}
-    <Text x="210" y="315" fontSize="20" fill="#000000" textAnchor="middle">
-      NIGERIA LIMITED
-    </Text>
-  </Svg>
+  <View style={{ width, alignItems: 'center' }}>
+    <Svg viewBox="0 0 400 200" width={width} height={width * 0.5}>
+      <Path d="M 180 140 C 140 140 90 110 70 95 C 110 115 150 160 170 170 Z" fill="#000000" />
+      <Path d="M 170 170 C 190 120 250 80 350 70 C 290 90 220 130 180 180 Z" fill="#000000" />
+    </Svg>
+    <Text style={{ fontSize: width * 0.35, fontWeight: 'heavy', color: '#000000', marginTop: -width * 0.15 }}>EHI</Text>
+    <View style={{ backgroundColor: '#000000', paddingHorizontal: width * 0.05, paddingVertical: width * 0.02, marginTop: 2 }}>
+      <Text style={{ fontSize: width * 0.065, color: '#FFFFFF', fontWeight: 'bold' }}>MULTISYSTEMS</Text>
+    </View>
+    <Text style={{ fontSize: width * 0.07, color: '#000000', fontWeight: 'bold', marginTop: 2, letterSpacing: 1 }}>NIGERIA LIMITED</Text>
+  </View>
 );

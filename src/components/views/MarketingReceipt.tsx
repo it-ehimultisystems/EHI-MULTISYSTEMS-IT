@@ -44,31 +44,28 @@ export interface MarketingDailySummaryData {
 
 
 const styles = StyleSheet.create({
-  page: { padding: 20, fontFamily: 'Helvetica' },
-  header: { marginBottom: 15, textAlign: 'center' },
-  companyName: { fontSize: 14, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
-  title: { fontSize: 8, color: '#6b7280', textTransform: 'uppercase', marginBottom: 10, alignSelf: 'center' },
-  divider: { marginVertical: 8, borderBottomWidth: 1, borderBottomColor: '#d1d5db', borderBottomStyle: 'solid' },
+  page: { padding: 15, fontFamily: 'Helvetica', backgroundColor: '#FFFFFF' },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  title: { fontSize: 11, color: '#000000', textTransform: 'uppercase', marginBottom: 15, alignSelf: 'center', fontWeight: 'bold' },
+  divider: { marginVertical: 6, borderBottomWidth: 1.5, borderBottomColor: '#000000', borderBottomStyle: 'dashed' },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  label: { fontSize: 8, color: '#6b7280', textTransform: 'uppercase', width: 60 },
-  value: { fontSize: 10, fontWeight: 'bold', color: '#111827', flex: 1 },
-  amountContainer: { marginTop: 8, padding: 8, backgroundColor: '#D1FAE5', borderRadius: 4, borderWidth: 1, borderColor: '#10B981' },
-  amountLabel: { fontSize: 10, color: '#6b7280', textTransform: 'uppercase', width: 60 },
-  amountValue: { fontSize: 18, fontWeight: 'bold', color: '#065F46' },
-  footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 4 },
-  footerText: { fontSize: 8, color: '#9ca3af', fontStyle: 'italic', textAlign: 'center' },
-  sectionTitle: { fontSize: 8, color: '#111827', fontWeight: 'bold', marginBottom: 4 }
+  label: { fontSize: 9, color: '#000000', textTransform: 'uppercase', width: 70, fontWeight: 'bold' },
+  value: { fontSize: 10, fontWeight: 'bold', color: '#000000', flex: 1, textAlign: 'right' },
+  amountContainer: { marginTop: 10, padding: 8, borderTopWidth: 2, borderBottomWidth: 2, borderColor: '#000000' },
+  amountLabel: { fontSize: 12, color: '#000000', textTransform: 'uppercase', fontWeight: 'bold' },
+  amountValue: { fontSize: 18, fontWeight: 'bold', color: '#000000', textAlign: 'right' },
+  footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
+  footerText: { fontSize: 8, color: '#000000', textAlign: 'center', marginTop: 10 },
+  sectionTitle: { fontSize: 10, color: '#000000', fontWeight: 'bold', marginBottom: 4, textTransform: 'uppercase' }
 });
 
 const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => (
   <Document>
-    <Page size="A6" style={styles.page}>
-      <View style={styles.header}>
-        <View style={{ alignItems: 'center', marginBottom: 10 }}>
-          <EHILogoPDF width={100} />
-        </View>
-        <Text style={styles.title}>FIELD MARKETING RECEIPT</Text>
+    <Page size={[226, 600]} style={styles.page}>
+      <View style={{ alignItems: 'flex-start', marginBottom: 15 }}>
+        <EHILogoPDF width={70} />
       </View>
+      <Text style={styles.title}>FIELD MARKETING RECEIPT</Text>
 
       <View style={styles.divider} />
 
