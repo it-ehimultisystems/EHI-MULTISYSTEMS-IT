@@ -5,7 +5,7 @@ import { fmt, uid, tnow } from '../../lib/helpers';
 import {
   CheckCircle, Loader2, User as UserIcon, Plane, Hash, Package, MapPin, Layers,
   Banknote, CreditCard, Landmark, MessageSquare, Scale, Users, ShieldAlert,
-  PlusCircle, Trash2, Edit3, Coins, Search, ArrowRight, Table, DollarSign
+  PlusCircle, Trash2, Edit3, Coins, Search, ArrowRight, Table, DollarSign, Building
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { sendReceiptWhatsApp, buildCargoWhatsApp } from '../../lib/notifications';
@@ -649,23 +649,23 @@ export const CargoForm = ({ onAddTx, user }: {
       <div className="flex bg-[var(--color-obsidian)] rounded-lg p-1 border border-[var(--color-border)] mb-6 max-w-lg mx-auto">
         <button
           onClick={() => setActivePortal('retail')}
-          className={`flex-1 py-3 text-[14px] font-sans font-bold rounded-md transition-all cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-[14px] font-sans font-bold rounded-md transition-all cursor-pointer ${
             activePortal === 'retail' 
               ? 'bg-[var(--color-accent-amber)] text-[#030712] shadow-md' 
               : 'text-[var(--color-light-muted)] hover:text-white'
           }`}
         >
-          📦 Retail Cargo Entry
+          <Package size={16} /> Retail Cargo Entry
         </button>
         <button
           onClick={() => setActivePortal('corporate')}
-          className={`flex-1 py-3 text-[14px] font-sans font-bold rounded-md transition-all cursor-pointer relative ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-[14px] font-sans font-bold rounded-md transition-all cursor-pointer relative ${
             activePortal === 'corporate' 
               ? 'bg-[var(--color-accent-amber)] text-[#030712] shadow-md' 
               : 'text-[var(--color-light-muted)] hover:text-white'
           }`}
         >
-          🏢 Corporate Contract (B2B)
+          <Users size={16} /> Corporate Contract (B2B)
           {pendingIntakes.length > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-600 text-white font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-[var(--color-obsidian)] animate-bounce font-bold">
               {pendingIntakes.length}
@@ -1137,7 +1137,7 @@ export const CargoForm = ({ onAddTx, user }: {
                         <div key={pi.id} className="py-2.5 flex items-center justify-between text-[12px]">
                           <div>
                             <div className="font-bold text-[var(--color-foreground)] flex items-center gap-1.5">
-                              <span>🏢 {pi.consignee}</span>
+                              <span className="flex items-center gap-1"><Building size={14} className="text-[var(--color-muted)]"/> {pi.consignee}</span>
                               <span className="font-semibold px-1.5 py-0.5 rounded bg-[rgba(245,158,11,0.08)] text-[var(--color-accent-amber)] font-mono text-[9px]">{pi.id}</span>
                             </div>
                             <div className="text-[var(--color-light-muted)] mt-0.5">
@@ -1205,7 +1205,7 @@ export const CargoForm = ({ onAddTx, user }: {
                          >
                            <div className="space-y-1">
                              <div className="flex items-center gap-2">
-                               <span className="font-bold text-white text-[14px]">🏢 {pi.consignee}</span>
+                               <span className="font-bold text-white text-[14px] flex items-center gap-1.5"><Building size={16} className="text-[var(--color-muted)]"/> {pi.consignee}</span>
                                <span className="text-[10px] font-mono font-bold px-1.5 bg-slate-800 text-[var(--color-light-muted)] rounded">{pi.id}</span>
                              </div>
                              <div className="text-[12px] text-[var(--color-light-muted)] space-x-2">

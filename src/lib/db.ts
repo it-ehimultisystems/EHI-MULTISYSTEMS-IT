@@ -59,6 +59,14 @@ class EHILocalDB extends Dexie {
       trip_pings: '++id, tripId, timestamp, synced',
       sync_queue: '++id, table_name, synced, created_at',
     });
+    this.version(5).stores({
+      cargo_entries: 'id, synced, created_at',
+      manifests: 'id, synced, created_at',
+      marketing_entries: 'id, synced, created_at',
+      proof_of_delivery: 'id, awbNumber, synced, deliveredAt',
+      trip_pings: '++id, tripId, timestamp, synced',
+      sync_queue: '++id, table_name, record_id, synced, created_at',
+    });
   }
 }
 
