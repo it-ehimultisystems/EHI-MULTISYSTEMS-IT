@@ -13,7 +13,7 @@ export async function cleanupOldQueue(): Promise<void> {
 export async function writeWithOfflineSupport(
   tableName: 'shipments' | 'manifests' | 'marketing_entries' | 'cargo_entries',
   payload: Record<string, unknown>
-): Promise<{ success: boolean; offline: boolean }> {
+): Promise<{ success: boolean; offline: boolean; error?: any }> {
   const record = { id: payload.id as string, data: payload, synced: 0 as const, created_at: new Date().toISOString() };
 
   // Always write to local IndexedDB first (instant)
@@ -45,10 +45,12 @@ export async function writeWithOfflineSupport(
       return { success: true, offline: false };
     } else {
       console.error('Supabase insert error (falling back to offline queue):', error);
+      return { success: false, offline: true, error: error.message || error.details || JSON.stringify(error) };
     }
   } catch (err) {
     console.error('Network exception in writeWithOfflineSupport:', err);
     // Network unavailable — leave in queue
+    return { success: false, offline: true, error: err instanceof Error ? err.message : String(err) };
   }
 
   return { success: true, offline: true };

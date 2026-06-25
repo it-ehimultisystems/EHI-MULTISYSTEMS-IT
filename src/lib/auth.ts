@@ -9,6 +9,7 @@ export interface UserProfile {
   role: UserRole;
   hub: string; // Maps to `hub_name`
   hubType: HubType;
+  hub_id?: string;
   active: boolean;
 }
 
@@ -35,6 +36,13 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       if (password !== demoUser.password) {
         throw new Error('Incorrect password. Check the demo credentials below.');
       }
+      
+      let hubId = undefined;
+      try {
+        const { data: hData } = await supabase.from('hubs').select('id').eq('name', demoUser.hub).single();
+        if (hData) hubId = hData.id;
+      } catch (e) {}
+
       return {
         id: `demo-${email.split('@')[0]}`,
         email,
@@ -42,6 +50,7 @@ export async function signIn(email: string, password: string): Promise<UserProfi
         role: demoUser.role,
         hub: demoUser.hub,
         hubType: demoUser.hubType,
+        hub_id: hubId,
         active: true,
       };
     }
@@ -60,6 +69,11 @@ export async function signIn(email: string, password: string): Promise<UserProfi
     if (profileError) {
       const fallbackDemo = DEMO_USERS[email as keyof typeof DEMO_USERS];
       if (fallbackDemo) {
+        let hubId = undefined;
+        try {
+          const { data: hData } = await supabase.from('hubs').select('id').eq('name', fallbackDemo.hub).single();
+          if (hData) hubId = hData.id;
+        } catch (e) {}
         return {
           id: data.user.id ?? `demo-${email.split('@')[0]}`,
           email,
@@ -67,6 +81,7 @@ export async function signIn(email: string, password: string): Promise<UserProfi
           role: fallbackDemo.role,
           hub: fallbackDemo.hub,
           hubType: fallbackDemo.hubType,
+          hub_id: hubId,
           active: true,
         };
       }
@@ -80,11 +95,17 @@ export async function signIn(email: string, password: string): Promise<UserProfi
         role: profile.role,
         hub: profile.hub_name,
         hubType: profile.hub_type,
+        hub_id: profile.hub_id,
         active: profile.active
     };
   } catch (err: any) {
     const fallbackDemo = DEMO_USERS[email as keyof typeof DEMO_USERS];
     if (fallbackDemo) {
+      let hubId = undefined;
+      try {
+        const { data: hData } = await supabase.from('hubs').select('id').eq('name', fallbackDemo.hub).single();
+        if (hData) hubId = hData.id;
+      } catch (e) {}
       return {
         id: data?.user?.id ?? `demo-${email.split('@')[0]}`,
         email,
@@ -92,6 +113,7 @@ export async function signIn(email: string, password: string): Promise<UserProfi
         role: fallbackDemo.role,
         hub: fallbackDemo.hub,
         hubType: fallbackDemo.hubType,
+        hub_id: hubId,
         active: true,
       };
     }
@@ -141,6 +163,7 @@ export async function getSession(): Promise<UserProfile | null> {
       role: profile.role,
       hub: profile.hub_name,
       hubType: profile.hub_type,
+      hub_id: profile.hub_id,
       active: profile.active
     };
   } catch (err) {

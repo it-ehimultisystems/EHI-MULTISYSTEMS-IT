@@ -181,6 +181,15 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       : tx.type === 'baggage' ? 'manifests' 
       : 'shipments';
     
+    let hubId = user.hub_id;
+    if (!hubId) {
+      // Fallback: fetch hub_id from db based on user.hub
+      const { data: hubData } = await supabase.from('hubs').select('id').eq('name', user.hub).single();
+      if (hubData) {
+        hubId = hubData.id;
+      }
+    }
+
     // Map internal Transaction type to Supabase table schema
     let payload: any = { id: tx.id };
     
@@ -203,6 +212,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         amount_paid: tx.amount,
         payment_mode: tx.mode,
         payment_bank: tx.bank,
+        hub_id: hubId,
+        entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
         created_at: new Date().toISOString()
       };
     } else if (tx.type === 'cargo') {
@@ -223,6 +234,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         amount_paid: tx.amount,
         payment_mode: tx.mode,
         payment_bank: tx.bank,
+        hub_id: hubId,
+        airline: 'ValueJet',
+        entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
         created_at: new Date().toISOString()
       };
     } else if (tx.type === 'baggage') {
@@ -236,6 +250,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         id: tx.id,
         transaction_id: tx.id,
         passenger_name: tx.name,
+        flight_no: 'VJ100', // Mock flight
+        excess_kg: parseFloat(kgStr) || 0,
+        amount: tx.amount,
         pnr: pnr,
         destination: dest,
         total_pcs: parseInt(pcsStr) || 1,
@@ -243,17 +260,19 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         amount_paid: tx.amount,
         payment_mode: tx.mode,
         payment_bank: tx.bank,
+        hub_id: hubId,
+        entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
         created_at: new Date().toISOString()
       };
     } else {
-      payload = { ...tx, created_at: new Date().toISOString() };
+      payload = { ...tx, created_at: new Date().toISOString(), hub_id: hubId };
     }
 
-    const { offline } = await writeWithOfflineSupport(tableName as any, payload);
+    const { offline, error } = await writeWithOfflineSupport(tableName as any, payload);
     
     if (offline) {
       setPendingSyncCount(prev => prev + 1);
-      showToast({ message: 'Saved offline — syncs when reconnected', type: 'warning' });
+      showToast({ message: error ? `Error: ${error}` : 'Saved offline — syncs when reconnected', type: 'warning' });
     }
   }, [showToast]);
 
