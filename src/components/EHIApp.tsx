@@ -201,10 +201,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       };
     } else if (tx.type === 'cargo') {
       const parts = tx.detail.split(' · ');
-      const route = parts[0] || '';
-      const pcsStr = parts[1] || '';
-      const kgStr = parts[2] || '';
-      const content = parts[3] || '';
+      // parts[0] = airline (already in tx.airline, skip)
+      const awbFromDetail = parts[1] || '';
+      const pcsStr = parts[2] || '';
+      const kgStr = parts[3] || '';
+      const route = parts[4] || '';
+      const content = parts[5] || '';
       
       payload = {
         id: tx.id,
@@ -214,11 +216,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         total_pcs: parseInt(pcsStr) || 1,
         total_kg: parseFloat(kgStr) || 0,
         content_type: content,
+        awb_tag_number: awbFromDetail,
         amount: tx.amount,
         receipt_mode: tx.mode,
         bank: tx.bank,
         hub_id: hubId,
-        airline: tx.airline || 'Unknown',
+        airline: (tx as any).airline || parts[0] || 'Unknown',
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
         created_at: new Date().toISOString()
       };
