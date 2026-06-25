@@ -7,8 +7,6 @@ import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-import { SEED_TRANSACTIONS } from './lib/constants';
-
 const PublicTrackingPage = () => {
   const { waybillId } = useParams<{ waybillId?: string }>();
   const [ref, setRef] = useState(waybillId || '');
@@ -16,19 +14,80 @@ const PublicTrackingPage = () => {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!waybillId) return;
+  const searchTracking = async (query: string) => {
     setLoading(true);
     setSearched(true);
-    const query = waybillId.trim().toUpperCase();
-    const found = SEED_TRANSACTIONS.find(
-      t => t.id.toUpperCase() === query ||
-           (t.awb_tag_number?.toUpperCase() ?? '') === query
-    );
-    setTimeout(() => {
-      setResult(found || null);
+    
+    // Check Cargo Entries
+    const { data: cargo } = await supabase
+      .from('cargo_entries')
+      .select('*')
+      .or(`entry_ref.eq."${query}",awb_tag_number.eq."${query}"`)
+      .limit(1);
+
+    if (cargo && cargo.length > 0) {
+      const c = cargo[0];
+      setResult({
+        id: c.entry_ref,
+        awb_tag_number: c.awb_tag_number,
+        name: c.consignee_name,
+        route: c.route,
+        contentType: c.content_type,
+        kg: c.total_kg,
+        pieces: c.total_pcs,
+        status: c.status || 'Intake'
+      });
       setLoading(false);
-    }, 600);
+      return;
+    }
+
+    // Check Marketing Entries
+    const { data: marketing } = await supabase
+      .from('marketing_entries')
+      .select('*')
+      .eq('entry_ref', query)
+      .limit(1);
+    
+    if (marketing && marketing.length > 0) {
+      const m = marketing[0];
+      setResult({
+        id: m.entry_ref,
+        name: m.customer_name,
+        route: m.route,
+        status: m.status || 'Intake'
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Check Manifests (ValueJet)
+    const { data: manifest } = await supabase
+      .from('manifests')
+      .select('*')
+      .or(`transaction_id.eq."${query}",pnr.eq."${query}"`)
+      .limit(1);
+
+    if (manifest && manifest.length > 0) {
+      const v = manifest[0];
+      setResult({
+        id: v.transaction_id,
+        name: v.passenger_name,
+        route: v.destination,
+        kg: v.total_kg,
+        pieces: v.total_pcs,
+        status: v.status || 'Intake'
+      });
+      setLoading(false);
+      return;
+    }
+
+    setResult(null);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!waybillId) return;
+    searchTracking(waybillId.trim().toUpperCase());
   }, [waybillId]);
 
   const statusColor = (status: string) => {
@@ -75,17 +134,7 @@ const PublicTrackingPage = () => {
             onKeyDown={e => {
               if (e.key === 'Enter') {
                 if (!ref.trim()) return;
-                setLoading(true);
-                setSearched(true);
-                const query = ref.trim().toUpperCase();
-                const found = SEED_TRANSACTIONS.find(
-                  t => t.id.toUpperCase() === query ||
-                       (t.awb_tag_number?.toUpperCase() ?? '') === query
-                );
-                setTimeout(() => {
-                  setResult(found || null);
-                  setLoading(false);
-                }, 600);
+                searchTracking(ref.trim().toUpperCase());
               }
             }}
             placeholder="e.g. AC240619X9Y8 or 14153"
@@ -100,17 +149,7 @@ const PublicTrackingPage = () => {
           <button
             onClick={() => {
               if (!ref.trim()) return;
-              setLoading(true);
-              setSearched(true);
-              const query = ref.trim().toUpperCase();
-              const found = SEED_TRANSACTIONS.find(
-                t => t.id.toUpperCase() === query ||
-                     (t.awb_tag_number?.toUpperCase() ?? '') === query
-              );
-              setTimeout(() => {
-                setResult(found || null);
-                setLoading(false);
-              }, 600);
+              searchTracking(ref.trim().toUpperCase());
             }}
             disabled={!ref.trim() || loading}
             style={{

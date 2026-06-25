@@ -173,7 +173,7 @@ export const Dashboard = React.memo(
         if (t.created_at) {
           return new Date(t.created_at) >= today;
         }
-        return true; // demo fallback
+        return true; // optimistic local insert
       });
     }, [transactions]);
 

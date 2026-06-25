@@ -237,7 +237,7 @@ export const Settings = ({
                 }`}>
                   {connectionMode === 'live'
                     ? <><Wifi size={12} /> ● CONNECTED TO SUPABASE</>
-                    : <><WifiOff size={12} /> ◎ DEMO MODE — Data not persisted</>
+                    : <><WifiOff size={12} /> ○ NOT CONNECTED — Add Supabase credentials below</>
                   }
                 </div>
 
@@ -303,7 +303,7 @@ export const Settings = ({
                   onClick={handleClearConnection}
                   className="w-full text-[10px] font-mono text-[var(--color-error)] bg-transparent border-none cursor-pointer py-1"
                 >
-                  Clear credentials → return to demo mode
+                  Clear credentials
                 </button>
 
                 <p className="text-[9px] text-[var(--color-muted)] font-mono leading-relaxed pt-1">

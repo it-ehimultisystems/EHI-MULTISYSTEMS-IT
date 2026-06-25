@@ -6,8 +6,7 @@ import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { SideNav } from './SideNav';
 import { Toast, ToastProps } from './Toast';
-import { supabase, getConnectionMode } from '../lib/supabase';
-import { randCargo, randBaggage, randMarketingEntry } from '../lib/helpers';
+import { supabase } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { Dashboard } from './views/Dashboard';
 import { CargoForm } from './views/CargoForm';
@@ -21,8 +20,6 @@ import { ITDashboard } from './views/ITDashboard';
 import { CreditDebit } from './views/CreditDebit';
 import { ErrorBoundary } from './ErrorBoundary';
 
-import { SEED_TRANSACTIONS } from '../lib/constants';
-
 export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const getDefaultTab = (role: string): TabView => {
     if (role === 'marketing_agent') return 'Marketing';
@@ -30,7 +27,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     return 'Tower';
   };
   const [currentTab, setCurrentTab] = useState<TabView>(getDefaultTab(user.role));
-  const [transactions, setTransactions] = useState<Transaction[]>(SEED_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
@@ -73,7 +70,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     pendingTxRef.current = [];
   }, []);
 
-  // Live simulation and Supabase real-time
+  // Supabase real-time
   useEffect(() => {
     if (isOffline) return;
     
@@ -144,24 +141,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         }
       ).subscribe();
 
-    // Only simulate in demo mode — NEVER inject fake data in production
-    let int: ReturnType<typeof setInterval> | null = null;
-    if (getConnectionMode() === 'demo') {
-      int = setInterval(() => {
-        const rand = Math.random();
-        const newTx = rand < 0.4 ? randCargo()
-          : (rand < 0.75 ? randMarketingEntry() : randBaggage());
-        pendingTxRef.current.push(newTx);
-        if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
-        flushTimerRef.current = setTimeout(flushPendingTx, 300);
-      }, 7000);
-    }
-    
     return () => {
       supabase.removeChannel(cargoChannel);
       supabase.removeChannel(vjChannel);
       supabase.removeChannel(marketingChannel);
-      if (int) clearInterval(int);
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     };
   }, [isOffline, flushPendingTx]);

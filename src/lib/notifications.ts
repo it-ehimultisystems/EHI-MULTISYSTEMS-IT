@@ -1,10 +1,7 @@
 /**
  * EHI Multisystems — WhatsApp Receipt Notifications via Termii
- * Demo mode: simulates silently (console.log only)
  * Live mode: calls POST /api/notify/whatsapp
  */
-
-import { getConnectionMode } from './supabase';
 
 export interface ReceiptNotificationPayload {
   phone: string;
@@ -26,13 +23,6 @@ export async function sendReceiptWhatsApp(
 ): Promise<{ ok: boolean; simulated?: boolean }> {
   const { phone, message, ref } = payload;
   const normalisedPhone = normalisePhone(phone);
-
-  if (getConnectionMode() === 'demo') {
-    console.log(
-      `[DEMO] WhatsApp receipt → ${normalisedPhone}\nRef: ${ref}\n${message}`
-    );
-    return { ok: true, simulated: true };
-  }
 
   try {
     const res = await fetch('/api/notify/whatsapp', {

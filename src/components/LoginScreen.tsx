@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { DEMO_USERS } from '../lib/constants';
 import { UserProfile, signIn } from '../lib/auth';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { LoadingState } from './views/LoadingState';
 
 export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void }) => {
@@ -9,7 +7,6 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showDemo, setShowDemo] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,23 +17,7 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
       const user = await signIn(email, password);
       onLogin(user);
     } catch (err: any) {
-      setError(err.message || 'Invalid credentials. Use the demo credentials below.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDemoClick = async (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setIsLoading(true);
-    setError('');
-    
-    try {
-      const user = await signIn(demoEmail, demoPass);
-      onLogin(user);
-    } catch (err: any) {
-      setError(err.message || 'Invalid credentials. Use the demo credentials below.');
+      setError(err.message || 'Invalid credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -103,63 +84,6 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
             {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
-
-        {/* Demo Credentials */}
-        <div className="w-full mt-6">
-          <button 
-            onClick={() => setShowDemo(!showDemo)}
-            className="w-full flex items-center justify-center space-x-2 text-[13px] font-sans text-[var(--color-foreground)] bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl py-3 hover:bg-[var(--color-surface-2)] transition-colors focus:outline-none"
-          >
-            <span>Need help signing in? Use Demo</span>
-            {showDemo ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-          
-          {showDemo && (
-            <div className="bg-[var(--color-surface-1)] rounded-xl mt-2 border border-[rgba(255,255,255,0.07)] flex flex-col divide-y divide-[rgba(255,255,255,0.07)] max-h-[160px] overflow-y-auto">
-              {(Object.entries(DEMO_USERS)).map(([demoEmail, user]) => {
-                const roleDisplay =
-                  user.role === 'super_admin' ? 'SUPER ADMIN' :
-                  user.role === 'cargo_agent' && demoEmail.includes('air') ? 'AIR OPS' :
-                  user.role === 'cargo_agent' ? 'CARGO' :
-                  user.role === 'vj_agent' ? 'VALUEJET POS' :
-                  user.role === 'marketing_agent' ? 'MARKETING' :
-                  user.role === 'driver' ? 'DRIVER' :
-                  user.role === 'accountant' ? 'ACCOUNTANT' :
-                  user.role === 'auditor' ? 'AUDITOR' :
-                  user.role.toUpperCase();
-                const roleColour =
-                  roleDisplay === 'SUPER ADMIN' ? 'text-[var(--color-accent-amber)]' :
-                  roleDisplay === 'ADMIN'       ? 'text-[var(--color-foreground)]' :
-                  roleDisplay === 'CARGO'       ? 'text-[var(--color-accent-amber)]' :
-                  roleDisplay === 'AIR OPS'     ? 'text-[var(--color-error)]' :
-                  roleDisplay === 'VALUEJET POS'? 'text-[var(--color-accent-cobalt)]' :
-                  roleDisplay === 'MARKETING'   ? 'text-[var(--color-success)]' :
-                  roleDisplay === 'DRIVER'      ? 'text-purple-400' :
-                  roleDisplay === 'ACCOUNTANT'  ? 'text-[var(--color-accent-cobalt)]' :
-                  roleDisplay === 'AUDITOR'     ? 'text-[var(--color-error)]' :
-                  'text-[var(--color-muted)]';
-                return (
-                  <div 
-                    key={demoEmail}
-                    onClick={() => handleDemoClick(demoEmail, user.password)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        handleDemoClick(demoEmail, user.password);
-                      }
-                    }}
-                    className="px-3 py-2 flex flex-col cursor-pointer hover:bg-[var(--color-surface-2)] transition-colors active:opacity-70 focus:outline-none focus:bg-[var(--color-surface-2)]"
-                  >
-                    <div className="text-[11px] font-mono text-[var(--color-light-muted)]">
-                      <span className={`font-bold font-sans text-[10px] uppercase tracking-wider ${roleColour}`}>{roleDisplay}</span> &middot; {demoEmail} &middot; {user.password}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
 
         {/* Footer */}
         <div className="absolute bottom-6 left-0 right-0 text-center text-[11px] font-sans text-[var(--color-muted)]">
