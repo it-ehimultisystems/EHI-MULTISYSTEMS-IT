@@ -88,19 +88,19 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
           <Text style={styles.sectionTitle}>REVENUE BREAKDOWN</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Cargo Station ({data.cargoCount})</Text>
-            <Text style={styles.summaryValue}>₦{data.cargoTotal.toLocaleString('en-NG')}</Text>
+            <Text style={styles.summaryValue}>NGN {data.cargoTotal.toLocaleString('en-NG')}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Field Marketing ({data.mktgCount})</Text>
-            <Text style={styles.summaryValue}>₦{data.mktgTotal.toLocaleString('en-NG')}</Text>
+            <Text style={styles.summaryValue}>NGN {data.mktgTotal.toLocaleString('en-NG')}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>ValueJet Baggage ({data.vjCount})</Text>
-            <Text style={styles.summaryValue}>₦{data.vjTotal.toLocaleString('en-NG')}</Text>
+            <Text style={styles.summaryValue}>NGN {data.vjTotal.toLocaleString('en-NG')}</Text>
           </View>
           <View style={[styles.summaryRow, { marginTop: 4, paddingTop: 4, borderTopWidth: 1, borderTopColor: '#e5e7eb' }]}>
             <Text style={[styles.summaryLabel, { fontWeight: 'bold' }]}>GROSS TOTAL</Text>
-            <Text style={styles.summaryValue}>₦{data.grossTotal.toLocaleString('en-NG')}</Text>
+            <Text style={styles.summaryValue}>NGN {data.grossTotal.toLocaleString('en-NG')}</Text>
           </View>
         </View>
 
@@ -108,23 +108,23 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
           <Text style={styles.sectionTitle}>PAYMENT ANALYSIS (SYSTEM EXPECTED)</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Cash Received</Text>
-            <Text style={styles.summaryValue}>₦{data.cashTotal.toLocaleString('en-NG')}</Text>
+            <Text style={styles.summaryValue}>NGN {data.cashTotal.toLocaleString('en-NG')}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Bank Transfer</Text>
-            <Text style={styles.summaryValue}>₦{data.transferTotal.toLocaleString('en-NG')}</Text>
+            <Text style={styles.summaryValue}>NGN {data.transferTotal.toLocaleString('en-NG')}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>POS Terminal</Text>
-            <Text style={styles.summaryValue}>₦{data.posTotal.toLocaleString('en-NG')}</Text>
+            <Text style={styles.summaryValue}>NGN {data.posTotal.toLocaleString('en-NG')}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Outstanding Debt</Text>
-            <Text style={[styles.summaryValue, { color: '#EF4444' }]}>₦{data.debtTotal.toLocaleString('en-NG')}</Text>
+            <Text style={[styles.summaryValue, { color: '#EF4444' }]}>NGN {data.debtTotal.toLocaleString('en-NG')}</Text>
           </View>
           <View style={[styles.summaryRow, { marginTop: 4, paddingTop: 4, borderTopWidth: 1, borderTopColor: '#e5e7eb' }]}>
             <Text style={[styles.summaryLabel, { fontWeight: 'bold' }]}>TOTAL SETTLED</Text>
-            <Text style={styles.summaryValue}>₦{(data.cashTotal + data.transferTotal + data.posTotal).toLocaleString('en-NG')}</Text>
+            <Text style={styles.summaryValue}>NGN {(data.cashTotal + data.transferTotal + data.posTotal).toLocaleString('en-NG')}</Text>
           </View>
         </View>
       </View>
@@ -138,7 +138,7 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
                 {data.expenses.filter(e => !e.mode || e.mode === 'Cash').map((e, i) => (
                   <View style={styles.summaryRow} key={`exp-${i}`}>
                     <Text style={styles.summaryLabel}>- {e.type} {e.description ? `(${e.description})` : ''}</Text>
-                    <Text style={[styles.summaryValue, { color: '#EF4444' }]}>-₦{e.amount.toLocaleString('en-NG')}</Text>
+                    <Text style={[styles.summaryValue, { color: '#EF4444' }]}>-NGN {e.amount.toLocaleString('en-NG')}</Text>
                   </View>
                 ))}
                 {data.expenses.filter(e => !e.mode || e.mode === 'Cash').length === 0 && (
@@ -148,15 +148,15 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
              <View style={{ width: '48%' }}>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Expected Net Cash:</Text>
-                  <Text style={styles.summaryValue}>₦{data.netCashToRemit.toLocaleString('en-NG')}</Text>
+                  <Text style={styles.summaryValue}>NGN {data.netCashToRemit.toLocaleString('en-NG')}</Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Expected Transfer:</Text>
-                  <Text style={styles.summaryValue}>₦{data.transferTotal.toLocaleString('en-NG')}</Text>
+                  <Text style={styles.summaryValue}>NGN {data.transferTotal.toLocaleString('en-NG')}</Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Expected POS:</Text>
-                  <Text style={styles.summaryValue}>₦{data.posTotal.toLocaleString('en-NG')}</Text>
+                  <Text style={styles.summaryValue}>NGN {data.posTotal.toLocaleString('en-NG')}</Text>
                 </View>
              </View>
           </View>
@@ -177,10 +177,10 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
               return (
                 <View key={`var-${i}`} style={{ flexDirection: 'row', padding: 4, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                   <Text style={{ flex: 1, fontSize: 8 }}>{row.label}</Text>
-                  <Text style={{ flex: 1, fontSize: 8, textAlign: 'right' }}>₦{row.expected.toLocaleString('en-NG')}</Text>
-                  <Text style={{ flex: 1, fontSize: 8, textAlign: 'right', fontWeight: 'bold' }}>₦{row.actual.toLocaleString('en-NG')}</Text>
+                  <Text style={{ flex: 1, fontSize: 8, textAlign: 'right' }}>NGN {row.expected.toLocaleString('en-NG')}</Text>
+                  <Text style={{ flex: 1, fontSize: 8, textAlign: 'right', fontWeight: 'bold' }}>NGN {row.actual.toLocaleString('en-NG')}</Text>
                   <Text style={{ flex: 1, fontSize: 8, textAlign: 'right', color: variance === 0 ? '#10B981' : (variance < 0 ? '#EF4444' : '#F59E0B') }}>
-                    {variance === 0 ? 'BALANCED' : (variance > 0 ? `+₦${variance.toLocaleString('en-NG')}` : `-₦${Math.abs(variance).toLocaleString('en-NG')}`)}
+                    {variance === 0 ? 'BALANCED' : (variance > 0 ? `+NGN ${variance.toLocaleString('en-NG')}` : `-NGN ${Math.abs(variance).toLocaleString('en-NG')}`)}
                   </Text>
                 </View>
               );
@@ -203,7 +203,7 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
                     const val = k.replace('n', '');
                     return (
                       <Text key={k} style={{ fontSize: 8, color: '#6B7280', marginRight: 10, marginBottom: 2 }}>
-                        ₦{val} x {v}
+                        NGN {val} x {v}
                       </Text>
                     );
                   })}
@@ -214,7 +214,7 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
           <View style={styles.netBox}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={styles.netText}>PHYSICAL CASH REMITTED:</Text>
-              <Text style={styles.netText}>₦{(data.countedCash || 0).toLocaleString('en-NG')}</Text>
+              <Text style={styles.netText}>NGN {(data.countedCash || 0).toLocaleString('en-NG')}</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
               <Text style={{ fontSize: 9, color: '#92400E' }}>Remitted By: {data.lockedBy}</Text>
@@ -242,7 +242,7 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
             <View style={styles.tableColNarrow}><Text style={styles.tableCell}>{t.type}</Text></View>
             <View style={styles.tableColWide}><Text style={styles.tableCell}>{t.name}</Text></View>
             <View style={styles.tableColWide}><Text style={styles.tableCell}>{t.detail}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>₦{t.amount.toLocaleString('en-NG')}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>NGN {t.amount.toLocaleString('en-NG')}</Text></View>
             <View style={styles.tableCol}><Text style={styles.tableCell}>{t.mode}</Text></View>
           </View>
         ))}

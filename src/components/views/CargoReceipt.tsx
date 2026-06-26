@@ -35,7 +35,7 @@ export interface CargoReceiptData {
 
 function formatNaira(n: number | string): string {
   const num = typeof n === 'string' ? parseFloat(n) : n;
-  return '₦' + (num || 0).toLocaleString('en-NG', {
+  return 'NGN ' + (num || 0).toLocaleString('en-NG', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
@@ -113,8 +113,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 2,
   },
-  qrContainer: { alignItems: "center", marginVertical: 6 },
-  qrImage: { width: 100, height: 100 },
+  qrContainer: { alignItems: "center", marginVertical: 4 },
+  qrImage: { width: 80, height: 80 },
   pinContainer: {
     marginTop: 4,
     padding: 6,
@@ -147,18 +147,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   tagRoute: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     fontFamily: "Helvetica-Bold",
     textAlign: "center",
-    marginVertical: 6,
+    marginVertical: 4,
   },
   tagAwb: {
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: "Helvetica-Bold",
     textAlign: "center",
-    marginVertical: 6,
+    marginVertical: 4,
   },
   tagDetailsRow: {
     flexDirection: "row",
@@ -260,7 +260,7 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => (
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Weight:</Text>
-        <Text style={styles.value}>{data.kg} KG</Text>
+        <Text style={styles.value}>{Math.round(data.kg)} KG</Text>
       </View>
 
       <View style={styles.divider} />
@@ -335,13 +335,13 @@ const CargoWaybillOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
 
           {data.qrCodeDataUrl ? (
             <View style={styles.qrContainer}>
-              <Image src={data.qrCodeDataUrl} style={{ width: 100, height: 100 }} />
+              <Image src={data.qrCodeDataUrl} style={{ width: 75, height: 75 }} />
             </View>
           ) : null}
 
-          <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6, fontFamily: 'Courier' }}>{data.entryRef}</Text>
+          <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 4, fontFamily: 'Courier' }}>REF: {data.entryRef}</Text>
 
-          <Text style={styles.tagAwb}>{data.awbTagNumber}</Text>
+          <Text style={styles.tagAwb}>AWB: {data.awbTagNumber}</Text>
 
           <View style={styles.tagDetailsRow}>
             <View style={styles.tagDetailBox}>
@@ -350,7 +350,7 @@ const CargoWaybillOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
             </View>
             <View style={styles.tagDetailBox}>
               <Text style={styles.tagDetailLabel}>WEIGHT (KG)</Text>
-              <Text style={styles.tagDetailValue}>{data.kg}</Text>
+              <Text style={styles.tagDetailValue}>{Math.round(data.kg)}</Text>
             </View>
           </View>
 

@@ -48,7 +48,7 @@ export const HtmlPrintReceipt = ({ data }: { data: CargoReceiptData }) => {
         </div>
         <div className="flex justify-between">
           <span className="text-[8px] uppercase">Weight:</span>{" "}
-          <span className="font-bold text-[10px]">{data.kg} kg</span>
+          <span className="font-bold text-[10px]">{Math.round(data.kg)} kg</span>
         </div>
         <div className="flex justify-between">
           <span className="text-[8px] uppercase">Route:</span>{" "}
@@ -65,7 +65,7 @@ export const HtmlPrintReceipt = ({ data }: { data: CargoReceiptData }) => {
       <div className="border-t border-black py-1 my-1 flex justify-between items-center">
         <span className="text-[8px] uppercase font-bold">Amount Charged:</span>
         <span className="text-[16px] font-bold tracking-tight">
-          ₦{data.amount.toLocaleString()}
+          NGN {data.amount.toLocaleString()}
         </span>
       </div>
 

@@ -46,7 +46,7 @@ export interface MarketingDailySummaryData {
 
 function formatNaira(n: number | string): string {
   const num = typeof n === 'string' ? parseFloat(n) : n;
-  return '₦' + (num || 0).toLocaleString('en-NG', {
+  return 'NGN ' + (num || 0).toLocaleString('en-NG', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
@@ -398,7 +398,7 @@ const MarketingDailySummaryPDF = ({
             <Text style={summaryStyles.tableCellHeader}>Bags</Text>
           </View>
           <View style={summaryStyles.tableCol}>
-            <Text style={summaryStyles.tableCellHeader}>Amount (₦)</Text>
+            <Text style={summaryStyles.tableCellHeader}>Amount (NGN)</Text>
           </View>
           <View style={summaryStyles.tableCol}>
             <Text style={summaryStyles.tableCellHeader}>Mode</Text>
@@ -437,13 +437,13 @@ const MarketingDailySummaryPDF = ({
               REVENUE
             </Text>
             <Text style={{ fontSize: 9, marginBottom: 3 }}>
-              Total Sales: ₦{data.totalSales.toLocaleString("en-NG")}
+              Total Sales: NGN {data.totalSales.toLocaleString("en-NG")}
             </Text>
             <Text style={{ fontSize: 9, marginBottom: 3 }}>
-              Cash Sales: ₦{data.cashSales.toLocaleString("en-NG")}
+              Cash Sales: NGN {data.cashSales.toLocaleString("en-NG")}
             </Text>
             <Text style={{ fontSize: 9 }}>
-              Transfer/POS: ₦{data.transferSales.toLocaleString("en-NG")}
+              Transfer/POS: NGN {data.transferSales.toLocaleString("en-NG")}
             </Text>
           </View>
         </View>
@@ -455,12 +455,11 @@ const MarketingDailySummaryPDF = ({
             </Text>
             {data.expenses.map((exp, i) => (
               <Text key={i} style={{ fontSize: 9, marginBottom: 3 }}>
-                {exp.type} - {exp.description}: ₦
-                {exp.amount.toLocaleString("en-NG")}
+                {exp.type} - {exp.description}: NGN {exp.amount.toLocaleString("en-NG")}
               </Text>
             ))}
             <Text style={{ fontSize: 9, fontWeight: "bold", marginTop: 3 }}>
-              Total Expenses: ₦{data.totalExpenses.toLocaleString("en-NG")}
+              Total Expenses: NGN {data.totalExpenses.toLocaleString("en-NG")}
             </Text>
           </View>
         </View>
@@ -468,7 +467,7 @@ const MarketingDailySummaryPDF = ({
 
       <View style={summaryStyles.balanceBox}>
         <Text style={summaryStyles.balanceText}>
-          BALANCE TO REMIT: ₦{data.balanceToRemit.toLocaleString("en-NG")}
+          BALANCE TO REMIT: NGN {data.balanceToRemit.toLocaleString("en-NG")}
         </Text>
         <Text style={{ fontSize: 8, color: "#065F46", marginTop: 2 }}>
           (Cash Sales minus Total Expenses)

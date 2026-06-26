@@ -42,7 +42,7 @@ export interface ReportDataPayload {
   hubs: any;
 }
 
-const fmt = (num: number) => `₦${(num || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmt = (num: number) => `NGN ${(num || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const RevenueTable = ({ data }: { data: any }) => (
   <View>

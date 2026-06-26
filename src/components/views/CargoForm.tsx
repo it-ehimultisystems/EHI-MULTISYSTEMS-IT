@@ -156,7 +156,7 @@ export const CargoForm = ({
 
   // Auto calculate amount for retail
   useEffect(() => {
-    const w = parseFloat(kg) || 0;
+    const w = Math.round(parseFloat(kg)) || 0;
     const rate = standardRates[route] || 500;
     if (w > 0) {
       setAmount((w * rate).toString());
@@ -590,7 +590,7 @@ export const CargoForm = ({
       awb_tag_number: awb,
       airline: airline,
       pieces: parseInt(pcs) || 1,
-      kg: parseFloat(kg) || 0,
+      kg: Math.round(parseFloat(kg)) || 0,
       pickupPin,
       consigneePhone: consigneePhone.trim(),
     } as Transaction;
@@ -781,7 +781,7 @@ export const CargoForm = ({
       consignee: successTx.name,
       awbTagNumber: successTx.awb_tag_number || awb,
       pieces: successTx.pieces || parseInt(pcs),
-      kg: successTx.kg || parseFloat(kg),
+      kg: successTx.kg || Math.round(parseFloat(kg)),
       route: successTx.detail.split(" · ")[4] || route,
       contentType: successTx.detail.split(" · ")[5] || contentType,
       amount: successTx.amount,

@@ -32,7 +32,7 @@ export interface VJReceiptData {
 
 function formatNaira(n: number | string): string {
   const num = typeof n === 'string' ? parseFloat(n) : n;
-  return '₦' + (num || 0).toLocaleString('en-NG', {
+  return 'NGN ' + (num || 0).toLocaleString('en-NG', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textTransform: "uppercase",
   },
-  qrContainer: { alignItems: "center", marginVertical: 6 },
-  qrImage: { width: 100, height: 100 },
+  qrContainer: { alignItems: "center", marginVertical: 4 },
+  qrImage: { width: 80, height: 80 },
 });
 
 const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => (
@@ -176,20 +176,20 @@ const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => (
       <Text style={styles.sectionTitle}>BAGGAGE BREAKDOWN</Text>
       <View style={styles.row}>
         <Text style={styles.label}>Total weight:</Text>
-        <Text style={styles.value}>{data.totalBaggage} KG</Text>
+        <Text style={styles.value}>{Math.round(data.totalBaggage)} KG</Text>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Free allow.:</Text>
-        <Text style={styles.value}>{data.freeAllowance} KG</Text>
+        <Text style={styles.value}>{Math.round(data.freeAllowance)} KG</Text>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Excess chrg:</Text>
-        <Text style={styles.value}>{data.excessKg} KG</Text>
+        <Text style={styles.value}>{Math.round(data.excessKg)} KG</Text>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Rate per KG:</Text>
         <Text style={styles.value}>
-          ₦{data.ratePerKg.toLocaleString("en-NG")}
+          NGN {data.ratePerKg.toLocaleString("en-NG")}
         </Text>
       </View>
 
