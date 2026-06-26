@@ -16,15 +16,14 @@ export const HtmlPrintReceipt = ({ data }: { data: CargoReceiptData }) => {
       <div className="text-center font-bold text-[10px] mb-1 uppercase">
         Cargo Entry Receipt
       </div>
+      <div className="text-center font-bold text-[9px] mb-1">
+        ORIGIN: {data.hubName}
+      </div>
 
       <div className="space-y-0.5 mb-1">
         <div className="flex justify-between">
           <span className="text-[8px] uppercase">Date:</span>{" "}
           <span className="font-bold text-[10px]">{data.date}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-[8px] uppercase">Origin State:</span>{" "}
-          <span className="font-bold text-[10px]">{data.hubName}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-[8px] uppercase">Ref:</span>{" "}

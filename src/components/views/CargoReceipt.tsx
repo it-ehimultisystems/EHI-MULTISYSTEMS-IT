@@ -184,6 +184,7 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => (
         <AirlineLogoPDF airline={data.airline} width={50} />
       </View>
       <Text style={styles.title}>CARGO ENTRY RECEIPT</Text>
+      <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 10 }}>Origin: {data.hubName}</Text>
 
       {data.qrCodeDataUrl ? (
         <View style={styles.qrContainer}>
@@ -217,10 +218,6 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => (
       <View style={styles.row}>
         <Text style={styles.label}>Date:</Text>
         <Text style={styles.value}>{data.date}</Text>
-      </View>
-      <View style={styles.row}>
-        <Text style={styles.label}>Origin State:</Text>
-        <Text style={styles.value}>{data.hubName}</Text>
       </View>
 
       <View style={styles.divider} />
@@ -319,6 +316,7 @@ const CargoWaybillOnlyPDF = ({ data }: { data: CargoReceiptData }) => (
         </View>
 
         <Text style={styles.tagRoute}>{data.route || "ROUTING"}</Text>
+        <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 5 }}>Origin: {data.hubName}</Text>
         <Text style={styles.tagAwb}>{data.awbTagNumber}</Text>
 
         <View style={styles.tagDetailsRow}>

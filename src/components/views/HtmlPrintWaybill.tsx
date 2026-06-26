@@ -19,6 +19,10 @@ export const HtmlPrintWaybill = ({ data }: { data: CargoReceiptData }) => {
         {data.route || "ROUTING"}
       </div>
 
+      <div className="text-center font-bold text-[10px] mb-1">
+        ORIGIN: {data.hubName}
+      </div>
+
       <div className="flex justify-between font-bold text-[10px] mb-1 border-b border-black pb-0.5">
         <span>{data.airline}</span>
         <span>AWB: {data.awbTagNumber}</span>
