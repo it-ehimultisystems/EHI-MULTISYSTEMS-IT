@@ -5,12 +5,14 @@ let _client: SupabaseClient;
 function buildClient(): SupabaseClient {
   const url =
     (import.meta as any).env?.VITE_SUPABASE_URL ||
-    localStorage.getItem('ehi_supabase_url');
+    localStorage.getItem('ehi_supabase_url') ||
+    'https://dummy.supabase.co';
   const key =
     (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
-    localStorage.getItem('ehi_supabase_anon_key');
+    localStorage.getItem('ehi_supabase_anon_key') ||
+    'dummy-key';
 
-  return createClient(url || '', key || '', {
+  return createClient(url, key, {
     auth: { persistSession: true, autoRefreshToken: true },
   });
 }
@@ -32,7 +34,7 @@ export function getConnectionMode(): 'live' | 'unconfigured' {
     (import.meta as any).env?.VITE_SUPABASE_URL ||
     localStorage.getItem('ehi_supabase_url') ||
     '';
-  return url && url.includes('supabase.co') ? 'live' : 'unconfigured';
+  return url && url.includes('supabase.co') && !url.includes('dummy') ? 'live' : 'unconfigured';
 }
 
 export async function testSupabaseConnection(): Promise<{

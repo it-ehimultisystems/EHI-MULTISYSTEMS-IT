@@ -70,6 +70,92 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     pendingTxRef.current = [];
   }, []);
 
+  // Fetch Initial Data
+  useEffect(() => {
+    if (isOffline) return;
+    
+    const fetchInitial = async () => {
+      try {
+        const [cargoRes, vjRes, mktRes] = await Promise.all([
+          supabase.from('cargo_entries').select('*').order('created_at', { ascending: false }).limit(100),
+          supabase.from('manifests').select('*').order('created_at', { ascending: false }).limit(100),
+          supabase.from('marketing_entries').select('*').order('created_at', { ascending: false }).limit(100)
+        ]);
+
+        const allTx: Transaction[] = [];
+
+        if (cargoRes.data) {
+          cargoRes.data.forEach(r => {
+            allTx.push({
+              id: r.entry_ref || r.id,
+              name: r.consignee_name || 'Cargo',
+              detail: `${r.airline || ''} · ${r.awb_tag_number || ''} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg · ${r.route || ''} · ${r.content_type || 'Package'}`,
+              amount: r.amount || 0,
+              mode: r.receipt_mode || r.payment_mode || 'Cash',
+              time: new Date(r.created_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+              type: 'cargo',
+              status: r.status || 'Intake',
+              awb_tag_number: r.awb_tag_number,
+              kg: r.total_kg,
+              pieces: r.total_pcs,
+              created_at: r.created_at,
+              airline: r.airline,
+              bank: r.bank
+            });
+          });
+        }
+
+        if (vjRes.data) {
+          vjRes.data.forEach(r => {
+            allTx.push({
+              id: r.transaction_id || r.id,
+              name: r.passenger_name || 'VJ Passenger',
+              detail: `${r.pnr || ''} · ${r.destination || ''} · ${r.total_pcs || 1}pcs · ${r.excess_kg || r.total_kg || 0}kg`,
+              amount: r.amount || 0,
+              mode: r.payment_mode || 'POS',
+              time: new Date(r.created_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+              type: 'baggage',
+              status: 'Delivered',
+              created_at: r.created_at,
+              bank: r.bank
+            });
+          });
+        }
+
+        if (mktRes.data) {
+          mktRes.data.forEach(r => {
+            allTx.push({
+              id: r.entry_ref || r.id,
+              name: r.customer_name || 'Customer',
+              detail: `${r.route || ''} · ${r.qty_big_bag || 0}BB ${r.qty_med_bag || 0}MB ${r.qty_small_bag || 0}SB`,
+              amount: r.amount_paid || 0,
+              mode: r.payment_mode || 'Cash',
+              time: new Date(r.created_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+              type: 'marketing',
+              status: 'Intake',
+              created_at: r.created_at,
+              bank: r.bank
+            });
+          });
+        }
+
+        allTx.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+        
+        setTransactions(prev => {
+          // Merge to prevent overwriting ones added locally before fetch completes
+          const combined = [...prev, ...allTx];
+          const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+          unique.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+          return unique.slice(0, 300);
+        });
+      } catch (err) {
+        console.error("Failed to fetch initial tx:", err);
+      }
+    };
+    
+    fetchInitial();
+  }, [isOffline]);
+
   // Supabase real-time
   useEffect(() => {
     if (isOffline) return;
