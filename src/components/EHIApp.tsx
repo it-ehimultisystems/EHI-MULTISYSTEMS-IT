@@ -77,9 +77,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     const fetchInitial = async () => {
       try {
         const [cargoRes, vjRes, mktRes] = await Promise.all([
-          supabase.from('cargo_entries').select('*').order('created_at', { ascending: false }).limit(100),
-          supabase.from('manifests').select('*').order('created_at', { ascending: false }).limit(100),
-          supabase.from('marketing_entries').select('*').order('created_at', { ascending: false }).limit(100)
+          supabase.from('cargo_entries').select('*').order('created_at', { ascending: false }).limit(500),
+          supabase.from('manifests').select('*').order('created_at', { ascending: false }).limit(500),
+          supabase.from('marketing_entries').select('*').order('created_at', { ascending: false }).limit(500)
         ]);
 
         const allTx: Transaction[] = [];
@@ -146,7 +146,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           const combined = [...prev, ...allTx];
           const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
           unique.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-          return unique.slice(0, 300);
+          return unique.slice(0, 1000);
         });
       } catch (err) {
         console.error("Failed to fetch initial tx:", err);

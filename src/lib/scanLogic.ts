@@ -33,7 +33,7 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
   const { data: cargoData } = await supabase
     .from('cargo_entries')
     .select('*')
-    .or(`id.eq.${cleanRef},awb_tag_number.eq.${cleanRef}`)
+    .or(`entry_ref.eq.${cleanRef},awb_tag_number.eq.${cleanRef}`)
     .limit(1)
     .maybeSingle();
 
@@ -43,7 +43,7 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
   const { data: vjData } = await supabase
     .from('manifests')
     .select('*')
-    .eq('id', cleanRef)
+    .eq('transaction_id', cleanRef)
     .limit(1)
     .maybeSingle();
 
@@ -371,14 +371,14 @@ export async function logScanEvent(
 
   // Also update cargo_entries status if it exists
   let newStatus = '';
-  if (mode === 'ARRIVE') newStatus = 'Arrive';
-  if (mode === 'DEPART') newStatus = 'Depart';
-  if (mode === 'DELIVER') newStatus = 'Delivers';
+  if (mode === 'ARRIVE') newStatus = 'Arrived';
+  if (mode === 'DEPART') newStatus = 'In-Transit';
+  if (mode === 'DELIVER') newStatus = 'Delivered';
   
   if (newStatus) {
-    const { data } = await supabase.from('cargo_entries').select('id').eq('id', ref).limit(1).maybeSingle();
+    const { data } = await supabase.from('cargo_entries').select('entry_ref').eq('entry_ref', ref).limit(1).maybeSingle();
     if (data) {
-      await supabase.from('cargo_entries').update({ status: newStatus }).eq('id', ref);
+      await supabase.from('cargo_entries').update({ status: newStatus }).eq('entry_ref', ref);
     }
   }
 }

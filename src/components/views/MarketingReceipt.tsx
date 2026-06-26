@@ -5,23 +5,8 @@ import {
   View,
   StyleSheet,
   pdf,
-  Font,
 } from "@react-pdf/renderer";
 import { EHILogoPDF } from "../EHILogoPDF";
-
-Font.register({
-  family: "Roboto",
-  fonts: [
-    {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf",
-      fontWeight: 400,
-    },
-    {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Medium.ttf",
-      fontWeight: 700,
-    },
-  ],
-});
 
 export interface MarketingReceiptData {
   entryRef: string;
@@ -59,8 +44,16 @@ export interface MarketingDailySummaryData {
   balanceToRemit: number;
 }
 
+function formatNaira(n: number | string): string {
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  return '₦' + (num || 0).toLocaleString('en-NG', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 const styles = StyleSheet.create({
-  page: { padding: 15, fontFamily: "Roboto", backgroundColor: "#FFFFFF" },
+  page: { padding: 15, fontFamily: "Helvetica", backgroundColor: "#FFFFFF" },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -197,10 +190,7 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => (
         <View style={styles.row}>
           <Text style={styles.amountLabel}>TOTAL:</Text>
           <Text style={styles.amountValue}>
-            ₦ {data.amount.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {formatNaira(data.amount)}
           </Text>
         </View>
         <View style={styles.row}>
@@ -224,7 +214,13 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => (
       <View style={styles.divider} />
 
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>Powered by EHI Logistics Platform</Text>
+        <Text style={styles.footerText}>EHI Multisystems Nigeria Limited</Text>
+      </View>
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>Track your cargo: ehimultisystems.com</Text>
+      </View>
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>{data.entryRef} • {data.date}</Text>
       </View>
     </Page>
   </Document>
@@ -241,7 +237,7 @@ export const downloadMarketingReceipt = async (data: MarketingReceiptData) => {
 };
 
 const summaryStyles = StyleSheet.create({
-  page: { padding: 40, fontFamily: "Roboto" },
+  page: { padding: 40, fontFamily: "Helvetica" },
   header: { marginBottom: 20 },
   companyName: {
     fontSize: 16,

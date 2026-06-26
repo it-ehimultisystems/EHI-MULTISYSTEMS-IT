@@ -5,26 +5,11 @@ import {
   View,
   StyleSheet,
   pdf,
-  Font,
   Image,
 } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
-
-Font.register({
-  family: "Roboto",
-  fonts: [
-    {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf",
-      fontWeight: 400,
-    },
-    {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Medium.ttf",
-      fontWeight: 700,
-    },
-  ],
-});
 
 export interface CargoReceiptData {
   entryRef: string;
@@ -48,24 +33,33 @@ export interface CargoReceiptData {
   pickupPin?: string;
 }
 
+function formatNaira(n: number | string): string {
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  return '₦' + (num || 0).toLocaleString('en-NG', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 const styles = StyleSheet.create({
-  page: { padding: 15, fontFamily: "Roboto", backgroundColor: "#FFFFFF" },
+  page: { padding: 10, fontFamily: "Helvetica", backgroundColor: "#FFFFFF" },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 6,
   },
   title: {
     fontSize: 12,
     color: "#000000",
     textTransform: "uppercase",
-    marginBottom: 15,
+    marginBottom: 6,
     alignSelf: "center",
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
   },
   divider: {
-    marginVertical: 6,
+    marginVertical: 4,
     borderBottomWidth: 1.5,
     borderBottomColor: "#000000",
     borderBottomStyle: "dashed",
@@ -81,17 +75,19 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     width: 70,
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
   },
   value: {
     fontSize: 10,
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     color: "#000000",
     flex: 1,
     textAlign: "right",
   },
   amountContainer: {
-    marginTop: 10,
-    padding: 8,
+    marginTop: 6,
+    padding: 6,
     borderTopWidth: 2,
     borderBottomWidth: 2,
     borderColor: "#000000",
@@ -101,25 +97,27 @@ const styles = StyleSheet.create({
     color: "#000000",
     textTransform: "uppercase",
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
   },
   amountValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     color: "#000000",
     textAlign: "right",
   },
-  footerRow: { flexDirection: "row", justifyContent: "center", marginTop: 10 },
+  footerRow: { flexDirection: "row", justifyContent: "center", marginTop: 4 },
   footerText: {
     fontSize: 8,
     color: "#000000",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 2,
   },
-  qrContainer: { alignItems: "center", marginVertical: 10 },
-  qrImage: { width: 90, height: 90 },
+  qrContainer: { alignItems: "center", marginVertical: 6 },
+  qrImage: { width: 100, height: 100 },
   pinContainer: {
-    marginTop: 8,
-    padding: 8,
+    marginTop: 4,
+    padding: 6,
     borderWidth: 2,
     borderColor: "#000000",
     alignItems: "center",
@@ -128,14 +126,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#000000",
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
   },
   pinValue: {
-    fontSize: 26,
+    fontSize: 24,
     fontFamily: "Courier",
     fontWeight: "bold",
     color: "#000000",
-    letterSpacing: 5,
+    letterSpacing: 4,
     marginVertical: 4,
   },
   pinHelper: { fontSize: 8, color: "#000000", textAlign: "center" },
@@ -143,48 +142,61 @@ const styles = StyleSheet.create({
   tagTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 6,
   },
   tagRoute: {
-    fontSize: 36,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginVertical: 10,
-  },
-  tagAwb: {
     fontSize: 24,
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     textAlign: "center",
-    marginVertical: 10,
+    marginVertical: 6,
+  },
+  tagAwb: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
+    textAlign: "center",
+    marginVertical: 6,
   },
   tagDetailsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginVertical: 10,
+    marginVertical: 6,
   },
   tagDetailBox: {
     alignItems: "center",
-    padding: 5,
+    padding: 4,
     borderWidth: 1,
     borderColor: "#000",
     flex: 1,
     marginHorizontal: 2,
   },
   tagDetailLabel: { fontSize: 8, textTransform: "uppercase" },
-  tagDetailValue: { fontSize: 14, fontWeight: "bold" },
+  tagDetailValue: { fontSize: 14, fontWeight: "bold", fontFamily: "Helvetica-Bold" },
+  stampBox: {
+    marginTop: 8,
+    height: 40,
+    borderWidth: 1,
+    borderColor: "#000",
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+  }
 });
 
+// Note: The entire receipt must render within 297mm height (A4) or 200mm (thermal)
 const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => (
   <Document>
-    <Page size={[226, 700]} style={styles.page}>
+    <Page size={[226, 566]} style={styles.page}>
       {/* Logos Header */}
       <View style={styles.headerRow}>
         <EHILogoPDF width={50} />
         <AirlineLogoPDF airline={data.airline} width={50} />
       </View>
       <Text style={styles.title}>CARGO ENTRY RECEIPT</Text>
-      <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 10 }}>Origin: {data.hubName}</Text>
+      <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6 }}>Origin: {data.hubName}</Text>
 
       {data.qrCodeDataUrl ? (
         <View style={styles.qrContainer}>
@@ -257,10 +269,7 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => (
         <View style={styles.row}>
           <Text style={styles.amountLabel}>AMOUNT:</Text>
           <Text style={styles.amountValue}>
-            ₦ {data.amount.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {formatNaira(data.amount)}
           </Text>
         </View>
         <View style={styles.row}>
@@ -294,64 +303,81 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => (
       ) : null}
 
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>Logged by: {data.agentName}</Text>
+        <Text style={styles.footerText}>EHI Multisystems Nigeria Limited</Text>
       </View>
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>Powered by EHI Logistics Platform</Text>
+        <Text style={styles.footerText}>Track your cargo: ehimultisystems.com</Text>
+      </View>
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>{data.entryRef} • {data.date}</Text>
       </View>
     </Page>
   </Document>
 );
 
-const CargoWaybillOnlyPDF = ({ data }: { data: CargoReceiptData }) => (
-  <Document>
-    <Page size="A6" style={styles.page}>
-      {/* --- TAG SECTION --- */}
-      <View style={styles.tagContainer}>
-        <Text style={styles.tagTitle}>CARGO ROUTING TAG</Text>
-
-        <View style={styles.headerRow}>
-          <EHILogoPDF width={40} />
-          <AirlineLogoPDF airline={data.airline} width={40} />
-        </View>
-
-        <Text style={styles.tagRoute}>{data.route || "ROUTING"}</Text>
-        <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 5 }}>Origin: {data.hubName}</Text>
-        <Text style={styles.tagAwb}>{data.awbTagNumber}</Text>
-
-        <View style={styles.tagDetailsRow}>
-          <View style={styles.tagDetailBox}>
-            <Text style={styles.tagDetailLabel}>PIECES</Text>
-            <Text style={styles.tagDetailValue}>{data.pieces}</Text>
+const CargoWaybillOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
+  // Extract hub code from hub name for origin (first 3 chars or predefined logic)
+  const originCode = (data.hubName || "LOS").substring(0, 3).toUpperCase();
+  const destName = data.route || "DESTINATION";
+  
+  return (
+    <Document>
+      <Page size="A6" style={styles.page}>
+        {/* --- TAG SECTION --- */}
+        <View style={styles.tagContainer}>
+          <View style={styles.headerRow}>
+            <EHILogoPDF width={40} />
+            <AirlineLogoPDF airline={data.airline} width={40} />
           </View>
-          <View style={styles.tagDetailBox}>
-            <Text style={styles.tagDetailLabel}>WEIGHT (KG)</Text>
-            <Text style={styles.tagDetailValue}>{data.kg}</Text>
+          
+          <Text style={styles.tagTitle}>CARGO ROUTING TAG</Text>
+          <Text style={styles.tagRoute}>{originCode} → {destName}</Text>
+
+          {data.qrCodeDataUrl ? (
+            <View style={styles.qrContainer}>
+              <Image src={data.qrCodeDataUrl} style={{ width: 100, height: 100 }} />
+            </View>
+          ) : null}
+
+          <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6, fontFamily: 'Courier' }}>{data.entryRef}</Text>
+
+          <Text style={styles.tagAwb}>{data.awbTagNumber}</Text>
+
+          <View style={styles.tagDetailsRow}>
+            <View style={styles.tagDetailBox}>
+              <Text style={styles.tagDetailLabel}>PIECES</Text>
+              <Text style={styles.tagDetailValue}>{data.pieces}</Text>
+            </View>
+            <View style={styles.tagDetailBox}>
+              <Text style={styles.tagDetailLabel}>WEIGHT (KG)</Text>
+              <Text style={styles.tagDetailValue}>{data.kg}</Text>
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Consignee:</Text>
+            <Text style={styles.value}>{data.consignee}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Date:</Text>
+            <Text style={styles.value}>{data.date}</Text>
+          </View>
+
+          {data.pickupPin ? (
+            <View style={styles.pinContainer}>
+              <Text style={styles.pinLabel}>PICKUP PIN: <Text style={styles.pinValue}>{data.pickupPin.split('').join('  ')}</Text></Text>
+              <Text style={styles.pinHelper}>Consignee must present PIN</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.stampBox}>
+            <Text style={{ fontSize: 10, color: "#9ca3af", fontWeight: "bold", fontFamily: "Helvetica-Bold" }}>HUB RECEIVING STAMP / SIGN</Text>
           </View>
         </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Consignee:</Text>
-          <Text style={styles.value}>{data.consignee}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Date:</Text>
-          <Text style={styles.value}>{data.date}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Ref:</Text>
-          <Text style={styles.value}>{data.entryRef}</Text>
-        </View>
-
-        {data.qrCodeDataUrl ? (
-          <View style={styles.qrContainer}>
-            <Image src={data.qrCodeDataUrl} style={{ width: 60, height: 60 }} />
-          </View>
-        ) : null}
-      </View>
-    </Page>
-  </Document>
-);
+      </Page>
+    </Document>
+  );
+};
 
 export const downloadCargoReceipt = async (data: CargoReceiptData) => {
   if (!data.qrCodeDataUrl) {

@@ -10,7 +10,8 @@ export const fmt = (amount: number) => {
 };
 
 export const generatePaymentNarration = (hubCode: string, serial: string | number): string => {
-  const code = (hubCode || 'XXX').toUpperCase().substring(0, 3).padEnd(3, 'X');
+  let code = (hubCode || 'XXX').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3);
+  if (code.length < 2) code = code.padEnd(3, 'X');
   const d = new Date();
   const yymmdd = [
     d.getFullYear().toString().slice(2),
@@ -28,8 +29,8 @@ export const extractNarrationFromText = (text: string): string | null => {
 
 export const uid = (prefix: 'WB' | 'VJ' | 'AC' | 'MK' | 'CG' | 'TR'): string => {
   const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-  const randomHex = Math.floor(Math.random() * 65536).toString(16).toUpperCase().padStart(4, '0');
-  return `${prefix}-${dateStr}-${randomHex}`;
+  const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `${prefix}-${dateStr}-${randomStr}`;
 };
 
 export const tnow = (): string => {

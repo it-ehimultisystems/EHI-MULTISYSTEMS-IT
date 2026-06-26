@@ -1,6 +1,7 @@
 import { db } from './db';
 import { supabase } from './supabase';
 import Dexie from 'dexie';
+import { appLogger } from './logger';
 
 export async function cleanupOldQueue(): Promise<void> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -38,17 +39,21 @@ export async function writeWithOfflineSupport(
       delete supabasePayload.id;
     }
 
-    const { error } = await supabase.from(tableName).insert(supabasePayload);
+    const onConflictColumn = tableName === 'manifests' ? 'transaction_id' : 'entry_ref';
+    const { error } = await supabase.from(tableName).upsert(supabasePayload, { onConflict: onConflictColumn });
     if (!error) {
       await db.sync_queue.where('record_id').equals(payload.id as string).delete();
       await (db[tableName] as Dexie.Table).where('id').equals(payload.id as string).modify({ synced: 1 });
       return { success: true, offline: false };
     } else {
       console.error('Supabase insert error (falling back to offline queue):', error);
-      return { success: false, offline: true, error: error.message || error.details || JSON.stringify(error) };
+      const errMsg = error.message || error.details || JSON.stringify(error);
+      appLogger.log('ERROR', 'SYNC', `Supabase upsert error on ${tableName}: ${errMsg}`);
+      return { success: false, offline: true, error: errMsg };
     }
   } catch (err) {
     console.error('Network exception in writeWithOfflineSupport:', err);
+    appLogger.log('ERROR', 'NETWORK', `Exception in writeWithOfflineSupport: ${err instanceof Error ? err.message : String(err)}`);
     // Network unavailable — leave in queue
     return { success: false, offline: true, error: err instanceof Error ? err.message : String(err) };
   }
@@ -73,8 +78,12 @@ export async function processSyncQueue(): Promise<number> {
       if (!error) {
         await db.sync_queue.delete(item.id!);
         synced++;
+      } else {
+        const errMsg = error.message || error.details || JSON.stringify(error);
+        appLogger.log('ERROR', 'SYNC_QUEUE', `Background sync failed for ${item.table_name}: ${errMsg}`);
       }
-    } catch {
+    } catch (err) {
+      appLogger.log('ERROR', 'SYNC_QUEUE', `Background sync exception for ${item.table_name}: ${err instanceof Error ? err.message : String(err)}`);
       // leave for next sync attempt
     }
   }

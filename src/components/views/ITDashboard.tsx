@@ -118,46 +118,14 @@ export const ITDashboard = ({ user }: { user: User }) => {
     localStorage.setItem('ehi_it_proposals', JSON.stringify(newP));
   };
 
-  // Generate logs intermittently
+  // Pull real logs from appLogger
   useEffect(() => {
-    const defaultLogs: LogMessage[] = [
-      { time: '14:21:05', level: 'INFO', source: 'SYS_CORE', text: 'EHI Multi-Systems Logistics Daemon booted successfully' },
-      { time: '14:21:06', level: 'DEBUG', source: 'DEXIE_DB', text: 'Connected to local IndexedDB [EHILocalDB] - Version 4' },
-      { time: '14:21:10', level: 'INFO', source: 'SYNC', text: 'Offline sync scheduler initialized. Polling interval: 15s' },
-      { time: '14:21:15', level: 'INFO', source: 'CONN', text: 'Supabase Web-Socket connection established cleanly' },
-    ];
-    setLogs(defaultLogs);
-
-    const interval = setInterval(() => {
-      const levels: LogMessage['level'][] = ['INFO', 'DEBUG', 'WARN', 'ERROR'];
-      const sources = ['SYNC', 'CARGO_AGENT', 'WHATSAPP_API', 'POD_GPS', 'DEXIE_DB', 'NETWORK'];
-      const items = [
-        'Polled sync queue - 0 pending records found.',
-        'GPS accuracy updated: +/- 4.2m.',
-        'IndexedDB transaction completed successfully.',
-        'Carrier signal strength: strong cellular (LTE).',
-        'Cache hit for configuration rules.',
-        'Re-verified Web Hook integration signature.'
-      ];
-      const errItems = [
-        'Latency spike detected: API Gateway answered in 3240ms.',
-        'WhatsApp SMS API responded with non-200 code. Queued for automatic fallback retry.',
-        'User triggered camera initialization on unsupported canvas container.',
-        'Unable to flush sync queue - server-authoritative lock was not satisfied.'
-      ];
-
-      const rLevel: LogMessage['level'] = Math.random() < 0.15 ? 'WARN' : (Math.random() < 0.05 ? 'ERROR' : (Math.random() < 0.4 ? 'DEBUG' : 'INFO'));
-      const rSource = sources[Math.floor(Math.random() * sources.length)];
-      const textPool = rLevel === 'ERROR' || rLevel === 'WARN' ? errItems : items;
-      const rText = textPool[Math.floor(Math.random() * textPool.length)];
-
-      const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
-      setLogs(prev => [{ time: timeStr, level: rLevel, source: rSource, text: rText }, ...prev].slice(0, 50));
-    }, 4000);
-
-    return () => clearInterval(interval);
+    import('../../lib/logger').then(({ appLogger }) => {
+      const unsubscribe = appLogger.subscribe((newLogs) => {
+        setLogs(newLogs as any); // Cast slightly because of local type but they match
+      });
+      return unsubscribe;
+    });
   }, []);
 
   // Filter logs or bugs

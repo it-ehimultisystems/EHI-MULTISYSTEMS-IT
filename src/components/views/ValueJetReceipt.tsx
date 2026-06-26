@@ -5,26 +5,11 @@ import {
   View,
   StyleSheet,
   pdf,
-  Font,
   Image,
 } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
-
-Font.register({
-  family: "Roboto",
-  fonts: [
-    {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf",
-      fontWeight: 400,
-    },
-    {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Medium.ttf",
-      fontWeight: 700,
-    },
-  ],
-});
 
 export interface VJReceiptData {
   entryRef: string;
@@ -45,24 +30,33 @@ export interface VJReceiptData {
   qrCodeDataUrl?: string;
 }
 
+function formatNaira(n: number | string): string {
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  return '₦' + (num || 0).toLocaleString('en-NG', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 const styles = StyleSheet.create({
-  page: { padding: 15, fontFamily: "Roboto", backgroundColor: "#FFFFFF" },
+  page: { padding: 10, fontFamily: "Helvetica", backgroundColor: "#FFFFFF" },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 6,
   },
   title: {
     fontSize: 11,
     color: "#000000",
     textTransform: "uppercase",
-    marginBottom: 15,
+    marginBottom: 6,
     alignSelf: "center",
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
   },
   divider: {
-    marginVertical: 6,
+    marginVertical: 4,
     borderBottomWidth: 1.5,
     borderBottomColor: "#000000",
     borderBottomStyle: "dashed",
@@ -78,17 +72,19 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     width: 70,
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
   },
   value: {
     fontSize: 10,
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     color: "#000000",
     flex: 1,
     textAlign: "right",
   },
   amountContainer: {
-    marginTop: 10,
-    padding: 8,
+    marginTop: 6,
+    padding: 6,
     borderTopWidth: 2,
     borderBottomWidth: 2,
     borderColor: "#000000",
@@ -98,39 +94,43 @@ const styles = StyleSheet.create({
     color: "#000000",
     textTransform: "uppercase",
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
   },
   amountValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     color: "#000000",
     textAlign: "right",
   },
-  footerRow: { flexDirection: "row", justifyContent: "center", marginTop: 10 },
+  footerRow: { flexDirection: "row", justifyContent: "center", marginTop: 4 },
   footerText: {
     fontSize: 8,
     color: "#000000",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 2,
   },
   sectionTitle: {
     fontSize: 10,
     color: "#000000",
     fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     marginBottom: 4,
     textTransform: "uppercase",
   },
-  qrContainer: { alignItems: "center", marginVertical: 10 },
-  qrImage: { width: 90, height: 90 },
+  qrContainer: { alignItems: "center", marginVertical: 6 },
+  qrImage: { width: 100, height: 100 },
 });
 
 const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => (
   <Document>
-    <Page size="A6" style={styles.page}>
+    <Page size={[226, 566]} style={styles.page}>
       <View style={styles.headerRow}>
-        <EHILogoPDF width={70} />
-        <AirlineLogoPDF airline="ValueJet" width={70} />
+        <EHILogoPDF width={50} />
+        <AirlineLogoPDF airline="ValueJet" width={50} />
       </View>
       <Text style={styles.title}>EXCESS BAGGAGE RECEIPT</Text>
+      <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6 }}>Origin: {data.hubName}</Text>
 
       {data.qrCodeDataUrl ? (
         <View style={styles.qrContainer}>
@@ -199,10 +199,7 @@ const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => (
         <View style={styles.row}>
           <Text style={styles.amountLabel}>AMOUNT:</Text>
           <Text style={styles.amountValue}>
-            ₦ {data.amount.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {formatNaira(data.amount)}
           </Text>
         </View>
         <View style={styles.row}>
@@ -226,7 +223,13 @@ const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => (
       <View style={styles.divider} />
 
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>Powered by EHI Logistics Platform</Text>
+        <Text style={styles.footerText}>EHI Multisystems Nigeria Limited</Text>
+      </View>
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>Track your cargo: ehimultisystems.com</Text>
+      </View>
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>{data.entryRef} • {data.date}</Text>
       </View>
     </Page>
   </Document>

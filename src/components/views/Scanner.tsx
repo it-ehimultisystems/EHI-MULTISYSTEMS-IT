@@ -35,6 +35,34 @@ const playBeep = () => {
   }
 };
 
+// Play a distinct warning/alarm double pulse for wrong destination alerts
+const playWarningBeep = () => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const audioCtx = new AudioContextClass();
+    
+    const playPulse = (time: number, freq: number) => {
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(freq, time);
+      gainNode.gain.setValueAtTime(0.0, time);
+      gainNode.gain.linearRampToValueAtTime(0.15, time + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+      oscillator.start(time);
+      oscillator.stop(time + 0.2);
+    };
+    
+    playPulse(audioCtx.currentTime, 180);
+    playPulse(audioCtx.currentTime + 0.25, 150);
+  } catch (error) {
+    console.warn('Audio feedback failed to play:', error);
+  }
+};
+
 export const Scanner = ({
   user,
   transactions,
@@ -159,6 +187,9 @@ export const Scanner = ({
     setProcessing(true);
 
     try {
+      // User-requested 2-second delay to simulate verification and show location / alert
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       const result = await validateScan(code, mode, currentHub, transactions);
       
       // Clear previous popup timer if any
@@ -166,7 +197,15 @@ export const Scanner = ({
 
       let message = result.message || '';
       
-      if (result.type === 'SUCCESS_DELIVER' || result.type === 'SUCCESS_ARRIVE' || result.type === 'SUCCESS_DEPART') {
+      if (result.type === 'WRONG_DESTINATION') {
+        playWarningBeep();
+        if (showToast) {
+          showToast({
+            message: `ALERT: Wrong station detected! ${result.message}`,
+            type: 'error'
+          });
+        }
+      } else if (result.type === 'SUCCESS_DELIVER' || result.type === 'SUCCESS_ARRIVE' || result.type === 'SUCCESS_DEPART') {
         playBeep();
         
         if (result.type === 'SUCCESS_DELIVER') {
@@ -238,10 +277,10 @@ export const Scanner = ({
         message
       });
 
-      // Auto dismiss popup after 2 seconds
+      // Auto dismiss popup after 3 seconds to let users read easily
       popupTimerRef.current = setTimeout(() => {
         setPopup(prev => ({ ...prev, visible: false }));
-      }, 2000);
+      }, 3000);
 
     } catch (err) {
       console.error('Scan processing error:', err);

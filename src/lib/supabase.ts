@@ -1,6 +1,40 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { appLogger } from './logger';
 
 let _client: SupabaseClient;
+
+// A custom fetch wrapper to intercept and log Supabase network failures
+const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  try {
+    const start = Date.now();
+    const response = await fetch(input, init);
+    const duration = Date.now() - start;
+
+    if (!response.ok) {
+      // Log failed Supabase network requests
+      const urlStr = typeof input === 'string' ? input : (input instanceof Request ? input.url : input.toString());
+      // we only want to clone to read body if it's not a head request
+      let errorBody = '';
+      try {
+        const cloned = response.clone();
+        errorBody = await cloned.text();
+      } catch (e) {
+        errorBody = 'Could not read error body';
+      }
+      
+      appLogger.log('ERROR', 'SUPABASE_API', `HTTP ${response.status} on ${urlStr} (${duration}ms) - ${errorBody.slice(0, 200)}`);
+    } else if (duration > 1500) {
+      const urlStr = typeof input === 'string' ? input : (input instanceof Request ? input.url : input.toString());
+      appLogger.log('WARN', 'SUPABASE_API', `Slow API response on ${urlStr} (${duration}ms)`);
+    }
+    
+    return response;
+  } catch (error) {
+    const urlStr = typeof input === 'string' ? input : (input instanceof Request ? input.url : input.toString());
+    appLogger.log('ERROR', 'SUPABASE_API', `Network failure on ${urlStr}: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  }
+};
 
 function buildClient(): SupabaseClient {
   const url =
@@ -14,6 +48,7 @@ function buildClient(): SupabaseClient {
 
   return createClient(url, key, {
     auth: { persistSession: true, autoRefreshToken: true },
+    global: { fetch: customFetch }
   });
 }
 

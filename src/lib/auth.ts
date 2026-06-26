@@ -20,7 +20,7 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       email: 'admin@demo.com',
       name: 'Demo Admin',
       role: 'super_admin',
-      hub: 'HQ Admin Server',
+      hub: 'Lagos Head Office',
       hubType: 'Cargo Station',
       active: true
     };
@@ -94,7 +94,7 @@ export async function getSession(): Promise<UserProfile | null> {
         email: 'admin@demo.com',
         name: 'Demo Admin',
         role: 'super_admin',
-        hub: 'HQ Admin Server',
+        hub: 'Lagos Head Office',
         hubType: 'Cargo Station',
         active: true
       };

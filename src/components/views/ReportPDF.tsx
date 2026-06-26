@@ -1,22 +1,10 @@
-import { Document, Page, Text, View, StyleSheet, pdf, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
 import { EHILogoPDF } from '../EHILogoPDF';
 
-Font.register({
-  family: 'Roboto',
-  fonts: [
-    {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf",
-      fontWeight: 400,
-    },
-    {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Medium.ttf",
-      fontWeight: 700,
-    },
-  ],
-});
+
 
 const styles = StyleSheet.create({
-  page: { padding: 30, fontFamily: 'Roboto', fontSize: 10 },
+  page: { padding: 30, fontFamily: 'Helvetica', fontSize: 10 },
   header: { marginBottom: 20 },
   companyName: { fontSize: 16, fontWeight: 'bold', color: '#F59E0B', marginBottom: 4 },
   title: { fontSize: 13, color: '#111827', textTransform: 'uppercase', marginBottom: 15, fontWeight: 'bold' },
@@ -30,12 +18,12 @@ const styles = StyleSheet.create({
   tableColHeader: { flex: 1, borderStyle: 'solid', borderWidth: 1, borderLeftWidth: 0, borderTopWidth: 0, borderColor: '#e5e7eb', backgroundColor: '#f9fafb', padding: 5 },
   tableCol: { flex: 1, borderStyle: 'solid', borderWidth: 1, borderLeftWidth: 0, borderTopWidth: 0, borderColor: '#e5e7eb', padding: 5 },
   
-  tableCellHeader: { fontSize: 8, fontWeight: 'bold' },
+  tableCellHeader: { fontSize: 8, fontWeight: 'bold', fontFamily: 'Helvetica-Bold' },
   tableCell: { fontSize: 8 },
   
   textRight: { textAlign: 'right' },
   textCenter: { textAlign: 'center' },
-  fontBold: { fontWeight: 'bold' },
+  fontBold: { fontWeight: 'bold', fontFamily: 'Helvetica-Bold' },
   
   footer: { position: 'absolute', bottom: 30, left: 30, right: 30, fontSize: 8, color: '#9ca3af', textAlign: 'center' }
 });
@@ -54,7 +42,7 @@ export interface ReportDataPayload {
   hubs: any;
 }
 
-const fmt = (num: number) => `N${num.toLocaleString('en-NG')}`;
+const fmt = (num: number) => `₦${(num || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const RevenueTable = ({ data }: { data: any }) => (
   <View>
