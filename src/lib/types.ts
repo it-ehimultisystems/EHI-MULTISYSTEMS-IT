@@ -35,6 +35,7 @@ export interface User {
   role: UserRole;
   hubType: HubType;
   hub: string;
+  hub_code?: string;
   hub_id?: string;
   active?: boolean;
 }

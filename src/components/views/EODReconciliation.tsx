@@ -3,6 +3,7 @@ import { User, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { ArrowLeft, Check, AlertTriangle, Printer, Lock, ChevronRight } from 'lucide-react';
 import { LoadingState } from './LoadingState';
+import { supabase } from '../../lib/supabase';
 
 interface Props {
   user: User;
@@ -146,6 +147,25 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
   };
 
   const handleLockEOD = async () => {
+    setIsGenerating(true);
+    await supabase.from('eod_records').insert({
+      hub: user.hub,
+      hub_id: user.hub_id || null,
+      date: new Date().toISOString().split('T')[0],
+      locked_by: user.name,
+      cargo_total: expectedTotals.cargoTotal,
+      vj_total: expectedTotals.vjTotal,
+      marketing_total: expectedTotals.mktgTotal,
+      gross_total: expectedTotals.grossTotal,
+      cash_total: expectedTotals.cashTotal,
+      transfer_total: expectedTotals.transferTotal,
+      pos_total: expectedTotals.posTotal,
+      debt_total: expectedTotals.debtTotal,
+      expense_total: expectedTotals.expensesTotal,
+      net_cash: expectedTotals.netExpectedCash,
+      status: 'locked'
+    });
+    setIsGenerating(false);
     onEOD();
   };
 

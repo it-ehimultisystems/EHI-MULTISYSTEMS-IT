@@ -76,10 +76,22 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     
     const fetchInitial = async () => {
       try {
+        const isAdmin = ['super_admin','admin','accountant','auditor'].includes(user.role);
+
+        const cargoQuery = supabase.from('cargo_entries').select('*').order('created_at', { ascending: false }).limit(500);
+        const vjQuery = supabase.from('manifests').select('*').order('created_at', { ascending: false }).limit(500);
+        const mktQuery = supabase.from('marketing_entries').select('*').order('created_at', { ascending: false }).limit(500);
+
+        if (!isAdmin && user.hub_id) {
+          cargoQuery.eq('hub_id', user.hub_id);
+          vjQuery.eq('hub_id', user.hub_id);
+          mktQuery.eq('hub_id', user.hub_id);
+        }
+
         const [cargoRes, vjRes, mktRes] = await Promise.all([
-          supabase.from('cargo_entries').select('*').order('created_at', { ascending: false }).limit(500),
-          supabase.from('manifests').select('*').order('created_at', { ascending: false }).limit(500),
-          supabase.from('marketing_entries').select('*').order('created_at', { ascending: false }).limit(500)
+          cargoQuery,
+          vjQuery,
+          mktQuery
         ]);
 
         const allTx: Transaction[] = [];
@@ -170,12 +182,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           pendingTxRef.current.push({
             id: r.entry_ref || r.id,
             name: r.consignee_name || 'Cargo',
-            detail: `${r.awb_tag_number || ''} · ${r.route || ''}`,
+            detail: `${r.airline || ''} · ${r.awb_tag_number || ''} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg · ${r.route || ''} · ${r.content_type || 'Package'}`,
             amount: r.amount || 0,
-            mode: r.receipt_mode || 'Cash',
+            mode: r.receipt_mode || r.payment_mode || 'Cash',
             time: new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
             type: 'cargo',
-            status: 'Intake',
+            status: r.status || 'Intake',
             awb_tag_number: r.awb_tag_number,
             kg: r.total_kg,
             pieces: r.total_pcs,
@@ -183,7 +195,23 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
           flushTimerRef.current = setTimeout(flushPendingTx, 300);
         }
-      ).subscribe();
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'cargo_entries' },
+        payload => {
+          const r = payload.new as any;
+          setTransactions(prev => prev.map(t => 
+            t.id === (r.entry_ref || r.id) ? {
+              ...t,
+              status: r.status || t.status,
+              mode: r.receipt_mode || r.payment_mode || t.mode,
+              paymentConfirmed: r.payment_confirmed,
+              posApprovalCode: r.pos_approval_code
+            } : t
+          ));
+        }
+      )
+      .subscribe();
 
     const vjChannel = supabase
       .channel('ehi-vj-live')
@@ -350,7 +378,58 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       setPendingSyncCount(prev => prev + 1);
       showToast({ message: error ? `Error: ${error}` : 'Saved offline — syncs when reconnected', type: 'warning' });
     }
+  }, [user.hub_id, user.id, showToast]);
+
+  const handleUpdateTx = useCallback(async (tx: Transaction) => {
+    setTransactions(prev =>
+      prev.map(t => t.id === tx.id ? tx : t)
+    );
+    const table = tx.type === 'cargo' ? 'cargo_entries'
+                : tx.type === 'baggage' ? 'manifests'
+                : 'marketing_entries';
+    const updatePayload: any = {
+      receipt_mode: tx.mode,
+      bank: tx.bank,
+      status: tx.status,
+    };
+    if (tx.paymentConfirmed !== undefined) {
+      updatePayload.payment_confirmed = tx.paymentConfirmed;
+    }
+    if (tx.posApprovalCode) {
+      updatePayload.pos_approval_code = tx.posApprovalCode;
+    }
+    const { error } = await supabase
+      .from(table)
+      .update(updatePayload)
+      .eq('entry_ref', tx.id);
+
+    if (error) {
+      showToast({ message: `Update failed: ${error.message}`, type: 'error' });
+    }
   }, [showToast]);
+
+  const handleAddExpense = useCallback(async (expense: Expense) => {
+    setExpenses(prev => [expense, ...prev]);
+    const payload = {
+      id: expense.id,
+      category: expense.type,
+      amount: expense.amount,
+      description: expense.description,
+      date: expense.time.split(' ')[0] || new Date().toISOString().split('T')[0],
+      time: expense.time,
+      hub: user.hub,
+      logged_by: user.name,
+      status: expense.status || 'pending',
+      requires_approval: expense.amount > 20000
+    };
+    const { offline, error } = await writeWithOfflineSupport('expenses', payload);
+    if (offline) {
+      setPendingSyncCount(prev => prev + 1);
+      showToast({ message: 'Expense saved offline — syncs when reconnected', type: 'warning' });
+    } else if (error) {
+      showToast({ message: `Failed to save expense: ${error}`, type: 'error' });
+    }
+  }, [user.hub, user.name, showToast]);
 
   const handleToggleWifi = useCallback(() => {
     setIsOffline(prev => {
@@ -419,7 +498,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                 )
               )}
               {currentTab === 'Cargo' && <CargoForm onAddTx={handleAddTx} user={user} />}
-              {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])} />}
+              {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={handleAddExpense} />}
               {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} user={user} />}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
               {currentTab === 'MyTrips' && <MyTrips user={user} />}
@@ -432,8 +511,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                   expenses={expenses}
                   onLogout={onLogout} 
                   onAddTx={handleAddTx}
+                  onFullUpdateTx={handleUpdateTx}
                   onChangeTab={setCurrentTab}
-                  onAddExpense={(exp: Expense) => setExpenses(prev => [exp, ...prev])}
+                  onAddExpense={handleAddExpense}
                   onEOD={() => {
                     showToast({ message: 'EOD Report Dispatched — Saved to Drive · Emailed to management', type: 'success' });
                   }}

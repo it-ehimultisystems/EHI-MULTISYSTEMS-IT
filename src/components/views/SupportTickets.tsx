@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { User } from '../../lib/types';
-import { ArrowLeft, MessageSquarePlus, CheckCircle2, Circle, Clock, MessageSquare } from 'lucide-react';
+import { ArrowLeft, MessageSquarePlus, CheckCircle2, Circle, Clock, MessageSquare, Loader2 } from 'lucide-react';
 import { fmt, tnow } from '../../lib/helpers';
+import { supabase } from '../../lib/supabase';
 
 export interface Ticket {
   id: string;
@@ -17,11 +18,39 @@ export interface Ticket {
 export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => void }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
   const canManage = user.role === 'admin' || user.role === 'super_admin';
+
+  useEffect(() => {
+    async function fetchTickets() {
+      setIsLoading(true);
+      const query = supabase.from('support_tickets').select('*');
+      if (!canManage) {
+        query.eq('user_id', user.id);
+      }
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        const mapped = data.map(d => ({
+          id: d.id,
+          userId: d.user_id,
+          userName: d.user_name,
+          subject: d.subject,
+          description: d.description,
+          status: d.status as any,
+          createdAt: new Date(d.created_at).toLocaleString('en-GB'),
+          resolvedAt: d.resolved_at ? new Date(d.resolved_at).toLocaleString('en-GB') : undefined
+        }));
+        setTickets(mapped);
+      }
+      setIsLoading(false);
+    }
+    fetchTickets();
+  }, [user.id, canManage]);
 
   // If regular user, only show their tickets. If admin, show all.
   const visibleTickets = useMemo(() => {
@@ -29,15 +58,16 @@ export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => voi
     if (!canManage) {
       list = list.filter(t => t.userId === user.id);
     }
-    return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return list;
   }, [tickets, user.id, canManage]);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!subject.trim() || !description.trim()) return;
     
+    const newId = `TCK-${Math.floor(1000 + Math.random() * 9000)}`;
     const newTicket: Ticket = {
-      id: `TCK-${Math.floor(1000 + Math.random() * 9000)}`,
-      userId: user.id,
+      id: newId,
+      userId: user.id || '',
       userName: user.name,
       subject: subject.trim(),
       description: description.trim(),
@@ -49,9 +79,19 @@ export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => voi
     setIsCreating(false);
     setSubject('');
     setDescription('');
+
+    await supabase.from('support_tickets').insert({
+      id: newId,
+      user_id: user.id,
+      user_name: user.name,
+      hub: user.hub,
+      subject: newTicket.subject,
+      description: newTicket.description,
+      status: 'open'
+    });
   };
 
-  const handleUpdateStatus = (id: string, newStatus: 'open' | 'in_progress' | 'resolved') => {
+  const handleUpdateStatus = async (id: string, newStatus: 'open' | 'in_progress' | 'resolved') => {
     setTickets(prev => prev.map(t => {
       if (t.id === id) {
         return {
@@ -65,6 +105,13 @@ export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => voi
     if (selectedTicket && selectedTicket.id === id) {
       setSelectedTicket({ ...selectedTicket, status: newStatus, resolvedAt: newStatus === 'resolved' ? tnow() : undefined });
     }
+
+    const updatePayload: any = { status: newStatus };
+    if (newStatus === 'resolved') {
+      updatePayload.resolved_at = new Date().toISOString();
+      updatePayload.resolved_by = user.name;
+    }
+    await supabase.from('support_tickets').update(updatePayload).eq('id', id);
   };
 
   return (
@@ -97,7 +144,12 @@ export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => voi
           </div>
 
           <div className="space-y-3">
-            {visibleTickets.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-[var(--color-muted)]">
+                <Loader2 size={24} className="animate-spin mb-3" />
+                <p className="text-[12px] font-mono">Loading tickets...</p>
+              </div>
+            ) : visibleTickets.length === 0 ? (
               <div className="text-center py-12 border border-[rgba(255,255,255,0.05)] rounded-lg bg-[rgba(255,255,255,0.02)] text-[var(--color-muted)]">
                 <MessageSquare size={32} className="mx-auto mb-3 opacity-20" />
                 <p className="text-[13px] font-medium font-sans">No complaints or issues reported.</p>

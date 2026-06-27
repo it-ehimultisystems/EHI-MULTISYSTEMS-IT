@@ -388,8 +388,19 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
         </div>
       )}
 
-      {activeTab === 'Credit Sales' && <DebtorsTab />}
-      {activeTab === 'Expenses' && <ExpensesTab />}
+      {activeTab === 'Credit Sales' && (
+        <DebtorsTab
+          transactions={transactions}
+          user={user}
+          onUpdateTx={(id, update) => {
+            if (onFullUpdateTx) {
+              const tx = transactions.find(t => t.id === id);
+              if (tx) onFullUpdateTx({ ...tx, ...update });
+            }
+          }}
+        />
+      )}
+      {activeTab === 'Expenses' && <ExpensesTab expenses={expenses} user={user} onAddExpense={onAddExpense} />}
       {activeTab === 'Payment Validation' && <PaymentValidation transactions={transactions} onUpdateTx={onFullUpdateTx!} />}
       {activeTab === 'Remittances' && (
         <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)] mt-4">

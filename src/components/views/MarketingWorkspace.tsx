@@ -42,7 +42,7 @@ export const MarketingWorkspace = ({
         // use a random serial for marketing if none exists
         setNarrationCode(
           generatePaymentNarration(
-            user.hub,
+            user.hub_code || user.hub,
             Math.floor(Math.random() * 900) + 100,
           ),
         );

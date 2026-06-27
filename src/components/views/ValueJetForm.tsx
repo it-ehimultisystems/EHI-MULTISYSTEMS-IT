@@ -25,7 +25,7 @@ export const ValueJetForm = ({ onAddTx, user }: { onAddTx: (tx: Transaction) => 
     if (mode === 'Transfer' && !narrationCode) {
       import('../../lib/helpers').then(({ generatePaymentNarration }) => {
         // use a random serial for VJ if none exists since we don't track VJ serials the same way
-        setNarrationCode(generatePaymentNarration(user.hub, Math.floor(Math.random() * 900) + 100));
+        setNarrationCode(generatePaymentNarration(user.hub_code || user.hub, Math.floor(Math.random() * 900) + 100));
       });
     }
   }, [mode, narrationCode, user.hub]);

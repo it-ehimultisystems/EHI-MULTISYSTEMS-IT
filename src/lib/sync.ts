@@ -12,7 +12,7 @@ export async function cleanupOldQueue(): Promise<void> {
 }
 
 export async function writeWithOfflineSupport(
-  tableName: 'shipments' | 'manifests' | 'marketing_entries' | 'cargo_entries',
+  tableName: 'shipments' | 'manifests' | 'marketing_entries' | 'cargo_entries' | 'expenses',
   payload: Record<string, unknown>
 ): Promise<{ success: boolean; offline: boolean; error?: any }> {
   const record = { id: payload.id as string, data: payload, synced: 0 as const, created_at: new Date().toISOString() };

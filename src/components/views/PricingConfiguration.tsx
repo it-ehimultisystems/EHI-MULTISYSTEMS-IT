@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CARGO_ROUTES } from '../../lib/constants';
 import { Save, Plus, ArrowLeft, Trash2, Edit3, Building } from 'lucide-react';
 import { User } from '../../lib/types';
+import { supabase } from '../../lib/supabase';
 
 export interface CorporateClient {
   id: string;
@@ -28,70 +29,77 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   const [rateRoute, setRateRoute] = useState(CARGO_ROUTES[0]);
   const [ratePrice, setRatePrice] = useState('');
 
-  // Load standard rates
+  // Fetch standard rates from Supabase
   useEffect(() => {
-    const saved = localStorage.getItem('ehi_standard_cargo_rates');
-    if (saved) {
-      setStandardRates(JSON.parse(saved));
-    } else {
-      const initial: Record<string, number> = {};
-      CARGO_ROUTES.forEach(r => initial[r] = 500); // 500 base rate
-      setStandardRates(initial);
-      localStorage.setItem('ehi_standard_cargo_rates', JSON.stringify(initial));
-    }
+    const fetchStandardRates = async () => {
+      const { data, error } = await supabase.from('standard_cargo_rates').select('*');
+      if (data && !error && data.length > 0) {
+        const ratesMap: Record<string, number> = {};
+        data.forEach(d => {
+          ratesMap[d.route_name] = d.rate_per_kg;
+        });
+        setStandardRates(ratesMap);
+      } else {
+        const initial: Record<string, number> = {};
+        CARGO_ROUTES.forEach(r => initial[r] = 500); // 500 base rate
+        setStandardRates(initial);
+      }
+    };
+    fetchStandardRates();
   }, []);
 
-  // Load corp clients
+  // Fetch corp clients and rates from Supabase
   useEffect(() => {
-    const savedClients = localStorage.getItem('ehi_corporate_clients_v2');
-    if (savedClients) {
-      setCorpClients(JSON.parse(savedClients));
-    } else {
-      const initial = [
-        { id: 'corp_1', company_name: 'GlobaCom', contact_phone: '08055555555' },
-        { id: 'corp_2', company_name: 'ZeemMax', contact_phone: '09012345678' }
-      ];
-      setCorpClients(initial);
-      localStorage.setItem('ehi_corporate_clients_v2', JSON.stringify(initial));
-    }
+    const fetchCorpData = async () => {
+      const [{ data: clients }, { data: rates }] = await Promise.all([
+        supabase.from('corporate_clients').select('*'),
+        supabase.from('corporate_route_rates').select('*')
+      ]);
 
-    const savedRates = localStorage.getItem('ehi_corporate_route_rates_v2');
-    if (savedRates) {
-      setCorpRates(JSON.parse(savedRates));
-    } else {
-      const initialRates = [
-        { id: 'rate_1', corporate_client_id: 'corp_1', route_name: 'ABV/Abuja', rate_per_kg: 600 },
-        { id: 'rate_2', corporate_client_id: 'corp_1', route_name: 'BNI/Benin City', rate_per_kg: 400 },
-      ];
-      setCorpRates(initialRates);
-      localStorage.setItem('ehi_corporate_route_rates_v2', JSON.stringify(initialRates));
-    }
+      if (clients) {
+        setCorpClients(clients);
+      }
+      if (rates) {
+        setCorpRates(rates);
+      }
+    };
+    fetchCorpData();
   }, []);
 
-  const handleUpdateStandardRate = (route: string, val: string) => {
+  const handleUpdateStandardRate = async (route: string, val: string) => {
     const num = parseFloat(val);
     if (isNaN(num)) return;
     const next = { ...standardRates, [route]: num };
     setStandardRates(next);
-    localStorage.setItem('ehi_standard_cargo_rates', JSON.stringify(next));
+
+    await supabase.from('standard_cargo_rates').upsert({
+      route_name: route,
+      rate_per_kg: num,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'route_name' });
   };
 
-  const handleCreateCorpClient = () => {
+  const handleCreateCorpClient = async () => {
     if (!newClientName.trim()) return;
     const newClient: CorporateClient = {
       id: 'corp_' + Date.now().toString(),
       company_name: newClientName,
       contact_phone: newClientPhone
     };
-    const next = [...corpClients, newClient];
-    setCorpClients(next);
-    localStorage.setItem('ehi_corporate_clients_v2', JSON.stringify(next));
+    setCorpClients([...corpClients, newClient]);
     setNewClientName('');
     setNewClientPhone('');
     setSelectedRateClient(newClient);
+
+    await supabase.from('corporate_clients').insert({
+      id: newClient.id,
+      company_name: newClient.company_name,
+      contact_phone: newClient.contact_phone,
+      created_at: new Date().toISOString()
+    });
   };
 
-  const handleSetCorpRate = () => {
+  const handleSetCorpRate = async () => {
     if (!selectedRateClient || !ratePrice) return;
     const priceNum = parseFloat(ratePrice);
     if (isNaN(priceNum) || priceNum <= 0) return;
@@ -101,19 +109,31 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
     );
 
     let updatedRates = [...corpRates];
+    const newId = 'rate_' + Date.now().toString();
+
     if (existingIndex >= 0) {
       updatedRates[existingIndex].rate_per_kg = priceNum;
+      await supabase.from('corporate_route_rates')
+        .update({ rate_per_kg: priceNum, updated_at: new Date().toISOString() })
+        .eq('id', updatedRates[existingIndex].id);
     } else {
-      updatedRates.push({
-        id: 'rate_' + Date.now().toString(),
+      const newRate = {
+        id: newId,
         corporate_client_id: selectedRateClient.id,
         route_name: rateRoute,
         rate_per_kg: priceNum
+      };
+      updatedRates.push(newRate);
+      await supabase.from('corporate_route_rates').insert({
+        id: newRate.id,
+        corporate_client_id: newRate.corporate_client_id,
+        route_name: newRate.route_name,
+        rate_per_kg: newRate.rate_per_kg,
+        created_at: new Date().toISOString()
       });
     }
 
     setCorpRates(updatedRates);
-    localStorage.setItem('ehi_corporate_route_rates_v2', JSON.stringify(updatedRates));
     setRatePrice('');
   };
 

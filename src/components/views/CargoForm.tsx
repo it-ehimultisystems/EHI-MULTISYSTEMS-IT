@@ -135,7 +135,7 @@ export const CargoForm = ({
   useEffect(() => {
     if (mode === "Transfer" && !narrationCode) {
       import("../../lib/helpers").then(({ generatePaymentNarration }) => {
-        setNarrationCode(generatePaymentNarration(user.hub, serialNumber));
+        setNarrationCode(generatePaymentNarration(user.hub_code || user.hub, serialNumber));
       });
     }
   }, [mode, narrationCode, user.hub, serialNumber]);

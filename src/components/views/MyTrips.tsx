@@ -3,6 +3,7 @@ import { User, DriverTrip, TripPing } from '../../lib/types';
 import { uid, tnow } from '../../lib/helpers';
 import { db } from '../../lib/db';
 import { Truck, Plus, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const NIGERIAN_HUBS = [
   'Lagos HQ', 'Abuja Station',
@@ -187,13 +188,48 @@ export const MyTrips = ({ user }: { user: User }) => {
     }
   });
 
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('driver_trips')
+          .select('*')
+          .eq('driver_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        if (data && !error) {
+          const mappedTrips = data.map(d => ({
+            id: d.id,
+            vehiclePlate: d.vehicle_plate || '',
+            driverName: d.driver_name || '',
+            origin: d.origin || '',
+            destination: d.destination || '',
+            departureTime: d.departure_time ? new Date(d.departure_time).toLocaleString('en-GB') : '',
+            arrivalTime: d.arrival_time ? new Date(d.arrival_time).toLocaleString('en-GB') : undefined,
+            status: d.status as any,
+            cargoRefs: d.cargo_refs || [],
+            notes: '', // If you want to support notes, add a column or leave empty
+            createdAt: d.created_at,
+            gpsTrackingEnabled: d.gps_enabled || false,
+          }));
+          setTrips(mappedTrips);
+          localStorage.setItem(TRIPS_KEY, JSON.stringify(mappedTrips));
+        }
+      } catch (err) {
+        console.error("Failed to fetch driver_trips:", err);
+      }
+    };
+    fetchTrips();
+  }, [user.id, TRIPS_KEY]);
+
   // Track active watches
   const watchRefs = useRef<Record<string, number>>({});
 
   // Persist on every change
   useEffect(() => {
     localStorage.setItem(TRIPS_KEY, JSON.stringify(trips));
-  }, [trips]);
+  }, [trips, TRIPS_KEY]);
 
   // Handle GPS watcher lifecycle
   useEffect(() => {
@@ -290,7 +326,7 @@ export const MyTrips = ({ user }: { user: User }) => {
   const activeTrips = trips.filter(t => t.status === 'Active');
   const completedTrips = trips.filter(t => t.status === 'Completed' || t.status === 'Cancelled');
 
-  const handleStartTrip = () => {
+  const handleStartTrip = async () => {
     if (!vehiclePlate.trim() || !destination) return;
     const refs = cargoRefsInput
       .split(/[\n,]/)
@@ -317,20 +353,43 @@ export const MyTrips = ({ user }: { user: User }) => {
     setCargoRefsInput('');
     setNotes('');
     setGpsEnabled(false);
+
+    await supabase.from('driver_trips').insert({
+      id: trip.id,
+      driver_id: user.id,
+      driver_name: user.name,
+      hub: user.hub,
+      vehicle_plate: trip.vehiclePlate,
+      origin: trip.origin,
+      destination: trip.destination,
+      departure_time: new Date().toISOString(),
+      status: 'Active',
+      cargo_refs: trip.cargoRefs,
+      gps_enabled: trip.gpsTrackingEnabled,
+    });
   };
 
-  const handleCompleteTrip = (tripId: string) => {
+  const handleCompleteTrip = async (tripId: string) => {
     setTrips(prev => prev.map(t =>
       t.id === tripId
         ? { ...t, status: 'Completed', arrivalTime: tnow(), gpsTrackingEnabled: false }
         : t
     ));
+    await supabase.from('driver_trips').update({
+      status: 'Completed',
+      arrival_time: new Date().toISOString(),
+      gps_enabled: false
+    }).eq('id', tripId);
   };
 
-  const handleCancelTrip = (tripId: string) => {
+  const handleCancelTrip = async (tripId: string) => {
     setTrips(prev => prev.map(t =>
       t.id === tripId ? { ...t, status: 'Cancelled', gpsTrackingEnabled: false } : t
     ));
+    await supabase.from('driver_trips').update({
+      status: 'Cancelled',
+      gps_enabled: false
+    }).eq('id', tripId);
   };
 
 
