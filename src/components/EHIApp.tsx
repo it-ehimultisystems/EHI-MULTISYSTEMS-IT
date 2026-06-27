@@ -6,7 +6,7 @@ import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { SideNav } from './SideNav';
 import { Toast, ToastProps } from './Toast';
-import { supabase } from '../lib/supabase';
+import { supabase, writeAuditLog } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { Dashboard } from './views/Dashboard';
 import { CargoForm } from './views/CargoForm';
@@ -345,12 +345,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         bank: tx.bank,
         hub_id: hubId,
         airline: (tx as any).airline || parts[0] || 'Unknown',
-        remark: JSON.stringify({
-          pin: (tx as any).pickupPin || null,
-          phone: (tx as any).consigneePhone || null,
-          text: (tx as any).remarks || ''
-        }),
-        entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
+        remark: (tx as any).remarks || null,
+        pickup_pin: (tx as any).pickupPin || null,
+        consignee_phone: (tx as any).consigneePhone || null,
+        entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
         created_at: new Date().toISOString()
       };
     } else if (tx.type === 'baggage') {
@@ -387,6 +385,18 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       setPendingSyncCount(prev => prev + 1);
       showToast({ message: error ? `Error: ${error}` : 'Saved offline — syncs when reconnected', type: 'warning' });
     }
+    // Write audit log
+    writeAuditLog({
+      user_id: user.id,
+      user_name: user.name,
+      action: 'CREATE',
+      table_name: tableName,
+      record_id: tx.id,
+      description: `New ${tx.type} entry: ${tx.name} — ₦${tx.amount.toLocaleString()}`,
+      hub: user.hub,
+      hub_id: user.hub_id,
+      new_values: { amount: tx.amount, mode: tx.mode, type: tx.type },
+    }).catch(() => {});
   }, [user.hub_id, user.id, showToast]);
 
   const handleUpdateTx = useCallback(async (tx: Transaction) => {

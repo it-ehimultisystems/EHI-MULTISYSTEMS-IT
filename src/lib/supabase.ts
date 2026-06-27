@@ -110,3 +110,35 @@ export async function fetchAndApplyServerConfig(): Promise<boolean> {
     return false; // Silently fail and remain unconfigured
   }
 }
+
+// ── AUDIT LOG WRITER ─────────────────────────────────────
+// Call this from any action that should appear in the audit trail
+export async function writeAuditLog(entry: {
+  user_id?: string;
+  user_name: string;
+  action: 'LOGIN' | 'LOGOUT' | 'CREATE' | 'UPDATE' | 'DELETE' | 'EOD_LOCK' | 'SETTINGS_CHANGE' | 'PAYMENT_CONFIRM';
+  table_name?: string;
+  record_id?: string;
+  description: string;
+  hub?: string;
+  hub_id?: string;
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+}) {
+  try {
+    await supabase.from('audit_log').insert({
+      user_id: entry.user_id && entry.user_id.length > 30 ? entry.user_id : null,
+      user_name: entry.user_name,
+      action: entry.action,
+      table_name: entry.table_name || null,
+      record_id: entry.record_id || null,
+      description: entry.description,
+      hub: entry.hub || null,
+      hub_id: entry.hub_id && entry.hub_id.length > 30 ? entry.hub_id : null,
+      old_values: entry.old_values || null,
+      new_values: entry.new_values || null,
+    });
+  } catch {
+    // Audit log failures must never break the main workflow
+  }
+}

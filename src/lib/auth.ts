@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { writeAuditLog } from './supabase';
 import { UserRole, HubType } from './types';
 
 export interface UserProfile {
@@ -51,8 +52,7 @@ export async function signIn(email: string, password: string): Promise<UserProfi
   }
   
   const prof: any = profile;
-  
-  return {
+  const result = {
       id: profile.id,
       email: data.user.email || profile.email || '',
       name: profile.name,
@@ -63,6 +63,18 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       hub_id: profile.hub_id,
       active: profile.active
   };
+
+  // Write audit log (fire-and-forget)
+  writeAuditLog({
+    user_id: result.id,
+    user_name: result.name,
+    action: 'LOGIN',
+    description: `${result.name} logged in at ${result.hub}`,
+    hub: result.hub,
+    hub_id: result.hub_id,
+  }).catch(() => {});
+
+  return result;
 }
 
 export async function signOut() {

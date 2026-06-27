@@ -3,7 +3,7 @@ import { User, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { ArrowLeft, Check, AlertTriangle, Printer, Lock, ChevronRight } from 'lucide-react';
 import { LoadingState } from './LoadingState';
-import { supabase } from '../../lib/supabase';
+import { supabase, writeAuditLog } from '../../lib/supabase';
 
 interface Props {
   user: User;
@@ -146,15 +146,15 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     }
   };
 
-  const [isLocking, setIsLocking] = useState(false);
   const [showLockConfirm, setShowLockConfirm] = useState(false);
 
   const handleLockEOD = async () => {
     setIsGenerating(true);
+    const date = new Date().toISOString().split('T')[0];
     await supabase.from('eod_records').insert({
       hub: user.hub,
       hub_id: user.hub_id || null,
-      date: new Date().toISOString().split('T')[0],
+      date,
       locked_by: user.name,
       cargo_total: expectedTotals.cargoTotal,
       vj_total: expectedTotals.vjTotal,
@@ -168,6 +168,16 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       net_cash: expectedTotals.netExpectedCash,
       status: 'locked'
     });
+    // Write to audit trail
+    writeAuditLog({
+      user_id: user.id,
+      user_name: user.name,
+      action: 'EOD_LOCK',
+      description: `EOD locked by ${user.name} at ${user.hub} — gross ₦${expectedTotals.grossTotal.toLocaleString()} on ${date}`,
+      hub: user.hub,
+      hub_id: user.hub_id,
+      new_values: { gross_total: expectedTotals.grossTotal, net_cash: expectedTotals.netExpectedCash, date },
+    }).catch(() => {});
     setIsGenerating(false);
     onEOD();
   };
