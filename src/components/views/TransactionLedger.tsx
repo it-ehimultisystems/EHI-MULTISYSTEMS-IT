@@ -291,26 +291,51 @@ export const TransactionLedger = ({
             <thead className="bg-[#111827]">
               <tr className="text-[var(--color-muted)] border-b border-[rgba(255,255,255,0.05)] uppercase">
                 {isAccountantOrAdmin && <th className="py-3 px-3 w-[36px]"></th>}
-                <th className="py-3 px-2 w-[64px] font-medium">ID</th>
-                <th className="py-3 px-2 w-[44px] font-medium hidden sm:table-cell">Time</th>
-                <th className="py-3 px-2 font-medium w-full min-w-[120px]">Customer</th>
+                <th className="py-3 px-2 w-[60px] font-medium">ID</th>
+                <th className="py-3 px-2 w-[72px] font-medium">Date</th>
+                <th className="py-3 px-2 font-medium min-w-[120px]">Customer / Detail</th>
+                <th className="py-3 px-2 w-[72px] font-medium text-center">Status</th>
                 <th className="py-3 px-2 w-[80px] font-medium text-right">Amount</th>
                 <th className="py-3 px-2 w-[56px] font-medium text-center">Mode</th>
-                <th className="py-3 px-3 w-[48px] font-medium text-center"></th>
+                <th className="py-3 px-3 w-[32px] font-medium text-center"></th>
               </tr>
             </thead>
             <tbody>
               {filteredEntries.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={isAccountantOrAdmin ? 7 : 6}
+                    colSpan={isAccountantOrAdmin ? 8 : 7}
                     className="py-8 text-center text-[var(--color-muted)]"
                   >
                     No entries found matching filters.
                   </td>
                 </tr>
               ) : (
-                filteredEntries.map((e) => (
+                filteredEntries.map((e) => {
+                  // Parse date and time from e.time
+                  const timeParts = e.time ? e.time.split(/,?\s+/) : [];
+                  const rawDate = timeParts[0] || '';
+                  const rawTime = timeParts[1] || '';
+                  const ampm = timeParts[2] || '';
+                  // Format date more readably: "6/25/2026," → "25 Jun"
+                  let displayDate = rawDate.replace(',', '');
+                  try {
+                    const d = new Date(e.time);
+                    if (!isNaN(d.getTime())) {
+                      displayDate = d.toLocaleDateString('en-NG', { day: '2-digit', month: 'short' });
+                    }
+                  } catch { /* keep raw */ }
+                  const displayTime = rawTime ? `${rawTime.slice(0,5)}${ampm ? ' '+ampm : ''}` : e.time.slice(0,5);
+
+                  // Status colour
+                  const statusColor =
+                    e.status === 'Delivered' ? 'text-[var(--color-success)] bg-[rgba(16,185,129,0.12)]' :
+                    ['In-Transit','Dispatched','Departure'].includes(e.status) ? 'text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.12)]' :
+                    e.status === 'Arrived' ? 'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.12)]' :
+                    e.status === 'Cancelled' ? 'text-[var(--color-error)] bg-[rgba(239,68,68,0.12)]' :
+                    'text-[var(--color-muted)] bg-[rgba(255,255,255,0.06)]';
+
+                  return (
                   <tr
                     key={e.id}
                     onClick={() => setViewingDetail(e)}
@@ -323,10 +348,10 @@ export const TransactionLedger = ({
                             {e.mode === 'POS' && !e.posApprovalCode ? (
                               posCodeInput.id === e.id ? (
                                 <div className="flex items-center gap-1">
-                                  <input 
+                                  <input
                                     autoFocus
-                                    type="text" 
-                                    className="w-16 bg-[var(--color-surface-1)] border border-[var(--color-accent-amber)] rounded px-1 py-0.5 text-[9px] text-white outline-none" 
+                                    type="text"
+                                    className="w-16 bg-[var(--color-surface-1)] border border-[var(--color-accent-amber)] rounded px-1 py-0.5 text-[9px] text-white outline-none"
                                     placeholder="Code"
                                     value={posCodeInput.code}
                                     onChange={evt => setPosCodeInput({ id: e.id, code: evt.target.value })}
@@ -335,7 +360,7 @@ export const TransactionLedger = ({
                                   <button onClick={(evt) => savePosCode(e, evt)} className="text-[var(--color-success)]"><Check size={12}/></button>
                                 </div>
                               ) : (
-                                <button 
+                                <button
                                   onClick={(evt) => { evt.stopPropagation(); setPosCodeInput({ id: e.id, code: '' }); }}
                                   className="text-[var(--color-accent-amber)] hover:underline whitespace-nowrap text-[9px]"
                                 >
@@ -343,7 +368,7 @@ export const TransactionLedger = ({
                                 </button>
                               )
                             ) : (
-                              <button 
+                              <button
                                 onClick={(evt) => toggleConfirm(e, evt)}
                                 className="flex items-center justify-center text-[var(--color-accent-amber)] hover:text-amber-400"
                               >
@@ -360,41 +385,44 @@ export const TransactionLedger = ({
                         )}
                       </td>
                     )}
+                    {/* ID */}
                     <td className="py-2.5 px-2 text-[var(--color-light-muted)] whitespace-nowrap">
                       {e.id.slice(-8)}
                     </td>
-                    <td className="py-2.5 px-2 text-[var(--color-muted)] whitespace-nowrap hidden sm:table-cell">
-                      {e.time.split(' ')[1] || e.time}
+                    {/* Date + Time */}
+                    <td className="py-2.5 px-2 whitespace-nowrap">
+                      <div className="text-[10px] font-mono text-[var(--color-foreground)] font-medium">{displayDate}</div>
+                      <div className="text-[9px] font-mono text-[var(--color-muted)] mt-0.5">{displayTime}</div>
                     </td>
+                    {/* Customer + Detail */}
                     <td className="py-2.5 px-2">
-                      <div className={`font-sans font-bold ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-foreground)]"}`}>
+                      <div className={`font-sans font-bold text-[12px] leading-snug ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-foreground)]"}`}>
                         {e.name}
                       </div>
-                      <div className="text-[9px] text-[var(--color-muted)] mt-0.5 whitespace-normal">
+                      <div className="text-[9px] text-[var(--color-muted)] mt-0.5 leading-snug line-clamp-2">
                         {e.detail}
                       </div>
                     </td>
-                    <td
-                      className={`py-2.5 px-2 text-right font-bold whitespace-nowrap ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-success)]"}`}
-                    >
-                      {e.source === "expense" ? "-" : ""}
-                      {fmt(e.amount)}
+                    {/* Status */}
+                    <td className="py-2.5 px-2 text-center">
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold font-mono whitespace-nowrap ${statusColor}`}>
+                        {e.source === 'expense' ? 'Expense' : (e.status || 'Intake')}
+                      </span>
                     </td>
+                    {/* Amount */}
+                    <td className={`py-2.5 px-2 text-right font-bold font-mono text-[11px] whitespace-nowrap ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-success)]"}`}>
+                      {e.source === "expense" ? "-" : ""}{fmt(e.amount)}
+                    </td>
+                    {/* Mode */}
                     <td className="py-2.5 px-2 text-center">
                       <div className="flex flex-col items-center gap-0.5">
-                        <span
-                          className={`px-1.5 py-0.5 rounded font-sans text-[9px] font-medium flex items-center gap-1 ${
-                            e.mode === "Cash"
-                              ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]"
-                              : e.mode === "Transfer"
-                                ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]"
-                                : e.mode === "POS"
-                                  ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]"
-                                  : e.mode === "Expense"
-                                    ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]"
-                                    : "border border-[var(--color-error)] text-[var(--color-error)]"
-                          }`}
-                        >
+                        <span className={`px-1.5 py-0.5 rounded font-sans text-[9px] font-medium flex items-center gap-1 ${
+                          e.mode === "Cash" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
+                          e.mode === "Transfer" ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]" :
+                          e.mode === "POS" ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]" :
+                          e.mode === "Expense" ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]" :
+                          "border border-[var(--color-error)] text-[var(--color-error)]"
+                        }`}>
                           {e.mode === "Debt" ? "Credit" : e.mode}
                           {e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && (
                             <Check size={10} strokeWidth={3} className="text-current opacity-80" />
@@ -408,11 +436,13 @@ export const TransactionLedger = ({
                         )}
                       </div>
                     </td>
+                    {/* Chevron */}
                     <td className="py-2.5 px-3 text-center">
                       <ChevronRight size={14} className="text-[var(--color-muted)] group-hover:text-white transition-colors ml-auto" />
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
