@@ -5,6 +5,7 @@ import { MapPin, Navigation, X, Truck, Phone } from 'lucide-react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { supabase } from '../../lib/supabase';
 
 // Fix leaflet icon issue in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -24,29 +25,31 @@ export const Dispatch = ({ onBack }: { onBack: () => void }) => {
 
   useEffect(() => {
     const fetchTrips = async () => {
-      // In a real app we'd fetch from supabase tracking table or sync queue 
-      // where we aggregate all users' trips, but for this local-first app
-      // we can try fetching trips from localStorage (which has the current user's trips) 
-      // to demonstrate.
       try {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('ehi_driver_trips_'));
-        let allTrips: DriverTrip[] = [];
-        keys.forEach(k => {
-          const t = JSON.parse(localStorage.getItem(k) || '[]');
-          allTrips = [...allTrips, ...t];
-        });
+        const { data, error } = await supabase
+          .from('driver_trips')
+          .select('*')
+          .eq('status', 'Active')
+          .eq('gps_enabled', true)
+          .order('created_at', { ascending: false });
 
-        const active = allTrips.filter(t => t.status === 'Active' && t.gpsTrackingEnabled);
-        
-        // Grab pings for each trip
-        const tripsWithPings = await Promise.all(active.map(async t => {
-          const pings = await db.trip_pings.where('tripId').equals(t.id).sortBy('timestamp');
-          return { ...t, pings };
-        }));
-
-        setActiveTrips(tripsWithPings);
+        if (data && !error) {
+          const tripsWithPings = await Promise.all(data.map(async (t: any) => {
+            let pings: TripPing[] = [];
+            try { pings = await db.trip_pings.where('tripId').equals(t.id).sortBy('timestamp'); } catch {}
+            return {
+              id: t.id, driverName: t.driver_name || 'Driver',
+              vehiclePlate: t.vehicle_plate || '', origin: t.origin || '',
+              destination: t.destination || '', status: t.status,
+              departureTime: t.departure_time || t.created_at,
+              cargoRefs: t.cargo_refs || [], gpsTrackingEnabled: t.gps_enabled,
+              pings
+            };
+          }));
+          setActiveTrips(tripsWithPings);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Dispatch fetch error:', err);
       }
     };
 

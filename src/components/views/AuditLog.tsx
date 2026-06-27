@@ -1,209 +1,189 @@
-import { useState } from 'react';
-import { ArrowLeft, Shield, Eye, ShieldCheck, Download, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Shield, Download, Search, Loader } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { User } from '../../lib/types';
 
 interface AuditLogEntry {
   id: string;
   userId: string;
   userName: string;
-  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'EOD_LOCK' | 'SETTINGS_CHANGE' | 'ROLE_CHANGE';
+  action: string;
   tableName: string;
   recordId: string;
   timestamp: string;
   description: string;
+  hub: string;
   oldValues?: string;
   newValues?: string;
 }
 
-export const AuditLog = ({ 
-  onBack 
-}: { 
-  onBack: () => void;
-}) => {
+export const AuditLog = ({ onBack, user }: { onBack: () => void; user?: User }) => {
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(null);
-  const [filterAction, setFilterAction] = useState<string>('all');
+  const [filterAction, setFilterAction] = useState('all');
   const [searchText, setSearchText] = useState('');
 
-  const [logs] = useState<AuditLogEntry[]>([
-    { id: 'AL-901', userId: 'USR-010', userName: 'Auditor David Obi', action: 'EOD_LOCK', tableName: 'eod_ledgers', recordId: 'EOD-240619', timestamp: '2026-06-20 00:15:32', description: 'Locked and verified daily terminal sales close.', oldValues: '{"locked": false}', newValues: '{"locked": true, "audited_by": "USR-010"}' },
-    { id: 'AL-902', userId: 'USR-001', userName: 'Super Admin Sanni', action: 'ROLE_CHANGE', tableName: 'user_profiles', recordId: 'USR-045', timestamp: '2026-06-19 21:04:15', description: 'Privilege elevation for security staff.', oldValues: '{"role": "cargo_agent"}', newValues: '{"role": "auditor"}' },
-    { id: 'AL-903', userId: 'USR-001', userName: 'Super Admin Sanni', action: 'SETTINGS_CHANGE', tableName: 'pricing_matrix', recordId: 'PM-LAG-ABV', timestamp: '2026-06-19 18:32:01', description: 'Modified route base pricing for Big Bag Cargo category.', oldValues: '{"bb": 17000}', newValues: '{"bb": 18000}' },
-    { id: 'AL-904', userId: 'USR-024', userName: 'Agent Folarin', action: 'CREATE', tableName: 'cargo_entries', recordId: 'CG-98443', timestamp: '2026-06-19 14:12:00', description: 'Logged new airway bill consignment for Madam Uchechi.', oldValues: 'null', newValues: '{"entry_ref": "CG-98443", "amount": 95000}' },
-    { id: 'AL-905', userId: 'USR-115', userName: 'Agent Adamu', action: 'CREATE', tableName: 'shipments', recordId: 'MK-524', timestamp: '2026-06-19 11:45:00', description: 'Registered new Field Marketing Bag intake.', oldValues: 'null', newValues: '{"entry_ref": "MK-524", "amount": 25000}' }
-  ]);
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('audit_log')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(200);
 
-  const filteredLogs = logs.filter(log => {
+        if (data && !error) {
+          setLogs(data.map((r: any) => ({
+            id: r.id,
+            userId: r.user_id || '',
+            userName: r.user_name,
+            action: r.action,
+            tableName: r.table_name || '',
+            recordId: r.record_id || '',
+            timestamp: new Date(r.created_at).toLocaleString('en-NG'),
+            description: r.description,
+            hub: r.hub || '',
+            oldValues: r.old_values ? JSON.stringify(r.old_values, null, 2) : undefined,
+            newValues: r.new_values ? JSON.stringify(r.new_values, null, 2) : undefined,
+          })));
+        }
+      } catch (err) {
+        console.error('Failed to fetch audit log:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, []);
+
+  const filtered = logs.filter(log => {
     const matchesAction = filterAction === 'all' || log.action === filterAction;
-    const matchesSearch = log.userName.toLowerCase().includes(searchText.toLowerCase()) || 
+    const matchesSearch = log.userName.toLowerCase().includes(searchText.toLowerCase()) ||
                           log.description.toLowerCase().includes(searchText.toLowerCase()) ||
-                          log.id.toLowerCase().includes(searchText.toLowerCase());
+                          log.recordId.toLowerCase().includes(searchText.toLowerCase());
     return matchesAction && matchesSearch;
   });
 
   const handleExportCSV = () => {
-    alert('Enterprise system audit logs successfully formatted and exported as CSV statement.');
+    if (filtered.length === 0) return;
+    const headers = ['Timestamp', 'User', 'Hub', 'Action', 'Table', 'Record ID', 'Description'];
+    const rows = filtered.map(l => [
+      `"${l.timestamp}"`, `"${l.userName}"`, `"${l.hub}"`,
+      `"${l.action}"`, `"${l.tableName}"`, `"${l.recordId}"`, `"${l.description}"`
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ehi_audit_log_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const actionColor = (action: string) => {
+    switch (action) {
+      case 'CREATE': return 'text-[var(--color-success)] bg-[rgba(16,185,129,0.1)]';
+      case 'UPDATE': return 'text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.1)]';
+      case 'DELETE': return 'text-[var(--color-error)] bg-[rgba(239,68,68,0.1)]';
+      case 'LOGIN': return 'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)]';
+      case 'EOD_LOCK': return 'text-purple-400 bg-[rgba(168,85,247,0.1)]';
+      default: return 'text-[var(--color-muted)] bg-[var(--color-surface-2)]';
+    }
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] overflow-y-auto pb-[80px] font-sans">
-      {/* Header back navigation */}
+    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] overflow-y-auto pb-[80px]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
         <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={16} />
-          <span className="text-[11px] font-mono">Back</span>
+          <ArrowLeft size={16} /><span className="text-[11px] font-mono">Back</span>
         </button>
-        <span className="text-[10px] font-mono text-purple-400 tracking-widest font-bold">● RECON ENTITY AUDITS</span>
+        <span className="text-[10px] font-mono text-purple-400 tracking-widest font-bold">● AUDIT TRAIL</span>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="space-y-0.5">
-          <div className="text-[9px] font-mono text-slate-400 tracking-[0.15em] uppercase">▸ COMPLIANCE & REVISION SYSTEMS</div>
-          <h2 className="text-sm font-black text-[var(--color-foreground)]">Full Platform Revision Audit Trails</h2>
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h2 className="text-[14px] font-bold">Platform Audit Log</h2>
+          <p className="text-[10px] font-mono text-[var(--color-muted)]">{filtered.length} entries</p>
         </div>
-
-        <button 
-          onClick={handleExportCSV}
-          className="bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/20 text-purple-300 font-mono text-[10px] uppercase font-bold px-3 py-1.5 rounded flex items-center space-x-1 cursor-pointer"
-        >
-          <Download size={12} />
-          <span>Export CSV Statement</span>
+        <button onClick={handleExportCSV} disabled={filtered.length === 0} className="flex items-center gap-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[11px] font-mono px-3 py-1.5 rounded hover:border-[var(--color-success)] transition-colors disabled:opacity-40">
+          <Download size={12} /> Export CSV
         </button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="ehi-card mb-6 grid grid-cols-1 md:grid-cols-12 gap-3">
-        {/* Search Input */}
-        <div className="relative md:col-span-8">
-          <Search size={14} className="absolute left-3 top-2.5 text-slate-500" />
-          <input 
-            type="text"
-            placeholder="Search by modifier, log description, or AWB ID..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className="w-full bg-black/40 border border-[rgba(255,255,255,0.1)] rounded p-2 pl-9 text-xs focus:outline-none focus:border-purple-500 font-mono"
-          />
+      <div className="flex gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
+          <input type="text" value={searchText} onChange={e => setSearchText(e.target.value)} placeholder="Search by user, action, record..." className="w-full pl-8 ehi-input text-[12px]" />
         </div>
-
-        {/* Action filter */}
-        <div className="md:col-span-4">
-          <select 
-            value={filterAction}
-            onChange={(e) => setFilterAction(e.target.value)}
-            className="w-full bg-black/40 border border-[rgba(255,255,255,0.1)] rounded p-2 text-xs focus:outline-none focus:border-purple-500 font-mono"
-          >
-            <option value="all">ALL SECURITY ACTIONS</option>
-            <option value="CREATE">CREATE (NEW RECORD)</option>
-            <option value="UPDATE">UPDATE (EDITS)</option>
-            <option value="SETTINGS_CHANGE">SETTINGS CHANGES</option>
-            <option value="ROLE_CHANGE">ROLE ELEVATIONS</option>
-            <option value="EOD_LOCK">EOD LOCKS</option>
-          </select>
-        </div>
+        <select value={filterAction} onChange={e => setFilterAction(e.target.value)} className="ehi-input text-[12px]">
+          <option value="all">All Actions</option>
+          <option value="LOGIN">Login</option>
+          <option value="CREATE">Create</option>
+          <option value="UPDATE">Update</option>
+          <option value="DELETE">Delete</option>
+          <option value="EOD_LOCK">EOD Lock</option>
+          <option value="SETTINGS_CHANGE">Settings</option>
+          <option value="PAYMENT_CONFIRM">Payment</option>
+        </select>
       </div>
 
-      {/* Audit Log Table list */}
-      <div className="ehi-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs font-mono">
-            <thead>
-              <tr className="border-b border-[rgba(255,255,255,0.05)] text-slate-400 text-left bg-[rgba(255,255,255,0.01)]">
-                <th className="py-3 px-4 font-bold uppercase tracking-wider">Log Timestamp</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider">Operator ID</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider">Modification</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider">Target Entity</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-black/10">
-                  <td className="py-3 px-4 text-slate-400 whitespace-nowrap">{log.timestamp}</td>
-                  <td className="py-3 px-4 font-semibold text-[var(--color-foreground)] whitespace-nowrap">{log.userName}</td>
-                  <td className="py-3 px-4">
-                    <span className="text-slate-300 block max-w-[250px] truncate">{log.description}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${
-                      log.action === 'CREATE' ? 'bg-emerald-500/10 text-[var(--color-success)]' :
-                      log.action === 'EOD_LOCK' ? 'bg-blue-500/10 text-[var(--color-accent-cobalt)]' :
-                      log.action === 'ROLE_CHANGE' || log.action === 'SETTINGS_CHANGE' ? 'bg-amber-500/10 text-[var(--color-accent-amber)]' : 'bg-neutral-800 text-slate-300'
-                    }`}>
-                      {log.action}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button 
-                      onClick={() => setSelectedEntry(log)}
-                      className="text-purple-400 hover:text-purple-300 font-mono text-[9.5px] uppercase font-bold p-1 cursor-pointer"
-                    >
-                      Inspect Diff
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <Loader size={24} className="animate-spin text-[var(--color-accent-amber)]" />
+          <p className="text-[12px] font-mono text-[var(--color-muted)]">Loading audit trail...</p>
         </div>
-      </div>
-
-      {/* Difference Audit Inspect Modal */}
-      {selectedEntry && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-55">
-          <div className="ehi-card max-w-lg w-full overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex justify-between items-center bg-black/40">
-              <span className="text-[9px] font-mono text-purple-400 uppercase font-bold tracking-wider">EHI SECURITY AUDIT LOG DIFFERENCE ANALYSIS</span>
-              <button onClick={() => setSelectedEntry(null)} className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[rgba(255,255,255,0.05)] rounded-xl">
+          <Shield size={32} className="opacity-20" />
+          <p className="text-[12px] font-mono text-[var(--color-muted)]">No audit entries found</p>
+          <p className="text-[10px] font-mono text-[var(--color-muted)] opacity-60">Actions like logins, cargo entries, and EOD locks will appear here</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(log => (
+            <div key={log.id} onClick={() => setSelectedEntry(log)} className="p-3 ehi-card cursor-pointer hover:border-[rgba(255,255,255,0.15)] transition-colors">
+              <div className="flex justify-between items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded font-mono ${actionColor(log.action)}`}>{log.action}</span>
+                    <span className="text-[9px] font-mono text-[var(--color-muted)] truncate">{log.userName}</span>
+                    {log.hub && <span className="text-[9px] font-mono text-[var(--color-muted)] opacity-60">· {log.hub}</span>}
+                  </div>
+                  <p className="text-[12px] text-[var(--color-foreground)] leading-snug">{log.description}</p>
+                </div>
+                <span className="text-[9px] font-mono text-[var(--color-muted)] shrink-0 text-right">{log.timestamp}</span>
+              </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            <div className="p-5 space-y-4 font-mono text-xs">
-              <div className="grid grid-cols-2 gap-4 text-[10px] pb-3 border-b border-solid border-[rgba(255,255,255,0.03)]">
-                <div>
-                  <span className="text-slate-500 uppercase block">Log Reference:</span>
-                  <span className="text-[var(--color-foreground)] font-bold block">{selectedEntry.id}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 uppercase block">Execution Date:</span>
-                  <span className="text-[var(--color-foreground)] font-bold block">{selectedEntry.timestamp}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 uppercase block">Modifier Account:</span>
-                  <span className="text-[var(--color-foreground)] font-bold block">{selectedEntry.userName} ({selectedEntry.userId})</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 uppercase block">Target Ledger database table:</span>
-                  <span className="text-purple-400 font-bold block bg-purple-500/10 px-1 py-0.5 rounded w-max mt-0.5">{selectedEntry.tableName}</span>
-                </div>
+      {selectedEntry && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="ehi-card max-w-sm w-full">
+            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center">
+              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded font-mono ${actionColor(selectedEntry.action)}`}>{selectedEntry.action}</span>
+              <button onClick={() => setSelectedEntry(null)} className="text-[var(--color-muted)] font-mono">✕</button>
+            </div>
+            <div className="p-4 space-y-3 text-[12px]">
+              <div className="grid grid-cols-2 gap-2">
+                <div><p className="ehi-label">User</p><p className="font-medium">{selectedEntry.userName}</p></div>
+                <div><p className="ehi-label">Hub</p><p className="font-medium">{selectedEntry.hub || '—'}</p></div>
+                <div><p className="ehi-label">Table</p><p className="font-mono text-[11px]">{selectedEntry.tableName || '—'}</p></div>
+                <div><p className="ehi-label">Record</p><p className="font-mono text-[11px]">{selectedEntry.recordId || '—'}</p></div>
               </div>
-
-              {/* JSON DIff Comparer representation */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span className="text-[8.5px] font-black text-rose-500/80 uppercase block">− Old Values Ledger</span>
-                  <pre className="bg-rose-950/15 border border-rose-500/10 rounded-lg p-3 text-[10px] text-rose-300 leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-[150px]">
-                    {selectedEntry.oldValues}
-                  </pre>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[8.5px] font-black text-emerald-500/85 uppercase block">+ New Applied metrics</span>
-                  <pre className="bg-emerald-950/15 border border-emerald-500/10 rounded-lg p-3 text-[10px] text-emerald-300 leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-[150px]">
-                    {selectedEntry.newValues}
-                  </pre>
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <button 
-                  onClick={() => setSelectedEntry(null)} 
-                  className="bg-purple-900 border border-purple-500/30 text-[var(--color-foreground)] font-mono text-[10.5px] uppercase font-bold px-4 py-2 rounded-lg cursor-pointer"
-                >
-                  Close evaluation window
-                </button>
-              </div>
-
+              <div><p className="ehi-label">Description</p><p className="text-[var(--color-muted)]">{selectedEntry.description}</p></div>
+              <div><p className="ehi-label">Timestamp</p><p className="font-mono text-[11px]">{selectedEntry.timestamp}</p></div>
+              {selectedEntry.newValues && (
+                <div><p className="ehi-label">Changes</p><pre className="text-[9px] bg-[var(--color-surface-2)] p-2 rounded overflow-auto max-h-24 text-[var(--color-muted)]">{selectedEntry.newValues}</pre></div>
+              )}
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };

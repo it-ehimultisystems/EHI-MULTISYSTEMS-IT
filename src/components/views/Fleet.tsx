@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Fuel, ShieldAlert, Truck, Wrench, BarChart2, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Fuel, Truck, Wrench, Loader } from 'lucide-react';
 import { fmt } from '../../lib/helpers';
+import { supabase } from '../../lib/supabase';
+import { User } from '../../lib/types';
 
 interface Vehicle {
   id: string;
@@ -20,33 +22,20 @@ interface FuelLog {
   plate: string;
   litres: number;
   costPerLitre: number;
+  total_cost: number;
   station: string;
   date: string;
 }
 
-export const Fleet = ({ 
-  onBack 
-}: { 
-  onBack: () => void;
-}) => {
-  const [activeTab, setActiveTab] = useState<'vehicles' | 'maintenance' | 'fuel'>('vehicles');
-  const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
+export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => {
+  const [activeTab, setActiveTab] = useState<'vehicles' | 'fuel'>('vehicles');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddVehicle, setShowAddVehicle] = useState(false);
+  const [showAddFuel, setShowAddFuel] = useState(false);
 
-  // Initial Seed Vehicles (SaaS & Fleet Management)
-  const [vehicles, setVehicles] = useState<Vehicle[]>([
-    { id: 'v-1', plate: 'LAG-404AA', make: 'Toyota', model: 'Hiace Cargo', type: 'Van', driver: 'Driver Folarin', capacity: 1200, status: 'Available', lastService: '2026-05-10', nextService: '2026-08-10' },
-    { id: 'v-2', plate: 'KAF-114BB', make: 'Mitsubishi', model: 'Fuso 5-Ton', type: 'Truck', driver: 'Driver Ibrahim', capacity: 5000, status: 'On Trip', lastService: '2026-04-12', nextService: '2026-07-12' },
-    { id: 'v-3', plate: 'ABJ-901CC', make: 'Nissan', model: 'Cabstar Pickup', type: 'Pickup', driver: 'Driver Stanley', capacity: 2200, status: 'Maintenance', lastService: '2026-03-20', nextService: '2026-06-25' }
-  ]);
-
-  // Fuel Logs Storage
-  const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([
-    { id: 'FL-001', plate: 'LAG-404AA', litres: 45, costPerLitre: 850, station: 'BOVAS Ojota', date: '2026-06-19' },
-    { id: 'FL-002', plate: 'KAF-114BB', litres: 120, costPerLitre: 870, station: 'NNPC Abuja', date: '2026-06-18' },
-    { id: 'FL-003', plate: 'ABJ-901CC', litres: 35, costPerLitre: 850, station: 'Total Ikeja', date: '2026-06-17' }
-  ]);
-
-  // Form states for new vehicle
+  // Vehicle form
   const [plate, setPlate] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
@@ -54,432 +43,279 @@ export const Fleet = ({
   const [driver, setDriver] = useState('');
   const [type, setType] = useState('Van');
 
-  // Form states for new fuel log
-  const [selectedPlate, setSelectedPlate] = useState(vehicles[0]?.plate || '');
+  // Fuel form
+  const [fuelPlate, setFuelPlate] = useState('');
   const [litres, setLitres] = useState('');
-  const [costPrLitre, setCostPrLitre] = useState('850');
-  const [stationName, setStationName] = useState('');
+  const [costPerLitre, setCostPerLitre] = useState('950');
+  const [station, setStation] = useState('');
 
-  const handleAddVehicle = (e: React.FormEvent) => {
+  const canEdit = user?.role === 'admin' || user?.role === 'super_admin';
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [vRes, fRes] = await Promise.all([
+          supabase.from('fleet_vehicles').select('*').order('created_at', { ascending: false }),
+          supabase.from('fuel_logs').select('*').order('log_date', { ascending: false }).limit(100)
+        ]);
+
+        if (vRes.data) {
+          setVehicles(vRes.data.map((r: any) => ({
+            id: r.id, plate: r.plate, make: r.make || '', model: r.model || '',
+            type: r.vehicle_type || 'Van', driver: r.driver_name || 'Unassigned',
+            capacity: r.capacity_kg || 1000, status: r.status || 'Available',
+            lastService: r.last_service || '', nextService: r.next_service || ''
+          })));
+        }
+        if (fRes.data) {
+          setFuelLogs(fRes.data.map((r: any) => ({
+            id: r.id, plate: r.vehicle_plate, litres: Number(r.litres),
+            costPerLitre: Number(r.cost_per_litre), total_cost: Number(r.total_cost),
+            station: r.station || '', date: r.log_date
+          })));
+        }
+      } catch (err) {
+        console.error('Fleet fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleAddVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!plate || !make) return;
-    const newVehicle: Vehicle = {
-      id: `v-${Date.now()}`,
-      plate: plate.toUpperCase(),
-      make,
-      model,
-      type,
-      driver: driver || 'Unassigned',
-      capacity: Number(capacity) || 1200,
-      status: 'Available',
-      lastService: new Date().toISOString().split('T')[0],
-      nextService: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const payload = {
+      plate: plate.toUpperCase(), make, model, vehicle_type: type,
+      driver_name: driver || 'Unassigned', capacity_kg: Number(capacity) || 1000,
+      status: 'Available', hub_id: user?.hub_id || null,
+      last_service: new Date().toISOString().slice(0, 10),
+      next_service: new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
     };
-
-    setVehicles(prev => [...prev, newVehicle]);
-    setShowAddVehicleModal(false);
-    setPlate('');
-    setMake('');
-    setModel('');
-    setDriver('');
-  };
-
-  const handleLogFuel = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!litres) return;
-    const newLog: FuelLog = {
-      id: `FL-${Date.now().toString().slice(-5)}`,
-      plate: selectedPlate,
-      litres: Number(litres),
-      costPerLitre: Number(costPrLitre),
-      station: stationName || 'General Station',
-      date: new Date().toISOString().split('T')[0]
-    };
-    setFuelLogs(prev => [newLog, ...prev]);
-    setLitres('');
-    setStationName('');
-  };
-
-  const handleDeleteVehicle = (id: string) => {
-    if (confirm('Deactivate and remove this vehicle from fleet?')) {
-      setVehicles(prev => prev.filter(v => v.id !== id));
+    const { data, error } = await supabase.from('fleet_vehicles').insert(payload).select().single();
+    if (data && !error) {
+      setVehicles(prev => [{
+        id: data.id, plate: data.plate, make: data.make, model: data.model || '',
+        type: data.vehicle_type, driver: data.driver_name, capacity: data.capacity_kg,
+        status: 'Available', lastService: data.last_service, nextService: data.next_service
+      }, ...prev]);
     }
+    setShowAddVehicle(false);
+    setPlate(''); setMake(''); setModel(''); setDriver('');
   };
 
-  const handleToggleStatus = (id: string, current: string) => {
-    const nextStatus: Record<string, Vehicle['status']> = {
-      'Available': 'On Trip',
-      'On Trip': 'Maintenance',
-      'Maintenance': 'Available'
+  const handleAddFuel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fuelPlate || !litres) return;
+    const payload = {
+      vehicle_plate: fuelPlate, litres: Number(litres),
+      cost_per_litre: Number(costPerLitre), station,
+      logged_by: user?.name || '', hub_id: user?.hub_id || null,
+      log_date: new Date().toISOString().slice(0, 10)
     };
-    const next = nextStatus[current] || 'Available';
-    setVehicles(prev => prev.map(v => v.id === id ? { ...v, status: next } : v));
+    const { data, error } = await supabase.from('fuel_logs').insert(payload).select().single();
+    if (data && !error) {
+      setFuelLogs(prev => [{
+        id: data.id, plate: data.vehicle_plate, litres: Number(data.litres),
+        costPerLitre: Number(data.cost_per_litre), total_cost: Number(data.total_cost),
+        station: data.station || '', date: data.log_date
+      }, ...prev]);
+    }
+    setShowAddFuel(false);
+    setFuelPlate(''); setLitres(''); setStation('');
   };
+
+  const statusColor = (s: string) => ({
+    Available: 'text-[var(--color-success)] bg-[rgba(16,185,129,0.1)]',
+    'On Trip': 'text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.1)]',
+    Maintenance: 'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)]',
+    Inactive: 'text-[var(--color-muted)] bg-[var(--color-surface-2)]'
+  }[s] || 'text-[var(--color-muted)]');
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] overflow-y-auto pb-[80px] font-sans">
-      {/* Header back navigation */}
+    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] overflow-y-auto pb-[80px]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
-        <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={16} />
-          <span className="text-[11px] font-mono">Back</span>
+        <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
+          <ArrowLeft size={16} /><span className="text-[11px] font-mono">Back</span>
         </button>
-        <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● SYSTEM FLEET HUB</span>
+        <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] tracking-widest font-bold">● FLEET</span>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="space-y-0.5">
-          <div className="text-[9px] font-mono text-slate-400 tracking-[0.15em] uppercase">▸ ENTERPRISE FLEET TRACKER</div>
-          <h2 className="text-sm font-black text-[var(--color-foreground)]">Logistics & Route Vehicles</h2>
-        </div>
-
-        {activeTab === 'vehicles' && (
-          <button 
-            onClick={() => setShowAddVehicleModal(true)}
-            className="bg-[var(--color-accent-amber)] hover:bg-amber-600 text-[var(--color-obsidian)] font-mono text-[10px] uppercase font-bold px-3 py-1.5 rounded flex items-center space-x-1 cursor-pointer"
-          >
-            <Plus size={12} />
-            <span>Add Vehicle</span>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-[14px] font-bold">Fleet Management</h2>
+        {canEdit && (
+          <button onClick={() => activeTab === 'vehicles' ? setShowAddVehicle(true) : setShowAddFuel(true)}
+            className="flex items-center gap-1.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold px-3 py-1.5 rounded">
+            <Plus size={12} /> {activeTab === 'vehicles' ? 'Add Vehicle' : 'Log Fuel'}
           </button>
         )}
       </div>
 
-      {/* Surface switches */}
-      <div className="flex space-x-2 bg-black/35 p-1 rounded-lg border border-[var(--color-border)] mb-6">
-        <button
-          onClick={() => setActiveTab('vehicles')}
-          className={`flex-1 py-2 text-center text-[10px] font-mono uppercase font-bold rounded-md flex items-center justify-center space-x-1.5 transition-colors ${
-            activeTab === 'vehicles' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-[var(--color-foreground)]'
-          }`}
-        >
-          <Truck size={12} />
-          <span>Fleet Registry</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('maintenance')}
-          className={`flex-1 py-2 text-center text-[10px] font-mono uppercase font-bold rounded-md flex items-center justify-center space-x-1.5 transition-colors ${
-            activeTab === 'maintenance' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-[var(--color-foreground)]'
-          }`}
-        >
-          <Wrench size={12} />
-          <span>Services scheduler</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('fuel')}
-          className={`flex-1 py-2 text-center text-[10px] font-mono uppercase font-bold rounded-md flex items-center justify-center space-x-1.5 transition-colors ${
-            activeTab === 'fuel' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'text-slate-400 hover:text-[var(--color-foreground)]'
-          }`}
-        >
-          <Fuel size={12} />
-          <span>Fuel Ledger</span>
-        </button>
+      <div className="flex border-b border-[rgba(255,255,255,0.05)] mb-4">
+        {(['vehicles', 'fuel'] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`pb-2 px-4 text-[11px] font-mono font-bold border-b-2 transition-all capitalize ${activeTab === tab ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)]'}`}>
+            {tab === 'vehicles' ? `Vehicles (${vehicles.length})` : `Fuel Logs (${fuelLogs.length})`}
+          </button>
+        ))}
       </div>
 
-      {/* Tab Contents */}
-      {activeTab === 'vehicles' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {vehicles.map((v) => (
-              <div key={v.id} className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] p-4 rounded-xl relative overflow-hidden space-y-4">
-                <span className={`absolute top-0 right-0 h-1.5 w-full ${
-                  v.status === 'Available' ? 'bg-[var(--color-success)]' :
-                  v.status === 'On Trip' ? 'bg-[var(--color-accent-cobalt)]' :
-                  v.status === 'Maintenance' ? 'bg-[var(--color-accent-amber)]' : 'bg-red-500'
-                }`} />
-
-                <div className="flex justify-between items-start">
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <Loader size={24} className="animate-spin text-[var(--color-accent-amber)]" />
+          <p className="text-[12px] font-mono text-[var(--color-muted)]">Loading fleet data...</p>
+        </div>
+      ) : activeTab === 'vehicles' ? (
+        vehicles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[rgba(255,255,255,0.05)] rounded-xl">
+            <Truck size={32} className="opacity-20" />
+            <p className="text-[12px] font-mono text-[var(--color-muted)]">No vehicles registered yet</p>
+            {canEdit && <button onClick={() => setShowAddVehicle(true)} className="text-[11px] font-mono text-[var(--color-accent-amber)] underline">Add first vehicle</button>}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {vehicles.map(v => (
+              <div key={v.id} className="ehi-card p-4">
+                <div className="flex justify-between items-start mb-2">
                   <div>
-                    <span className="text-[9px] font-mono font-bold text-slate-500 block uppercase tracking-wider">{v.type} ({v.capacity}KG Limit)</span>
-                    <h3 className="text-base font-mono font-black text-[var(--color-foreground)] mt-0.5">{v.plate}</h3>
+                    <p className="text-[14px] font-bold font-mono">{v.plate}</p>
+                    <p className="text-[11px] text-[var(--color-muted)]">{v.make} {v.model} · {v.type}</p>
                   </div>
-                  <button 
-                    onClick={() => handleToggleStatus(v.id, v.status)}
-                    className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-solid ${
-                      v.status === 'Available' ? 'bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border-[rgba(16,185,129,0.3)]' :
-                      v.status === 'On Trip' ? 'bg-[rgba(59,130,246,0.1)] text-[var(--color-accent-cobalt)] border-[rgba(59,130,246,0.3)]' :
-                      'bg-[rgba(245,158,11,0.1)] text-[var(--color-accent-amber)] border-[rgba(245,158,11,0.3)]'
-                    }`}
-                  >
-                    {v.status}
-                  </button>
+                  <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded font-mono ${statusColor(v.status)}`}>{v.status}</span>
                 </div>
-
-                <div className="pt-2 border-t border-[rgba(255,255,255,0.05)] grid grid-cols-2 gap-4 text-[11px]">
-                  <div>
-                    <span className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider block">Assigned Driver</span>
-                    <span className="font-semibold text-slate-300 mt-0.5 block truncate">{v.driver}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider block">Car Model</span>
-                    <span className="font-semibold text-slate-300 mt-0.5 block truncate">{v.make} {v.model}</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-3 border-t border-[rgba(255,255,255,0.05)]">
-                  <span className="text-[9px] font-mono text-slate-500 uppercase">Service: {v.nextService}</span>
-                  <button 
-                    onClick={() => handleDeleteVehicle(v.id)}
-                    className="text-[var(--color-error)] opacity-60 hover:opacity-100 p-1 rounded hover:bg-red-500/10 cursor-pointer"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                <div className="grid grid-cols-3 gap-2 text-[10px] font-mono text-[var(--color-muted)]">
+                  <span>Driver: {v.driver}</span>
+                  <span>Cap: {v.capacity.toLocaleString()}kg</span>
+                  <span>Next svc: {v.nextService || '—'}</span>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {activeTab === 'maintenance' && (
-        <div className="ehi-card overflow-hidden">
-          <div className="p-3 border-b border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] flex justify-between items-center">
-            <span className="text-[10px] font-mono text-[var(--color-foreground)] uppercase tracking-wider">Scheduled Fleet Services</span>
-            <span className="text-[9px] text-[var(--color-muted)] font-mono uppercase">Interval Checklist (90-Day Standard)</span>
+        )
+      ) : (
+        fuelLogs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[rgba(255,255,255,0.05)] rounded-xl">
+            <Fuel size={32} className="opacity-20" />
+            <p className="text-[12px] font-mono text-[var(--color-muted)]">No fuel logs yet</p>
           </div>
-
-          <div className="divide-y divide-[rgba(255,255,255,0.05)] text-xs font-mono">
-            {vehicles.map((v) => {
-              const diffMs = new Date(v.nextService).getTime() - Date.now();
-              const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-              const isUrgent = daysRemaining < 10;
-              return (
-                <div key={v.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-1.5">
-                      <span className="text-[12px] font-bold text-[var(--color-foreground)]">{v.plate}</span>
-                      <span className="text-[8px] bg-black/40 text-slate-400 px-1 py-0.5 rounded uppercase">{v.make} {v.model}</span>
-                    </div>
-                    <div className="flex space-x-4 text-[10px] text-slate-500">
-                      <span>Last Service: {v.lastService}</span>
-                      <span>Next Schedule: {v.nextService}</span>
-                    </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="ehi-card p-3 flex justify-between items-center mb-3 bg-[rgba(245,158,11,0.05)] border-[rgba(245,158,11,0.2)]">
+              <span className="text-[10px] font-mono text-[var(--color-muted)]">Total Fuel Spend</span>
+              <span className="text-[14px] font-bold font-mono text-[var(--color-accent-amber)]">{fmt(fuelLogs.reduce((s, f) => s + f.total_cost, 0))}</span>
+            </div>
+            {fuelLogs.map(f => (
+              <div key={f.id} className="ehi-card p-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-[12px] font-bold font-mono">{f.plate}</p>
+                    <p className="text-[10px] text-[var(--color-muted)]">{f.litres}L @ ₦{f.costPerLitre}/L · {f.station}</p>
                   </div>
-
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <span className={`text-[12px] font-bold font-mono ${isUrgent ? 'text-[var(--color-error)]' : 'text-[var(--color-success)]'}`}>
-                        {daysRemaining} Days
-                      </span>
-                      <span className="text-[8px] text-slate-500 uppercase tracking-widest block font-mono">Remaining</span>
-                    </div>
-
-                    <button 
-                      onClick={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        const next = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                        setVehicles(prev => prev.map(item => item.id === v.id ? { ...item, lastService: today, nextService: next } : item));
-                        alert(`Vehicle ${v.plate} marked as fully serviced! Last serviced record updated to ${today}.`);
-                      }}
-                      className="bg-[var(--color-success)] hover:bg-emerald-600 text-[var(--color-obsidian)] text-[9px] uppercase font-black px-3 py-1.5 rounded cursor-pointer"
-                    >
-                      Log Service Completed
-                    </button>
+                  <div className="text-right">
+                    <p className="text-[13px] font-bold text-[var(--color-accent-amber)]">{fmt(f.total_cost)}</p>
+                    <p className="text-[9px] font-mono text-[var(--color-muted)]">{f.date}</p>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
-        </div>
+        )
       )}
 
-      {activeTab === 'fuel' && (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Fuel Entry Log Form */}
-          <form onSubmit={handleLogFuel} className="ehi-card p-4 md:col-span-4 h-max space-y-4">
-            <div className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-wider uppercase">Log Fuel Consumption</div>
-
-            <div className="space-y-1">
-              <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Select Vehicle</label>
-              <select 
-                value={selectedPlate}
-                onChange={(e) => setSelectedPlate(e.target.value)}
-                className="w-full bg-black/40 border border-[rgba(255,255,255,0.1)] rounded p-2 text-xs focus:outline-none focus:border-[var(--color-accent-amber)]"
-              >
-                {vehicles.map(v => (
-                  <option key={v.id} value={v.plate}>{v.plate} ({v.driver})</option>
-                ))}
-              </select>
+      {/* Add Vehicle Modal */}
+      {showAddVehicle && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="ehi-card max-w-sm w-full">
+            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center">
+              <span className="text-[11px] font-mono font-bold">Register Vehicle</span>
+              <button onClick={() => setShowAddVehicle(false)} className="text-[var(--color-muted)] font-mono">✕</button>
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
+            <form onSubmit={handleAddVehicle} className="p-4 space-y-3">
               <div className="space-y-1">
-                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Litres Count</label>
-                <input 
-                  type="number"
-                  placeholder="e.g. 45"
-                  value={litres}
-                  onChange={(e) => setLitres(e.target.value)}
-                  className="w-full bg-black/40 border border-[rgba(255,255,255,0.1)] rounded p-2 text-xs focus:outline-none focus:border-[var(--color-accent-amber)]"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Rate/L (₦)</label>
-                <input 
-                  type="number"
-                  placeholder="e.g. 850"
-                  value={costPrLitre}
-                  onChange={(e) => setCostPrLitre(e.target.value)}
-                  className="w-full bg-black/40 border border-[rgba(255,255,255,0.1)] rounded p-2 text-xs focus:outline-none focus:border-[var(--color-accent-amber)]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Filling Station Info</label>
-              <input 
-                type="text"
-                placeholder="e.g. Bovas Ikeja"
-                value={stationName}
-                onChange={(e) => setStationName(e.target.value)}
-                className="w-full bg-black/40 border border-[rgba(255,255,255,0.1)] rounded p-2 text-xs focus:outline-none focus:border-[var(--color-accent-amber)]"
-              />
-            </div>
-
-            <button 
-              type="submit"
-              className="w-full py-2.5 bg-[var(--color-accent-amber)] hover:bg-amber-600 text-[var(--color-obsidian)] text-[10px] font-bold font-mono uppercase rounded cursor-pointer"
-            >
-              SAVE FUEL LOG
-            </button>
-          </form>
-
-          {/* Historical Log list */}
-          <div className="ehi-card md:col-span-8 overflow-hidden">
-            <div className="p-3 border-b border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] flex justify-between items-center">
-              <span className="text-[10px] font-mono text-[var(--color-foreground)] uppercase tracking-wider font-bold">Historical Fuel Expenditures</span>
-              <span className="text-[9px] text-[var(--color-muted)] font-mono uppercase">Fleet records</span>
-            </div>
-
-            <div className="divide-y divide-[rgba(255,255,255,0.05)] text-xs font-mono">
-              {fuelLogs.map((log) => (
-                <div key={log.id} className="p-3.5 flex justify-between items-center hover:bg-black/10">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-1.5">
-                      <span className="text-[12px] font-bold text-[var(--color-foreground)]">{log.plate}</span>
-                      <span className="text-[8px] bg-amber-500/10 text-[var(--color-accent-amber)] px-1 py-0.5 rounded uppercase">{log.id}</span>
-                    </div>
-                    <div className="flex space-x-4 text-[10px] text-slate-500">
-                      <span>Station: {log.station}</span>
-                      <span>Date: {log.date}</span>
-                    </div>
-                  </div>
-
-                  <div className="text-right space-y-0.5">
-                    <span className="text-[12px] font-bold text-[var(--color-success)] block">{fmt(log.litres * log.costPerLitre)}</span>
-                    <span className="text-[8.5px] text-slate-400 block">{log.litres}L @ ₦{log.costPerLitre}/L</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Vehicle Modal Overlay */}
-      {showAddVehicleModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-55">
-          <div className="ehi-card max-w-sm w-full overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex justify-between items-center bg-black/40">
-              <span className="text-[10px] font-mono text-[var(--color-accent-amber)] uppercase font-bold tracking-wider">ADD VEHICLE TO FLEET</span>
-              <button onClick={() => setShowAddVehicleModal(false)} className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
-            </div>
-
-            <form onSubmit={handleAddVehicle} className="p-4 space-y-4">
-              <div className="space-y-1">
-                <label className="text-[8px] font-mono text-[var(--color-muted)] uppercase">Vehicle Type</label>
-                <select 
-                  value={type} 
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full bg-[var(--color-obsidian)] border border-[var(--color-border-strong)] p-2 rounded text-xs text-[var(--color-foreground)]"
-                >
-                  <option value="Van">Van Delivery</option>
-                  <option value="Truck">Truck Logistic Trailer</option>
-                  <option value="Pickup">Pickup Dispatch</option>
-                  <option value="Bus">Passenger Bus</option>
-                  <option value="Motorcycle">Motorcycle Delivery</option>
+                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Vehicle Type</label>
+                <select value={type} onChange={e => setType(e.target.value)} className="w-full ehi-input text-[12px]">
+                  <option value="Van">Van</option>
+                  <option value="Truck">Truck</option>
+                  <option value="Pickup">Pickup</option>
+                  <option value="Bus">Bus</option>
+                  <option value="Motorcycle">Motorcycle</option>
                 </select>
               </div>
-
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] uppercase">Plate Number</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. LAG-404AA"
-                    required
-                    value={plate}
-                    onChange={(e) => setPlate(e.target.value)}
-                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] uppercase placeholder-slate-600"
-                  />
+                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Plate No.</label>
+                  <input required type="text" value={plate} onChange={e => setPlate(e.target.value)} placeholder="LAG-404AA" className="w-full ehi-input text-[12px] uppercase" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] uppercase">Load Limit (KG)</label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 1500"
-                    required
-                    value={capacity}
-                    onChange={(e) => setCapacity(e.target.value)}
-                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] placeholder-slate-600"
-                  />
+                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Load Limit (kg)</label>
+                  <input type="number" value={capacity} onChange={e => setCapacity(e.target.value)} className="w-full ehi-input text-[12px]" />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] uppercase">Manufacturer Make</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Toyota"
-                    required
-                    value={make}
-                    onChange={(e) => setMake(e.target.value)}
-                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] placeholder-slate-600"
-                  />
+                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Make</label>
+                  <input required type="text" value={make} onChange={e => setMake(e.target.value)} placeholder="Toyota" className="w-full ehi-input text-[12px]" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] uppercase">Model Series</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Hiace"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] placeholder-slate-600"
-                  />
+                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Model</label>
+                  <input type="text" value={model} onChange={e => setModel(e.target.value)} placeholder="Hiace" className="w-full ehi-input text-[12px]" />
                 </div>
               </div>
-
               <div className="space-y-1">
-                <label className="text-[8px] font-mono text-[var(--color-muted)] uppercase">Default Driver Name</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Driver Tunde"
-                  value={driver}
-                  onChange={(e) => setDriver(e.target.value)}
-                  className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)] placeholder-slate-600"
-                />
+                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Driver Name</label>
+                <input type="text" value={driver} onChange={e => setDriver(e.target.value)} placeholder="Driver Tunde" className="w-full ehi-input text-[12px]" />
               </div>
-
-              <div className="flex space-x-2 pt-2">
-                <button 
-                  type="submit"
-                  className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-mono text-[10px] font-bold uppercase py-2.5 rounded hover:bg-amber-600 cursor-pointer"
-                >
-                  Confirm Addition
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setShowAddVehicleModal(false)}
-                  className="bg-neutral-800 text-slate-300 font-mono text-[10px] font-bold uppercase px-4 rounded hover:bg-neutral-700 cursor-pointer"
-                >
-                  Cancel
-                </button>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[11px] py-2.5 rounded">Add Vehicle</button>
+                <button type="button" onClick={() => setShowAddVehicle(false)} className="px-4 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[11px] rounded">Cancel</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* Add Fuel Modal */}
+      {showAddFuel && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="ehi-card max-w-sm w-full">
+            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center">
+              <span className="text-[11px] font-mono font-bold">Log Fuel</span>
+              <button onClick={() => setShowAddFuel(false)} className="text-[var(--color-muted)] font-mono">✕</button>
+            </div>
+            <form onSubmit={handleAddFuel} className="p-4 space-y-3">
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Vehicle Plate</label>
+                <select value={fuelPlate} onChange={e => setFuelPlate(e.target.value)} required className="w-full ehi-input text-[12px]">
+                  <option value="">Select vehicle...</option>
+                  {vehicles.map(v => (
+                    <option key={v.id} value={v.plate}>{v.plate} · {v.driver}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Litres</label>
+                  <input required type="number" value={litres} onChange={e => setLitres(e.target.value)} placeholder="e.g. 45" className="w-full ehi-input text-[12px]" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Rate/L (₦)</label>
+                  <input type="number" value={costPerLitre} onChange={e => setCostPerLitre(e.target.value)} className="w-full ehi-input text-[12px]" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Station Name</label>
+                <input type="text" value={station} onChange={e => setStation(e.target.value)} placeholder="e.g. BOVAS Ikeja" className="w-full ehi-input text-[12px]" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[11px] py-2.5 rounded">Save Log</button>
+                <button type="button" onClick={() => setShowAddFuel(false)} className="px-4 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[11px] rounded">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

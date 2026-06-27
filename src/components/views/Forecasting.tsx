@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Brain, Calendar, ShieldCheck, AlertTriangle, TrendingUp, Sparkles, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts';
 import { fmt } from '../../lib/helpers';
+import { supabase } from '../../lib/supabase';
 
 interface ForecastDay {
   date: string;
@@ -23,16 +24,56 @@ export const Forecasting = ({
   const [riskNote, setRiskNote] = useState('');
   const [peakDay, setPeakDay] = useState('');
 
-  // Initial historical performance trend dataset
-  const [historicalData] = useState([
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const [historicalData, setHistoricalData] = useState([
     { day: 'Mon', Cargo: 320000, Marketing: 140000, ValueJet: 95000 },
     { day: 'Tue', Cargo: 480000, Marketing: 185000, ValueJet: 110000 },
-    { day: 'Wed', Cargo: 720000, Marketing: 340000, ValueJet: 325000 }, // Peak Day
+    { day: 'Wed', Cargo: 720000, Marketing: 340000, ValueJet: 325000 },
     { day: 'Thu', Cargo: 540000, Marketing: 210000, ValueJet: 165000 },
     { day: 'Fri', Cargo: 680000, Marketing: 290000, ValueJet: 240000 },
     { day: 'Sat', Cargo: 390000, Marketing: 125000, ValueJet: 85000 },
     { day: 'Sun', Cargo: 150000, Marketing: 80000, ValueJet: 45000 }
   ]);
+
+  useEffect(() => {
+    const fetchRevenue = async () => {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      try {
+        const [cargoRes, txRes] = await Promise.all([
+          supabase.from('cargo_entries').select('created_at, amount').gte('created_at', sevenDaysAgo),
+          supabase.from('transactions').select('created_at, amount, type').gte('created_at', sevenDaysAgo).in('type', ['marketing', 'baggage'])
+        ]);
+
+        const dayMap: Record<string, { Cargo: number; Marketing: number; ValueJet: number }> = {};
+        DAYS.forEach(d => { dayMap[d] = { Cargo: 0, Marketing: 0, ValueJet: 0 }; });
+
+        const jsToEhi = (jsDay: number) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][jsDay];
+
+        if (cargoRes.data) {
+          cargoRes.data.forEach((e: any) => {
+            const d = jsToEhi(new Date(e.created_at).getDay());
+            if (dayMap[d]) dayMap[d].Cargo += Number(e.amount) || 0;
+          });
+        }
+        if (txRes.data) {
+          txRes.data.forEach((e: any) => {
+            const d = jsToEhi(new Date(e.created_at).getDay());
+            if (!dayMap[d]) return;
+            if (e.type === 'marketing') dayMap[d].Marketing += Number(e.amount) || 0;
+            else if (e.type === 'baggage') dayMap[d].ValueJet += Number(e.amount) || 0;
+          });
+        }
+
+        const total = Object.values(dayMap).reduce((s, d) => s + d.Cargo + d.Marketing + d.ValueJet, 0);
+        if (total > 0) {
+          setHistoricalData(DAYS.map(day => ({ day, ...dayMap[day] })));
+        }
+      } catch (err) {
+        console.error('Forecasting revenue fetch error:', err);
+      }
+    };
+    fetchRevenue();
+  }, []);
 
   // Forecasted dataset
   const [forecastData, setForecastData] = useState<ForecastDay[]>([

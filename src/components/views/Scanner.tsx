@@ -122,7 +122,7 @@ export const Scanner = ({
   const batchSuccess = batchItems.filter(b => b.result.startsWith('SUCCESS')).length;
   const batchAlerts = batchItems.filter(b => !b.result.startsWith('SUCCESS') && b.result !== 'ALREADY_PROCESSED').length;
   const successfulScans = batchItems
-    .filter(item => item.result === 'SUCCESS_ARRIVE' || item.result === 'SUCCESS_DEPART')
+    .filter(item => item.result === 'SUCCESS_ARRIVE' || item.result === 'SUCCESS_DEPART' || item.result === 'SUCCESS_DELIVER')
     .slice(0, 10);
 
   const handleConfirmSubmitBatch = async (itemsToSubmit = batchQueue) => {
@@ -851,9 +851,10 @@ export const Scanner = ({
           <div className="divide-y divide-[var(--color-border)]">
             {successfulScans.map((item, index) => {
               const isArrive = item.result === 'SUCCESS_ARRIVE';
-              const badgeBg = isArrive ? 'rgba(16,185,129,0.1)' : 'rgba(37,99,235,0.1)';
-              const badgeText = isArrive ? 'var(--color-success)' : 'var(--color-accent-cobalt)';
-              const label = isArrive ? 'ARRIVE' : 'DEPART';
+              const isDeliver = item.result === 'SUCCESS_DELIVER';
+              const badgeBg = isArrive ? 'rgba(16,185,129,0.1)' : isDeliver ? 'rgba(168,85,247,0.1)' : 'rgba(37,99,235,0.1)';
+              const badgeText = isArrive ? 'var(--color-success)' : isDeliver ? '#a855f7' : 'var(--color-accent-cobalt)';
+              const label = isArrive ? 'ARRIVE' : isDeliver ? 'DELIVER' : 'DEPART';
 
               return (
                 <div key={index} className="flex items-center justify-between py-2 text-[12px]">

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { ArrowLeft, ShieldAlert, CheckCircle, RefreshCcw, Eye, Search, AlertOctagon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, ShieldAlert, CheckCircle, RefreshCcw, Eye, AlertOctagon, Loader } from 'lucide-react';
 import { fmt } from '../../lib/helpers';
+import { supabase } from '../../lib/supabase';
 
 interface FraudAlert {
   id: string;
@@ -14,23 +15,114 @@ interface FraudAlert {
   resolution?: string;
 }
 
-export const FraudAlerts = ({ 
-  onBack 
-}: { 
+export const FraudAlerts = ({
+  onBack
+}: {
   onBack: () => void;
 }) => {
   const [activeTab, setActiveTab] = useState<'pending' | 'reviewed'>('pending');
   const [selectedAlert, setSelectedAlert] = useState<FraudAlert | null>(null);
   const [resolutionText, setResolutionText] = useState('');
-  
-  // Real-time seed fraud alerts (Rule-based & AI-based logs)
-  const [alerts, setAlerts] = useState<FraudAlert[]>([
-    { id: 'FR-101', type: 'duplicate_awb', severity: 'critical', title: 'Duplicate Airway Bill Input', description: 'AWB tag tracking number 18002 was submitted twice by Lagos HQ and Abuja Station within 8 minutes.', relatedId: 'AC-18002', time: '10 mins ago', reviewed: false },
-    { id: 'FR-102', type: 'debt_spike', severity: 'high', title: 'Rapid Debt Limit Violation', description: 'Consignee Madame Lily total outstanding uncollected debt balances sum up to ₦620,000, violating terminal alert threshold (₦50,050).', relatedId: 'MK-240619-M112', time: '35 mins ago', reviewed: false },
-    { id: 'FR-103', type: 'unusual_amount', severity: 'medium', title: 'Aesthetic Cargo Rate Deviation', description: 'Amount recorded (₦95,000) for Parcels shipment of weight 12KG is significantly inflated compared to standard pricing grid.', relatedId: 'WB-240619-A3F1', time: '2 hours ago', reviewed: false },
-    { id: 'FR-104', type: 'suspicious_pattern', severity: 'high', title: '[AI Insight] Abnormal Entry Volatility', description: 'Agent logged 32 ValueJet tags within 45 minutes from same POS terminal. High probability of bulk baggage ledger manipulation.', relatedId: 'VJ-BATCH', time: '5 hours ago', reviewed: false },
-    { id: 'FR-105', type: 'rapid_entries', severity: 'low', title: 'Over-speed Entry Checklist', description: 'Cargo ledger registered 12 distinct entries under 180 seconds on terminal C-14.', relatedId: 'TX-FAST', time: 'Yesterday', reviewed: true, resolution: 'Confirmed manual bulk backlog clearance by Lead Accountant.' }
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [alerts, setAlerts] = useState<FraudAlert[]>([]);
+
+  useEffect(() => {
+    const runDetectionRules = async () => {
+      setLoading(true);
+      const liveAlerts: FraudAlert[] = [];
+      const now = new Date();
+      const last24h = new Date(Date.now() - 86400000).toISOString();
+      const last15m = new Date(Date.now() - 15 * 60000).toISOString();
+
+      try {
+        // Rule 1: Duplicate AWB detection (last 24 hours)
+        const { data: cargoData } = await supabase
+          .from('cargo_entries')
+          .select('awb_tag_number, consignee_name, amount, logged_by, created_at')
+          .gte('created_at', last24h);
+
+        if (cargoData && cargoData.length > 0) {
+          const awbCounts: Record<string, number> = {};
+          cargoData.forEach((e: any) => {
+            if (e.awb_tag_number) awbCounts[e.awb_tag_number] = (awbCounts[e.awb_tag_number] || 0) + 1;
+          });
+          Object.entries(awbCounts).filter(([_, c]) => c > 1).forEach(([awb, count]) => {
+            liveAlerts.push({
+              id: `FR-DUP-${awb}`, type: 'duplicate_awb', severity: 'critical',
+              title: 'Duplicate Airway Bill Detected',
+              description: `AWB ${awb} was submitted ${count} times in the last 24 hours across stations.`,
+              relatedId: awb, time: 'Live', reviewed: false
+            });
+          });
+
+          // Rule 2: Unusual amount — entries >2.5× average amount
+          const amounts = cargoData.map((e: any) => Number(e.amount)).filter(a => a > 0);
+          if (amounts.length > 3) {
+            const avg = amounts.reduce((s: number, a: number) => s + a, 0) / amounts.length;
+            cargoData.filter((e: any) => Number(e.amount) > avg * 2.5 && Number(e.amount) > 80000).forEach((e: any) => {
+              liveAlerts.push({
+                id: `FR-AMT-${e.awb_tag_number || e.id}`, type: 'unusual_amount', severity: 'medium',
+                title: 'Unusual Cargo Amount',
+                description: `${e.consignee_name}: ${fmt(Number(e.amount))} is ${Math.round(Number(e.amount) / avg * 100)}% of average — significantly above the ₦${Math.round(avg).toLocaleString()} baseline.`,
+                relatedId: e.awb_tag_number || '', time: 'Live', reviewed: false
+              });
+            });
+          }
+
+          // Rule 3: Rapid entries — any agent logging ≥8 entries in 15 minutes
+          const { data: recentData } = await supabase
+            .from('cargo_entries')
+            .select('logged_by, created_at')
+            .gte('created_at', last15m);
+
+          if (recentData && recentData.length >= 8) {
+            const byAgent: Record<string, number> = {};
+            recentData.forEach((e: any) => {
+              const key = e.logged_by || 'Unknown Agent';
+              byAgent[key] = (byAgent[key] || 0) + 1;
+            });
+            Object.entries(byAgent).filter(([_, c]) => c >= 8).forEach(([agent, count]) => {
+              liveAlerts.push({
+                id: `FR-RAPID-${agent.slice(0, 8)}`, type: 'rapid_entries', severity: 'high',
+                title: 'Rapid Entry Velocity Detected',
+                description: `Agent "${agent}" logged ${count} cargo entries within 15 minutes. This may indicate bulk manipulation.`,
+                relatedId: agent, time: 'Live', reviewed: false
+              });
+            });
+          }
+        }
+
+        // Rule 4: Debt spike — consignees with total outstanding debt > ₦50,000
+        const { data: debtData } = await supabase
+          .from('cargo_entries')
+          .select('consignee_name, amount')
+          .eq('receipt_mode', 'Debt');
+
+        if (debtData && debtData.length > 0) {
+          const debtByConsignee: Record<string, number> = {};
+          debtData.forEach((e: any) => {
+            debtByConsignee[e.consignee_name] = (debtByConsignee[e.consignee_name] || 0) + Number(e.amount);
+          });
+          Object.entries(debtByConsignee).filter(([_, total]) => total > 50000).forEach(([name, total]) => {
+            liveAlerts.push({
+              id: `FR-DEBT-${name.slice(0, 10).replace(/\s/g, '')}`, type: 'debt_spike', severity: 'high',
+              title: 'Outstanding Debt Threshold Exceeded',
+              description: `${name} has ${fmt(total)} in uncleared debt, exceeding the ₦50,000 alert threshold.`,
+              relatedId: name, time: 'Live', reviewed: false
+            });
+          });
+        }
+
+      } catch (err) {
+        console.error('Fraud detection error:', err);
+      }
+
+      setAlerts(liveAlerts);
+      setLoading(false);
+    };
+
+    runDetectionRules();
+  }, []);
 
   const handleReviewAlert = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,7 +231,12 @@ export const FraudAlerts = ({
 
       {/* Log Feed List */}
       <div className="space-y-3">
-        {(activeTab === 'pending' ? pendingAlerts : reviewedAlerts).length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Loader size={24} className="animate-spin text-[var(--color-error)]" />
+            <p className="text-[12px] font-mono text-[var(--color-muted)]">Running 4 live detection rules...</p>
+          </div>
+        ) : (activeTab === 'pending' ? pendingAlerts : reviewedAlerts).length === 0 ? (
           <div className="py-12 text-center border-2 border-dashed border-[rgba(255,255,255,0.05)] rounded-xl bg-black/10">
             <span className="text-2xl block">🛡️</span>
             <span className="text-xs font-mono text-slate-400 mt-2 block">No matching security entries found</span>
