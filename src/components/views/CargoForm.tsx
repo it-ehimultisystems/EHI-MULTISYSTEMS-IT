@@ -199,52 +199,7 @@ export const CargoForm = ({
   const [corpClients, setCorpClients] = useState<CorporateClient[]>(() => {
     const saved = localStorage.getItem("ehi_corporate_clients_v2");
     if (saved) return JSON.parse(saved);
-    const initial = [
-      {
-        id: "corp_1",
-        company_name: "Aramex",
-        contact_phone: "08011223344",
-        accumulated_monthly_debt: 154300,
-      },
-      {
-        id: "corp_2",
-        company_name: "SAHCO",
-        contact_phone: "08022334455",
-        accumulated_monthly_debt: 84000,
-      },
-      {
-        id: "corp_3",
-        company_name: "GlobaCom",
-        contact_phone: "09033445566",
-        accumulated_monthly_debt: 220000,
-      },
-      {
-        id: "corp_4",
-        company_name: "ZeemMax",
-        contact_phone: "08044556677",
-        accumulated_monthly_debt: 0,
-      },
-      {
-        id: "corp_5",
-        company_name: "EHI",
-        contact_phone: "08055667788",
-        accumulated_monthly_debt: 0,
-      },
-      {
-        id: "corp_6",
-        company_name: "Salco",
-        contact_phone: "08066778899",
-        accumulated_monthly_debt: 0,
-      },
-      {
-        id: "corp_7",
-        company_name: "Slot",
-        contact_phone: "08077889900",
-        accumulated_monthly_debt: 0,
-      },
-    ];
-    localStorage.setItem("ehi_corporate_clients_v2", JSON.stringify(initial));
-    return initial;
+    return [];
   });
 
   const [corpRates, setCorpRates] = useState<CorporateRouteRate[]>(() => {
@@ -305,34 +260,7 @@ export const CargoForm = ({
     () => {
       const saved = localStorage.getItem("ehi_pending_intakes_v2");
       if (saved) return JSON.parse(saved);
-      const initial = [
-        {
-          id: "CG-INT-309",
-          consignee: "Aramex",
-          pieces: 4,
-          route: "ABV/Abuja",
-          contentType: "Documents",
-          airline: "Arik Air",
-          awb: "AWB-ARAM-92",
-          created_at: new Date().toISOString(),
-          sender_phone: "08011223344",
-          time: "10:15",
-        },
-        {
-          id: "CG-INT-315",
-          consignee: "SAHCO",
-          pieces: 8,
-          route: "BNI/Benin City",
-          contentType: "Medical",
-          airline: "United Nigeria",
-          awb: "AWB-SAHC-15",
-          created_at: new Date().toISOString(),
-          sender_phone: "08022334455",
-          time: "12:40",
-        },
-      ];
-      localStorage.setItem("ehi_pending_intakes_v2", JSON.stringify(initial));
-      return initial;
+      return [];
     },
   );
 
@@ -349,6 +277,31 @@ export const CargoForm = ({
       }
     }
   }, [availableAirlines]);
+
+  // Load real corporate clients from Supabase — overrides the local seed when data exists
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { supabase } = await import('../../lib/supabase');
+        const { data } = await supabase
+          .from('corporate_clients')
+          .select('id, company_name, contact_phone')
+          .eq('active', true)
+          .order('company_name');
+        if (active && data && data.length > 0) {
+          const mapped = data.map((c: any) => ({
+            id: c.id,
+            company_name: c.company_name,
+            contact_phone: c.contact_phone || '',
+            accumulated_monthly_debt: 0,
+          }));
+          setCorpClients(mapped);
+        }
+      } catch { /* keep local seed if offline */ }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const [intakeAwb, setIntakeAwb] = useState(generateAwb());
   const [intakePcs, setIntakePcs] = useState("1");

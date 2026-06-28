@@ -64,7 +64,7 @@ const PublicTrackingPage = () => {
     const { data: manifest } = await supabase
       .from('manifests')
       .select('*')
-      .or(`transaction_id.eq."${query}",pnr.eq."${query}"`)
+      .eq('transaction_id', query)
       .limit(1);
 
     if (manifest && manifest.length > 0) {
@@ -73,9 +73,9 @@ const PublicTrackingPage = () => {
         id: v.transaction_id,
         name: v.passenger_name,
         route: v.destination,
-        kg: v.total_kg,
+        kg: v.excess_kg || v.total_kg,
         pieces: v.total_pcs,
-        status: v.status || 'Intake'
+        status: v.status || 'Delivered'
       });
       setLoading(false);
       return;

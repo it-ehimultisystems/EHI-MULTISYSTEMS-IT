@@ -72,20 +72,20 @@ export const FraudAlerts = ({
           // Rule 3: Rapid entries — any agent logging ≥8 entries in 15 minutes
           const { data: recentData } = await supabase
             .from('cargo_entries')
-            .select('logged_by, created_at')
+            .select('entered_by, created_at')
             .gte('created_at', last15m);
 
           if (recentData && recentData.length >= 8) {
             const byAgent: Record<string, number> = {};
             recentData.forEach((e: any) => {
-              const key = e.logged_by || 'Unknown Agent';
+              const key = e.entered_by || 'Unknown Agent';
               byAgent[key] = (byAgent[key] || 0) + 1;
             });
             Object.entries(byAgent).filter(([_, c]) => c >= 8).forEach(([agent, count]) => {
               liveAlerts.push({
                 id: `FR-RAPID-${agent.slice(0, 8)}`, type: 'rapid_entries', severity: 'high',
                 title: 'Rapid Entry Velocity Detected',
-                description: `Agent "${agent}" logged ${count} cargo entries within 15 minutes. This may indicate bulk manipulation.`,
+                description: `Agent ID ${agent.slice(0, 8)}… logged ${count} cargo entries within 15 minutes. This may indicate bulk manipulation.`,
                 relatedId: agent, time: 'Live', reviewed: false
               });
             });

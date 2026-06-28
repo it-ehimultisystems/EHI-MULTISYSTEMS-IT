@@ -12,13 +12,15 @@ export async function cleanupOldQueue(): Promise<void> {
 }
 
 export async function writeWithOfflineSupport(
-  tableName: 'shipments' | 'manifests' | 'marketing_entries' | 'cargo_entries' | 'expenses',
+  tableName: 'manifests' | 'marketing_entries' | 'cargo_entries' | 'expenses',
   payload: Record<string, unknown>
 ): Promise<{ success: boolean; offline: boolean; error?: any }> {
   const record = { id: payload.id as string, data: payload, synced: 0 as const, created_at: new Date().toISOString() };
 
-  // Always write to local IndexedDB first (instant)
-  await (db[tableName] as Dexie.Table).put(record);
+  // Always write to local IndexedDB first (instant) — expenses has no local mirror table
+  if (tableName !== 'expenses') {
+    await (db[tableName] as Dexie.Table).put(record);
+  }
 
   // Add to sync queue
   await db.sync_queue.add({
@@ -39,11 +41,16 @@ export async function writeWithOfflineSupport(
       delete supabasePayload.id;
     }
 
-    const onConflictColumn = tableName === 'manifests' ? 'transaction_id' : 'entry_ref';
+    // expenses uses its own id column, others use entry_ref / transaction_id
+    const onConflictColumn = tableName === 'manifests' ? 'transaction_id'
+      : tableName === 'expenses' ? 'id'
+      : 'entry_ref';
     const { error } = await supabase.from(tableName).upsert(supabasePayload, { onConflict: onConflictColumn });
     if (!error) {
       await db.sync_queue.where('record_id').equals(payload.id as string).delete();
-      await (db[tableName] as Dexie.Table).where('id').equals(payload.id as string).modify({ synced: 1 });
+      if (tableName !== 'expenses') {
+        await (db[tableName] as Dexie.Table).where('id').equals(payload.id as string).modify({ synced: 1 });
+      }
       return { success: true, offline: false };
     } else {
       console.error('Supabase insert error (falling back to offline queue):', error);
@@ -57,8 +64,6 @@ export async function writeWithOfflineSupport(
     // Network unavailable — leave in queue
     return { success: false, offline: true, error: err instanceof Error ? err.message : String(err) };
   }
-
-  return { success: true, offline: true };
 }
 
 export async function processSyncQueue(): Promise<number> {

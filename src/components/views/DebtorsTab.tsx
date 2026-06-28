@@ -16,30 +16,28 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
 
   const [statementPrint, setStatementPrint] = useState<Transaction | null>(null);
 
-  // Deterministic age from tx ID — stable across renders
-  const stableAge = (id: string): number => {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) hash += id.charCodeAt(i);
-    return hash % 120;
+  // Compute real aging from the transaction's created_at timestamp
+  const realAgeInDays = (t: any): number => {
+    if (!t.created_at) return 0;
+    const created = new Date(t.created_at).getTime();
+    if (isNaN(created)) return 0;
+    return Math.max(0, Math.floor((Date.now() - created) / 86400000));
   };
 
-  // Extract fake created_at from time, and determine clientType. 
-  // Normally this would use actual typed DebtRecords from backend.
   const debts = transactions.filter(t => t.mode === 'Debt' || t.mode?.includes('Debt')).map(t => {
-    // Fake aging purely for simulation UI
-    const stableAgeInDays = stableAge(t.id);
+    const ageInDays = realAgeInDays(t);
     let bucket: 'current' | 'overdue' | 'critical' | 'writeoff-risk' = 'current';
-    if (stableAgeInDays > 90) bucket = 'writeoff-risk';
-    else if (stableAgeInDays > 60) bucket = 'critical';
-    else if (stableAgeInDays > 30) bucket = 'overdue';
+    if (ageInDays > 90) bucket = 'writeoff-risk';
+    else if (ageInDays > 60) bucket = 'critical';
+    else if (ageInDays > 30) bucket = 'overdue';
 
     return {
       ...t,
-      clientType: ['Aramex', 'SAHCO', 'GlobaCom', 'ZeemMax', 'Slot'].includes(t.name) ? 'Corporate' : 'Individual',
-      ageInDays: stableAgeInDays,
+      clientType: ['Aramex', 'SAHCO', 'GlobaCom', 'ZeemMax', 'Slot', 'Salco', 'Slot Nigeria'].includes(t.name) ? 'Corporate' : 'Individual',
+      ageInDays,
       agingBucket: bucket,
-      balance: t.amount, // mock un-paid debt
-      payments: [] // mock empty payments
+      balance: t.amount,
+      payments: []
     };
   });
 

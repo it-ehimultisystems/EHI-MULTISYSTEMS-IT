@@ -359,6 +359,7 @@ export const MyTrips = ({ user }: { user: User }) => {
       driver_id: user.id,
       driver_name: user.name,
       hub: user.hub,
+      hub_id: user.hub_id || null,
       vehicle_plate: trip.vehiclePlate,
       origin: trip.origin,
       destination: trip.destination,

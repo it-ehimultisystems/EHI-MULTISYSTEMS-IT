@@ -163,6 +163,9 @@ export const MarketingWorkspace = ({
       time: tnow(),
       type: "marketing",
       status: "Intake",
+      route,
+      // Explicit fields so EHIApp doesn't need to parse the detail string
+      ...(bb > 0 || mb > 0 || sb > 0 ? { _bb: bb, _mb: mb, _sb: sb } as any : {}),
     };
 
     setSuccessTx(tx);

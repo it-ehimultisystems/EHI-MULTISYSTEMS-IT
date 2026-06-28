@@ -29,11 +29,12 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
     }
   }
 
-  // Try cargo_entries first
+  // Try cargo_entries first — quote values to handle special characters safely
+  const safeRef = cleanRef.replace(/"/g, '');
   const { data: cargoData } = await supabase
     .from('cargo_entries')
     .select('*')
-    .or(`entry_ref.eq.${cleanRef},awb_tag_number.eq.${cleanRef}`)
+    .or(`entry_ref.eq."${safeRef}",awb_tag_number.eq."${safeRef}"`)
     .limit(1)
     .maybeSingle();
 
@@ -369,16 +370,30 @@ export async function logScanEvent(
     cargo_destination: cargoDestination,
   });
 
-  // Also update cargo_entries status if it exists
+  // Map scan mode to status
   let newStatus = '';
-  if (mode === 'ARRIVE') newStatus = 'Arrived';
-  if (mode === 'DEPART') newStatus = 'In-Transit';
+  if (mode === 'ARRIVE')  newStatus = 'Arrived';
+  if (mode === 'DEPART')  newStatus = 'In-Transit';
   if (mode === 'DELIVER') newStatus = 'Delivered';
-  
-  if (newStatus) {
-    const { data } = await supabase.from('cargo_entries').select('entry_ref').eq('entry_ref', ref).limit(1).maybeSingle();
-    if (data) {
-      await supabase.from('cargo_entries').update({ status: newStatus }).eq('entry_ref', ref);
-    }
+  if (!newStatus) return;
+
+  // Find which table the ref belongs to and update that table's status.
+  // cargo_entries uses entry_ref, manifests uses transaction_id, marketing uses entry_ref.
+  const cargoHit = await supabase.from('cargo_entries').select('entry_ref').eq('entry_ref', ref).limit(1).maybeSingle();
+  if (cargoHit.data) {
+    await supabase.from('cargo_entries').update({ status: newStatus }).eq('entry_ref', ref);
+    return;
+  }
+
+  const vjHit = await supabase.from('manifests').select('transaction_id').eq('transaction_id', ref).limit(1).maybeSingle();
+  if (vjHit.data) {
+    await supabase.from('manifests').update({ status: newStatus }).eq('transaction_id', ref);
+    return;
+  }
+
+  const mktHit = await supabase.from('marketing_entries').select('entry_ref').eq('entry_ref', ref).limit(1).maybeSingle();
+  if (mktHit.data) {
+    await supabase.from('marketing_entries').update({ status: newStatus }).eq('entry_ref', ref);
+    return;
   }
 }

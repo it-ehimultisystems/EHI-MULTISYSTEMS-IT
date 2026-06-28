@@ -12,7 +12,7 @@ import {
   DollarSign,
   Eye, EyeOff, Wifi, WifiOff, Phone, Mail, Building2, Key
 } from 'lucide-react';
-import { reinitSupabase, getConnectionMode, testSupabaseConnection } from '../../lib/supabase';
+import { reinitSupabase, getConnectionMode, testSupabaseConnection, supabase } from '../../lib/supabase';
 
 export const Settings = ({ 
   user, 
@@ -129,31 +129,22 @@ export const Settings = ({
     ];
   });
 
-  // Multi-Hub and Aviation Settings
-  const [hubs, setHubs] = useState(() => {
-    const saved = localStorage.getItem('ehi_setting_hubs');
-    return saved ? JSON.parse(saved) : [
-      { id: 'hub-los', name: 'LOS/Lagos HQ', code: 'LOS', type: 'Head Office', active: true },
-      { id: 'hub-abv', name: 'ABV/Abuja Station', code: 'ABV', type: 'Cargo Station', active: true },
-      { id: 'hub-phc', name: 'PHC/Port Harcourt Station', code: 'PHC', type: 'Cargo Station', active: true },
-      { id: 'hub-kan', name: 'KAN/Kano Station', code: 'KAN', type: 'Cargo Station', active: true },
-      { id: 'hub-enu', name: 'ENU/Enugu Station', code: 'ENU', type: 'Cargo Station', active: true },
-      { id: 'hub-abb', name: 'ABB/Asaba Station', code: 'ABB', type: 'Cargo Station', active: true },
-      { id: 'hub-akr', name: 'AKR/Akure Station', code: 'AKR', type: 'Cargo Station', active: true },
-      { id: 'hub-bcu', name: 'BCU/Bauchi Station', code: 'BCU', type: 'Cargo Station', active: true },
-      { id: 'hub-bni', name: 'BNI/Benin City Station', code: 'BNI', type: 'Cargo Station', active: true },
-      { id: 'hub-cbq', name: 'CBQ/Calabar Station', code: 'CBQ', type: 'Cargo Station', active: true },
-      { id: 'hub-gmo', name: 'GMO/Gombe Station', code: 'GMO', type: 'Cargo Station', active: true },
-      { id: 'hub-iba', name: 'IBA/Ibadan Station', code: 'IBA', type: 'Cargo Station', active: true },
-      { id: 'hub-ilr', name: 'ILR/Ilorin Station', code: 'ILR', type: 'Cargo Station', active: true },
-      { id: 'hub-kad', name: 'KAD/Kaduna Station', code: 'KAD', type: 'Cargo Station', active: true },
-      { id: 'hub-miu', name: 'MIU/Maiduguri Station', code: 'MIU', type: 'Cargo Station', active: true },
-      { id: 'hub-qow', name: 'QOW/Owerri Station', code: 'QOW', type: 'Cargo Station', active: true },
-      { id: 'hub-quo', name: 'QUO/Uyo Station', code: 'QUO', type: 'Cargo Station', active: true },
-      { id: 'hub-qrw', name: 'QRW/Warri (Osubi) Station', code: 'QRW', type: 'Cargo Station', active: true },
-      { id: 'hub-yol', name: 'YOL/Yola Station', code: 'YOL', type: 'Cargo Station', active: true }
-    ];
-  });
+  // Multi-Hub — loaded live from Supabase (single source of truth)
+  const [hubs, setHubs] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase.from('hubs').select('id, name, code, type, active').order('name').then(({ data }) => {
+      if (data) {
+        setHubs(data.map((h: any) => ({
+          id: h.id,
+          name: `${h.code}/${h.name}`,
+          code: h.code,
+          type: h.type,
+          active: h.active,
+        })));
+      }
+    });
+  }, []);
 
   const [carriers, setCarriers] = useState(() => {
     const saved = localStorage.getItem('ehi_setting_carriers');
@@ -178,10 +169,6 @@ export const Settings = ({
   }, [pricing]);
 
   useEffect(() => {
-    localStorage.setItem('ehi_setting_hubs', JSON.stringify(hubs));
-  }, [hubs]);
-
-  useEffect(() => {
     localStorage.setItem('ehi_setting_carriers', JSON.stringify(carriers));
   }, [carriers]);
 
@@ -190,8 +177,13 @@ export const Settings = ({
     setPricing((prev: any) => prev.map((p: any) => p.id === id ? { ...p, [field]: num } : p));
   };
 
-  const handleToggleHub = (id: string) => {
-    setHubs((prev: any) => prev.map((h: any) => h.id === id ? { ...h, active: !h.active } : h));
+  const handleToggleHub = async (id: string) => {
+    const target = hubs.find((h: any) => h.id === id);
+    if (!target) return;
+    const newActive = !target.active;
+    setHubs((prev: any) => prev.map((h: any) => h.id === id ? { ...h, active: newActive } : h));
+    // Persist to Supabase
+    await supabase.from('hubs').update({ active: newActive }).eq('id', id);
   };
 
   const handleToggleCarrier = (code: string) => {

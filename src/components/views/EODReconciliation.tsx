@@ -151,7 +151,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
   const handleLockEOD = async () => {
     setIsGenerating(true);
     const date = new Date().toISOString().split('T')[0];
-    await supabase.from('eod_records').insert({
+    await supabase.from('eod_records').upsert({
       hub: user.hub,
       hub_id: user.hub_id || null,
       date,
@@ -167,7 +167,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       expense_total: expectedTotals.expensesTotal,
       net_cash: expectedTotals.netExpectedCash,
       status: 'locked'
-    });
+    }, { onConflict: 'hub_id,date' });
     // Write to audit trail
     writeAuditLog({
       user_id: user.id,

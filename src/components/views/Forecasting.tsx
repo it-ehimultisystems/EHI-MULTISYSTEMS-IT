@@ -39,9 +39,10 @@ export const Forecasting = ({
     const fetchRevenue = async () => {
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
       try {
-        const [cargoRes, txRes] = await Promise.all([
+        const [cargoRes, vjRes, mktRes] = await Promise.all([
           supabase.from('cargo_entries').select('created_at, amount').gte('created_at', sevenDaysAgo),
-          supabase.from('transactions').select('created_at, amount, type').gte('created_at', sevenDaysAgo).in('type', ['marketing', 'baggage'])
+          supabase.from('manifests').select('created_at, amount').gte('created_at', sevenDaysAgo),
+          supabase.from('marketing_entries').select('created_at, amount_paid').gte('created_at', sevenDaysAgo)
         ]);
 
         const dayMap: Record<string, { Cargo: number; Marketing: number; ValueJet: number }> = {};
@@ -55,12 +56,16 @@ export const Forecasting = ({
             if (dayMap[d]) dayMap[d].Cargo += Number(e.amount) || 0;
           });
         }
-        if (txRes.data) {
-          txRes.data.forEach((e: any) => {
+        if (vjRes.data) {
+          vjRes.data.forEach((e: any) => {
             const d = jsToEhi(new Date(e.created_at).getDay());
-            if (!dayMap[d]) return;
-            if (e.type === 'marketing') dayMap[d].Marketing += Number(e.amount) || 0;
-            else if (e.type === 'baggage') dayMap[d].ValueJet += Number(e.amount) || 0;
+            if (dayMap[d]) dayMap[d].ValueJet += Number(e.amount) || 0;
+          });
+        }
+        if (mktRes.data) {
+          mktRes.data.forEach((e: any) => {
+            const d = jsToEhi(new Date(e.created_at).getDay());
+            if (dayMap[d]) dayMap[d].Marketing += Number(e.amount_paid) || 0;
           });
         }
 
@@ -76,15 +81,23 @@ export const Forecasting = ({
   }, []);
 
   // Forecasted dataset
-  const [forecastData, setForecastData] = useState<ForecastDay[]>([
-    { date: '2026-06-22', day: 'Mon', predictedCargo: 345000, predictedMarketing: 155000, predictedVJ: 100000, confidence: 'High' },
-    { date: '2026-06-23', day: 'Tue', predictedCargo: 495000, predictedMarketing: 195000, predictedVJ: 120000, confidence: 'High' },
-    { date: '2026-06-24', day: 'Wed', predictedCargo: 790000, predictedMarketing: 360000, predictedVJ: 340000, confidence: 'Medium' },
-    { date: '2026-06-25', day: 'Thu', predictedCargo: 565000, predictedMarketing: 220000, predictedVJ: 175000, confidence: 'Medium' },
-    { date: '2026-06-26', day: 'Fri', predictedCargo: 740000, predictedMarketing: 310000, predictedVJ: 260000, confidence: 'Medium' },
-    { date: '2026-06-27', day: 'Sat', predictedCargo: 410000, predictedMarketing: 135000, predictedVJ: 95000, confidence: 'High' },
-    { date: '2026-06-28', day: 'Sun', predictedCargo: 165000, predictedMarketing: 90000, predictedVJ: 50000, confidence: 'Low' }
-  ]);
+  const [forecastData] = useState<ForecastDay[]>(() => {
+    const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(Date.now() + (i + 1) * 86400000);
+      const dayName = DAYS_OF_WEEK[d.getDay()];
+      const dateStr = d.toISOString().split('T')[0];
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      return {
+        date: dateStr,
+        day: dayName,
+        predictedCargo: isWeekend ? 200000 : 450000,
+        predictedMarketing: isWeekend ? 80000 : 180000,
+        predictedVJ: isWeekend ? 60000 : 130000,
+        confidence: i < 3 ? 'High' : i < 5 ? 'Medium' : 'Low',
+      };
+    });
+  });
 
   // Heatmap route data representation
   const routesHeatmap = [

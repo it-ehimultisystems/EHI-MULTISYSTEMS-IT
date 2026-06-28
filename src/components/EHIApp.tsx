@@ -37,6 +37,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
   const pendingTxRef = useRef<Transaction[]>([]);
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transactionsRef = useRef<Transaction[]>([]);
+
+  // Keep a ref mirror of transactions for synchronous dedup checks in realtime handlers
+  useEffect(() => { transactionsRef.current = transactions; }, [transactions]);
 
   const showToast = useCallback((props: Omit<ToastProps, 'onClose'>) => {
     setToast({ ...props, onClose: () => setToast(null) });
@@ -184,15 +188,29 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   // Supabase real-time
   useEffect(() => {
     if (isOffline) return;
-    
-    // Subscribe to real-time changes
+
+    const isAdmin = ['super_admin','admin','accountant','auditor'].includes(user.role);
+    // Postgres changes filter — non-admins only receive their own hub's rows
+    const hubFilter = (!isAdmin && user.hub_id) ? `hub_id=eq.${user.hub_id}` : undefined;
+
+    // Guard against pushing a row that already exists locally (e.g. our own insert)
+    const pushUnique = (tx: Transaction) => {
+      const exists =
+        pendingTxRef.current.some(p => p.id === tx.id) ||
+        transactionsRef.current.some(p => p.id === tx.id);
+      if (exists) return;
+      pendingTxRef.current.push(tx);
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = setTimeout(flushPendingTx, 300);
+    };
+
     const cargoChannel = supabase
       .channel('ehi-cargo-live')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'cargo_entries' },
+        { event: 'INSERT', schema: 'public', table: 'cargo_entries', filter: hubFilter },
         payload => {
           const r = payload.new as any;
-          pendingTxRef.current.push({
+          pushUnique({
             id: r.entry_ref || r.id,
             name: r.consignee_name || 'Cargo',
             detail: `${r.airline || ''} · ${r.awb_tag_number || ''} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg · ${r.route || ''} · ${r.content_type || 'Package'}`,
@@ -204,16 +222,17 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             awb_tag_number: r.awb_tag_number,
             kg: r.total_kg,
             pieces: r.total_pcs,
+            created_at: r.created_at,
+            hub_id: r.hub_id,
+            route: r.route,
           });
-          if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
-          flushTimerRef.current = setTimeout(flushPendingTx, 300);
         }
       )
       .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'cargo_entries' },
+        { event: 'UPDATE', schema: 'public', table: 'cargo_entries', filter: hubFilter },
         payload => {
           const r = payload.new as any;
-          setTransactions(prev => prev.map(t => 
+          setTransactions(prev => prev.map(t =>
             t.id === (r.entry_ref || r.id) ? {
               ...t,
               status: r.status || t.status,
@@ -229,31 +248,51 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     const vjChannel = supabase
       .channel('ehi-vj-live')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'manifests' },
+        { event: 'INSERT', schema: 'public', table: 'manifests', filter: hubFilter },
         payload => {
           const r = payload.new as any;
-          pendingTxRef.current.push({
+          pushUnique({
             id: r.transaction_id || r.id,
             name: r.passenger_name || 'VJ Passenger',
-            detail: `${r.flight_no || ''} · +${r.excess_kg || 0}kg excess`,
+            detail: `${r.flight_no || ''} · ${r.destination || ''} · +${r.excess_kg || 0}kg excess`,
             amount: r.amount || 0,
             mode: r.payment_mode || 'POS',
             time: new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
             type: 'baggage',
             status: 'Delivered',
+            created_at: r.created_at,
+            hub_id: r.hub_id,
+            destination: r.destination,
+            excessKg: r.excess_kg,
+            totalKg: r.total_kg,
+            flight: r.flight_no,
+            kg: r.excess_kg,
           });
-          if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
-          flushTimerRef.current = setTimeout(flushPendingTx, 300);
         }
-      ).subscribe();
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'manifests', filter: hubFilter },
+        payload => {
+          const r = payload.new as any;
+          setTransactions(prev => prev.map(t =>
+            t.id === (r.transaction_id || r.id) ? {
+              ...t,
+              mode: r.payment_mode || t.mode,
+              paymentConfirmed: r.payment_confirmed,
+              posApprovalCode: r.pos_approval_code
+            } : t
+          ));
+        }
+      )
+      .subscribe();
 
     const marketingChannel = supabase
       .channel('ehi-marketing-live')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'marketing_entries' },
+        { event: 'INSERT', schema: 'public', table: 'marketing_entries', filter: hubFilter },
         payload => {
           const r = payload.new as any;
-          pendingTxRef.current.push({
+          pushUnique({
             id: r.entry_ref || r.id,
             name: r.customer_name || 'Customer',
             detail: `${r.route || ''} · ${r.qty_big_bag || 0}BB ${r.qty_med_bag || 0}MB ${r.qty_small_bag || 0}SB`,
@@ -262,11 +301,27 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             time: new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
             type: 'marketing',
             status: 'Intake',
+            created_at: r.created_at,
+            hub_id: r.hub_id,
+            route: r.route,
           });
-          if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
-          flushTimerRef.current = setTimeout(flushPendingTx, 300);
         }
-      ).subscribe();
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'marketing_entries', filter: hubFilter },
+        payload => {
+          const r = payload.new as any;
+          setTransactions(prev => prev.map(t =>
+            t.id === (r.entry_ref || r.id) ? {
+              ...t,
+              mode: r.payment_mode || t.mode,
+              paymentConfirmed: r.payment_confirmed,
+              status: r.status || t.status,
+            } : t
+          ));
+        }
+      )
+      .subscribe();
 
     return () => {
       supabase.removeChannel(cargoChannel);
@@ -274,7 +329,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       supabase.removeChannel(marketingChannel);
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     };
-  }, [isOffline, flushPendingTx]);
+  }, [isOffline, flushPendingTx, user.hub_id, user.role]);
 
   const handleAddTx = useCallback(async (tx: Transaction) => {
     setTransactions(prev => {
@@ -305,11 +360,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     
     if (tx.type === 'marketing') {
       const parts = tx.detail.split(' · ');
-      const route = parts[0] || '';
+      const route = (tx as any).route || parts[0] || '';
       const bagsStr = parts[1] || '';
-      const bb = parseInt(bagsStr.match(/(\d+)\s*BB/)?.[1] || '0');
-      const mb = parseInt(bagsStr.match(/(\d+)\s*MB/)?.[1] || '0');
-      const sb = parseInt(bagsStr.match(/(\d+)\s*SB/)?.[1] || '0');
+      // Read direct fields first (faster, no regex needed)
+      const bb = (tx as any)._bb ?? parseInt(bagsStr.match(/(\d+)\s*BB/)?.[1] || '0');
+      const mb = (tx as any)._mb ?? parseInt(bagsStr.match(/(\d+)\s*MB/)?.[1] || '0');
+      const sb = (tx as any)._sb ?? parseInt(bagsStr.match(/(\d+)\s*SB/)?.[1] || '0');
 
       payload = {
         id: tx.id,
@@ -429,15 +485,20 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
   const handleAddExpense = useCallback(async (expense: Expense) => {
     setExpenses(prev => [expense, ...prev]);
+    const today = new Date().toISOString().split('T')[0];
+    // expense.time may be "14:30" (no date) — only use it as a date if it looks like one
+    const parsedDate = /^\d{4}-\d{2}-\d{2}/.test(expense.time) ? expense.time.split(' ')[0] : today;
     const payload = {
       id: expense.id,
       category: expense.type,
       amount: expense.amount,
       description: expense.description,
-      date: expense.time.split(' ')[0] || new Date().toISOString().split('T')[0],
+      date: parsedDate,
       time: expense.time,
       hub: user.hub,
+      hub_id: user.hub_id || null,
       logged_by: user.name,
+      logged_by_id: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : null,
       status: expense.status || 'pending',
       requires_approval: expense.amount > 20000
     };
@@ -448,7 +509,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     } else if (error) {
       showToast({ message: `Failed to save expense: ${error}`, type: 'error' });
     }
-  }, [user.hub, user.name, showToast]);
+  }, [user.hub, user.hub_id, user.id, user.name, showToast]);
 
   const handleToggleWifi = useCallback(() => {
     setIsOffline(prev => {
