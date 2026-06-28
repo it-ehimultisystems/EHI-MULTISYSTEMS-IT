@@ -39,18 +39,22 @@ export const TransactionLedger = ({
   expenses = [],
   onBack,
   onUpdateTx,
+  defaultTypeFilter,
+  viewOnly = false,
 }: {
   user: User;
   transactions: Transaction[];
   expenses?: Expense[];
   onBack: () => void;
   onUpdateTx: (tx: Transaction) => void;
+  defaultTypeFilter?: 'cargo' | 'baggage' | 'marketing';
+  viewOnly?: boolean;
 }) => {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [viewingQrTx, setViewingQrTx] = useState<Entry | null>(null);
   const [viewingDetail, setViewingDetail] = useState<Entry | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState(defaultTypeFilter || "All");
   const [modeFilter, setModeFilter] = useState("All");
   const [posCodeInput, setPosCodeInput] = useState<{ id: string; code: string }>({ id: '', code: '' });
 
@@ -150,7 +154,12 @@ export const TransactionLedger = ({
     setPosCodeInput({ id: '', code: '' });
   };
 
-  const isAccountantOrAdmin = ['accountant', 'admin', 'super_admin'].includes(user.role);
+  // Edit allowed only when not view-only AND user has can_edit_ledger or is super_admin
+  const canEdit = !viewOnly &&
+    ['accountant', 'admin', 'super_admin'].includes(user.role) &&
+    (user.role === 'super_admin' || user.can_edit_ledger === true);
+
+  const isAccountantOrAdmin = canEdit;
 
   const unverifiedCash = filteredEntries.filter(e => e.mode === 'Cash' && !e.raw.paymentConfirmed);
   const unconfirmedTransfer = filteredEntries.filter(e => e.mode === 'Transfer' && !e.raw.paymentConfirmed);

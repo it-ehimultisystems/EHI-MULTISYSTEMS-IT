@@ -38,6 +38,7 @@ export interface User {
   hub_code?: string;
   hub_id?: string;
   active?: boolean;
+  can_edit_ledger?: boolean;   // Super admin grants this per user
 }
 
 export type PaymentMode = 'Cash' | 'POS' | 'Transfer' | 'Debt' | 'Debt Paid';
@@ -161,6 +162,7 @@ export interface Transaction {
   excessKg?: number;
   totalKg?: number;
   flight?: string;
+  pnr?: string;           // Passenger Name Record / booking reference
   // Payment Validation
   paymentConfirmed?: boolean;
   confirmedAt?: string;

@@ -9,8 +9,19 @@ import { CARGO_ROUTES } from '../../lib/constants';
 
 const VJ_RATE_PER_KG = 1000;
 
-export const ValueJetForm = ({ onAddTx, user }: { onAddTx: (tx: Transaction) => void, user: User }) => {
+export const ValueJetForm = ({
+  onAddTx,
+  user,
+  transactions = [],
+  onShowHistory,
+}: {
+  onAddTx: (tx: Transaction) => void;
+  user: User;
+  transactions?: Transaction[];
+  onShowHistory?: () => void;
+}) => {
   const [name, setName] = useState('');
+  const [pnr, setPnr]   = useState('');
   const [flight, setFlight] = useState('');
   const [dest, setDest] = useState(CARGO_ROUTES[0]);
   const [kg, setKg] = useState('');
@@ -56,11 +67,11 @@ export const ValueJetForm = ({ onAddTx, user }: { onAddTx: (tx: Transaction) => 
       time: tnow(),
       type: 'baggage',
       status: 'Delivered',
-      // Explicit fields so EHIApp doesn't need to parse the detail string
       destination: dest,
       excessKg: excessKg,
       totalKg: kgVal,
       flight: flight.toUpperCase(),
+      pnr: pnr.trim().toUpperCase() || undefined,
       kg: excessKg,
     };
 
@@ -88,8 +99,9 @@ export const ValueJetForm = ({ onAddTx, user }: { onAddTx: (tx: Transaction) => 
 
   const handleReset = () => {
     setName('');
+    setPnr('');
     setFlight('');
-    setDest('');
+    setDest(CARGO_ROUTES[0]);
     setKg('');
     setPhone('');
     setSuccessTx(null);
@@ -228,6 +240,14 @@ export const ValueJetForm = ({ onAddTx, user }: { onAddTx: (tx: Transaction) => 
         <span style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 700, color: 'var(--color-accent-cobalt)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           ▸ VALUEJET EXCESS BAGGAGE TICKETING
         </span>
+        {onShowHistory && (
+          <button
+            onClick={onShowHistory}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-cobalt)] hover:border-[var(--color-accent-cobalt)] transition-colors"
+          >
+            <span>📋</span> History
+          </button>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">
@@ -240,6 +260,17 @@ export const ValueJetForm = ({ onAddTx, user }: { onAddTx: (tx: Transaction) => 
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={formInputClass}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">PNR / Booking Reference <span className="text-[10px] font-normal text-[var(--color-muted)]">(Optional)</span></span>
+            <input
+              placeholder="e.g. ABC123"
+              value={pnr}
+              onChange={(e) => setPnr(e.target.value.toUpperCase())}
+              className={`${formInputClass} uppercase tracking-widest font-mono`}
+              maxLength={10}
             />
           </div>
 
@@ -366,6 +397,7 @@ export const ValueJetForm = ({ onAddTx, user }: { onAddTx: (tx: Transaction) => 
               </div>
               <div style={{ fontSize: 13, fontFamily: 'monospace', lineHeight: 2.2, color: 'var(--color-foreground)' }}>
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Passenger</span><span className="truncate ml-4 font-semibold text-[var(--color-foreground)]" style={{ maxWidth: '140px' }}>{name || '—'}</span></div>
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>PNR</span><span className="font-mono text-[11px] font-bold text-[var(--color-accent-cobalt)]">{pnr || '—'}</span></div>
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Flight</span><span className="font-bold text-[var(--color-accent-cobalt)]">{flight.toUpperCase() || '—'}</span></div>
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Total Weight</span><span className="font-semibold text-[var(--color-foreground)]">{kgVal} kg</span></div>
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Free Limit</span><span className="font-semibold text-[var(--color-success)]">– {vjFreeAllowance} kg</span></div>

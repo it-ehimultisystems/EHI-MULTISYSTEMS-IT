@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft, Plus, RefreshCw, Search, Edit2, UserX, UserCheck,
-  MapPin, Phone, Mail, Loader, AlertTriangle, Check, Eye, EyeOff
+  MapPin, Phone, Mail, Loader, AlertTriangle, Check, Eye, EyeOff, Shield
 } from 'lucide-react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
@@ -16,6 +16,7 @@ interface StaffMember {
   hub_type: string;
   active: boolean;
   phone?: string;
+  can_edit_ledger?: boolean;
   hub?: { name: string; code: string };
 }
 
@@ -72,7 +73,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       if (hubData) setHubs(hubData as Hub[]);
 
       let q = supabase.from('user_profiles')
-        .select('id, email, name, role, hub_id, hub_type, active, phone, hubs(name, code)')
+        .select('id, email, name, role, hub_id, hub_type, active, phone, can_edit_ledger, hubs(name, code)')
         .order('name');
 
       if (!isSuperAdmin && user.hub_id) {
@@ -84,6 +85,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
         setStaff(staffData.map((s: any) => ({
           ...s,
           hub: Array.isArray(s.hubs) ? s.hubs[0] : s.hubs,
+          can_edit_ledger: s.can_edit_ledger ?? false,
         })));
       }
     } catch {
@@ -377,16 +379,36 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
           <div className="ehi-card w-full max-w-sm rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[#111827]">
               <div>
-                <span className="text-[12px] font-bold text-[var(--color-foreground)]">Edit: {editingStaff.name}</span>
+                <span className="text-[12px] font-bold text-[var(--color-foreground)]">Edit Staff Profile</span>
                 <div className="text-[10px] text-[var(--color-muted)] font-mono">{editingStaff.email}</div>
               </div>
               <button onClick={() => setEditingStaff(null)} className="text-[var(--color-muted)] font-mono text-lg leading-none">✕</button>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 max-h-[75vh] overflow-y-auto">
+              {/* Name */}
+              <div>
+                <label className="ehi-label">Full Name</label>
+                <input
+                  value={editingStaff.name}
+                  onChange={e => setEditingStaff(s => s ? {...s, name: e.target.value} : null)}
+                  className="ehi-input"
+                />
+              </div>
+              {/* Phone */}
+              <div>
+                <label className="ehi-label">Phone Number</label>
+                <input
+                  value={editingStaff.phone || ''}
+                  onChange={e => setEditingStaff(s => s ? {...s, phone: e.target.value} : null)}
+                  placeholder="+234 800 000 0000"
+                  className="ehi-input"
+                />
+              </div>
+              {/* Role */}
               <div>
                 <label className="ehi-label">Role</label>
                 <select
-                  defaultValue={editingStaff.role}
+                  value={editingStaff.role}
                   onChange={e => setEditingStaff(s => s ? {...s, role: e.target.value} : null)}
                   className="ehi-input"
                 >
@@ -395,11 +417,12 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                   ))}
                 </select>
               </div>
+              {/* Hub (super_admin only) */}
               {isSuperAdmin && (
                 <div>
                   <label className="ehi-label">Station / Hub</label>
                   <select
-                    defaultValue={editingStaff.hub_id}
+                    value={editingStaff.hub_id}
                     onChange={e => setEditingStaff(s => s ? {...s, hub_id: e.target.value} : null)}
                     className="ehi-input"
                   >
@@ -407,10 +430,50 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                   </select>
                 </div>
               )}
+              {/* Ledger Edit Permission — super_admin only */}
+              {isSuperAdmin && (
+                <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Shield size={12} className="text-[var(--color-accent-amber)]" />
+                        <span className="text-[12px] font-bold text-[var(--color-foreground)]">Ledger Edit Permission</span>
+                      </div>
+                      <p className="text-[10px] text-[var(--color-muted)] leading-snug">
+                        Allows this staff member to edit transaction entries in the ledger. Changes affect live financial data.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setEditingStaff(s => s ? {...s, can_edit_ledger: !s.can_edit_ledger} : null)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors ml-3 ${
+                        editingStaff.can_edit_ledger
+                          ? 'bg-[var(--color-accent-amber)] border-[var(--color-accent-amber)]'
+                          : 'bg-[var(--color-surface-2)] border-[var(--color-border)]'
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow transition-transform ${
+                        editingStaff.can_edit_ledger ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                  {editingStaff.can_edit_ledger && (
+                    <div className="mt-2 text-[9px] font-mono text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.08)] px-2 py-1 rounded">
+                      ⚠ This user can edit cargo, VJ, and marketing entries
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-3 pt-1">
                 <button onClick={() => { setEditingStaff(null); setError(''); }} className="flex-1 h-11 border border-[var(--color-border)] rounded-lg text-[12px] font-bold text-[var(--color-muted)]">Cancel</button>
                 <button
-                  onClick={() => handleUpdateRole(editingStaff.id, { role: editingStaff.role, hub_id: editingStaff.hub_id })}
+                  onClick={() => handleUpdateRole(editingStaff.id, {
+                    name: editingStaff.name,
+                    phone: editingStaff.phone,
+                    role: editingStaff.role,
+                    hub_id: editingStaff.hub_id,
+                    can_edit_ledger: editingStaff.can_edit_ledger,
+                  })}
                   disabled={saving}
                   className="flex-1 h-11 bg-[var(--color-accent-cobalt)] text-white rounded-lg text-[12px] font-bold disabled:opacity-60"
                 >

@@ -17,12 +17,14 @@ export const MarketingWorkspace = ({
   expenses,
   onAddTx,
   onAddExpense,
+  onShowHistory,
 }: {
   user: User;
   transactions: Transaction[];
   expenses: Expense[];
   onAddTx: (tx: Transaction) => void;
   onAddExpense: (exp: Expense) => void;
+  onShowHistory?: () => void;
 }) => {
   // New Entry State
   const [name, setName] = useState("");
@@ -238,7 +240,17 @@ export const MarketingWorkspace = ({
             month: "short",
           })}
         </div>
-        <div>Agent: {user.name.split(" ")[0]}</div>
+        <div className="flex items-center gap-3">
+          {onShowHistory && (
+            <button
+              onClick={onShowHistory}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors normal-case tracking-normal"
+            >
+              <span>📋</span> History
+            </button>
+          )}
+          <div>Agent: {user.name.split(" ")[0]}</div>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">

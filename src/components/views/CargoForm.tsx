@@ -97,9 +97,13 @@ import { PaymentNarrationBox } from "../PaymentNarrationBox";
 export const CargoForm = ({
   onAddTx,
   user,
+  transactions = [],
+  onShowHistory,
 }: {
   onAddTx: (tx: Transaction) => void;
   user: User;
+  transactions?: Transaction[];
+  onShowHistory?: () => void;
 }) => {
   // Navigation tabs between Regular & Corporate Billing
   const [activePortal, setActivePortal] = useState<"retail" | "corporate">(
@@ -950,14 +954,24 @@ export const CargoForm = ({
       {activePortal === "retail" && (
         <div className="p-4 grid gap-6 md:grid-cols-[1fr_280px] items-start">
           <div>
-            <div className="flex flex-col mb-4">
-              <h1 className="text-[18px] font-sans font-bold text-[var(--color-foreground)] leading-tight">
-                New Cargo Retail Entry
-              </h1>
-              <p className="text-[12px] font-sans text-[var(--color-muted)]">
-                Log immediate cargo entries with retail cash, transfer or local
-                options.
-              </p>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-[18px] font-sans font-bold text-[var(--color-foreground)] leading-tight">
+                  New Cargo Retail Entry
+                </h1>
+                <p className="text-[12px] font-sans text-[var(--color-muted)]">
+                  Log immediate cargo entries with retail cash, transfer or local
+                  options.
+                </p>
+              </div>
+              {onShowHistory && (
+                <button
+                  onClick={onShowHistory}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:border-[var(--color-accent-amber)] transition-colors"
+                >
+                  <span>📋</span> History
+                </button>
+              )}
             </div>
 
             <div className="space-y-4">

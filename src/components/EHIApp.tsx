@@ -13,6 +13,7 @@ import { CargoForm } from './views/CargoForm';
 import { ValueJetForm } from './views/ValueJetForm';
 import { Analytics } from './views/Analytics';
 import { More } from './views/More';
+import { TransactionLedger } from './views/TransactionLedger';
 import { MarketingWorkspace } from './views/MarketingWorkspace';
 import { Scanner } from './views/Scanner';
 import { MyTrips } from './views/MyTrips';
@@ -27,6 +28,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     return 'Tower';
   };
   const [currentTab, setCurrentTab] = useState<TabView>(getDefaultTab(user.role));
+  const [streamLedger, setStreamLedger] = useState<'cargo' | 'baggage' | 'marketing' | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -144,6 +146,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               excessKg: r.excess_kg,
               totalKg: r.total_kg,
               flight: r.flight_no,
+              pnr: r.pnr || undefined,
               kg: r.excess_kg,
             });
           });
@@ -416,6 +419,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       const totalKg   = Math.round(tx.totalKg  || (tx as any).totalKg  || excessKg);
       const dest      = tx.destination || (tx as any).destination || '';
       const flightNo  = tx.flight      || (tx as any).flight      || tx.detail?.split(' · ')[0] || '';
+      const pnr       = tx.pnr         || (tx as any).pnr         || null;
 
       payload = {
         id: tx.id,
@@ -423,6 +427,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         passenger_name: tx.name,
         flight_no: flightNo,
         destination: dest,
+        pnr: pnr,
         excess_kg: excessKg,
         total_kg: totalKg,
         free_allowance_kg: 20,
@@ -578,9 +583,32 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                   <Dashboard user={user} transactions={transactions} />
                 )
               )}
-              {currentTab === 'Cargo' && <CargoForm onAddTx={handleAddTx} user={user} />}
-              {currentTab === 'Marketing' && <MarketingWorkspace user={user} transactions={transactions} expenses={expenses} onAddTx={handleAddTx} onAddExpense={handleAddExpense} />}
-              {currentTab === 'VJ POS' && <ValueJetForm onAddTx={handleAddTx} user={user} />}
+              {currentTab === 'Cargo' && (
+                <CargoForm
+                  onAddTx={handleAddTx}
+                  user={user}
+                  transactions={transactions}
+                  onShowHistory={() => setStreamLedger('cargo')}
+                />
+              )}
+              {currentTab === 'Marketing' && (
+                <MarketingWorkspace
+                  user={user}
+                  transactions={transactions}
+                  expenses={expenses}
+                  onAddTx={handleAddTx}
+                  onAddExpense={handleAddExpense}
+                  onShowHistory={() => setStreamLedger('marketing')}
+                />
+              )}
+              {currentTab === 'VJ POS' && (
+                <ValueJetForm
+                  onAddTx={handleAddTx}
+                  user={user}
+                  transactions={transactions}
+                  onShowHistory={() => setStreamLedger('baggage')}
+                />
+              )}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
               {currentTab === 'MyTrips' && <MyTrips user={user} />}
               {currentTab === 'IT Debug' && <ITDashboard user={user} />}
@@ -608,6 +636,20 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       <div className="fixed bottom-0 left-0 right-0 w-full z-50 md:hidden block bg-[var(--color-nav-bg)]">
         <BottomNav user={user} currentTab={currentTab} onChangeTab={setCurrentTab} />
       </div>
+
+      {/* Per-stream view-only ledger overlay */}
+      {streamLedger && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-obsidian)]">
+          <TransactionLedger
+            user={user}
+            transactions={transactions.filter(t => t.type === streamLedger)}
+            onBack={() => setStreamLedger(null)}
+            onUpdateTx={handleUpdateTx}
+            defaultTypeFilter={streamLedger}
+            viewOnly={user.role !== 'super_admin' && !user.can_edit_ledger}
+          />
+        </div>
+      )}
 
       {toast && <Toast {...toast} />}
     </div>

@@ -38,6 +38,7 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       hub_type,
       active,
       hub_id,
+      can_edit_ledger,
       hubs (
         name,
         code,
@@ -66,7 +67,8 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       hub_code: Array.isArray(prof.hubs) ? prof.hubs[0]?.code : (prof.hubs?.code || 'HQ'),
       hubType: profile.hub_type || (Array.isArray(prof.hubs) ? prof.hubs[0]?.type : prof.hubs?.type) || 'Cargo Station',
       hub_id: profile.hub_id,
-      active: profile.active
+      active: profile.active,
+      can_edit_ledger: profile.can_edit_ledger ?? false,
   };
 
   // Write audit log (fire-and-forget)
@@ -133,7 +135,7 @@ export async function fetchStaffList(hubId?: string): Promise<any[]> {
 // Update a staff profile (role, hub, active status)
 export async function updateStaffProfile(
   userId: string,
-  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string }
+  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string; can_edit_ledger?: boolean }
 ): Promise<void> {
   const { error } = await supabase
     .from('user_profiles')
