@@ -12,12 +12,10 @@ const VJ_RATE_PER_KG = 1000;
 export const ValueJetForm = ({
   onAddTx,
   user,
-  transactions = [],
   onShowHistory,
 }: {
   onAddTx: (tx: Transaction) => void;
   user: User;
-  transactions?: Transaction[];
   onShowHistory?: () => void;
 }) => {
   const [name, setName] = useState('');
@@ -73,7 +71,9 @@ export const ValueJetForm = ({
       flight: flight.toUpperCase(),
       pnr: pnr.trim().toUpperCase() || undefined,
       kg: excessKg,
-    };
+    } as any;
+    // Attach phone for EHIApp to write to passenger_phone column
+    (tx as any).phone = phone.trim() || undefined;
 
     setSuccessTx({ tx, kgs: kgVal, exc: excessKg });
     setSubmitting(false);

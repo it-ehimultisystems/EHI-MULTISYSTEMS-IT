@@ -425,6 +425,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         id: tx.id,
         transaction_id: tx.id,
         passenger_name: tx.name,
+        passenger_phone: (tx as any).phone || null,
         flight_no: flightNo,
         destination: dest,
         pnr: pnr,
@@ -605,7 +606,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                 <ValueJetForm
                   onAddTx={handleAddTx}
                   user={user}
-                  transactions={transactions}
                   onShowHistory={() => setStreamLedger('baggage')}
                 />
               )}
