@@ -35,8 +35,11 @@ import {
   DollarSign,
   History,
   MapPin,
-  Percent
+  Percent,
+  Users
 } from 'lucide-react';
+
+import { StaffManagement } from './StaffManagement';
 
 export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onChangeTab }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: () => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onChangeTab: (t: TabView) => void }) => {
   const [eodView, setEodView] = useState(false);
@@ -57,6 +60,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   const [airlineCommissionsView, setAirlineCommissionsView] = useState(false);
   const [pricingView, setPricingView] = useState(false);
   const [supportView, setSupportView] = useState(false);
+  const [staffView, setStaffView] = useState(false);
 
   // View controllers
   if (eodView) {
@@ -121,6 +125,10 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
   if (supportView) {
     return <SupportTickets user={user} onBack={() => setSupportView(false)} />;
+  }
+
+  if (staffView) {
+    return <StaffManagement user={user} onBack={() => setStaffView(false)} />;
   }
 
   // Role checking helpers
@@ -321,6 +329,14 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
       {/* Support & Account */}
       <SectionLabel label="Support & Account" />
       <div className="space-y-2">
+        {(user.role === 'super_admin' || user.role === 'admin') && (
+          <MenuItem
+            icon={Users}
+            title="Staff Management"
+            subtitle="Add staff, assign hubs, set roles, deactivate accounts"
+            onClick={() => setStaffView(true)}
+          />
+        )}
         <MenuItem
           icon={ShieldAlert}
           title="Help Desk & Issue Resolution"

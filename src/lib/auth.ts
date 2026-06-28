@@ -50,7 +50,12 @@ export async function signIn(email: string, password: string): Promise<UserProfi
   if (profileError || !profile) {
     throw new Error('Account exists but profile not set up. Contact your admin.');
   }
-  
+
+  if (!profile.active) {
+    await supabase.auth.signOut();
+    throw new Error('Your account has been deactivated. Contact your admin.');
+  }
+
   const prof: any = profile;
   const result = {
       id: profile.id,
@@ -84,6 +89,57 @@ export async function signOut() {
   } catch(e) {
     console.warn("Sign out err", e);
   }
+}
+
+// ── STAFF ACCOUNT MANAGEMENT ──────────────────────────────────────
+
+export interface CreateStaffPayload {
+  name:      string;
+  email:     string;
+  password:  string;
+  role:      string;
+  hub_id:    string;
+  hub_type:  string;
+  phone?:    string;
+}
+
+// Creates a new staff account via the server endpoint
+// (server uses service role key — client anon key can't create users)
+export async function createStaffAccount(payload: CreateStaffPayload): Promise<{ id: string; email: string }> {
+  const res = await fetch('/api/admin/create-staff', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || 'Failed to create account');
+  return { id: data.id, email: data.email };
+}
+
+// Fetches all staff (super_admin sees all, hub admin sees own hub)
+export async function fetchStaffList(hubId?: string): Promise<any[]> {
+  let q = supabase
+    .from('user_profiles')
+    .select('id, email, name, role, hub_type, active, hub_id, hubs(name, code)')
+    .order('name');
+
+  if (hubId) q = q.eq('hub_id', hubId) as any;
+
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+// Update a staff profile (role, hub, active status)
+export async function updateStaffProfile(
+  userId: string,
+  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string }
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update(updates)
+    .eq('id', userId);
+  if (error) throw new Error(error.message);
 }
 
 export async function getSession(): Promise<UserProfile | null> {
