@@ -142,9 +142,11 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
   const handleToggleActive = async (member: StaffMember) => {
     setSaving(true); setError('');
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token || '';
       const res = await fetch('/api/admin/set-staff-active', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ userId: member.id, active: !member.active }),
       });
       const data = await res.json();

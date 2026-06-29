@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow } from "../../lib/helpers";
 import {
@@ -88,7 +89,7 @@ export const TransactionLedger = ({
     });
   }, [transactions, expenses]);
 
-  const filteredEntries = entries.filter((e) => {
+  const filteredEntries = useMemo(() => entries.filter((e) => {
     if (typeFilter !== "All" && e.type !== typeFilter.toLowerCase())
       return false;
 
@@ -110,7 +111,7 @@ export const TransactionLedger = ({
     }
 
     return true;
-  });
+  }), [entries, typeFilter, modeFilter, searchQuery]);
 
   const handleEditClick = (e: Entry, evt: React.MouseEvent) => {
     evt.stopPropagation();
@@ -178,6 +179,15 @@ export const TransactionLedger = ({
 
   const totalAmount = filteredEntries.reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
   const cashAmount = filteredEntries.filter(e => e.mode === 'Cash').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
+
+  const tableRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: filteredEntries.length,
+    getScrollElement: () => tableRef.current,
+    estimateSize: () => 56,
+    overscan: 10,
+  });
+
   const transferAmount = filteredEntries.filter(e => e.mode === 'Transfer').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
   const posAmount = filteredEntries.filter(e => e.mode === 'POS').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
 
@@ -312,7 +322,7 @@ export const TransactionLedger = ({
       )}
 
       {/* Table Container */}
-      <div className="flex-1 overflow-auto p-4 pb-20 relative">
+      <div ref={tableRef} className="flex-1 overflow-auto p-4 pb-20 relative">
         <div className="ehi-card overflow-hidden shadow-sm">
           <table className="w-full text-left font-mono text-[10px]">
             <thead className="bg-[#111827]">
@@ -338,8 +348,15 @@ export const TransactionLedger = ({
                   </td>
                 </tr>
               ) : (
-                filteredEntries.map((e) => {
-                  // Parse date and time from e.time
+                <>
+                  {rowVirtualizer.getVirtualItems().length > 0 && (
+                    <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
+                      <td colSpan={isAccountantOrAdmin ? 8 : 7} />
+                    </tr>
+                  )}
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const e = filteredEntries[virtualRow.index];
+                    // Parse date and time from e.time
                   const timeParts = e.time ? e.time.split(/,?\s+/) : [];
                   const rawDate = timeParts[0] || '';
                   const rawTime = timeParts[1] || '';
@@ -469,7 +486,16 @@ export const TransactionLedger = ({
                     </td>
                   </tr>
                   );
-                })
+                  })}
+                  {(() => {
+                    const items = rowVirtualizer.getVirtualItems();
+                    const lastItem = items[items.length - 1];
+                    const paddingBottom = rowVirtualizer.getTotalSize() - (lastItem ? lastItem.end : 0);
+                    return paddingBottom > 0 ? (
+                      <tr style={{ height: paddingBottom }}><td colSpan={isAccountantOrAdmin ? 8 : 7} /></tr>
+                    ) : null;
+                  })()}
+                </>
               )}
             </tbody>
           </table>

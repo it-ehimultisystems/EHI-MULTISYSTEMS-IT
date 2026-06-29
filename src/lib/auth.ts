@@ -108,9 +108,11 @@ export interface CreateStaffPayload {
 // Creates a new staff account via the server endpoint
 // (server uses service role key — client anon key can't create users)
 export async function createStaffAccount(payload: CreateStaffPayload): Promise<{ id: string; email: string }> {
+  const { data: sess } = await supabase.auth.getSession();
+  const token = sess.session?.access_token || '';
   const res = await fetch('/api/admin/create-staff', {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body:    JSON.stringify(payload),
   });
   const data = await res.json();

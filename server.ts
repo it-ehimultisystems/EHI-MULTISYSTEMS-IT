@@ -3,16 +3,66 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import paystackRoutes from './server/paystack';
 import notificationRoutes from './server/notifications';
-
 import eodRoutes from './server/eod';
 import geminiRoutes from './server/gemini';
 import { parseBankAlert } from './server/emailParser';
+
+const rateLimiter = (maxReqs: number, windowMs: number) => {
+  const store = new Map<string, { count: number; resetAt: number }>();
+  return (req: any, res: any, next: any) => {
+    const key = req.ip || 'unknown';
+    const now = Date.now();
+    const entry = store.get(key);
+    if (!entry || now > entry.resetAt) {
+      store.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    if (entry.count >= maxReqs) {
+      return res.status(429).json({ error: 'Too many requests' });
+    }
+    entry.count++;
+    next();
+  };
+};
+
+async function requireAdminCaller(req: any, res: any): Promise<boolean> {
+  const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+  if (!token) { res.status(401).json({ error: 'Unauthorized' }); return false; }
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) { res.status(503).json({ error: 'Server not configured' }); return false; }
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const admin = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+    const { data: { user }, error } = await admin.auth.getUser(token);
+    if (error || !user) { res.status(401).json({ error: 'Invalid token' }); return false; }
+    const { data: profile } = await admin.from('user_profiles').select('role').eq('id', user.id).single();
+    if (!profile || !['super_admin', 'admin'].includes(profile.role)) {
+      res.status(403).json({ error: 'Forbidden' }); return false;
+    }
+    return true;
+  } catch {
+    res.status(500).json({ error: 'Auth check failed' }); return false;
+  }
+}
 
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '2mb' }));
+
+  // Security headers
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-XSS-Protection', '0');
+    next();
+  });
+
+  const notifyLimiter = rateLimiter(30, 60_000);
+  const adminLimiter = rateLimiter(10, 60_000);
 
   // Supabase runtime config exposure
   app.get('/api/config', (req, res) => {
@@ -28,13 +78,14 @@ async function startServer() {
 
   // API routes
   app.use('/api/paystack', paystackRoutes);
-  app.use('/api/notify', notificationRoutes);
+  app.use('/api/notify', notifyLimiter, notificationRoutes);
   app.use('/api/eod', eodRoutes);
   app.use('/api/gemini', geminiRoutes);
 
   // ── STAFF MANAGEMENT ─────────────────────────────────────────────
   // Requires SUPABASE_SERVICE_ROLE_KEY in environment
-  app.post('/api/admin/create-staff', async (req, res) => {
+  app.post('/api/admin/create-staff', adminLimiter, async (req, res) => {
+    if (!await requireAdminCaller(req, res)) return;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
 
@@ -85,7 +136,8 @@ async function startServer() {
   });
 
   // Deactivate / reactivate a staff account (sets active flag)
-  app.post('/api/admin/set-staff-active', async (req, res) => {
+  app.post('/api/admin/set-staff-active', adminLimiter, async (req, res) => {
+    if (!await requireAdminCaller(req, res)) return;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
     if (!serviceKey || !supabaseUrl) {

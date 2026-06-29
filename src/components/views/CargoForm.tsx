@@ -42,6 +42,7 @@ import {
 import { createPortal } from "react-dom";
 import { HtmlPrintReceipt } from "./HtmlPrintReceipt";
 import { HtmlPrintWaybill } from "./HtmlPrintWaybill";
+import { supabase } from "../../lib/supabase";
 
 interface CorporateClient {
   id: string;
@@ -149,15 +150,26 @@ export const CargoForm = ({
   );
 
   useEffect(() => {
-    const saved = localStorage.getItem("ehi_standard_cargo_rates");
-    if (saved) {
-      setStandardRates(JSON.parse(saved));
-    } else {
-      const initial: Record<string, number> = {};
-      CARGO_ROUTES.forEach((r) => (initial[r] = 500));
-      setStandardRates(initial);
-      localStorage.setItem("ehi_standard_cargo_rates", JSON.stringify(initial));
-    }
+    supabase.from('standard_cargo_rates').select('route_name, rate_per_kg').then(({ data }) => {
+      if (data && data.length > 0) {
+        const rates: Record<string, number> = {};
+        data.forEach((r: any) => { rates[r.route_name] = Number(r.rate_per_kg); });
+        setStandardRates(rates);
+        localStorage.setItem("ehi_standard_cargo_rates", JSON.stringify(rates));
+      } else {
+        const saved = localStorage.getItem("ehi_standard_cargo_rates");
+        if (saved) setStandardRates(JSON.parse(saved));
+        else {
+          const initial: Record<string, number> = {};
+          CARGO_ROUTES.forEach((r) => (initial[r] = 500));
+          setStandardRates(initial);
+          localStorage.setItem("ehi_standard_cargo_rates", JSON.stringify(initial));
+        }
+      }
+    }).catch(() => {
+      const saved = localStorage.getItem("ehi_standard_cargo_rates");
+      if (saved) setStandardRates(JSON.parse(saved));
+    });
   }, []);
 
   // Auto calculate amount for retail
@@ -287,7 +299,6 @@ export const CargoForm = ({
     let active = true;
     (async () => {
       try {
-        const { supabase } = await import('../../lib/supabase');
         const { data } = await supabase
           .from('corporate_clients')
           .select('id, company_name, contact_phone')
@@ -526,13 +537,24 @@ export const CargoForm = ({
     contentType.trim().length > 0 &&
     parsedAmount > 0;
 
-  const handleRetailSubmit = () => {
+  const handleRetailSubmit = async () => {
     if (!isRetailFormValid || submitting) return;
     setSubmitting(true);
 
-    const summaryStr = `${airline} · ${awb} · ${pcs}pcs · ${kg}KG · ${route} · ${contentType}`;
-
     const pickupPin = generatePickupPin();
+
+    const airlineCode = ({ 'Arik Air': 'AK', 'Green Africa': 'GA', 'Green Africa Airways': 'GA', 'United Nigeria': 'UN', 'United Nigeria Airlines': 'UN' } as Record<string, string>)[airline] || null;
+
+    let resolvedAwb = awb;
+    try {
+      const { data: rpcData } = await supabase.rpc('allocate_awb', { p_airline_code: airlineCode });
+      if (rpcData) resolvedAwb = rpcData;
+    } catch { /* fall back to form AWB */ }
+
+    const nextSerial = incrementLocalSerial();
+    setSerialNumber(nextSerial);
+
+    const summaryStr = `${airline} · ${resolvedAwb} · ${pcs}pcs · ${kg}KG · ${route} · ${contentType}`;
 
     const tx: Transaction = {
       id: uid("CG"),
@@ -546,7 +568,7 @@ export const CargoForm = ({
       time: tnow(),
       type: "cargo",
       status: "Intake",
-      awb_tag_number: awb,
+      awb_tag_number: resolvedAwb,
       airline: airline,
       pieces: parseInt(pcs) || 1,
       kg: Math.round(parseFloat(kg)) || 0,
@@ -554,11 +576,9 @@ export const CargoForm = ({
       consigneePhone: consigneePhone.trim(),
     } as Transaction;
 
-    setSuccessTx(tx);
-    setSerialNumber(incrementLocalSerial());
-    setSubmitting(false);
-
     onAddTx(tx);
+    setSuccessTx(tx);
+    setSubmitting(false);
 
     // Call PIN notification API
     fetch("/api/notify/pickup-pin", {

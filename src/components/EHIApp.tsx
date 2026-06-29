@@ -96,10 +96,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         const addHubFilter = (q: any) =>
           (!isAdmin && user.hub_id) ? q.eq('hub_id', user.hub_id) : q;
 
+        const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
         const [cargoRes, vjRes, mktRes] = await Promise.all([
-          addHubFilter(supabase.from('cargo_entries').select('*').order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('manifests').select('*').order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('marketing_entries').select('*').order('created_at', { ascending: false }).limit(500))
+          addHubFilter(supabase.from('cargo_entries').select('entry_ref,id,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,payment_mode,created_at,status,bank,hub_id').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('manifests').select('transaction_id,id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('marketing_entries').select('entry_ref,id,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500))
         ]);
 
         const allTx: Transaction[] = [];
@@ -487,7 +488,20 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
     const { error } = await supabase.from(table).update(updatePayload).eq(idCol, tx.id);
     if (error) showToast({ message: `Update failed: ${error.message}`, type: 'error' });
-  }, [showToast]);
+    if (!error && tx.paymentConfirmed) {
+      writeAuditLog({
+        user_id: user.id,
+        user_name: user.name,
+        action: 'PAYMENT_CONFIRM',
+        table_name: table,
+        record_id: tx.id,
+        description: `Payment confirmed for ${tx.name} — ₦${tx.amount?.toLocaleString()} (${tx.mode})`,
+        hub: user.hub,
+        hub_id: user.hub_id,
+        new_values: { payment_confirmed: true, mode: tx.mode },
+      }).catch(() => {});
+    }
+  }, [showToast, user.hub, user.hub_id, user.id, user.name]);
 
   const handleAddExpense = useCallback(async (expense: Expense) => {
     setExpenses(prev => [expense, ...prev]);
