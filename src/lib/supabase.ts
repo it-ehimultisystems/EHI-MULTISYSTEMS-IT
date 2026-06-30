@@ -36,6 +36,8 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promis
   }
 };
 
+let lastBuiltUrl: string | null = null;
+
 function buildClient(): SupabaseClient {
   const url =
     (import.meta as any).env?.VITE_SUPABASE_URL ||
@@ -45,6 +47,8 @@ function buildClient(): SupabaseClient {
     (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
     localStorage.getItem('ehi_supabase_anon_key') ||
     'dummy-key';
+
+  lastBuiltUrl = url;
 
   return createClient(url, key, {
     auth: { persistSession: true, autoRefreshToken: true },
@@ -92,7 +96,17 @@ export async function fetchAndApplyServerConfig(): Promise<boolean> {
   if (viteUrl && viteKey && viteUrl.includes('supabase.co') && !viteUrl.includes('dummy')) {
     localStorage.setItem('ehi_supabase_url', viteUrl);
     localStorage.setItem('ehi_supabase_anon_key', viteKey);
-    reinitSupabase();
+    // _client was already built with these exact same Vite env vars at module
+    // load time (see buildClient() — it checks the same import.meta.env values
+    // first, synchronously). Calling reinitSupabase() here would create a
+    // second GoTrueClient bound to the identical storage key for no reason,
+    // which is exactly what produces the "Multiple GoTrueClient instances"
+    // console warning on every page load. Only rebuild if the values actually
+    // differ from what the client already has (e.g. localStorage held a
+    // different project from a previous session/device share).
+    if (lastBuiltUrl !== viteUrl) {
+      reinitSupabase();
+    }
     return true;
   }
 
