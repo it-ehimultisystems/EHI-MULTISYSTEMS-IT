@@ -33,6 +33,10 @@ import {
   DollarSign,
   Building,
   Copy,
+  ClipboardList,
+  AlertTriangle,
+  Rocket,
+  Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -500,6 +504,25 @@ export const CargoForm = ({
 
     // 4. Trigger printer receipt model & clear states
     setSuccessTx(txEntry);
+    
+    // Send Whatsapp Receipt for Corporate Debt Client
+    if (selectedIntake.sender_phone) {
+      sendReceiptWhatsApp({
+        phone: selectedIntake.sender_phone,
+        ref: txEntry.id,
+        message: buildCargoWhatsApp({
+          ref: txEntry.id,
+          consignee: selectedIntake.consignee,
+          awb: selectedIntake.awb,
+          route: selectedIntake.route,
+          kg: weightNum,
+          pcs: selectedIntake.pieces,
+          amount: computedCost,
+          mode: "Debt",
+        }),
+      });
+    }
+
     setSelectedIntake(null);
     setGateWeight("");
     setCustomRateOverwrite("");
@@ -1057,7 +1080,7 @@ export const CargoForm = ({
                   onClick={onShowHistory}
                   className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:border-[var(--color-accent-amber)] transition-colors"
                 >
-                  <span>📋</span> History
+                  <ClipboardList size={14} /> <span>History</span>
                 </button>
               )}
             </div>
@@ -1497,7 +1520,7 @@ export const CargoForm = ({
                   : "text-[var(--color-light-muted)] hover:text-white"
               }`}
             >
-              📋 Phase 1: Field Intake Book
+              <ClipboardList size={14} /> Phase 1: Field Intake Book
             </button>
             <button
               onClick={() => setCorpSubTab("weighing")}
@@ -1507,7 +1530,7 @@ export const CargoForm = ({
                   : "text-[var(--color-light-muted)] hover:text-white"
               }`}
             >
-              ⚖️ Phase 2: Yard Gate Weigh Scale
+              <Scale size={14} /> Phase 2: Yard Gate Weigh Scale
               {pendingIntakes.length > 0 && (
                 <span className="bg-red-600 text-white font-bold text-[10px] px-1.5 py-0.5 rounded-full">
                   {pendingIntakes.length} pending
@@ -1532,8 +1555,8 @@ export const CargoForm = ({
                 </div>
 
                 {successMessage && (
-                  <div className="p-3 mb-4 text-[12px] font-sans font-bold text-[#fafafa] bg-emerald-950 border border-emerald-500 rounded animate-bounce">
-                    ✓ {successMessage}
+                  <div className="p-3 mb-4 text-[12px] font-sans font-bold text-[#fafafa] bg-emerald-950 border border-emerald-500 rounded flex items-center gap-2 animate-bounce">
+                    <CheckCircle size={14} /> {successMessage}
                   </div>
                 )}
 
@@ -1637,8 +1660,8 @@ export const CargoForm = ({
                   </div>
 
                   <div className="bg-[rgba(245,158,11,0.03)] border border-[rgba(245,158,11,0.1)] p-3 rounded text-[11px] font-sans text-[var(--color-light-muted)] space-y-1">
-                    <p className="font-semibold text-[var(--color-accent-amber)]">
-                      ⚠️ INTENTIONAL BUSINESS LOGIC:
+                    <p className="font-semibold text-[var(--color-accent-amber)] flex items-center gap-1.5">
+                      <AlertTriangle size={14} /> INTENTIONAL BUSINESS LOGIC:
                     </p>
                     <p>
                       No pricing or weights can be registered during Field
@@ -1652,7 +1675,7 @@ export const CargoForm = ({
                     onClick={handleLogFieldIntake}
                     className="w-full h-12 mt-4 cursor-pointer bg-[var(--color-accent-amber)] text-[#030712] font-semibold text-[14px] rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-opacity-95 transition-all text-center"
                   >
-                    🚀 LOG INTAKE FOR WEIGHING
+                    <Rocket size={16} /> LOG INTAKE FOR WEIGHING
                   </button>
                 </div>
               </div>
@@ -1987,10 +2010,13 @@ export const CargoForm = ({
                         </div>
                       </div>
 
-                      <div className="text-[11px] text-[#ef4444] bg-[rgba(239,68,68,0.03)] p-2 rounded border border-[rgba(239,68,68,0.1)] leading-snug">
-                        ⚡ PL/pgSQL database trigger will automatically book
-                        this finalized amount to the client's monthly master
-                        debt profile balance.
+                      <div className="text-[11px] text-[#ef4444] bg-[rgba(239,68,68,0.03)] p-2 rounded border border-[rgba(239,68,68,0.1)] leading-snug flex items-start gap-1.5">
+                        <Zap size={14} className="shrink-0 mt-0.5" /> 
+                        <span>
+                          PL/pgSQL database trigger will automatically book
+                          this finalized amount to the client's monthly master
+                          debt profile balance.
+                        </span>
                       </div>
                     </div>
 
@@ -2002,7 +2028,9 @@ export const CargoForm = ({
                       {isWeighingSubmitting ? (
                         <Loader2 size={16} className="animate-spin" />
                       ) : (
-                        "✓ FINALIZE GATE INVOICE"
+                        <>
+                          <CheckCircle size={16} /> FINALIZE GATE INVOICE
+                        </>
                       )}
                     </button>
                   </div>

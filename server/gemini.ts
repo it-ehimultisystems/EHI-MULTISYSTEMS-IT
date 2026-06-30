@@ -79,26 +79,10 @@ Return ONLY valid JSON. Absolutely do not include markdown blocks or "json" head
     res.json({ success: true, insights: parsed });
   } catch (error: any) {
     if (error?.message?.includes('429') || error?.status === 429 || error?.status === 'RESOURCE_EXHAUSTED') {
-      console.warn("Gemini insights quota exceeded. Returning fallback insights.");
+      console.warn("Gemini insights quota exceeded.");
       return res.json({
-        success: true,
-        insights: [
-          {
-            title: "Revenue Concentration",
-            insight: "A substantial portion of revenue is concentrated in a primary route. Consider diversifying or offering promotions for under-utilized channels.",
-            priority: "medium"
-          },
-          {
-            title: "Debt Management",
-            insight: "Outstanding debt continues to accumulate. Implement stricter upfront payment policies or active follow-ups for high-debt clients.",
-            priority: "high"
-          },
-          {
-            title: "Operational Efficiency",
-            insight: "Current entry volumes suggest capacity for more throughput. Suggest optimizing processing times during peak hours.",
-            priority: "low"
-          }
-        ]
+        success: false,
+        error: "AI service quota exceeded. Please try again later."
       });
     }
     console.error("Gemini insights error:", error);
@@ -142,10 +126,10 @@ Write in a formal corporate tone. Return ONLY the 3 plain-text paragraphs.
     res.json({ success: true, narrative: response.text });
   } catch (error: any) {
     if (error?.message?.includes('429') || error?.status === 429 || error?.status === 'RESOURCE_EXHAUSTED') {
-      console.warn("Gemini narrative quota exceeded. Returning fallback narrative.");
+      console.warn("Gemini narrative quota exceeded.");
       return res.json({ 
-        success: true, 
-        narrative: "This is an automated fallback summary as the AI service is currently experiencing high demand.\n\nOverall performance indicators show consistent transactional throughput, although specific operational streams may require closer attention to balance load and reduce pending debt aging.\n\nManagement is advised to continue monitoring terminal velocity and enforce stricter revenue collection policies to ensure balanced cash flow."
+        success: false, 
+        error: "AI service quota exceeded. Please try again later."
       });
     }
     console.error("Gemini report narrative error:", error);

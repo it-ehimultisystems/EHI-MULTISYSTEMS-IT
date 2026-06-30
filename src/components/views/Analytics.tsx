@@ -3,6 +3,7 @@ import { User, Transaction, Expense } from '../../lib/types';
 import { fmt, uid } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { normalizeAirlineName } from '../../lib/helpers';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
 import { 
   TrendingUp, 
   Package, 
@@ -376,40 +377,48 @@ export const Analytics = ({
     } finally {
       setLoadingInsights(false);
     }
-  }, [stats]);
+  }, [stats.cargoRev, stats.mktgRev, stats.vjRev, stats.topRoute, stats.debt, stats.cargoCount, stats.mktgCount]);
 
   const handleDownloadCSV = () => {
-    if (!periodFilteredTxs || periodFilteredTxs.length === 0) return;
-    
-    const headers = ['ID', 'Date', 'Type', 'Status', 'Amount', 'Payment Mode', 'Route/Detail', 'AWB/Tag'];
-    
-    const rows = periodFilteredTxs.map(t => {
-      let route = t.route || '';
-      let awb = t.awb_tag_number || '';
-      if (!route && t.detail) {
-        route = t.detail.split('·')[0]?.trim() || '';
+    try {
+      if (!periodFilteredTxs || periodFilteredTxs.length === 0) {
+        alert("No transactions available to download for this period.");
+        return;
       }
-      return [
-        t.id,
-        t.created_at || new Date().toISOString(),
-        t.type,
-        t.status,
-        t.amount.toString(),
-        t.mode || '',
-        `"${route}"`,
-        `"${awb}"`
-      ].join(',');
-    });
-    
-    const csvContent = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `ehi_transactions_${period}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      
+      const headers = ['ID', 'Date', 'Type', 'Status', 'Amount', 'Payment Mode', 'Route/Detail', 'AWB/Tag'];
+      
+      const rows = periodFilteredTxs.map(t => {
+        let route = t.route || '';
+        let awb = t.awb_tag_number || '';
+        if (!route && t.detail) {
+          route = t.detail.split('·')[0]?.trim() || '';
+        }
+        return [
+          t.id || '',
+          t.created_at || new Date().toISOString(),
+          t.type || '',
+          t.status || '',
+          (t.amount || 0).toString(),
+          t.mode || '',
+          `"${route}"`,
+          `"${awb}"`
+        ].join(',');
+      });
+      
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ehi_transactions_${period}_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err: any) {
+      alert("Error downloading CSV: " + err.message);
+    }
   };
 
   return (
@@ -465,7 +474,9 @@ export const Analytics = ({
         <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
           <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-accent-amber)]" />
           <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Cargo Stream</div>
-          <div className="text-[17px] font-bold font-mono text-[var(--color-accent-amber)] pl-1">{fmt(stats.cargoRev)}</div>
+          <div className="text-[17px] font-bold font-mono text-[var(--color-accent-amber)] pl-1">
+            <AnimatedNumber value={stats.cargoRev} format={fmt} />
+          </div>
           <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
             {stats.cargoCount} waybills · {stats.cargoKg.toLocaleString()} KG
           </div>
@@ -475,7 +486,9 @@ export const Analytics = ({
         <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
           <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-success)]" />
           <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Field Marketing</div>
-          <div className="text-[17px] font-bold font-mono text-[var(--color-success)] pl-1">{fmt(stats.mktgRev)}</div>
+          <div className="text-[17px] font-bold font-mono text-[var(--color-success)] pl-1">
+            <AnimatedNumber value={stats.mktgRev} format={fmt} />
+          </div>
           <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
             {stats.mktgCount} entries log
           </div>
@@ -485,7 +498,9 @@ export const Analytics = ({
         <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
           <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-accent-cobalt)]" />
           <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">ValueJet Baggage</div>
-          <div className="text-[17px] font-bold font-mono text-[var(--color-accent-cobalt)] pl-1">{fmt(stats.vjRev)}</div>
+          <div className="text-[17px] font-bold font-mono text-[var(--color-accent-cobalt)] pl-1">
+            <AnimatedNumber value={stats.vjRev} format={fmt} />
+          </div>
           <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
             {stats.vjCount} Pax · {stats.vjExcessKg.toLocaleString()} Excess KG
           </div>
@@ -505,13 +520,17 @@ export const Analytics = ({
         <div className="flex justify-between items-center px-2 md:px-8">
           <div className="flex flex-col items-start">
             <span className="text-[8px] font-mono text-[var(--color-error)] uppercase tracking-widest font-bold">● PAYABLES</span>
-            <span className="text-[16px] md:text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">{fmt(stats.airlinePayables)}</span>
+            <span className="text-[16px] md:text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">
+              <AnimatedNumber value={stats.airlinePayables} format={fmt} />
+            </span>
             <span className="text-[7px] font-mono text-[var(--color-light-muted)] mt-0.5 uppercase hidden md:block">Owed to airlines</span>
           </div>
 
           <div className="flex flex-col items-center">
             <div className="text-[8px] font-mono text-[var(--color-success)] uppercase tracking-widest font-bold">● COMBINED PORTFOLIO REVENUE</div>
-            <div className="text-[20px] md:text-[26px] font-bold font-mono text-[var(--color-foreground)] mt-1.5">{fmt(stats.totalRev)}</div>
+            <div className="text-[20px] md:text-[26px] font-bold font-mono text-[var(--color-foreground)] mt-1.5">
+              <AnimatedNumber value={stats.totalRev} format={fmt} />
+            </div>
             <div className="text-[8px] font-mono text-[var(--color-light-muted)] mt-1 uppercase hidden md:block">
               Consolidated across all 3 streams for {period}
             </div>
@@ -519,7 +538,9 @@ export const Analytics = ({
 
           <div className="flex flex-col items-end">
             <span className="text-[8px] font-mono text-[var(--color-accent-amber)] uppercase tracking-widest font-bold">● RECEIVABLES</span>
-            <span className="text-[16px] md:text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">{fmt(stats.debt)}</span>
+            <span className="text-[16px] md:text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">
+              <AnimatedNumber value={stats.debt} format={fmt} />
+            </span>
           </div>
         </div>
       </div>
