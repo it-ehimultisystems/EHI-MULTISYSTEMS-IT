@@ -339,7 +339,7 @@ export const TransactionLedger = ({
             <thead className="bg-[#111827]">
               <tr className="text-[var(--color-muted)] border-b border-[rgba(255,255,255,0.05)] uppercase">
                 {isAccountantOrAdmin && <th className="py-3 px-3 w-[36px]"></th>}
-                <th className="py-3 px-2 w-[60px] font-medium">ID</th>
+                <th className="py-3 px-2 w-[90px] font-medium">ID</th>
                 <th className="py-3 px-2 w-[72px] font-medium">Date</th>
                 <th className="py-3 px-2 font-medium min-w-[120px]">Customer / Detail</th>
                 <th className="py-3 px-2 w-[72px] font-medium text-center">Status</th>
@@ -442,7 +442,20 @@ export const TransactionLedger = ({
                     )}
                     {/* ID */}
                     <td className="py-2.5 px-2 text-[var(--color-light-muted)] whitespace-nowrap">
-                      {e.id.slice(-8)}
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                          e.type === 'cargo' ? 'bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]' :
+                          e.type === 'baggage' ? 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]' :
+                          e.type === 'marketing' ? 'bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]' :
+                          'bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]'
+                        }`}>
+                          {e.type === 'cargo' && <Package size={10} />}
+                          {e.type === 'baggage' && <Plane size={10} />}
+                          {e.type === 'marketing' && <TrendingUp size={10} />}
+                          {e.source === 'expense' && <Minus size={10} />}
+                        </div>
+                        {e.id.slice(-8)}
+                      </div>
                     </td>
                     {/* Date + Time */}
                     <td className="py-2.5 px-2 whitespace-nowrap">

@@ -32,6 +32,8 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
   const [customTo,   setCustomTo]   = useState('');
   const [generating, setGenerating] = useState(false);
   const [hubNames, setHubNames] = useState<Record<string, string>>({});
+  const [fetchedTx, setFetchedTx] = useState<Transaction[]>([]);
+  const [isLoadingTx, setIsLoadingTx] = useState(false);
 
   useEffect(() => {
     supabase.from('hubs').select('id, name, code').then(({ data }) => {
@@ -64,16 +66,100 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
     return { from, to };
   }, [preset, customFrom, customTo]);
 
-  // Filter transactions to date range
-  const filteredTx = useMemo(() => {
-    return transactions.filter(t => {
-      let d = new Date();
-      if (t.created_at) {
-        d = new Date(t.created_at);
+  // Fetch transactions based on dateRange
+  useEffect(() => {
+    let isMounted = true;
+    const fetchTransactions = async () => {
+      setIsLoadingTx(true);
+      const fromISO = dateRange.from.toISOString();
+      const toISO = dateRange.to.toISOString();
+      
+      const isAdmin = ['super_admin','admin','accountant','auditor'].includes(user.role);
+      const addHubFilter = (q: any) => (!isAdmin && user.hub_id) ? q.eq('hub_id', user.hub_id) : q;
+
+      try {
+        const [cargoRes, vjRes, mktRes] = await Promise.all([
+          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id').gte('created_at', fromISO).lte('created_at', toISO)),
+          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', fromISO).lte('created_at', toISO)),
+          addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name)').gte('created_at', fromISO).lte('created_at', toISO))
+        ]);
+
+        const allTx: Transaction[] = [];
+
+        if (cargoRes.data) {
+          cargoRes.data.forEach((r: any) => {
+            allTx.push({
+              id: r.entry_ref,
+              name: r.consignee_name || 'Consignee',
+              detail: `${r.route || 'Local'} · ${r.airline || 'Airline'} · ${r.awb_tag_number || ''}`,
+              amount: r.amount || 0,
+              mode: r.receipt_mode || 'Cash',
+              time: new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+              type: 'cargo',
+              status: r.status,
+              created_at: r.created_at,
+              bank: r.bank,
+              hub_id: r.hub_id,
+              route: r.route,
+            });
+          });
+        }
+
+        if (vjRes.data) {
+          vjRes.data.forEach((r: any) => {
+            allTx.push({
+              id: r.transaction_id,
+              name: r.passenger_name || 'Passenger',
+              detail: `${r.destination || 'Destination'} · ${r.flight_no || 'Flight'} · ${r.excess_kg}KG`,
+              amount: r.amount || 0,
+              mode: r.payment_mode || 'Cash',
+              time: new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+              type: 'baggage',
+              created_at: r.created_at,
+              bank: r.bank,
+              hub_id: r.hub_id,
+            });
+          });
+        }
+
+        if (mktRes.data) {
+          mktRes.data.forEach((r: any) => {
+            const enteredByName = Array.isArray(r.user_profiles) ? r.user_profiles[0]?.name : r.user_profiles?.name;
+            allTx.push({
+              id: r.entry_ref || r.id,
+              name: r.customer_name || 'Customer',
+              detail: `${r.route || 'Local'} · BB:${r.qty_big_bag||0} MB:${r.qty_med_bag||0} SB:${r.qty_small_bag||0}`,
+              amount: r.amount_paid || 0,
+              mode: r.payment_mode || 'Cash',
+              time: new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+              type: 'marketing',
+              created_at: r.created_at,
+              bank: r.bank,
+              hub_id: r.hub_id,
+              route: r.route,
+              enteredByName: enteredByName || undefined,
+            });
+          });
+        }
+        
+        if (isMounted) {
+          setFetchedTx(allTx.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
+        }
+      } catch (err) {
+        console.error("Failed to fetch report transactions", err);
+      } finally {
+        if (isMounted) setIsLoadingTx(false);
       }
-      return d >= dateRange.from && d <= dateRange.to;
-    });
-  }, [transactions, dateRange]);
+    };
+
+    fetchTransactions();
+    return () => { isMounted = false; };
+  }, [dateRange, user]);
+
+  // Filter transactions to date range (we now just use the fetchedTx, which are already filtered by the DB)
+  const filteredTx = useMemo(() => {
+    return fetchedTx;
+  }, [fetchedTx]);
 
   // ── Report computations ─────────────────────────
 
@@ -312,12 +398,20 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               {REPORT_TYPES.find(r => r.id === selectedReport)?.label}
             </div>
 
-            {selectedReport === 'revenue' && <RevenueReportView data={revenueReport} />}
-            {selectedReport === 'routes'    && <RouteReportView data={routeReport} />}
-            {selectedReport === 'customers' && <CustomerReportView data={customerReport} />}
-            {selectedReport === 'debtors'   && <DebtorReportView data={debtorReport} />}
-            {selectedReport === 'staff'     && <StaffReportView data={staffReport} />}
-            {selectedReport === 'hubs'      && <HubReportView data={hubReport} />}
+            {isLoadingTx ? (
+              <div className="flex justify-center py-12">
+                <Loader2 size={24} className="animate-spin text-[var(--color-accent-amber)]" />
+              </div>
+            ) : (
+              <>
+                {selectedReport === 'revenue' && <RevenueReportView data={revenueReport} />}
+                {selectedReport === 'routes'    && <RouteReportView data={routeReport} />}
+                {selectedReport === 'customers' && <CustomerReportView data={customerReport} />}
+                {selectedReport === 'debtors'   && <DebtorReportView data={debtorReport} />}
+                {selectedReport === 'staff'     && <StaffReportView data={staffReport} />}
+                {selectedReport === 'hubs'      && <HubReportView data={hubReport} />}
+              </>
+            )}
           </div>
 
           {/* Export buttons */}

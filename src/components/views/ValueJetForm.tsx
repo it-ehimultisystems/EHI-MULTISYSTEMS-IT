@@ -47,7 +47,7 @@ export const ValueJetForm = ({
   const excessKg = Math.max(0, kgVal - vjFreeAllowance);
   const totalAmount = excessKg * VJ_RATE_PER_KG;
 
-  const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0;
+  const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0 && phone.trim().length > 0;
 
   const handleSubmit = () => {
     if (!isValid || submitting) return;
@@ -277,7 +277,7 @@ export const ValueJetForm = ({
           <div className="space-y-1.5">
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)] font-bold flex items-center gap-1.5">
               <MessageSquare size={14} className="text-[var(--color-accent-cobalt)]" />
-              Passenger Phone — WhatsApp Receipt (Optional)
+              Passenger Phone — WhatsApp Receipt (Required)
             </span>
             <input
               type="tel"

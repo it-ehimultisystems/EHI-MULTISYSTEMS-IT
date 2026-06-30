@@ -476,7 +476,7 @@ export const Analytics = ({
           <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-accent-amber)]" />
           <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Cargo Stream</div>
           <div className="text-[17px] font-bold font-mono text-[var(--color-accent-amber)] pl-1">
-            <AnimatedNumber value={stats.cargoRev} format={fmt} />
+            {fmt(stats.cargoRev)}
           </div>
           <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
             {stats.cargoCount} waybills · {stats.cargoKg.toLocaleString()} KG
@@ -488,7 +488,7 @@ export const Analytics = ({
           <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-success)]" />
           <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Field Marketing</div>
           <div className="text-[17px] font-bold font-mono text-[var(--color-success)] pl-1">
-            <AnimatedNumber value={stats.mktgRev} format={fmt} />
+            {fmt(stats.mktgRev)}
           </div>
           <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
             {stats.mktgCount} entries log
@@ -500,7 +500,7 @@ export const Analytics = ({
           <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-accent-cobalt)]" />
           <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">ValueJet Baggage</div>
           <div className="text-[17px] font-bold font-mono text-[var(--color-accent-cobalt)] pl-1">
-            <AnimatedNumber value={stats.vjRev} format={fmt} />
+            {fmt(stats.vjRev)}
           </div>
           <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
             {stats.vjCount} Pax · {stats.vjExcessKg.toLocaleString()} Excess KG

@@ -109,7 +109,7 @@ export const BankReconciliation = ({
 }: { 
   transactions: Transaction[]; 
   onBack: () => void;
-  onConfirm?: (s: { matched: number, unmatched: number, totalMatched: number }) => void;
+  onConfirm?: (s: { matched: number, unmatched: number, totalMatched: number, matchedIds: string[] }) => void;
 }) => {
   const [method, setMethod] = useState<'CSV' | 'PDF'>('CSV');
   const [bankType, setBankType] = useState<BankFormat>('UBA');
@@ -243,7 +243,8 @@ export const BankReconciliation = ({
   const totalCredits = bankTxList.reduce((sum, b) => sum + b.credit, 0);
 
   const confirmRecon = () => {
-    if (onConfirm) onConfirm({ matched: matchedBtxCount, unmatched: unmatchedBtxCount, totalMatched: totalCredits });
+    const matchedIds = bankTxList.filter(b => b.status === 'Auto-Matched' || b.status === 'Manual-Matched').map(b => b.matchedId).filter(Boolean) as string[];
+    if (onConfirm) onConfirm({ matched: matchedBtxCount, unmatched: unmatchedBtxCount, totalMatched: totalCredits, matchedIds });
     setShowSuccess(true);
   };
 

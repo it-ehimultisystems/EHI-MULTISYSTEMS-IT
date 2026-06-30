@@ -74,7 +74,7 @@ export const Scanner = ({
   transactions: any[];
   showToast?: (opts: any) => void;
 }) => {
-  const [mode, setMode] = useState<ScanMode>('ARRIVE');
+  const [mode, setMode] = useState<ScanMode>('DEPART');
   const [isScanning, setIsScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
   // Unused state removed
@@ -739,7 +739,7 @@ export const Scanner = ({
 
       {/* Mode Toggle — ARRIVE / DEPART / DELIVER */}
       <div className="flex bg-[var(--color-surface-2)] p-1 rounded-lg mb-6 shadow-inner" style={{ width: '100%' }}>
-        {(['ARRIVE', 'DEPART', 'DELIVER'] as ScanMode[]).map((m) => {
+        {(['DEPART', 'ARRIVE', 'DELIVER'] as ScanMode[]).map((m) => {
           const active = mode === m;
           const activeColor = m === 'ARRIVE' ? 'var(--color-success)' : m === 'DEPART' ? 'var(--color-accent-cobalt)' : '#a855f7';
           const activeBg = 'var(--color-surface-1)';

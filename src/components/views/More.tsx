@@ -82,7 +82,20 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (bankReconView) {
-    return <BankReconciliation transactions={transactions} onBack={() => setBankReconView(false)} />;
+    return <BankReconciliation 
+      transactions={transactions} 
+      onBack={() => setBankReconView(false)} 
+      onConfirm={({ matchedIds }) => {
+        if (onFullUpdateTx) {
+          matchedIds.forEach(id => {
+            const tx = transactions.find(t => t.id === id);
+            if (tx) {
+              onFullUpdateTx({ ...tx, paymentConfirmed: true, confirmedAt: new Date().toLocaleTimeString('en-NG'), confirmedBy: user.name });
+            }
+          });
+        }
+      }}
+    />;
   }
 
   if (fleetView) {

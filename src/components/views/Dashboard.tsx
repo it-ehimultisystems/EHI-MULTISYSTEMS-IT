@@ -2,13 +2,8 @@ import React, { useEffect, useState, useMemo, useRef } from "react";
 import { Package, Plane, TrendingUp, Package2, QrCode, X, Clock } from "lucide-react";
 import { User, Transaction } from "../../lib/types";
 import { fmt } from "../../lib/helpers";
-import { AnimatedNumber } from "../ui/AnimatedNumber";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { QRCode } from "../QRCode";
-
-const AnimatedScore = React.memo(({ value }: { value: number }) => (
-  <AnimatedNumber value={value} format={fmt} />
-));
 
 // Format time from full timestamp to "10:42 AM"
 function formatTime(raw: string): string {
@@ -153,7 +148,7 @@ const ScoreCard = ({ label, icon: Icon, color, bg, borderColor, total, sub1, sub
       </div>
     </div>
     <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "monospace", color, lineHeight: 1.1 }}>
-      <AnimatedNumber value={total} format={fmt} />
+      {fmt(total)}
     </div>
     <div style={{ fontSize: 11, color: "var(--color-muted)", display: "flex", justifyContent: "space-between" }}>
       <span>{sub1}</span>
@@ -255,7 +250,7 @@ export const Dashboard = React.memo(
             <div className="text-right">
               <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wide">Gross Today</div>
               <div className="text-[15px] font-bold font-mono text-[var(--color-success)]">
-                <AnimatedNumber value={grossTotal} format={fmt} />
+                {fmt(grossTotal)}
               </div>
             </div>
           )}
@@ -309,7 +304,7 @@ export const Dashboard = React.memo(
                 Revenue Breakdown
               </span>
               <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "monospace", color: "var(--color-foreground)" }}>
-                <AnimatedNumber value={grossTotal} format={fmt} />
+                {fmt(grossTotal)}
               </span>
             </div>
             <div className="grid grid-cols-4 gap-2">
@@ -324,7 +319,7 @@ export const Dashboard = React.memo(
                     {label}
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "monospace", color }}>
-                    <AnimatedNumber value={value} format={fmt} />
+                    {fmt(value)}
                   </div>
                   {grossTotal > 0 && (
                     <div style={{ fontSize: 9, color: "var(--color-muted)", marginTop: 1 }}>

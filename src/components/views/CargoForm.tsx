@@ -401,6 +401,10 @@ export const CargoForm = ({
       alert("Please provide the Air Waybill / Tag Number.");
       return;
     }
+    if (!intakeSenderPhone.trim()) {
+      alert("Please provide the Field Client Phone for WhatsApp.");
+      return;
+    }
 
     const newIntake: PendingWeighingIntake = {
       id: `CG-INT-${Math.floor(100 + Math.random() * 900)}`,
@@ -584,7 +588,8 @@ export const CargoForm = ({
     awb.trim().length > 0 &&
     route.trim().length > 0 &&
     contentType.trim().length > 0 &&
-    parsedAmount > 0;
+    parsedAmount > 0 &&
+    senderPhone.trim().length > 0;
 
   const handleRetailSubmit = async () => {
     if (!isRetailFormValid || submitting) return;
@@ -1345,7 +1350,7 @@ export const CargoForm = ({
               <div>
                 {renderLabel(
                   MessageSquare,
-                  "Sender Phone — WhatsApp Receipt (Optional)",
+                  "Sender Phone — WhatsApp Receipt (Required)",
                 )}
                 <input
                   type="tel"
@@ -1647,7 +1652,7 @@ export const CargoForm = ({
                     <div>
                       {renderLabel(
                         MessageSquare,
-                        "Field Client Phone (WhatsApp)",
+                        "Field Client Phone (WhatsApp Required)",
                       )}
                       <input
                         type="tel"

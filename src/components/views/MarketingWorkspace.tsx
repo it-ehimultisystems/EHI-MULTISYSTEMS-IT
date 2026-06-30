@@ -64,7 +64,7 @@ export const MarketingWorkspace = ({
   const totalAmount =
     bb * routePrices.BB + mb * routePrices.MB + sb * routePrices.SB;
 
-  const isValid = name.trim().length > 0 && totalAmount > 0;
+  const isValid = name.trim().length > 0 && totalAmount > 0 && phone.trim().length > 0;
 
   const marketingTxs = transactions.filter((t) => t.type === "marketing");
   const totalSales = marketingTxs.reduce((sum, t) => sum + t.amount, 0);
@@ -370,7 +370,7 @@ export const MarketingWorkspace = ({
                   <MessageSquare size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
                   <input
                     type="tel"
-                    placeholder="Customer Phone (WhatsApp Receipt)"
+                    placeholder="Customer Phone (WhatsApp Receipt Required)"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className={`w-full h-11 pl-9 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
