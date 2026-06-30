@@ -100,7 +100,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         const [cargoRes, vjRes, mktRes, expRes] = await Promise.all([
           addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name)').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('expenses').select('*').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500))
         ]);
 
@@ -157,7 +157,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         }
 
         if (mktRes.data) {
-          mktRes.data.forEach(r => {
+          mktRes.data.forEach((r: any) => {
+            // user_profiles comes back as an object when entered_by matched a real
+            // user, or an array depending on the relationship — handle both shapes.
+            const enteredByName = Array.isArray(r.user_profiles) ? r.user_profiles[0]?.name : r.user_profiles?.name;
             allTx.push({
               id: r.entry_ref || r.id,
               name: r.customer_name || 'Customer',
@@ -171,6 +174,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               bank: r.bank,
               hub_id: r.hub_id,
               route: r.route,
+              enteredByName: enteredByName || undefined,
             });
           });
         }
@@ -183,6 +187,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             description: e.description,
             time: e.created_at,
             status: e.status || 'pending',
+            logged_by: e.logged_by || undefined,
           }));
           setExpenses(prev => {
             const combined = [...prev, ...fetchedExpenses];

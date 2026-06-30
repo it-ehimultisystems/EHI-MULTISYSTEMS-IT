@@ -295,24 +295,25 @@ export const Analytics = ({
   // Marketing agents performance computed from real data
   const marketingAgentsData = useMemo(() => {
     const map: Record<string, { entries: number; revenue: number; expenses: number }> = {};
-    
-    // Process marketing revenues
+
+    // Process marketing revenues — grouped by the real agent name resolved
+    // from entered_by via the user_profiles join, not a field that was never fetched
     periodFilteredTxs.filter(t => t.type === 'marketing').forEach(t => {
-      // Find the user who created it, or default
-      const loggedBy = (t as any).logged_by || 'Agent';
-      if (!map[loggedBy]) map[loggedBy] = { entries: 0, revenue: 0, expenses: 0 };
-      map[loggedBy].entries++;
-      map[loggedBy].revenue += t.amount;
+      const agentName = t.enteredByName || 'Unassigned';
+      if (!map[agentName]) map[agentName] = { entries: 0, revenue: 0, expenses: 0 };
+      map[agentName].entries++;
+      map[agentName].revenue += t.amount;
     });
 
-    // Process expenses by agent
+    // Process expenses by agent — logged_by is the agent's real name,
+    // written directly at expense-creation time
     periodFilteredExpenses.forEach(e => {
-      const loggedBy = (e as any).loggedBy || (e as any).logged_by || 'Agent';
-      if (map[loggedBy]) {
-        map[loggedBy].expenses += e.amount;
+      const agentName = e.logged_by || 'Unassigned';
+      if (map[agentName]) {
+        map[agentName].expenses += e.amount;
       } else {
         // If they only have expenses but no revenue in this period
-        map[loggedBy] = { entries: 0, revenue: 0, expenses: e.amount };
+        map[agentName] = { entries: 0, revenue: 0, expenses: e.amount };
       }
     });
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Transaction, Expense } from "../../lib/types";
 import { PRICING, BANKS, EXPENSE_CATEGORIES } from "../../lib/constants";
 import { fmt, uid, tnow } from "../../lib/helpers";
-import { Plus, CheckCircle, Loader2 } from "lucide-react";
+import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer } from "lucide-react";
 import { motion } from "motion/react";
 
 import {
@@ -246,7 +246,7 @@ export const MarketingWorkspace = ({
               onClick={onShowHistory}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors normal-case tracking-normal"
             >
-              <span>📋</span> History
+              <ClipboardList size={14} /> <span>History</span>
             </button>
           )}
           <div>Agent: {user.name.split(" ")[0]}</div>
@@ -315,9 +315,9 @@ export const MarketingWorkspace = ({
               <div className="flex w-full">
                 <button
                   onClick={handleReset}
-                  className="flex-1 py-3 bg-[var(--color-success)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer"
+                  className="flex-1 py-3 bg-[var(--color-success)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer flex justify-center items-center gap-2"
                 >
-                  Add Another
+                  <Plus size={14} /> NEW ENTRY
                 </button>
               </div>
               <button
@@ -340,7 +340,7 @@ export const MarketingWorkspace = ({
                   marginTop: 8,
                 }}
               >
-                ↓ DOWNLOAD RECEIPT
+                <Printer size={14} /> DOWNLOAD RECEIPT
               </button>
             </div>
           ) : (
@@ -366,13 +366,16 @@ export const MarketingWorkspace = ({
                   onChange={(e) => setName(e.target.value)}
                   className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                 />
-                <input
-                  type="tel"
-                  placeholder="Phone Number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
-                />
+                <div className="relative">
+                  <MessageSquare size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
+                  <input
+                    type="tel"
+                    placeholder="Customer Phone (WhatsApp Receipt)"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className={`w-full h-11 pl-9 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                  />
+                </div>
 
                 <div className="flex space-x-3">
                   <select
@@ -464,7 +467,11 @@ export const MarketingWorkspace = ({
                   }`}
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
-                  {submitting ? "ADDING ENTRY..." : "ADD ENTRY"}
+                  {submitting ? "ADDING ENTRY..." : (
+                    <>
+                      <Plus size={16} /> ADD ENTRY
+                    </>
+                  )}
                 </button>
               </div>
             </div>

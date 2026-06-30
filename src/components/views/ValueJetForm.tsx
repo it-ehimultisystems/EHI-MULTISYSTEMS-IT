@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PaymentMode, Transaction, User } from '../../lib/types';
 import { fmt, uid, tnow } from '../../lib/helpers';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer } from 'lucide-react';
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
@@ -206,11 +206,11 @@ export const ValueJetForm = ({
           </div>
 
           <div className="flex w-full space-x-2">
-            <button onClick={handleReset} className="flex-1 py-3 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-mono rounded cursor-pointer">
-              Next Passenger
+            <button onClick={handleReset} className="flex-1 py-3 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-mono rounded cursor-pointer flex justify-center items-center gap-2">
+              <Plus size={14} /> NEXT PASSENGER
             </button>
-            <button onClick={handlePrintReceipt} className="flex-1 py-3 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer">
-              Print Receipt
+            <button onClick={handlePrintReceipt} className="flex-1 py-3 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex justify-center items-center gap-2">
+              <Printer size={14} /> PRINT RECEIPT
             </button>
           </div>
           <button
@@ -245,7 +245,7 @@ export const ValueJetForm = ({
             onClick={onShowHistory}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-cobalt)] hover:border-[var(--color-accent-cobalt)] transition-colors"
           >
-            <span>📋</span> History
+            <ClipboardList size={14} /> <span>History</span>
           </button>
         )}
       </div>
@@ -275,7 +275,10 @@ export const ValueJetForm = ({
           </div>
 
           <div className="space-y-1.5">
-            <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)] font-bold">Passenger Phone — WhatsApp Receipt (Optional)</span>
+            <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)] font-bold flex items-center gap-1.5">
+              <MessageSquare size={14} className="text-[var(--color-accent-cobalt)]" />
+              Passenger Phone — WhatsApp Receipt (Optional)
+            </span>
             <input
               type="tel"
               placeholder="e.g. 08012345678"

@@ -150,6 +150,7 @@ export interface Transaction {
   bank?: string;
   hub_id?: string;
   hub?: string;
+  enteredByName?: string;
   // Cargo specifics
   awb_tag_number?: string;
   airline?: string;
@@ -205,6 +206,7 @@ export interface Expense {
   status?: 'pending' | 'approved' | 'rejected';
   mode?: string;
   posApprovalCode?: string;
+  logged_by?: string;
 }
 
 export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Scan' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit';
