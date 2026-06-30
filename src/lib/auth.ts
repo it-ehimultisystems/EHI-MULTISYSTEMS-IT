@@ -120,20 +120,25 @@ export async function createStaffAccount(payload: CreateStaffPayload): Promise<{
   });
 
   let data: any = {};
+  let rawText = '';
   try {
-    const text = await res.text();
-    if (text) {
-      data = JSON.parse(text);
+    rawText = await res.text();
+    if (rawText) {
+      data = JSON.parse(rawText);
     }
   } catch (e) {
-    // If it's not valid JSON, we'll handle it below using res.status
+    // Not valid JSON — rawText still holds whatever the server actually sent,
+    // surfaced below instead of being silently discarded.
   }
 
   if (!res.ok || data.error) {
     if (res.status === 503) {
       throw new Error('Staff account creation is not configured on the server. Add SUPABASE_SERVICE_ROLE_KEY to your environment variables.');
     }
-    throw new Error(data.error || `Server returned error status ${res.status}`);
+    const fallback = rawText
+      ? `Server returned status ${res.status}: ${rawText.slice(0, 200)}`
+      : `Server returned error status ${res.status} with an empty response`;
+    throw new Error(data.error || fallback);
   }
   return { id: data.id, email: data.email };
 }
@@ -170,9 +175,10 @@ export async function updateStaffProfile(
   });
   
   let data: any = {};
+  let rawText = '';
   try {
-    const text = await res.text();
-    if (text) data = JSON.parse(text);
+    rawText = await res.text();
+    if (rawText) data = JSON.parse(rawText);
   } catch(e) {}
 
   if (!res.ok || data.error) {
@@ -183,7 +189,10 @@ export async function updateStaffProfile(
       if (error) throw new Error(`Backend not configured, and direct DB update failed: ${error.message}`);
       return;
     }
-    throw new Error(data.error || 'Failed to update profile');
+    const fallback = rawText
+      ? `Server returned status ${res.status}: ${rawText.slice(0, 200)}`
+      : `Server returned error status ${res.status} with an empty response`;
+    throw new Error(data.error || fallback);
   }
 }
 

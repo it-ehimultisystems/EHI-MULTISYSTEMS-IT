@@ -9,47 +9,58 @@ import { parseBankAlert } from './emailParser';
 const rateLimiter = (maxReqs: number, windowMs: number) => {
   const store = new Map<string, { count: number; resetAt: number }>();
   return (req: any, res: any, next: any) => {
-    const key = req.ip || 'unknown';
-    const now = Date.now();
-    const entry = store.get(key);
-    if (!entry || now > entry.resetAt) {
-      store.set(key, { count: 1, resetAt: now + windowMs });
-      return next();
+    try {
+      const key = req.ip || 'unknown';
+      const now = Date.now();
+      const entry = store.get(key);
+      if (!entry || now > entry.resetAt) {
+        store.set(key, { count: 1, resetAt: now + windowMs });
+        return next();
+      }
+      if (entry.count >= maxReqs) {
+        return res.status(429).json({ error: 'Too many requests' });
+      }
+      entry.count++;
+      next();
+    } catch (err) {
+      // Fail open — a broken rate limiter should never block a legitimate request
+      console.error('Rate limiter error (failing open):', err);
+      next();
     }
-    if (entry.count >= maxReqs) {
-      return res.status(429).json({ error: 'Too many requests' });
-    }
-    entry.count++;
-    next();
   };
 };
 
 async function requireAdminCaller(req: any, res: any): Promise<{ admin: any; supabaseUrl: string; serviceKey: string } | null> {
-  const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
-  if (!token) { res.status(401).json({ error: 'Unauthorized' }); return null; }
-
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceKey) {
-    res.status(503).json({ error: 'Service key or Supabase URL not configured on server' });
-    return null;
-  }
-
   try {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (!token) { res.status(401).json({ error: 'Unauthorized' }); return null; }
+
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      res.status(503).json({ error: 'Service key or Supabase URL not configured on server' });
+      return null;
+    }
+
     const { createClient } = await import('@supabase/supabase-js');
     const admin = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: { user }, error } = await admin.auth.getUser(token);
 
-    if (error || !user) { res.status(401).json({ error: 'Invalid token' }); return null; }
+    if (error || !user) { res.status(401).json({ error: 'Invalid token: ' + (error?.message || 'no user') }); return null; }
 
-    const { data: profile } = await admin.from('user_profiles').select('role').eq('id', user.id).single();
+    const { data: profile, error: profileErr } = await admin.from('user_profiles').select('role').eq('id', user.id).single();
+    if (profileErr) { res.status(500).json({ error: 'Failed to load caller profile: ' + profileErr.message }); return null; }
     if (!profile || !['super_admin', 'admin'].includes(profile.role)) {
       res.status(403).json({ error: 'Forbidden' }); return null;
     }
     return { admin, supabaseUrl, serviceKey };
   } catch (err: any) {
-    res.status(500).json({ error: 'Auth check failed: ' + err.message }); return null;
+    console.error('requireAdminCaller error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Auth check failed: ' + (err?.message || 'unknown error') });
+    }
+    return null;
   }
 }
 
@@ -190,6 +201,26 @@ export function createApp() {
     } catch (e: any) {
       res.status(400).json({ error: e.message || 'Failed to parse inbound email' });
     }
+  });
+
+  // Catch-all for any /api/* path that didn't match a registered route above —
+  // without this, an unmatched sub-path falls through to Express's default
+  // 404 page (HTML, not JSON), which the client can't parse for a useful message.
+  app.use('/api', (req, res) => {
+    res.status(404).json({ error: `No API route matches ${req.method} ${req.originalUrl}` });
+  });
+
+  // Global error handler — MUST be registered last, and MUST have exactly
+  // 4 parameters for Express to recognise it as an error handler. This is
+  // the final safety net: any error thrown anywhere above that wasn't
+  // caught by a route's own try/catch lands here instead of producing
+  // Express's raw, non-JSON default error response.
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error('Unhandled API error:', err);
+    if (res.headersSent) return next(err);
+    res.status(err.status || err.statusCode || 500).json({
+      error: err.message || 'Unexpected server error',
+    });
   });
 
   return app;

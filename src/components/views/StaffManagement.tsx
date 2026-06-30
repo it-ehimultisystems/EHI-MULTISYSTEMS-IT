@@ -153,17 +153,21 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
         body: JSON.stringify({ userId: member.id, active: !member.active }),
       });
       let data: any = {};
+      let rawText = '';
       try {
-        const text = await res.text();
-        if (text) data = JSON.parse(text);
+        rawText = await res.text();
+        if (rawText) data = JSON.parse(rawText);
       } catch(e) {}
-      
+
       if (!res.ok || data.error) {
         if (res.status === 503) {
           const { error } = await supabase.from('user_profiles').update({ active: !member.active }).eq('id', member.id);
           if (error) throw new Error(`Backend not configured, direct DB update failed: ${error.message}`);
         } else {
-          throw new Error(data.error || `Server returned error status ${res.status}`);
+          const fallback = rawText
+            ? `Server returned status ${res.status}: ${rawText.slice(0, 200)}`
+            : `Server returned error status ${res.status} with an empty response`;
+          throw new Error(data.error || fallback);
         }
       }
       await loadData();
