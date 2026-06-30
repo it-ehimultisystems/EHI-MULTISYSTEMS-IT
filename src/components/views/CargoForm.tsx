@@ -909,7 +909,7 @@ export const CargoForm = ({
                         (successTx as any).pickupPin,
                       )
                     }
-                    className="text-[var(--color-accent-amber)] hover:text-white transition-colors"
+                    className="text-[var(--color-accent-amber)] hover:text-[var(--color-foreground)] transition-colors"
                     title="Copy PIN"
                   >
                     <Copy size={14} />
@@ -986,13 +986,13 @@ export const CargoForm = ({
               onClick={handlePrintReceipt}
               className="flex-1 py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[14px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
             >
-              Download Receipt
+              Print Receipt
             </button>
             <button
               onClick={handlePrintWaybill}
               className="flex-1 py-3.5 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[14px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none"
             >
-              Download Waybill Tag
+              Print Tag
             </button>
           </div>
 
@@ -1023,7 +1023,7 @@ export const CargoForm = ({
               marginTop: 10,
             }}
           >
-            ↓ DOWNLOAD PDF RECEIPT
+            ↓ PRINT PDF RECEIPT
           </button>
         </div>
       </div>
@@ -1043,7 +1043,7 @@ export const CargoForm = ({
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-[14px] font-sans font-bold rounded-md transition-all cursor-pointer ${
             activePortal === "retail"
               ? "bg-[var(--color-accent-amber)] text-[#030712] shadow-md"
-              : "text-[var(--color-light-muted)] hover:text-white"
+              : "text-[var(--color-light-muted)] hover:text-[var(--color-foreground)]"
           }`}
         >
           <Package size={16} /> Retail Cargo Entry
@@ -1053,7 +1053,7 @@ export const CargoForm = ({
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-[14px] font-sans font-bold rounded-md transition-all cursor-pointer relative ${
             activePortal === "corporate"
               ? "bg-[var(--color-accent-amber)] text-[#030712] shadow-md"
-              : "text-[var(--color-light-muted)] hover:text-white"
+              : "text-[var(--color-light-muted)] hover:text-[var(--color-foreground)]"
           }`}
         >
           <Users size={16} /> Corporate Contract (B2B)
@@ -1519,10 +1519,10 @@ export const CargoForm = ({
           <div className="flex border-b border-[var(--color-border)] text-[13px] font-sans font-bold gap-4 py-1">
             <button
               onClick={() => setCorpSubTab("intake")}
-              className={`pb-2.5 px-1 transition-all cursor-pointer ${
+              className={`pb-2.5 px-1 transition-all cursor-pointer flex items-center gap-1.5 ${
                 corpSubTab === "intake"
                   ? "text-[var(--color-accent-amber)] border-b-2 border-[var(--color-accent-amber)]"
-                  : "text-[var(--color-light-muted)] hover:text-white"
+                  : "text-[var(--color-light-muted)] hover:text-[var(--color-foreground)]"
               }`}
             >
               <ClipboardList size={14} /> Phase 1: Field Intake Book
@@ -1532,7 +1532,7 @@ export const CargoForm = ({
               className={`pb-2.5 px-1 transition-all cursor-pointer flex items-center gap-1.5 ${
                 corpSubTab === "weighing"
                   ? "text-[var(--color-accent-amber)] border-b-2 border-[var(--color-accent-amber)]"
-                  : "text-[var(--color-light-muted)] hover:text-white"
+                  : "text-[var(--color-light-muted)] hover:text-[var(--color-foreground)]"
               }`}
             >
               <Scale size={14} /> Phase 2: Yard Gate Weigh Scale
@@ -1765,7 +1765,7 @@ export const CargoForm = ({
 
                 {pendingIntakes.length === 0 ? (
                   <div className="text-center py-20 text-[var(--color-muted)] text-[13px] font-sans">
-                    <p className="font-semibold text-white mb-1">
+                    <p className="font-semibold text-[var(--color-foreground)] mb-1">
                       Scale Yard Queue Empty
                     </p>
                     <p className="max-w-md mx-auto text-[11px]">
@@ -1809,7 +1809,7 @@ export const CargoForm = ({
                         >
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-white text-[14px] flex items-center gap-1.5">
+                              <span className="font-bold text-[var(--color-foreground)] text-[14px] flex items-center gap-1.5">
                                 <Building
                                   size={16}
                                   className="text-[var(--color-muted)]"
@@ -1830,7 +1830,7 @@ export const CargoForm = ({
                               <span>•</span>
                               <span>
                                 Route:{" "}
-                                <strong className="text-gray-300">
+                                <strong className="text-[var(--color-foreground)]">
                                   {pi.route}
                                 </strong>
                               </span>
@@ -1870,14 +1870,14 @@ export const CargoForm = ({
               <div>
                 {selectedIntake ? (
                   <div className="bg-[var(--color-surface-card)] border border-[var(--color-border-strong)] p-6 rounded-[var(--radius-md)] text-zinc-300 flex flex-col h-auto">
-                    <div className="flex items-center justify-between mb-6 pb-2 border-b border-[rgba(255,255,255,0.05)]">
+                    <div className="flex items-center justify-between mb-6 pb-2 border-b border-[var(--color-border)]">
                       <div className="text-[13px] font-bold text-[var(--color-accent-amber)] uppercase tracking-wider">
                         SCALE WEIGHING CONSOLE
                       </div>
                     </div>
 
-                    <div className="bg-[var(--color-surface-2)] p-4 rounded-lg border border-[rgba(255,255,255,0.05)] space-y-2 text-[12px] mb-6">
-                      <div className="flex justify-between items-center py-1 border-b border-[rgba(255,255,255,0.05)]">
+                    <div className="bg-[var(--color-surface-2)] p-4 rounded-lg border border-[var(--color-border)] space-y-2 text-[12px] mb-6">
+                      <div className="flex justify-between items-center py-1 border-b border-[var(--color-border)]">
                         <span className="text-[var(--color-muted)] font-medium">
                           Arrived Client
                         </span>
@@ -1885,7 +1885,7 @@ export const CargoForm = ({
                           {selectedIntake.consignee}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-1 border-b border-[rgba(255,255,255,0.05)]">
+                      <div className="flex justify-between items-center py-1 border-b border-[var(--color-border)]">
                         <span className="text-[var(--color-muted)] font-medium">
                           Shipment Route
                         </span>
@@ -1893,7 +1893,7 @@ export const CargoForm = ({
                           {selectedIntake.route}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-1 border-b border-[rgba(255,255,255,0.05)]">
+                      <div className="flex justify-between items-center py-1 border-b border-[var(--color-border)]">
                         <span className="text-[var(--color-muted)] font-medium">
                           Carrier Waybill
                         </span>
@@ -1923,7 +1923,7 @@ export const CargoForm = ({
                           placeholder="Scale Reading"
                           value={gateWeight}
                           onChange={(e) => setGateWeight(e.target.value)}
-                          className="w-full h-12 pl-4 pr-12 text-[16px] font-bold text-[var(--color-accent-amber)] rounded-md bg-[var(--color-bg)] border border-[rgba(255,255,255,0.1)] font-mono focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
+                          className="w-full h-12 pl-4 pr-12 text-[16px] font-bold text-[var(--color-accent-amber)] rounded-md bg-[var(--color-bg)] border border-[var(--color-surface-2)] font-mono focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-muted)] font-bold text-[12px] font-sans">
                           KG
@@ -1933,7 +1933,7 @@ export const CargoForm = ({
 
                     {/* DYNAMIC CONTRACT PRICING ENGINE */}
                     <div className="flex flex-col space-y-4">
-                      <div className="bg-[var(--color-bg)] p-4 rounded-lg border border-[rgba(255,255,255,0.05)] space-y-3 font-mono text-[12px]">
+                      <div className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)] space-y-3 font-mono text-[12px]">
                         <div className="flex justify-between items-center">
                           <span className="text-[var(--color-muted)]">
                             Negotiated Rate
@@ -1962,7 +1962,7 @@ export const CargoForm = ({
 
                         {/* RBAC OVERWRITE PRICING LOCK */}
                         {isAuthorizedRole ? (
-                          <div className="pt-2 border-t border-[rgba(255,255,255,0.05)]">
+                          <div className="pt-2 border-t border-[var(--color-border)]">
                             <label className="text-[10px] text-[var(--color-muted)] block mb-1.5">
                               Admin Custom Rate Overwrite (₦/KG):
                             </label>
@@ -1973,7 +1973,7 @@ export const CargoForm = ({
                               onChange={(e) =>
                                 setCustomRateOverwrite(e.target.value)
                               }
-                              className="w-full h-9 px-3 text-[12px] bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[rgba(255,255,255,0.05)] rounded focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
+                              className="w-full h-9 px-3 text-[12px] bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
                             />
                           </div>
                         ) : (
@@ -1983,7 +1983,7 @@ export const CargoForm = ({
                           </div>
                         )}
 
-                        <div className="pt-3 mt-1 border-t border-[rgba(255,255,255,0.1)] flex justify-between items-center">
+                        <div className="pt-3 mt-1 border-t border-[var(--color-surface-2)] flex justify-between items-center">
                           <span className="text-[12px] font-sans text-[var(--color-muted)] font-medium uppercase tracking-wider">
                             Computed Bill
                           </span>
@@ -2041,8 +2041,8 @@ export const CargoForm = ({
                   </div>
                 ) : (
                   <div className="bg-[var(--color-surface-card)] border border-[var(--color-border-strong)] p-12 rounded-[var(--radius-md)] text-center text-[var(--color-muted)]">
-                    <Scale size={32} className="mx-auto text-zinc-700 mb-3" />
-                    <p className="text-[13px] font-sans font-semibold text-zinc-400">
+                    <Scale size={32} className="mx-auto text-[var(--color-muted)] mb-3" />
+                    <p className="text-[13px] font-sans font-semibold text-[var(--color-muted)]">
                       Scale Diagnostic Standby
                     </p>
                     <p className="text-[11px] font-sans max-w-xs mx-auto mt-1">
@@ -2053,7 +2053,7 @@ export const CargoForm = ({
                 )}
 
                 <div className="bg-[var(--color-surface-2)] p-4 rounded border border-[var(--color-border)]">
-                  <h5 className="text-[12px] font-bold text-white mb-2 flex items-center gap-1">
+                  <h5 className="text-[12px] font-bold text-[var(--color-foreground)] mb-2 flex items-center gap-1">
                     <ShieldAlert size={14} className="text-yellow-600" />
                     B2B Scaling Rules
                   </h5>

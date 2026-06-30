@@ -166,7 +166,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                     type="number"
                     value={standardRates[r] || ''}
                     onChange={(e) => handleUpdateStandardRate(r, e.target.value)}
-                    className="w-24 bg-[var(--color-bg)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[12px] font-mono text-[var(--color-foreground)] text-right focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-24 bg-[var(--color-bg)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[12px] font-mono text-[var(--color-foreground)] text-right focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                   <span className="text-[10px] text-[var(--color-muted)]">/KG</span>
                 </div>
@@ -184,7 +184,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
               placeholder="Company Name"
               value={newClientName}
               onChange={(e) => setNewClientName(e.target.value)}
-              className="flex-1 bg-[var(--color-bg)] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 text-[12px] focus:border-[var(--color-accent-amber)] outline-none"
+              className="flex-1 bg-[var(--color-bg)] border border-[var(--color-surface-2)] rounded px-3 py-2 text-[12px] focus:border-[var(--color-accent-amber)] outline-none"
             />
             <button 
               onClick={handleCreateCorpClient}
@@ -203,7 +203,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                 <div 
                   key={c.id}
                   onClick={() => setSelectedRateClient(c)}
-                  className={`p-3 rounded border cursor-pointer transition-colors ${selectedRateClient?.id === c.id ? 'bg-[rgba(251,191,36,0.1)] border-[var(--color-accent-amber)]' : 'bg-[var(--color-bg)] border-[rgba(255,255,255,0.07)] hover:border-[rgba(255,255,255,0.2)]'}`}
+                  className={`p-3 rounded border cursor-pointer transition-colors ${selectedRateClient?.id === c.id ? 'bg-[rgba(251,191,36,0.1)] border-[var(--color-accent-amber)]' : 'bg-[var(--color-bg)] border-[rgba(255,255,255,0.07)] hover:border-[var(--color-muted)]'}`}
                 >
                   <div className="font-bold text-[12px] text-[var(--color-foreground)]">{c.company_name}</div>
                   <div className="text-[10px] text-[var(--color-muted)] font-mono mt-1">{corpRates.filter(r => r.corporate_client_id === c.id).length} routes configured</div>
@@ -215,19 +215,19 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
             <div className="w-full md:w-1/2">
               {selectedRateClient ? (
                 <div className="flex flex-col h-full space-y-4 pl-0 md:pl-2">
-                  <div className="flex items-center justify-between pb-2 border-b border-[rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between pb-2 border-b border-[var(--color-border)]">
                     <div className="text-[14px] font-bold text-[var(--color-accent-amber)]">{selectedRateClient.company_name}</div>
                     <div className="text-[10px] font-mono text-[var(--color-muted)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded">Tariffs</div>
                   </div>
                   
-                  <div className="bg-[var(--color-surface-2)] p-4 rounded-lg border border-[rgba(255,255,255,0.05)] space-y-4">
+                  <div className="bg-[var(--color-surface-2)] p-4 rounded-lg border border-[var(--color-border)] space-y-4">
                     <div className="flex flex-col space-y-3">
                       <div>
                         <label className="text-[11px] font-medium text-[var(--color-muted)] block mb-1.5">Route</label>
                         <select
                           value={rateRoute}
                           onChange={(e) => setRateRoute(e.target.value)}
-                          className="w-full bg-[var(--color-bg)] border border-[rgba(255,255,255,0.1)] rounded-md px-3 py-2 text-[13px] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
+                          className="w-full bg-[var(--color-bg)] border border-[var(--color-surface-2)] rounded-md px-3 py-2 text-[13px] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
                         >
                           {CARGO_ROUTES.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
@@ -239,7 +239,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                           value={ratePrice}
                           onChange={(e) => setRatePrice(e.target.value)}
                           placeholder="e.g. 450"
-                          className="w-full bg-[var(--color-bg)] border border-[rgba(255,255,255,0.1)] rounded-md px-3 py-2 text-[13px] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
+                          className="w-full bg-[var(--color-bg)] border border-[var(--color-surface-2)] rounded-md px-3 py-2 text-[13px] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
                         />
                       </div>
                       <button 
@@ -256,7 +256,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                     <div className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider font-semibold mb-3">Configured Routes</div>
                     <div className="space-y-2">
                       {corpRates.filter(r => r.corporate_client_id === selectedRateClient.id).map(r => (
-                        <div key={r.id} className="flex justify-between items-center bg-[var(--color-bg)] border border-[rgba(255,255,255,0.05)] px-3 py-2.5 rounded-md">
+                        <div key={r.id} className="flex justify-between items-center bg-[var(--color-bg)] border border-[var(--color-border)] px-3 py-2.5 rounded-md">
                           <span className="text-[12px] text-[var(--color-light-muted)] font-medium">{r.route_name}</span>
                           <span className="text-[13px] text-[var(--color-accent-amber)] font-bold font-mono">₦{r.rate_per_kg}</span>
                         </div>

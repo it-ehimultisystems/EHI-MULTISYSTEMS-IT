@@ -568,7 +568,7 @@ export const Analytics = ({
                 tickFormatter={(val) => `₦${(val/1000)}k`} 
               />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1E293B', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px' }}
+                contentStyle={{ backgroundColor: '#1E293B', borderColor: 'var(--color-surface-2)', color: '#fff', fontSize: '10px' }}
                 formatter={(value: any) => [fmt(Number(value)), '']}
               />
               <Area type="monotone" dataKey="cargo" stroke="var(--color-accent-amber)" fill="rgba(245,158,11,0.05)" strokeWidth={1.5} />
@@ -611,7 +611,7 @@ export const Analytics = ({
                     <span className="text-[var(--color-light-muted)]">{r.name}</span>
                     <span className="text-[var(--color-foreground)] font-bold">{fmt(r.value)}</span>
                   </div>
-                  <div className="w-full bg-[rgba(255,255,255,0.03)] h-1.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-[var(--color-border)] h-1.5 rounded-full overflow-hidden">
                     <div 
                       className="bg-[var(--color-accent-amber)] h-full rounded-full" 
                       style={{ width: `${ratio}%` }}
@@ -681,14 +681,14 @@ export const Analytics = ({
           <span>CARGO DESK REVENUE INTELLIGENCE</span>
         </div>
         
-        <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase border-b border-[rgba(255,255,255,0.05)] pb-1">
+        <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase border-b border-[var(--color-border)] pb-1">
           Top Consignee Partnerships
         </div>
         
         <div className="space-y-2 overflow-x-auto pr-1">
           <table className="w-full text-left font-mono text-[10px]">
             <thead>
-              <tr className="text-[var(--color-muted)] border-b border-[rgba(255,255,255,0.03)] pb-1">
+              <tr className="text-[var(--color-muted)] border-b border-[var(--color-border)] pb-1">
                 <th className="py-1">Client</th>
                 <th className="text-center py-1">Shipments</th>
                 <th className="text-right py-1">Revenue</th>
@@ -696,7 +696,7 @@ export const Analytics = ({
             </thead>
             <tbody>
               {topConsignees.map((c, i) => (
-                <tr key={i} className="border-b border-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.02)]">
+                <tr key={i} className="border-b border-[var(--color-border)] hover:bg-[rgba(255,255,255,0.02)]">
                   <td className="py-2 text-[var(--color-foreground)] truncate max-w-[125px]">{c.name}</td>
                   <td className="text-center text-[var(--color-muted)] py-2">{c.entries}</td>
                   <td className={`text-right py-2 font-bold ${i === 0 ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-foreground)]'}`}>{fmt(c.revenue)}</td>
@@ -706,7 +706,7 @@ export const Analytics = ({
           </table>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[rgba(255,255,255,0.05)]">
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--color-border)]">
           {topAirlines.length > 0 ? topAirlines.map((item, index) => {
             const colors = [
               { color: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
@@ -742,7 +742,7 @@ export const Analytics = ({
         <div className="space-y-2.5 overflow-x-auto">
           <table className="w-full text-left font-mono text-[10px]">
             <thead>
-              <tr className="text-[var(--color-muted)] border-b border-[rgba(255,255,255,0.05)]">
+              <tr className="text-[var(--color-muted)] border-b border-[var(--color-border)]">
                 <th className="py-1">Agent</th>
                 <th className="text-center py-1">Entries</th>
                 <th className="text-right py-1">Gross Rev</th>
@@ -751,7 +751,7 @@ export const Analytics = ({
             </thead>
             <tbody>
               {marketingAgentsData.length > 0 ? marketingAgentsData.map((agent, i) => (
-                <tr key={i} className="border-b border-[rgba(255,255,255,0.03)] text-[10px]">
+                <tr key={i} className="border-b border-[var(--color-border)] text-[10px]">
                   <td className="py-2 text-[var(--color-foreground)] font-bold">{agent.name}</td>
                   <td className="text-center py-2 text-[var(--color-light-muted)]">{agent.entries}</td>
                   <td className="text-right py-2 text-[var(--color-foreground)]">{fmt(agent.revenue)}</td>
@@ -787,7 +787,7 @@ export const Analytics = ({
               <div 
                 key={hub.id} 
                 onClick={() => setSelectedHub(hub.id)}
-                className={`bg-[rgba(255,255,255,0.02)] p-2.5 rounded border border-[rgba(255,255,255,0.05)] flex flex-col justify-between cursor-pointer hover:border-[var(--color-accent-cobalt)] transition-colors ${selectedHub === hub.id ? 'border-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.05)]' : ''}`}
+                className={`bg-[rgba(255,255,255,0.02)] p-2.5 rounded border border-[var(--color-border)] flex flex-col justify-between cursor-pointer hover:border-[var(--color-accent-cobalt)] transition-colors ${selectedHub === hub.id ? 'border-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.05)]' : ''}`}
               >
                 <div>
                   <div className="text-[10px] font-sans font-bold text-[var(--color-foreground)] truncate">{hub.name}</div>
@@ -806,7 +806,7 @@ export const Analytics = ({
       {/* AI Insights panel Powered by Gemini */}
       <div className="ehi-card overflow-hidden h-full flex flex-col">
         {/* Header bar */}
-        <div className="bg-[rgba(16,185,129,0.08)] border-b border-[rgba(255,255,255,0.05)] p-3 flex justify-between items-center">
+        <div className="bg-[rgba(16,185,129,0.08)] border-b border-[var(--color-border)] p-3 flex justify-between items-center">
           <div className="flex items-center space-x-1.5">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-success)] opacity-75"></span>
@@ -869,7 +869,7 @@ export const Analytics = ({
               {insights.map((ins, i) => (
                 <div 
                   key={i} 
-                  className="p-2.5 rounded bg-[rgba(255,255,255,0.015)] border border-[rgba(255,255,255,0.05)] space-y-1.5"
+                  className="p-2.5 rounded bg-[rgba(255,255,255,0.015)] border border-[var(--color-border)] space-y-1.5"
                 >
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-sans font-bold text-[var(--color-foreground)] uppercase">{ins.title}</span>

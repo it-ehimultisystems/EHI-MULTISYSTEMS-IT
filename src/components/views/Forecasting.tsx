@@ -163,7 +163,7 @@ export const Forecasting = ({
 
       <div className="flex justify-between items-center flex-col sm:flex-row gap-4 mb-6">
         <div className="space-y-0.5">
-          <div className="text-[9px] font-mono text-slate-400 tracking-[0.15em] uppercase">▸ DEMAND SHIELD & INTEL</div>
+          <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.15em] uppercase">▸ DEMAND SHIELD & INTEL</div>
           <h2 className="text-sm font-black text-[var(--color-foreground)]">AI-Powered Predictive Modeling</h2>
         </div>
 
@@ -203,7 +203,7 @@ export const Forecasting = ({
                 <AreaChart data={historicalData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="day" stroke="#64748B" strokeWidth={1} tickLine={false} />
                   <YAxis stroke="#64748B" strokeWidth={0} tickLine={false} tickFormatter={(v) => `₦${v/1000}k`} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1E293B', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1E293B', borderColor: 'var(--color-surface-2)', borderRadius: '8px' }} />
                   <defs>
                     <linearGradient id="cargoGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2}/>
@@ -233,7 +233,7 @@ export const Forecasting = ({
                 <BarChart data={forecastData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="day" stroke="#64748B" strokeWidth={1} tickLine={false} />
                   <YAxis stroke="#64748B" strokeWidth={0} tickLine={false} tickFormatter={(v) => `₦${v/1000}k`} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1E293B', borderColor: 'rgba(255,255,255,0.1)' }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1E293B', borderColor: 'var(--color-surface-2)' }} />
                   <Legend iconSize={8} />
                   <Bar dataKey="predictedCargo" name="Cargo (₦)" fill="#F59E0B" stackId="stack" />
                   <Bar dataKey="predictedMarketing" name="Mktg (₦)" fill="#10B981" stackId="stack" />
@@ -263,7 +263,7 @@ export const Forecasting = ({
                 <ShieldCheck size={16} />
                 <span className="text-[12px] uppercase">Cargo Staff Allocation</span>
               </div>
-              <p className="text-[11px] text-slate-200 leading-relaxed font-mono font-medium">{staffingRecommendation}</p>
+              <p className="text-[11px] text-[var(--color-foreground)] leading-relaxed font-mono font-medium">{staffingRecommendation}</p>
             </div>
 
             {/* Risks notes */}
@@ -305,7 +305,7 @@ export const Forecasting = ({
           <div className="overflow-x-auto">
             <table className="w-full text-xs font-mono">
               <thead>
-                <tr className="border-b border-[rgba(255,255,255,0.05)] text-slate-400 text-left">
+                <tr className="border-b border-[var(--color-border)] text-slate-400 text-left">
                   <th className="py-2.5 font-bold">Logistics Route Axis</th>
                   <th className="py-2.5 px-2">Mon</th>
                   <th className="py-2.5 px-2">Tue</th>
@@ -315,7 +315,7 @@ export const Forecasting = ({
                   <th className="py-2.5 px-2">Sat</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+              <tbody className="divide-y divide-[var(--color-border)]">
                 {routesHeatmap.map((heatmap, idx) => (
                   <tr key={idx} className="hover:bg-black/10">
                     <td className="py-3 font-semibold text-[var(--color-foreground)] uppercase truncate max-w-[200px]">{heatmap.route}</td>

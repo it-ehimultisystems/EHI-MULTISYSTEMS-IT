@@ -227,7 +227,7 @@ export const ValueJetForm = ({
               marginTop: 8,
             }}
           >
-            ↓ DOWNLOAD RECEIPT
+            ↓ PRINT RECEIPT
           </button>
         </div>
       </div>

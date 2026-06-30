@@ -234,7 +234,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           title={
             <span className="flex items-center gap-1.5">
               Bank Reconciliation
-              <span className="text-[8px] font-mono bg-[rgba(255,255,255,0.1)] text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase transition-colors">CSV AUTO</span>
+              <span className="text-[8px] font-mono bg-[var(--color-surface-2)] text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase transition-colors">CSV AUTO</span>
             </span>
           }
           subtitle="Match bank deposits with system payment ledgers"
@@ -279,7 +279,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           title={
             <span className="flex items-center gap-1.5">
               Demand Forecasting AI
-              <span className="text-[8px] font-mono bg-[rgba(255,255,255,0.1)] text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase transition-colors">Gemini Intel</span>
+              <span className="text-[8px] font-mono bg-[var(--color-surface-2)] text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase transition-colors">Gemini Intel</span>
             </span>
           }
           subtitle="Capacity heatmap and busy periods projections"

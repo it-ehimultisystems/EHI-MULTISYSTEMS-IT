@@ -353,7 +353,7 @@ export const Dashboard = React.memo(
         {/* Live Feed */}
         <div ref={parentRef} className="flex-1 overflow-y-auto w-full no-scrollbar">
           {allVisibleTx.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8 py-12 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)] mt-2">
+            <div className="flex flex-col items-center justify-center p-8 py-12 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[var(--color-surface-2)] mt-2">
               <Package2 size={36} className="text-[#64748B] mb-3" strokeWidth={1.5} />
               <div className="text-[14px] font-semibold text-[var(--color-foreground)] font-sans">
                 No activity yet today
@@ -406,8 +406,8 @@ export const Dashboard = React.memo(
         {/* QR Modal */}
         {viewingQrTx && (
           <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden">
-              <div className="p-4 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[#111827]">
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-surface-2)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden">
+              <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface-card)]">
                 <h3 className="font-bold font-sans text-[var(--color-foreground)]">Scan to View</h3>
                 <button onClick={() => setViewingQrTx(null)} className="text-[var(--color-muted)] hover:text-[var(--color-foreground)] p-1 cursor-pointer">
                   <X size={16} />

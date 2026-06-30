@@ -281,7 +281,7 @@ export const BankReconciliation = ({
            <CheckCircle2 size={32} className="text-[var(--color-success)]" />
          </div>
          <h2 className="text-[20px] font-sans font-bold text-[var(--color-foreground)] mb-2">Reconciliation confirmed</h2>
-         <p className="text-[14px] font-sans text-slate-400 mb-8 max-w-sm">
+         <p className="text-[14px] font-sans text-[var(--color-muted)] mb-8 max-w-sm">
            {matchedBtxCount} of {bankTxList.length} transactions matched. Saved to accounting ledger.
          </p>
          <div className="flex space-x-3">
@@ -337,7 +337,7 @@ export const BankReconciliation = ({
             onDragLeave={() => setDragOver(false)}
             onDrop={handleFileUpload}
             className={`border-2 border-dashed rounded-xl p-8 py-12 text-center flex flex-col items-center justify-center space-y-3 transition-colors ${
-              dragOver ? 'border-[var(--color-accent-cobalt)] bg-blue-500/5' : 'border-[rgba(255,255,255,0.1)] bg-[var(--color-surface-1)]'
+              dragOver ? 'border-[var(--color-accent-cobalt)] bg-blue-500/5' : 'border-[var(--color-surface-2)] bg-[var(--color-surface-1)]'
             }`}
           >
             {loadingPdf ? (
@@ -365,7 +365,7 @@ export const BankReconciliation = ({
                   onChange={handleFileUpload}
                   className="absolute inset-0 opacity-0 w-full cursor-pointer h-full"
                 />
-                <button className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] text-[var(--color-foreground)] font-sans text-[13px] font-medium px-6 py-2.5 rounded-lg pointer-events-none">
+                <button className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] text-[var(--color-foreground)] font-sans text-[13px] font-medium px-6 py-2.5 rounded-lg pointer-events-none">
                   Select File
                 </button>
               </div>
@@ -421,7 +421,7 @@ export const BankReconciliation = ({
               
               <button 
                 onClick={() => setFileImported(false)}
-                className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-slate-300 font-sans text-[13px] font-medium px-4 py-2.5 rounded-lg cursor-pointer transition-colors"
+                className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans text-[13px] font-medium px-4 py-2.5 rounded-lg cursor-pointer transition-colors"
               >
                 Reset Sheet
               </button>

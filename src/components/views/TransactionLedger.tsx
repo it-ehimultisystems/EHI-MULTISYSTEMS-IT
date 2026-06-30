@@ -236,8 +236,8 @@ export const TransactionLedger = ({
       </div>
 
       {/* Summary Strip */}
-      <div className="px-4 py-2 bg-[#111827] border-b border-[var(--color-border)] flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0">
-        <div className="px-2 py-1 rounded-full bg-[rgba(255,255,255,0.05)] text-[10px] font-mono border border-[rgba(255,255,255,0.05)] text-white">
+      <div className="px-4 py-2 bg-[var(--color-surface-card)] border-b border-[var(--color-border)] flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0">
+        <div className="px-2 py-1 rounded-full bg-[var(--color-border)] text-[10px] font-mono border border-[var(--color-border)] text-[var(--color-foreground)]">
           Total: <span className="font-bold">{fmt(totalAmount)}</span>
         </div>
         <div 
@@ -336,8 +336,8 @@ export const TransactionLedger = ({
       <div ref={tableRef} className="flex-1 overflow-auto p-4 pb-20 relative">
         <div className="ehi-card overflow-hidden shadow-sm">
           <table className="w-full text-left font-mono text-[10px]">
-            <thead className="bg-[#111827]">
-              <tr className="text-[var(--color-muted)] border-b border-[rgba(255,255,255,0.05)] uppercase">
+            <thead className="bg-[var(--color-surface-card)]">
+              <tr className="text-[var(--color-muted)] border-b border-[var(--color-border)] uppercase">
                 {isAccountantOrAdmin && <th className="py-3 px-3 w-[36px]"></th>}
                 <th className="py-3 px-2 w-[90px] font-medium">ID</th>
                 <th className="py-3 px-2 w-[72px] font-medium">Date</th>
@@ -394,7 +394,7 @@ export const TransactionLedger = ({
                   <tr
                     key={e.id}
                     onClick={() => setViewingDetail(e)}
-                    className="border-b border-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.05)] transition-colors cursor-pointer group"
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-border)] transition-colors cursor-pointer group"
                   >
                     {isAccountantOrAdmin && (
                       <td className="py-2.5 px-3">
@@ -533,15 +533,15 @@ export const TransactionLedger = ({
           onClick={() => setViewingDetail(null)}
         >
           <div 
-            className="bg-[#111827] sm:border sm:border-[rgba(255,255,255,0.1)] sm:rounded-xl w-full sm:max-w-md max-h-[85vh] sm:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 rounded-t-2xl sm:rounded-b-xl"
+            className="bg-[var(--color-surface-card)] sm:border sm:border-[var(--color-surface-2)] sm:rounded-xl w-full sm:max-w-md max-h-[85vh] sm:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 rounded-t-2xl sm:rounded-b-xl"
             onClick={evt => evt.stopPropagation()}
           >
             {/* Handle bar for mobile */}
             <div className="w-full flex justify-center py-2 sm:hidden shrink-0">
-              <div className="w-12 h-1.5 bg-[rgba(255,255,255,0.2)] rounded-full" />
+              <div className="w-12 h-1.5 bg-[var(--color-muted)] rounded-full" />
             </div>
 
-            <div className="p-4 sm:p-5 flex justify-between items-start shrink-0 border-b border-[rgba(255,255,255,0.05)]">
+            <div className="p-4 sm:p-5 flex justify-between items-start shrink-0 border-b border-[var(--color-border)]">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   viewingDetail.type === 'cargo' ? 'bg-blue-500/20 text-blue-400' :
@@ -561,7 +561,7 @@ export const TransactionLedger = ({
               </div>
               <button 
                 onClick={() => setViewingDetail(null)}
-                className="text-[var(--color-muted)] hover:text-white p-1 rounded-full bg-[rgba(255,255,255,0.05)]"
+                className="text-[var(--color-muted)] hover:text-white p-1 rounded-full bg-[var(--color-border)]"
               >
                 <X size={16} />
               </button>
@@ -571,7 +571,7 @@ export const TransactionLedger = ({
               {/* Customer Section */}
               <section>
                 <h4 className="text-[10px] font-mono text-[var(--color-muted)] uppercase mb-2">Details</h4>
-                <div className="bg-[var(--color-surface-1)] rounded-lg p-3 border border-[rgba(255,255,255,0.03)]">
+                <div className="bg-[var(--color-surface-1)] rounded-lg p-3 border border-[var(--color-border)]">
                   <div className={`font-sans font-bold text-lg mb-1 ${viewingDetail.source === 'expense' ? 'text-[var(--color-error)]' : 'text-white'}`}>
                     {viewingDetail.name}
                   </div>
@@ -589,14 +589,14 @@ export const TransactionLedger = ({
               {/* Payment Section */}
               <section>
                 <h4 className="text-[10px] font-mono text-[var(--color-muted)] uppercase mb-2">Payment Info</h4>
-                <div className="bg-[var(--color-surface-1)] rounded-lg p-4 border border-[rgba(255,255,255,0.03)] space-y-3">
+                <div className="bg-[var(--color-surface-1)] rounded-lg p-4 border border-[var(--color-border)] space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] text-[var(--color-muted)]">Amount</span>
                     <span className={`text-xl font-bold font-mono ${viewingDetail.source === 'expense' ? 'text-[var(--color-error)]' : 'text-[var(--color-success)]'}`}>
                       {viewingDetail.source === 'expense' ? '-' : ''}₦{viewingDetail.amount.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.05)] pt-3">
+                  <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-3">
                     <span className="text-[12px] text-[var(--color-muted)]">Mode</span>
                     <span className={`px-2 py-0.5 rounded font-sans text-[11px] font-bold ${
                       viewingDetail.mode === "Cash" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" : 
@@ -618,7 +618,7 @@ export const TransactionLedger = ({
                   {viewingDetail.mode === 'Transfer' && viewingDetail.raw.paymentNarration && (
                     <div className="flex items-center justify-between">
                       <span className="text-[12px] text-[var(--color-muted)]">Narration Ref</span>
-                      <span className="text-[10px] font-mono bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded text-white">{viewingDetail.raw.paymentNarration}</span>
+                      <span className="text-[10px] font-mono bg-[var(--color-surface-2)] px-1.5 py-0.5 rounded text-white">{viewingDetail.raw.paymentNarration}</span>
                     </div>
                   )}
                   {viewingDetail.mode === 'POS' && viewingDetail.posApprovalCode && (
@@ -628,7 +628,7 @@ export const TransactionLedger = ({
                     </div>
                   )}
 
-                  <div className="mt-2 pt-3 border-t border-[rgba(255,255,255,0.05)]">
+                  <div className="mt-2 pt-3 border-t border-[var(--color-border)]">
                     {viewingDetail.mode === 'Debt' ? (
                       <div className="text-[11px] text-[var(--color-error)] flex items-center gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-error)]" />
@@ -660,7 +660,7 @@ export const TransactionLedger = ({
               {viewingDetail.source === 'transaction' && (
                 <section>
                   <h4 className="text-[10px] font-mono text-[var(--color-muted)] uppercase mb-2">Status & Tracking</h4>
-                  <div className="bg-[var(--color-surface-1)] rounded-lg p-3 border border-[rgba(255,255,255,0.03)] flex flex-col gap-2">
+                  <div className="bg-[var(--color-surface-1)] rounded-lg p-3 border border-[var(--color-border)] flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${
                         viewingDetail.status === "Delivered" ? "bg-emerald-500" : 
@@ -690,12 +690,12 @@ export const TransactionLedger = ({
             </div>
 
             {/* Actions Footer */}
-            <div className="p-4 bg-[var(--color-obsidian)] border-t border-[rgba(255,255,255,0.05)] flex gap-2 shrink-0">
+            <div className="p-4 bg-[var(--color-obsidian)] border-t border-[var(--color-border)] flex gap-2 shrink-0">
               {viewingDetail.source === 'transaction' && (
                 <>
                   <button 
                     onClick={() => setViewingQrTx(viewingDetail)}
-                    className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[rgba(255,255,255,0.05)] text-[12px] font-medium"
+                    className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
                   >
                     <QrCode size={14} /> Scan
                   </button>
@@ -709,7 +709,7 @@ export const TransactionLedger = ({
                   )}
                   <button 
                     onClick={(evt) => handleEditClick(viewingDetail, evt)}
-                    className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[rgba(255,255,255,0.05)] text-[12px] font-medium"
+                    className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
                   >
                     <Edit2 size={14} /> Edit
                   </button>
@@ -723,8 +723,8 @@ export const TransactionLedger = ({
       {/* Edit Modal Dialog */}
       {editingTx && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in" onClick={() => setEditingTx(null)}>
-          <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[#111827]">
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-surface-2)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface-card)]">
               <h3 className="font-bold font-sans text-[var(--color-foreground)]">
                 Edit Transaction
               </h3>
@@ -737,7 +737,7 @@ export const TransactionLedger = ({
             </div>
 
             <div className="p-4 space-y-4">
-              <div className="text-[12px] font-mono text-[var(--color-muted)] bg-[rgba(255,255,255,0.05)] p-2 rounded">
+              <div className="text-[12px] font-mono text-[var(--color-muted)] bg-[var(--color-border)] p-2 rounded">
                 Ref:{" "}
                 <span className="text-[var(--color-foreground)]">
                   {editingTx.id}
@@ -757,7 +757,7 @@ export const TransactionLedger = ({
                       amount: parseFloat(e.target.value) || 0,
                     })
                   }
-                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-mono text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                 />
               </div>
 
@@ -770,7 +770,7 @@ export const TransactionLedger = ({
                   onChange={(e) =>
                     setEditingTx({ ...editingTx, mode: e.target.value as any })
                   }
-                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                 >
                   <option value="Cash">Cash</option>
                   <option value="Transfer">Bank Transfer</option>
@@ -789,7 +789,7 @@ export const TransactionLedger = ({
                     onChange={(e) =>
                       setEditingTx({ ...editingTx, bank: e.target.value })
                     }
-                    className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   >
                     <option value="">Select Bank</option>
                     <option value="GTBank">GTBank</option>
@@ -813,7 +813,7 @@ export const TransactionLedger = ({
                       status: e.target.value as any,
                     })
                   }
-                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                 >
                   <option value="Intake">Intake</option>
                   <option value="Dispatched">Dispatched</option>
@@ -823,7 +823,7 @@ export const TransactionLedger = ({
               </div>
             </div>
 
-            <div className="p-4 border-t border-[rgba(255,255,255,0.05)] bg-[#111827] flex justify-end">
+            <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-card)] flex justify-end">
               <button
                 onClick={handleSaveEdit}
                 className="h-9 px-4 bg-[var(--color-success)] hover:bg-emerald-600 text-[var(--color-obsidian)] font-bold font-sans text-[13px] rounded-lg cursor-pointer flex items-center gap-1.5 transition-colors"
@@ -839,8 +839,8 @@ export const TransactionLedger = ({
       {/* QR Code Modal Dialog */}
       {viewingQrTx && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in" onClick={() => setViewingQrTx(null)}>
-          <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[#111827]">
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-surface-2)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface-card)]">
               <h3 className="font-bold font-sans text-[var(--color-foreground)]">
                 Scan to View
               </h3>

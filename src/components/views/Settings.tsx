@@ -212,7 +212,7 @@ export const Settings = ({
       {user.role === 'super_admin' && (
         <div className="ehi-card overflow-hidden">
           {/* Section header */}
-          <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.05)] flex items-center gap-2">
+          <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center gap-2">
             <Key size={13} className="text-[var(--color-accent-amber)]" />
             <span className="text-[9px] font-mono text-[var(--color-accent-amber)] tracking-widest uppercase font-bold">
               CONNECTION & API CONFIGURATION
@@ -220,7 +220,7 @@ export const Settings = ({
           </div>
 
           {/* Sub-tabs */}
-          <div className="flex border-b border-[rgba(255,255,255,0.05)]">
+          <div className="flex border-b border-[var(--color-border)]">
             {(['CONNECTION','PAYMENTS','NOTIFICATIONS','COMPANY'] as const).map(tab => (
               <button
                 key={tab}
@@ -491,7 +491,7 @@ export const Settings = ({
         </div>
 
         {/* Manager Phone — receives EOD summary + alerts */}
-        <div className="border-t border-[rgba(255,255,255,0.05)] pt-3 space-y-1.5">
+        <div className="border-t border-[var(--color-border)] pt-3 space-y-1.5">
           <div className="flex justify-between items-center">
             <div>
               <span className="text-[12px] font-bold text-[var(--color-foreground)] block">Manager Phone (WhatsApp/SMS)</span>
@@ -508,7 +508,7 @@ export const Settings = ({
         </div>
 
         {/* Toggle Google Drive Sync */}
-        <div className="flex justify-between items-center py-1 border-t border-[rgba(255,255,255,0.05)] pt-3">
+        <div className="flex justify-between items-center py-1 border-t border-[var(--color-border)] pt-3">
           <div className="space-y-0.5">
             <span className="text-[12px] font-bold text-[var(--color-foreground)] block">Google Drive EOD dispatch</span>
             <span className="text-[9px] text-[var(--color-muted)] font-mono block font-mono">Archive daily PDF reports to cloud folder automatically</span>
@@ -544,7 +544,7 @@ export const Settings = ({
                     type="number"
                     value={r.bb}
                     onChange={(e) => handlePriceUpdate(r.id, 'bb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <div>
@@ -553,7 +553,7 @@ export const Settings = ({
                     type="number"
                     value={r.mb}
                     onChange={(e) => handlePriceUpdate(r.id, 'mb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <div>
@@ -562,7 +562,7 @@ export const Settings = ({
                     type="number"
                     value={r.sb}
                     onChange={(e) => handlePriceUpdate(r.id, 'sb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
               </div>

@@ -344,7 +344,7 @@ export const ITDashboard = ({ user }: { user: User }) => {
             <Cpu size={18} className="animate-pulse" />
             <span className="text-[10px] font-mono tracking-widest uppercase font-black">▸ IT SYSTEMS ENGINEERING UNIT</span>
           </div>
-          <h1 className="text-xl md:text-2xl font-bold font-sans flex items-center space-x-2 text-white">
+          <h1 className="text-xl md:text-2xl font-bold font-sans flex items-center space-x-2 text-[var(--color-foreground)]">
             <span>Debugging & Fallbacks Portal</span>
           </h1>
           <p className="text-xs text-[var(--color-muted)] mt-1 max-w-xl">
@@ -741,7 +741,7 @@ export const ITDashboard = ({ user }: { user: User }) => {
                     <span className="text-stone-500">[{log.time}]</span>{' '}
                     <span className={`font-bold ${color}`}>[{log.level}]</span>{' '}
                     <span className="text-purple-400 font-bold">[{log.source}]</span>{' '}
-                    <span className="text-gray-200">{log.text}</span>
+                    <span className="text-[var(--color-foreground)]">{log.text}</span>
                   </div>
                 );
               })
@@ -849,28 +849,28 @@ export const ITDashboard = ({ user }: { user: User }) => {
                 <span className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider block mb-2">Network Performance & Hardware Metrics:</span>
                 
                 <div className="space-y-3.5 pt-1.5">
-                  <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[rgba(255,255,255,0.03)]">
+                  <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[var(--color-border)]">
                     <span className="text-[11px] font-mono text-[var(--color-muted)]">Estimated API Latency</span>
                     <span className="text-sm font-bold font-mono text-white">
                       {diagResults.speedCheck ? `${diagResults.speedCheck} ms` : 'Not Measured'}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[rgba(255,255,255,0.03)]">
+                  <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[var(--color-border)]">
                     <span className="text-[11px] font-mono text-[var(--color-muted)]">Current Network State</span>
                     <span className="text-sm font-bold font-mono text-emerald-400 uppercase">
                       {navigator.onLine ? 'ONLINE (WAN)' : 'OFFLINE'}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[rgba(255,255,255,0.03)]">
+                  <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[var(--color-border)]">
                     <span className="text-[11px] font-mono text-[var(--color-muted)]">Local Storage usage</span>
                     <span className="text-sm font-bold font-mono text-white">
                       1.42 MB / Unlimited
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[rgba(255,255,255,0.03)]">
+                  <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[var(--color-border)]">
                     <span className="text-[11px] font-mono text-[var(--color-muted)]">Client Core Platform</span>
                     <span className="text-[11px] font-mono text-amber-400 font-bold">
                       EHI-REACT v2.4 (Chrome WebKit)

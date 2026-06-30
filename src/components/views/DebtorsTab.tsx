@@ -222,7 +222,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
 
       {/* DEBT LIST */}
       {visibleDebts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)]">
+        <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[var(--color-surface-2)]">
            <div className="w-12 h-12 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.2)] mb-3">
              <div className="w-5 h-5 border-b-2 border-r-2 border-[var(--color-success)] transform rotate-45 mb-1" />
            </div>

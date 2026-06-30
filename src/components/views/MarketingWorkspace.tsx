@@ -275,7 +275,7 @@ export const MarketingWorkspace = ({
               </div>
 
               <div className="bg-[var(--color-obsidian)] rounded p-3 mb-4 space-y-2 border border-[var(--color-border)]">
-                <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1">
                   <span className="text-[10px] font-mono text-[var(--color-muted)]">
                     Customer
                   </span>
@@ -283,7 +283,7 @@ export const MarketingWorkspace = ({
                     {successTx.name}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1">
                   <span className="text-[10px] font-mono text-[var(--color-muted)]">
                     Route / Bags
                   </span>
@@ -291,7 +291,7 @@ export const MarketingWorkspace = ({
                     {successTx.detail}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-[rgba(255,255,255,0.05)] pb-1">
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1">
                   <span className="text-[10px] font-mono text-[var(--color-muted)]">
                     Amount
                   </span>
@@ -340,11 +340,11 @@ export const MarketingWorkspace = ({
                   marginTop: 8,
                 }}
               >
-                <Printer size={14} /> DOWNLOAD RECEIPT
+                <Printer size={14} /> PRINT RECEIPT
               </button>
             </div>
           ) : (
-            <div className="space-y-4 bg-[rgba(255,255,255,0.02)] -mx-4 px-4 py-4 md:mx-0 md:rounded-xl md:border border-y border-[rgba(255,255,255,0.05)]">
+            <div className="space-y-4 bg-[rgba(255,255,255,0.02)] -mx-4 px-4 py-4 md:mx-0 md:rounded-xl md:border border-y border-[var(--color-border)]">
               <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
                 <span
                   style={{
@@ -529,7 +529,7 @@ export const MarketingWorkspace = ({
               </button>
             </div>
 
-            <div className="bg-[rgba(255,255,255,0.03)] p-3 rounded mt-4 space-y-2">
+            <div className="bg-[var(--color-border)] p-3 rounded mt-4 space-y-2">
               <div className="flex justify-between items-center text-[10px] font-mono uppercase">
                 <span className="text-[var(--color-muted)]">
                   Expenses Today
@@ -599,7 +599,7 @@ export const MarketingWorkspace = ({
             </div>
 
             <div className="bg-[var(--color-surface-1)] p-3 rounded flex justify-between space-x-4">
-              <div className="flex-1 text-center border-r border-[rgba(255,255,255,0.05)]">
+              <div className="flex-1 text-center border-r border-[var(--color-border)]">
                 <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase">
                   Cash
                 </div>
@@ -640,7 +640,7 @@ export const MarketingWorkspace = ({
               </div>
 
               {marketingTxs.length === 0 ? (
-                <div className="text-[11px] text-[var(--color-muted)] font-mono py-4 text-center border border-dashed border-[rgba(255,255,255,0.1)] rounded">
+                <div className="text-[11px] text-[var(--color-muted)] font-mono py-4 text-center border border-dashed border-[var(--color-surface-2)] rounded">
                   No entries yet
                 </div>
               ) : (
@@ -648,7 +648,7 @@ export const MarketingWorkspace = ({
                   {marketingTxs.map((t) => (
                     <div
                       key={t.id}
-                      className="flex justify-between items-center bg-[var(--color-surface-1)] p-3 rounded border border-[rgba(255,255,255,0.05)]"
+                      className="flex justify-between items-center bg-[var(--color-surface-1)] p-3 rounded border border-[var(--color-border)]"
                     >
                       <div className="flex-1 min-w-0 pr-3">
                         <div className="text-[12px] font-bold text-[var(--color-foreground)] truncate">
@@ -705,7 +705,7 @@ export const MarketingWorkspace = ({
               width: "100%",
               maxWidth: 480,
               borderRadius: 16,
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid var(--color-surface-2)",
               padding: 24,
               position: "relative",
             }}
@@ -753,7 +753,7 @@ export const MarketingWorkspace = ({
 
             <div
               style={{
-                borderTop: "1px solid rgba(255,255,255,0.05)",
+                borderTop: "1px solid var(--color-border)",
                 paddingTop: 16,
                 marginBottom: 16,
               }}
@@ -795,7 +795,7 @@ export const MarketingWorkspace = ({
 
             <div
               style={{
-                borderTop: "1px solid rgba(255,255,255,0.05)",
+                borderTop: "1px solid var(--color-border)",
                 paddingTop: 16,
                 marginBottom: 16,
               }}
@@ -840,7 +840,7 @@ export const MarketingWorkspace = ({
 
             <div
               style={{
-                borderTop: "1px solid rgba(255,255,255,0.05)",
+                borderTop: "1px solid var(--color-border)",
                 paddingTop: 16,
                 marginBottom: 20,
               }}
@@ -885,7 +885,7 @@ export const MarketingWorkspace = ({
                   fontSize: 13,
                   marginTop: 8,
                   paddingTop: 8,
-                  borderTop: "1px dashed rgba(255,255,255,0.1)",
+                  borderTop: "1px dashed var(--color-surface-2)",
                 }}
               >
                 <span className="text-[var(--color-foreground)]">

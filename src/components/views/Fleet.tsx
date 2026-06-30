@@ -154,7 +154,7 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
         )}
       </div>
 
-      <div className="flex border-b border-[rgba(255,255,255,0.05)] mb-4">
+      <div className="flex border-b border-[var(--color-border)] mb-4">
         {(['vehicles', 'fuel'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`pb-2 px-4 text-[11px] font-mono font-bold border-b-2 transition-all capitalize ${activeTab === tab ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)]'}`}>
@@ -170,7 +170,7 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
         </div>
       ) : activeTab === 'vehicles' ? (
         vehicles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[rgba(255,255,255,0.05)] rounded-xl">
+          <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[var(--color-border)] rounded-xl">
             <Truck size={32} className="opacity-20" />
             <p className="text-[12px] font-mono text-[var(--color-muted)]">No vehicles registered yet</p>
             {canEdit && <button onClick={() => setShowAddVehicle(true)} className="text-[11px] font-mono text-[var(--color-accent-amber)] underline">Add first vehicle</button>}
@@ -197,7 +197,7 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
         )
       ) : (
         fuelLogs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[rgba(255,255,255,0.05)] rounded-xl">
+          <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[var(--color-border)] rounded-xl">
             <Fuel size={32} className="opacity-20" />
             <p className="text-[12px] font-mono text-[var(--color-muted)]">No fuel logs yet</p>
           </div>

@@ -209,7 +209,7 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
             {!isPhotoActive && !capturedPhoto && (
               <button 
                 onClick={() => setIsPhotoActive(true)} 
-                className="w-full h-12 border border-[rgba(255,255,255,0.1)] bg-[var(--color-surface-2)] text-[var(--color-foreground)] hover:bg-[rgba(255,255,255,0.05)] rounded flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full h-12 border border-[var(--color-surface-2)] bg-[var(--color-surface-2)] text-[var(--color-foreground)] hover:bg-[var(--color-border)] rounded flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
                 <Camera size={16} /> <span className="text-[13px] font-bold">Capture Photo</span>
               </button>
@@ -236,7 +236,7 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
                 <div className="w-full aspect-video bg-black rounded overflow-hidden relative border border-[var(--color-border)]">
                   <img src={capturedPhoto} alt="Captured delivery proof" className="w-full h-full object-cover" />
                 </div>
-                <button onClick={() => { setCapturedPhoto(null); setIsPhotoActive(true); }} className="h-10 border border-[rgba(255,255,255,0.1)] bg-[var(--color-surface-2)] text-[var(--color-foreground)] hover:bg-[rgba(255,255,255,0.05)] rounded flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                <button onClick={() => { setCapturedPhoto(null); setIsPhotoActive(true); }} className="h-10 border border-[var(--color-surface-2)] bg-[var(--color-surface-2)] text-[var(--color-foreground)] hover:bg-[var(--color-border)] rounded flex items-center justify-center gap-2 cursor-pointer transition-colors">
                   <RefreshCw size={14} /> <span className="text-[12px] font-bold">Retake Photo</span>
                 </button>
               </div>

@@ -40,7 +40,7 @@ const roleColor = (role: string) => ({
   vj_agent:        'text-purple-400 bg-[rgba(168,85,247,0.12)]',
   accountant:      'text-teal-400 bg-[rgba(20,184,166,0.12)]',
   auditor:         'text-orange-400 bg-[rgba(249,115,22,0.12)]',
-  driver:          'text-slate-400 bg-[rgba(100,116,139,0.12)]',
+  driver:          'text-[var(--color-muted)] bg-[rgba(100,116,139,0.12)]',
   marketing_agent: 'text-[var(--color-success)] bg-[rgba(16,185,129,0.10)]',
 }[role] || 'text-[var(--color-muted)] bg-[var(--color-surface-2)]');
 
@@ -191,7 +191,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
-        <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-white transition-colors">
+        <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
           <ArrowLeft size={16} /><span className="text-[11px] font-mono">Back</span>
         </button>
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● STAFF MANAGEMENT</span>
@@ -326,7 +326,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       {showCreate && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
           <div className="ehi-card w-full max-w-sm rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[#111827]">
+            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface-card)]">
               <span className="text-[12px] font-bold text-[var(--color-foreground)]">Create Staff Account</span>
               <button onClick={() => setShowCreate(false)} className="text-[var(--color-muted)] font-mono text-lg leading-none">✕</button>
             </div>
@@ -398,7 +398,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       {editingStaff && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
           <div className="ehi-card w-full max-w-sm rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[#111827]">
+            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface-card)]">
               <div>
                 <span className="text-[12px] font-bold text-[var(--color-foreground)]">Edit Staff Profile</span>
                 <div className="text-[10px] text-[var(--color-muted)] font-mono">{editingStaff.email}</div>

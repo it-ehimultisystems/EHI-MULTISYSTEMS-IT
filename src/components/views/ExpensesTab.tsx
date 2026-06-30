@@ -193,7 +193,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                          <input 
                            type="number" 
                            autoFocus
-                           className="w-20 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.2)] rounded px-1 text-[11px] text-[var(--color-foreground)] font-mono h-6 outline-none"
+                           className="w-20 bg-[var(--color-surface-1)] border border-[var(--color-muted)] rounded px-1 text-[11px] text-[var(--color-foreground)] font-mono h-6 outline-none"
                            value={budgetInput}
                            onChange={e => setBudgetInput(e.target.value)}
                            onBlur={() => saveBudget(c, parseFloat(budgetInput) || budget)}
@@ -231,7 +231,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
          </div>
 
          {expenses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-6 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)]">
+            <div className="flex flex-col items-center justify-center p-6 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[var(--color-surface-2)]">
                <Briefcase size={24} className="text-[#64748B] mb-2" />
                <div className="text-[13px] font-medium text-[var(--color-foreground)] font-sans">No expenses logged yet.</div>
             </div>
@@ -249,12 +249,12 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                     </div>
                     <div className="flex items-center space-x-2 mt-2">
                       <span className="text-[11px] font-sans text-[var(--color-muted)]">{e.time}</span>
-                      <span className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.2)]" />
+                      <span className="w-1 h-1 rounded-full bg-[var(--color-muted)]" />
                       <span className="text-[11px] font-sans text-[var(--color-muted)]">{e.type}</span>
                       
                       {e.status && (
                         <>
-                           <span className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.2)]" />
+                           <span className="w-1 h-1 rounded-full bg-[var(--color-muted)]" />
                            <span className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[9px] font-sans font-bold uppercase tracking-wider ${
                              e.status === 'approved' ? 'text-[var(--color-success)] bg-[rgba(16,185,129,0.1)]' :
                              e.status === 'pending' ? 'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)]' :

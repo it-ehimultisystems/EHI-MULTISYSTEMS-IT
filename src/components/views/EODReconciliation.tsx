@@ -213,19 +213,19 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       <div className="text-[12px] font-mono text-[var(--color-muted)] mb-4">Review System Expected Totals</div>
       
       <div className="ehi-card overflow-hidden flex flex-col">
-        <div className="p-3 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[rgba(245,158,11,0.05)]">
+        <div className="p-3 border-b border-[var(--color-border)] flex justify-between items-center bg-[rgba(245,158,11,0.05)]">
           <span className="text-[11px] font-mono text-[var(--color-muted)]">Cargo Station</span>
           <span className="text-[14px] font-bold font-mono text-[var(--color-accent-amber)]">{fmt(expectedTotals.cargoTotal)}</span>
         </div>
-        <div className="p-3 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[rgba(16,185,129,0.05)]">
+        <div className="p-3 border-b border-[var(--color-border)] flex justify-between items-center bg-[rgba(16,185,129,0.05)]">
           <span className="text-[11px] font-mono text-[var(--color-muted)]">Field Marketing</span>
           <span className="text-[14px] font-bold font-mono text-[var(--color-success)]">{fmt(expectedTotals.mktgTotal)}</span>
         </div>
-        <div className="p-3 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[rgba(59,130,246,0.05)]">
+        <div className="p-3 border-b border-[var(--color-border)] flex justify-between items-center bg-[rgba(59,130,246,0.05)]">
           <span className="text-[11px] font-mono text-[var(--color-muted)]">ValueJet Baggage</span>
           <span className="text-[14px] font-bold font-mono text-[var(--color-accent-cobalt)]">{fmt(expectedTotals.vjTotal)}</span>
         </div>
-        <div className="p-3 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center bg-[rgba(255,255,255,0.02)]">
+        <div className="p-3 border-b border-[var(--color-border)] flex justify-between items-center bg-[rgba(255,255,255,0.02)]">
           <span className="text-[11px] font-bold font-mono text-[var(--color-foreground)]">Gross Total</span>
           <span className="text-[14px] font-bold font-mono text-[var(--color-foreground)]">{fmt(expectedTotals.grossTotal)}</span>
         </div>
@@ -241,12 +241,12 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
           <span className="text-[12px] font-mono">Less: Cash Expenses</span>
           <span className="text-[14px] font-mono">-{fmt(expectedTotals.expensesTotal)}</span>
         </div>
-        <div className="flex justify-between items-center pt-2 border-t border-[rgba(255,255,255,0.05)]">
+        <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
           <span className="text-[12px] font-bold font-mono text-[var(--color-foreground)]">Net Cash Expected</span>
           <span className="text-[16px] font-bold font-mono text-[var(--color-success)]">{fmt(expectedTotals.netExpectedCash)}</span>
         </div>
         
-        <div className="flex justify-between items-center mt-4 pt-4 border-t border-[rgba(255,255,255,0.05)]">
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--color-border)]">
           <span className="text-[12px] font-mono text-[var(--color-muted)]">Transfer</span>
           <span className="text-[14px] font-mono text-[var(--color-foreground)]">{fmt(expectedTotals.transferTotal)}</span>
         </div>
@@ -272,7 +272,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       
       {showDenoms ? (
         <div className="ehi-card space-y-4">
-          <div className="flex justify-between items-center border-b border-[rgba(255,255,255,0.1)] pb-2 mb-2">
+          <div className="flex justify-between items-center border-b border-[var(--color-surface-2)] pb-2 mb-2">
             <span className="text-[12px] font-mono text-[var(--color-foreground)]">Cash Denominations</span>
             <button onClick={() => setShowDenoms(false)} className="text-[10px] text-[var(--color-accent-amber)] font-mono">CLOSE</button>
           </div>
@@ -291,11 +291,11 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
               </div>
             );
           })}
-          <div className="flex justify-between items-center pt-2 border-t border-[rgba(255,255,255,0.1)]">
+          <div className="flex justify-between items-center pt-2 border-t border-[var(--color-surface-2)]">
             <span className="text-[12px] font-mono">Total Counted:</span>
             <span className="text-[16px] font-bold font-mono text-[var(--color-success)]">{fmt(denomTotal)}</span>
           </div>
-          <button onClick={handleApplyDenoms} className="w-full h-10 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded text-[12px] font-bold font-mono hover:bg-[rgba(255,255,255,0.1)] transition-colors">
+          <button onClick={handleApplyDenoms} className="w-full h-10 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded text-[12px] font-bold font-mono hover:bg-[var(--color-surface-2)] transition-colors">
             APPLY TO CASH COUNT
           </button>
         </div>
@@ -313,7 +313,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
               />
               <button 
                 onClick={() => setShowDenoms(true)}
-                className="absolute right-2 top-2 h-8 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.1)] rounded text-[10px] font-mono hover:bg-[rgba(255,255,255,0.2)] transition-colors"
+                className="absolute right-2 top-2 h-8 px-3 bg-[var(--color-surface-2)] border border-[var(--color-surface-2)] rounded text-[10px] font-mono hover:bg-[var(--color-muted)] transition-colors"
               >
                 USE DENOMS
               </button>
@@ -358,7 +358,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
   );
 
   const VarianceRow = ({ label, expected, actual, variance }: { label: string, expected: number, actual: number, variance: number }) => (
-    <div className="py-2 border-b border-[rgba(255,255,255,0.05)]">
+    <div className="py-2 border-b border-[var(--color-border)]">
       <div className="flex justify-between items-center mb-1">
         <span className="text-[12px] font-mono text-[var(--color-muted)]">{label}</span>
         <span className="text-[12px] font-mono">Exp: {fmt(expected)}</span>
@@ -392,7 +392,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
         <VarianceRow label="POS" expected={expectedTotals.posTotal} actual={Number(countedPOS)} variance={posVariance} />
         
         {needsReason && (
-          <div className="mt-4 pt-4 border-t border-[rgba(255,255,255,0.1)]">
+          <div className="mt-4 pt-4 border-t border-[var(--color-surface-2)]">
             <label className="block text-[11px] font-mono text-[var(--color-error)] mb-2 uppercase tracking-wider flex items-center">
               <AlertTriangle size={14} className="mr-1" /> Reason for Variance Required
             </label>
@@ -426,7 +426,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       <div className="bg-[rgba(16,185,129,0.05)] border border-[var(--color-success)] rounded p-6 text-center space-y-2">
         <div className="ehi-label">Physical Cash to Remit</div>
         <div className="text-[32px] font-bold font-mono text-[var(--color-success)]">{fmt(Number(countedCash))}</div>
-        <div className="text-[12px] font-mono text-[var(--color-muted)] pt-2 border-t border-[rgba(255,255,255,0.05)] mx-auto w-3/4">
+        <div className="text-[12px] font-mono text-[var(--color-muted)] pt-2 border-t border-[var(--color-border)] mx-auto w-3/4">
           Ensure exact physical match before locking.
         </div>
       </div>
@@ -526,10 +526,10 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
         </div>
 
       <div className="flex items-center justify-between mb-8 relative">
-        <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-[rgba(255,255,255,0.1)] -z-10" />
+        <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-[var(--color-surface-2)] -z-10" />
         {[1, 2, 3, 4].map(s => (
           <div key={s} className="flex flex-col items-center bg-[var(--color-obsidian)] px-2">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold font-mono border ${s === step ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] border-[var(--color-accent-amber)]' : s < step ? 'bg-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] border-[var(--color-accent-amber)]' : 'bg-[var(--color-surface-card)] text-[var(--color-muted)] border-[rgba(255,255,255,0.1)]'}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold font-mono border ${s === step ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] border-[var(--color-accent-amber)]' : s < step ? 'bg-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] border-[var(--color-accent-amber)]' : 'bg-[var(--color-surface-card)] text-[var(--color-muted)] border-[var(--color-surface-2)]'}`}>
               {s < step ? <Check size={12} /> : s}
             </div>
             <span className={`text-[9px] font-mono mt-1 ${s === step ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-muted)]'}`}>{stepNames[s-1]}</span>

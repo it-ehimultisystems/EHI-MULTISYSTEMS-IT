@@ -203,7 +203,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
               <h3 className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider mb-2">Parsed Alert Data</h3>
               <div className="flex items-center space-x-2 mb-2">
                 <span className={`font-bold ${getBankColor(parsedResult.bankName)}`}>{parsedResult.bankName}</span>
-                <span className="text-[10px] bg-[rgba(255,255,255,0.1)] px-2 py-0.5 rounded text-[var(--color-foreground)]">
+                <span className="text-[10px] bg-[var(--color-surface-2)] px-2 py-0.5 rounded text-[var(--color-foreground)]">
                   Confidence: {parsedResult.confidence}
                 </span>
               </div>
@@ -239,7 +239,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
                 <div className="text-[11px] text-[var(--color-muted)] mb-2">{matchResult.transaction.detail}</div>
                 <div className="flex flex-wrap gap-1">
                   {matchResult.matchReasons.map((r, i) => (
-                    <span key={i} className="text-[9px] bg-[rgba(255,255,255,0.05)] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.1)]">
+                    <span key={i} className="text-[9px] bg-[var(--color-border)] px-1.5 py-0.5 rounded border border-[var(--color-surface-2)]">
                       {r}
                     </span>
                   ))}
@@ -296,14 +296,14 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
                       <div className="flex items-center space-x-2">
                         <span className="text-[9px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded uppercase font-bold border border-amber-500/20">Pending</span>
                         {tx.paymentNarration && (
-                          <span className="text-[9px] bg-[rgba(255,255,255,0.05)] text-[var(--color-foreground)] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.1)] font-mono">
+                          <span className="text-[9px] bg-[var(--color-border)] text-[var(--color-foreground)] px-1.5 py-0.5 rounded border border-[var(--color-surface-2)] font-mono">
                             {tx.paymentNarration}
                           </span>
                         )}
                       </div>
                       <button 
                         onClick={() => confirmMatch(tx)}
-                        className="text-[10px] text-[var(--color-muted)] hover:text-white border border-[var(--color-border)] hover:border-[rgba(255,255,255,0.3)] bg-[var(--color-surface-2)] px-2 py-1 rounded transition-colors"
+                        className="text-[10px] text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-[var(--color-border)] hover:border-[rgba(255,255,255,0.3)] bg-[var(--color-surface-2)] px-2 py-1 rounded transition-colors"
                       >
                         CONFIRM MANUALLY
                       </button>
@@ -344,7 +344,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
             {showAutoForward && (
               <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-1)] text-[11px] text-[var(--color-muted)] space-y-2">
                 <p>To receive confirmations automatically without pasting emails, forward your bank alerts to this address:</p>
-                <div className="bg-black/30 p-2 rounded border border-[rgba(255,255,255,0.05)] font-mono text-[10px] break-all select-all">
+                <div className="bg-black/30 p-2 rounded border border-[var(--color-border)] font-mono text-[10px] break-all select-all">
                   [server-url]/api/validate-payment/inbound
                 </div>
                 <p className="font-bold text-[var(--color-foreground)] mt-2">How to set up auto-forward:</p>

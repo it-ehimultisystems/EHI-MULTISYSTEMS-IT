@@ -221,7 +221,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
               <span className="text-[13px] font-sans text-[var(--color-muted)]">Grand Revenue</span>
               <span className="text-[15px] font-mono text-[var(--color-foreground)]">{fmt(grandRevenue)}</span>
             </div>
-            <div className="flex justify-between items-center mb-4 border-b border-[rgba(255,255,255,0.05)] pb-4">
+            <div className="flex justify-between items-center mb-4 border-b border-[var(--color-border)] pb-4">
               <span className="text-[13px] font-sans text-[var(--color-muted)]">Total Expenses</span>
               <span className="text-[15px] font-mono text-[var(--color-error)]">-{fmt(totalExpenses)}</span>
             </div>
@@ -268,7 +268,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
              </div>
           </div>
 
-          <div className="bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.05)] rounded-xl p-4 flex items-start space-x-3">
+          <div className="bg-[var(--color-border)] border border-[var(--color-border)] rounded-xl p-4 flex items-start space-x-3">
              <AlertCircle size={18} className="text-[var(--color-muted)] shrink-0 mt-0.5" />
              <div>
                <div className="text-[13px] font-sans font-medium text-[var(--color-light-muted)]">Estimated VAT Liability (7.5%): <span className="font-mono">{fmt(vatEstimate)}</span></div>
@@ -315,15 +315,15 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                </div>
 
                <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5 space-y-4">
-                 <div className="flex justify-between items-center pb-3 border-b border-[rgba(255,255,255,0.05)]">
+                 <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
                    <div className="text-[13px] font-sans text-[var(--color-muted)]">Opening Balance</div>
                    <div className="text-[15px] font-mono text-[var(--color-foreground)]">{fmt(openingBalance || 0)}</div>
                  </div>
-                 <div className="flex justify-between items-center pb-3 border-b border-[rgba(255,255,255,0.05)]">
+                 <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
                    <div className="text-[13px] font-sans text-[var(--color-muted)]">Total Cash Receipts</div>
                    <div className="text-[15px] font-mono text-[var(--color-success)]">+{fmt(regReceipts)}</div>
                  </div>
-                 <div className="flex justify-between items-center pb-3 border-b border-[rgba(255,255,255,0.05)]">
+                 <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
                    <div className="text-[13px] font-sans text-[var(--color-muted)]">Total Cash Payments</div>
                    <div className="text-[15px] font-mono text-[var(--color-error)]">-{fmt(regPayments)}</div>
                  </div>
@@ -404,7 +404,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       {activeTab === 'Expenses' && <ExpensesTab expenses={expenses} user={user} onAddExpense={onAddExpense} />}
       {activeTab === 'Payment Validation' && <PaymentValidation transactions={transactions} onUpdateTx={onFullUpdateTx!} />}
       {activeTab === 'Remittances' && (
-        <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[rgba(255,255,255,0.1)] mt-4">
+        <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[var(--color-surface-2)] mt-4">
            <Unlock size={36} className="text-[var(--color-muted)] mb-3" />
            <div className="text-[15px] font-sans font-medium text-[var(--color-foreground)] mb-1">Coming Next</div>
            <div className="text-[13px] font-sans text-[var(--color-muted)]">Hub Remittances module will be available soon.</div>

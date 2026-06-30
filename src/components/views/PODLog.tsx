@@ -123,7 +123,7 @@ export const PODLog = ({ onBack }: { onBack: () => void }) => {
 
             <div className="p-5 flex flex-col gap-5">
               {/* Primary info */}
-              <div className="bg-[var(--color-surface-2)] rounded-lg p-3 border border-[rgba(255,255,255,0.05)] border-l-2 border-l-[var(--color-success)]">
+              <div className="bg-[var(--color-surface-2)] rounded-lg p-3 border border-[var(--color-border)] border-l-2 border-l-[var(--color-success)]">
                 <div className="text-[10px] text-[var(--color-muted)] font-mono uppercase mb-1">AWB Number</div>
                 <div className="text-[16px] font-bold font-mono text-[var(--color-foreground)] mb-3">{selectedPod.awbNumber}</div>
 
@@ -158,7 +158,7 @@ export const PODLog = ({ onBack }: { onBack: () => void }) => {
                     </div>
                   )}
                   {selectedPod.receivedByIdType && (
-                    <div className="flex justify-between border-t border-[rgba(255,255,255,0.05)] pt-2 mt-1">
+                    <div className="flex justify-between border-t border-[var(--color-border)] pt-2 mt-1">
                       <span className="text-[var(--color-muted)]">Verified ID:</span>
                       <div className="text-right">
                         <div className="font-bold text-[var(--color-accent-amber)]">{selectedPod.receivedByIdType}</div>

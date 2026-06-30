@@ -131,11 +131,11 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
           </div>
         </div>
 
-        <div className="flex bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.05)] p-1 rounded-lg mt-5 mb-2 w-full">
+        <div className="flex bg-[var(--color-obsidian)] border border-[var(--color-border)] p-1 rounded-lg mt-5 mb-2 w-full">
           <button
             onClick={() => setActiveTab('debts')}
             className={`flex-1 py-2.5 text-[11px] font-bold font-mono uppercase tracking-wider rounded transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'debts' ? 'bg-[var(--color-surface-2)] text-[var(--color-accent-amber)] shadow-sm border border-[rgba(245,158,11,0.2)]' : 'text-[var(--color-muted)] hover:text-white'
+              activeTab === 'debts' ? 'bg-[var(--color-surface-2)] text-[var(--color-accent-amber)] shadow-sm border border-[rgba(245,158,11,0.2)]' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
             }`}
           >
             <ArrowDownLeft size={14} strokeWidth={2} /> Receivables
@@ -184,9 +184,9 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
 
                 <div className="space-y-3">
                   <h3 className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Debtors Breakdown</h3>
-                  {debtSummary.length === 0 && <div className="text-[12px] font-mono text-[var(--color-muted)] text-center py-4 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg">No debts found.</div>}
+                  {debtSummary.length === 0 && <div className="text-[12px] font-mono text-[var(--color-muted)] text-center py-4 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg">No debts found.</div>}
                   {debtSummary.map((d, i) => (
-                    <div key={i} className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg p-4 flex justify-between items-center hover:border-[rgba(255,255,255,0.1)] transition-colors">
+                    <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 flex justify-between items-center hover:border-[var(--color-surface-2)] transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-[var(--color-surface-2)] rounded flex items-center justify-center text-[var(--color-muted)]">
                           <UserSquare2 size={16} />
@@ -201,13 +201,13 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
                 <div className="mt-8 space-y-3">
                   <h3 className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Detailed Ledger</h3>
                   {debts.map((tx, i) => (
-                    <div key={i} className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg p-4 hover:border-[rgba(255,255,255,0.1)] transition-colors">
+                    <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-surface-2)] transition-colors">
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[14px] font-sans font-bold text-white">{tx.name}</span>
                         <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(tx.amount)}</span>
                       </div>
                       <div className="text-[12px] font-sans text-[var(--color-muted)] mb-3">{tx.detail}</div>
-                      <div className="flex justify-between pt-3 border-t border-[rgba(255,255,255,0.05)] text-[10px] font-mono text-[var(--color-muted)] uppercase">
+                      <div className="flex justify-between pt-3 border-t border-[var(--color-border)] text-[10px] font-mono text-[var(--color-muted)] uppercase">
                         <span>{new Date(tx.time).toLocaleDateString()}</span>
                         <span>{tx.id}</span>
                       </div>
@@ -231,9 +231,9 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
 
             <div className="space-y-3">
               <h3 className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Airlines Breakdown</h3>
-              {creditSummary.length === 0 && <div className="text-[12px] font-mono text-[var(--color-muted)] text-center py-4 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg">No credits found.</div>}
+              {creditSummary.length === 0 && <div className="text-[12px] font-mono text-[var(--color-muted)] text-center py-4 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg">No credits found.</div>}
               {creditSummary.map((c, i) => (
-                <div key={i} className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg p-4 flex justify-between items-center hover:border-[rgba(255,255,255,0.1)] transition-colors">
+                <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 flex justify-between items-center hover:border-[var(--color-surface-2)] transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-[var(--color-surface-2)] rounded flex items-center justify-center text-[var(--color-muted)]">
                       <Building size={16} />
@@ -252,7 +252,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
                 const commRate = commissions[normalizedAirline] ?? commissions[tx.airline!] ?? 0;
                 const weOwe = tx.amount * (1 - commRate / 100);
                 return (
-                  <div key={i} className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg p-4 hover:border-[rgba(255,255,255,0.1)] transition-colors">
+                  <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-surface-2)] transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-[14px] font-sans font-bold text-white">{tx.airline} <span className="opacity-50 text-[11px] font-mono ml-1">({tx.id})</span></span>
                       <span className="text-[13px] font-mono font-bold text-emerald-400">{fmt(weOwe)}</span>

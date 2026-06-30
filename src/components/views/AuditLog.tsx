@@ -137,7 +137,7 @@ export const AuditLog = ({ onBack, user }: { onBack: () => void; user?: User }) 
           <p className="text-[12px] font-mono text-[var(--color-muted)]">Loading audit trail...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[rgba(255,255,255,0.05)] rounded-xl">
+        <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-[var(--color-border)] rounded-xl">
           <Shield size={32} className="opacity-20" />
           <p className="text-[12px] font-mono text-[var(--color-muted)]">No audit entries found</p>
           <p className="text-[10px] font-mono text-[var(--color-muted)] opacity-60">Actions like logins, cargo entries, and EOD locks will appear here</p>

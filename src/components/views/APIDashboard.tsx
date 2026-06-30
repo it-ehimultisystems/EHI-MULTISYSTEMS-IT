@@ -75,7 +75,7 @@ export const APIDashboard = ({
 
       <div className="flex justify-between items-center flex-col sm:flex-row gap-4 mb-6">
         <div className="space-y-0.5">
-          <div className="text-[9px] font-mono text-slate-400 tracking-[0.15em] uppercase">▸ PARTNER API GATEWAY CONTROLS</div>
+          <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.15em] uppercase">▸ PARTNER API GATEWAY CONTROLS</div>
           <h2 className="text-sm font-black text-[var(--color-foreground)]">REST API & Credentials Tokens</h2>
         </div>
 
@@ -121,7 +121,7 @@ export const APIDashboard = ({
           <div className="ehi-card p-4 space-y-4">
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Active Developer Tokens</span>
 
-            <div className="divide-y divide-[rgba(255,255,255,0.05)] text-xs font-mono">
+            <div className="divide-y divide-[var(--color-border)] text-xs font-mono">
               {keys.map((k) => (
                 <div key={k.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-black/5">
                   <div className="space-y-1">
@@ -136,7 +136,7 @@ export const APIDashboard = ({
                   <div className="flex items-center space-x-4 self-end sm:self-center">
                     <div className="text-right">
                       <span className="text-[10px] text-slate-400 block font-mono">Last Used</span>
-                      <span className="text-[11px] text-slate-200 block font-mono">{k.lastUsed}</span>
+                      <span className="text-[11px] text-[var(--color-foreground)] block font-mono">{k.lastUsed}</span>
                     </div>
                     <button 
                       onClick={() => handleDeleteKey(k.id)}
@@ -151,7 +151,7 @@ export const APIDashboard = ({
           </div>
         </div>
       ) : (
-        <div className="ehi-card p-4 space-y-6 font-mono text-xs text-slate-300">
+        <div className="ehi-card p-4 space-y-6 font-mono text-xs text-[var(--color-foreground)]">
           <div className="space-y-2">
             <h3 className="text-sm font-bold text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-1.5">
               <Shield size={14} className="text-[var(--color-accent-cobalt)]" />
@@ -164,7 +164,7 @@ export const APIDashboard = ({
 
           <div className="space-y-4">
             {/* Auth block */}
-            <div className="p-3 bg-black/45 rounded-lg border border-solid border-[rgba(255,255,255,0.03)] space-y-2">
+            <div className="p-3 bg-black/45 rounded-lg border border-solid border-[var(--color-border)] space-y-2">
               <span className="text-[10.5px] font-bold text-[var(--color-accent-cobalt)] uppercase block mb-1">Authenticates Request Header:</span>
               <p className="text-[11px] leading-relaxed text-slate-300">Include your private credentials token in the headers sequence of every JSON API payload:</p>
               <pre className="p-2 bg-neutral-900 rounded font-bold text-slate-200">X-Api-Key: ehi_live_f7a2d8xxxxxxxxxxxxxxxx</pre>

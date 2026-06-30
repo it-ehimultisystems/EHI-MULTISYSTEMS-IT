@@ -166,14 +166,14 @@ export const FraudAlerts = ({
 
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
         <div className="space-y-0.5">
-          <div className="text-[9px] font-mono text-slate-400 tracking-[0.15em] uppercase">▸ COGNITIVE SHIELD PRO v1.1</div>
+          <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.15em] uppercase">▸ COGNITIVE SHIELD PRO v1.1</div>
           <h2 className="text-sm font-black text-[var(--color-foreground)]">Anomalies & Fraud Security Feed</h2>
         </div>
 
         {pendingAlerts.length > 0 && (
           <button 
             onClick={handleDismissAll}
-            className="bg-neutral-800 hover:bg-neutral-750 text-slate-300 font-mono text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-all cursor-pointer"
+            className="bg-neutral-800 hover:bg-neutral-750 text-[var(--color-foreground)] font-mono text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-all cursor-pointer"
           >
             Acknowledge All
           </button>
@@ -208,7 +208,7 @@ export const FraudAlerts = ({
       </div>
 
       {/* Segment switcher */}
-      <div className="flex border-b border-[rgba(255,255,255,0.05)] mb-4 text-xs font-mono">
+      <div className="flex border-b border-[var(--color-border)] mb-4 text-xs font-mono">
         <button 
           onClick={() => setActiveTab('pending')}
           className={`pb-2.5 px-4 font-bold border-b-2 flex items-center space-x-1.5 transition-all cursor-pointer ${
@@ -238,7 +238,7 @@ export const FraudAlerts = ({
             <p className="text-[12px] font-mono text-[var(--color-muted)]">Running 4 live detection rules...</p>
           </div>
         ) : (activeTab === 'pending' ? pendingAlerts : reviewedAlerts).length === 0 ? (
-          <div className="py-12 text-center border-2 border-dashed border-[rgba(255,255,255,0.05)] rounded-xl bg-black/10">
+          <div className="py-12 text-center border-2 border-dashed border-[var(--color-border)] rounded-xl bg-black/10">
             <span className="text-2xl block">🛡️</span>
             <span className="text-xs font-mono text-slate-400 mt-2 block">No matching security entries found</span>
           </div>
@@ -249,7 +249,7 @@ export const FraudAlerts = ({
               className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all hover:bg-black/10 ${
                 alert.severity === 'critical' ? 'bg-[rgba(239,68,68,0.02)] border-red-500/20' :
                 alert.severity === 'high' ? 'bg-[rgba(245,158,11,0.02)] border-amber-500/20' :
-                'bg-[var(--color-surface-1)] border-[rgba(255,255,255,0.05)]'
+                'bg-[var(--color-surface-1)] border-[var(--color-border)]'
               }`}
             >
               <div className="space-y-1.5 flex-1">
@@ -257,7 +257,7 @@ export const FraudAlerts = ({
                   <span className={`text-[8.5px] uppercase font-bold px-2 py-0.5 rounded-md ${
                     alert.severity === 'critical' ? 'bg-red-500/15 text-red-400' :
                     alert.severity === 'high' ? 'bg-amber-500/15 text-amber-400' :
-                    'bg-zinc-800 text-zinc-400'
+                    'bg-zinc-800 text-[var(--color-muted)]'
                   }`}>
                     {alert.severity} Risk
                   </span>
@@ -303,7 +303,7 @@ export const FraudAlerts = ({
             <form onSubmit={handleReviewAlert} className="p-4 space-y-4 font-mono text-xs">
               <div className="space-y-1">
                 <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block">Anomaly Threat description:</span>
-                <p className="text-slate-300 leading-relaxed bg-black/20 p-2.5 rounded border border-solid border-[rgba(255,255,255,0.03)] text-[11px]">{selectedAlert.description}</p>
+                <p className="text-slate-300 leading-relaxed bg-black/20 p-2.5 rounded border border-solid border-[var(--color-border)] text-[11px]">{selectedAlert.description}</p>
               </div>
 
               <div className="space-y-1">
