@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
 import { fmt, uid } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
+import { normalizeAirlineName } from '../../lib/helpers';
 import { 
   TrendingUp, 
   Package, 
@@ -71,6 +72,21 @@ export const Analytics = ({
           { id: 'all', name: 'All Hubs', code: 'ALL', region: 'Nigeria' },
           ...data.map((h: any) => ({ id: h.id, name: h.name, code: h.code, region: h.state }))
         ]);
+      }
+    });
+  }, []);
+
+  // Airline commission rates — used to compute real airline payables (not general expenses)
+  const [airlineCommissions, setAirlineCommissions] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    supabase.from('pricing_config').select('config_value').eq('config_key', 'airline_commissions').single().then(({ data }) => {
+      if (data?.config_value) {
+        const normalized: Record<string, number> = {};
+        Object.entries(data.config_value as Record<string, number>).forEach(([k, v]) => {
+          normalized[normalizeAirlineName(k)] = v;
+        });
+        setAirlineCommissions(normalized);
       }
     });
   }, []);
@@ -157,6 +173,16 @@ export const Analytics = ({
     
     const totalExpenses = periodFilteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+    // Real airline payables: for each cargo entry with an airline, we owe the
+    // airline (100% - our commission %) of the amount. This is the same
+    // calculation CreditDebit.tsx uses for "Total Due to Airlines".
+    const airlinePayables = cargo.reduce((sum, t) => {
+      if (!t.airline) return sum;
+      const normalizedAirline = normalizeAirlineName(t.airline);
+      const commRate = airlineCommissions[normalizedAirline] || 0;
+      return sum + t.amount * (1 - commRate / 100);
+    }, 0);
+
     // Find top route in today's transactions
     const routesMap: Record<string, number> = {};
     periodFilteredTxs.forEach(t => {
@@ -196,9 +222,10 @@ export const Analytics = ({
       transfer,
       debt,
       topRoute,
-      totalExpenses
+      totalExpenses,
+      airlinePayables
     };
-  }, [periodFilteredTxs, periodFilteredExpenses]);
+  }, [periodFilteredTxs, periodFilteredExpenses, airlineCommissions]);
 
   // Real hourly revenue chart based on actual created_at timestamps
   const revenueChartData = useMemo(() => {
@@ -423,7 +450,8 @@ export const Analytics = ({
         <div className="flex justify-between items-center px-2 md:px-8">
           <div className="flex flex-col items-start">
             <span className="text-[8px] font-mono text-[var(--color-error)] uppercase tracking-widest font-bold">● PAYABLES</span>
-            <span className="text-[16px] md:text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">{fmt(stats.totalExpenses)}</span>
+            <span className="text-[16px] md:text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">{fmt(stats.airlinePayables)}</span>
+            <span className="text-[7px] font-mono text-[var(--color-light-muted)] mt-0.5 uppercase hidden md:block">Owed to airlines</span>
           </div>
 
           <div className="flex flex-col items-center">

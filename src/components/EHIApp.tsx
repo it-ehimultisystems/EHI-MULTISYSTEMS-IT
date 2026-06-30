@@ -248,6 +248,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             created_at: r.created_at,
             hub_id: r.hub_id,
             route: r.route,
+            airline: r.airline,
           });
         }
       )

@@ -144,3 +144,23 @@ export function downloadDailyCSV(
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+// ── AIRLINE NAME NORMALIZATION ────────────────────────────────
+// Cargo entries and commission config keys have historically used both short
+// and long airline names ("Green Africa" vs "Green Africa Airways"). This
+// collapses any known variant to the single canonical long-form name so
+// breakdowns and commission lookups never fragment one airline into two rows.
+const AIRLINE_NAME_MAP: Record<string, string> = {
+  'green africa': 'Green Africa Airways',
+  'green africa airways': 'Green Africa Airways',
+  'united nigeria': 'United Nigeria Airlines',
+  'united nigeria airlines': 'United Nigeria Airlines',
+  'arik air': 'Arik Air',
+  'arik': 'Arik Air',
+};
+
+export function normalizeAirlineName(raw: string | null | undefined): string {
+  if (!raw) return 'Unknown';
+  const key = raw.trim().toLowerCase();
+  return AIRLINE_NAME_MAP[key] || raw.trim();
+}

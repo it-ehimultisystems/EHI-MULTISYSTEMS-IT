@@ -193,9 +193,11 @@ export const Dashboard = React.memo(
 
     const isAdmin       = user.role === "admin" || user.role === "super_admin";
     const isAccountant  = user.role === "accountant" || user.role === "auditor";
-    const showCargo     = isAdmin || user.role === "cargo_agent";
-    const showVJ        = isAdmin || user.role === "vj_agent";
-    const showMktg      = isAdmin || user.role === "marketing_agent";
+    // Accountant/auditor need to see all three streams to review financial activity —
+    // same visibility as admin, not the single-stream visibility of a field agent.
+    const showCargo     = isAdmin || isAccountant || user.role === "cargo_agent";
+    const showVJ        = isAdmin || isAccountant || user.role === "vj_agent";
+    const showMktg      = isAdmin || isAccountant || user.role === "marketing_agent";
     const showRevSummary = isAdmin || isAccountant;
 
     const allVisibleTx = useMemo(() =>

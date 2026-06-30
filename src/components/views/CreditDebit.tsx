@@ -3,6 +3,7 @@ import { User, Transaction } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { ArrowLeft, CreditCard, Building2, Users, Search, ArrowDownLeft, ArrowUpRight, TrendingDown, TrendingUp, Building, UserSquare2, Loader } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { normalizeAirlineName } from '../../lib/helpers';
 
 export const CreditDebit = ({ user, transactions: _propTransactions }: { user: User; transactions: Transaction[] }) => {
   const [activeTab, setActiveTab] = useState<'debts' | 'credits'>('debts');
@@ -63,7 +64,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
           cargoCreditsReq.data.forEach(r => {
             if (r.airline) {
               mappedCredits.push({
-                id: r.entry_ref || r.id, name: r.consignee_name || 'Cargo', detail: `${r.awb_tag_number || ''}`, amount: r.amount || 0, mode: r.receipt_mode, time: r.created_at, type: 'cargo', airline: r.airline, status: r.status || 'Intake'
+                id: r.entry_ref || r.id, name: r.consignee_name || 'Cargo', detail: `${r.awb_tag_number || ''}`, amount: r.amount || 0, mode: r.receipt_mode, time: r.created_at, type: 'cargo', airline: normalizeAirlineName(r.airline), status: r.status || 'Intake'
               });
             }
           });
@@ -101,9 +102,13 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
   const creditSummary = useMemo(() => {
     const summary: Record<string, number> = {};
     credits.forEach(tx => {
-      const airline = tx.airline || 'Unknown';
-      const commRate = commissions[airline] || 0; // if 0, we owe 100%? Or 0 commission means we keep 0, pay 100%.
-      // Actually, if commission is 10%, we keep 10%, pay 90%.
+      // tx.airline is already normalized when mapped from Supabase above,
+      // but also normalize commission keys so a commission saved under the
+      // short form still matches.
+      const airline = normalizeAirlineName(tx.airline) || 'Unknown';
+      const normalizedCommissions: Record<string, number> = {};
+      Object.entries(commissions).forEach(([k, v]) => { normalizedCommissions[normalizeAirlineName(k)] = v; });
+      const commRate = normalizedCommissions[airline] || 0;
       const weOwe = tx.amount * (1 - commRate / 100);
       summary[airline] = (summary[airline] || 0) + weOwe;
     });
@@ -243,7 +248,8 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
             <div className="mt-8 space-y-3">
               <h3 className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Detailed Remittances</h3>
               {credits.map((tx, i) => {
-                const commRate = commissions[tx.airline!] || 0;
+                const normalizedAirline = normalizeAirlineName(tx.airline);
+                const commRate = commissions[normalizedAirline] ?? commissions[tx.airline!] ?? 0;
                 const weOwe = tx.amount * (1 - commRate / 100);
                 return (
                   <div key={i} className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.05)] rounded-lg p-4 hover:border-[rgba(255,255,255,0.1)] transition-colors">
