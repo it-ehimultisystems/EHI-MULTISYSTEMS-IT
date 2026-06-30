@@ -1,5 +1,5 @@
-import { PRICING } from './constants';
-import { Transaction, PaymentMode } from './types';
+import { PRICING } from './constants.js';
+import { Transaction, PaymentMode } from './types.js';
 
 export const fmt = (amount: number) => {
   return new Intl.NumberFormat('en-NG', {

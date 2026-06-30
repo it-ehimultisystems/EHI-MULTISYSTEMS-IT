@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
-import paystackRoutes from './paystack';
-import notificationRoutes from './notifications';
-import eodRoutes from './eod';
-import geminiRoutes from './gemini';
-import { parseBankAlert } from './emailParser';
+import paystackRoutes from './paystack.js';
+import notificationRoutes from './notifications.js';
+import eodRoutes from './eod.js';
+import geminiRoutes from './gemini.js';
+import { parseBankAlert } from './emailParser.js';
 
 const rateLimiter = (maxReqs: number, windowMs: number) => {
   const store = new Map<string, { count: number; resetAt: number }>();
@@ -98,7 +98,7 @@ export function createApp() {
   app.post('/api/admin/create-staff', adminLimiter, async (req, res) => {
     const adminCtx = await requireAdminCaller(req, res);
     if (!adminCtx) return;
-    const { adminClient } = { adminClient: adminCtx.admin };
+    const { admin: adminClient } = adminCtx;
 
     const { name, email, password, role, hub_id, hub_type, phone } = req.body;
     if (!name || !email || !password || !role || !hub_id) {
@@ -203,18 +203,10 @@ export function createApp() {
     }
   });
 
-  // Catch-all for any /api/* path that didn't match a registered route above —
-  // without this, an unmatched sub-path falls through to Express's default
-  // 404 page (HTML, not JSON), which the client can't parse for a useful message.
   app.use('/api', (req, res) => {
     res.status(404).json({ error: `No API route matches ${req.method} ${req.originalUrl}` });
   });
 
-  // Global error handler — MUST be registered last, and MUST have exactly
-  // 4 parameters for Express to recognise it as an error handler. This is
-  // the final safety net: any error thrown anywhere above that wasn't
-  // caught by a route's own try/catch lands here instead of producing
-  // Express's raw, non-JSON default error response.
   app.use((err: any, req: any, res: any, next: any) => {
     console.error('Unhandled API error:', err);
     if (res.headersSent) return next(err);

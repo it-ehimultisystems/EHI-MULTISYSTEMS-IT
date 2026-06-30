@@ -10,7 +10,7 @@ export interface ParsedBankAlert {
   narrationCode?: string;
 }
 
-import { extractNarrationFromText } from '../src/lib/helpers';
+import { extractNarrationFromText } from '../src/lib/helpers.js';
 
 function cleanAmount(val: string): number {
   return parseFloat(val.replace(/,/g, '').replace(/[^\d.]/g, ''));

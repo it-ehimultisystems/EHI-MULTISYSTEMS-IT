@@ -1,4 +1,4 @@
-import { Transaction, UserRole, HubType } from './types';
+import { Transaction, UserRole, HubType } from './types.js';
 
 export const PRICING: Record<string, { BB: number; MB: number; SB: number }> = {
   'LOS/Lagos':  { BB: 30000, MB: 18000, SB: 22000 },
