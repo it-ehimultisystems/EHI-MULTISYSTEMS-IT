@@ -121,7 +121,11 @@ export const Forecasting = ({
           }
         })
       });
-      const resData = await response.json();
+      let resData: any = {};
+      try {
+        const text = await response.text();
+        if (text) resData = JSON.parse(text);
+      } catch(e) {}
       
       if (resData.success && resData.narrative) {
         // Parse paragraphs

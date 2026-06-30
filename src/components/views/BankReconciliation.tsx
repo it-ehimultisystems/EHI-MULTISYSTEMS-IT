@@ -164,7 +164,17 @@ export const BankReconciliation = ({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pdfBase64: base64Data })
           });
-          const data = await res.json();
+          
+          let data: any = {};
+          try {
+            const text = await res.text();
+            if (text) data = JSON.parse(text);
+          } catch(e) {}
+          
+          if (!res.ok || data.error) {
+            throw new Error(data.error || `Server returned error status ${res.status}`);
+          }
+          
           if (data.success && data.transactions) {
             let idx = 1;
             const parsed = data.transactions.map((t: any) => ({

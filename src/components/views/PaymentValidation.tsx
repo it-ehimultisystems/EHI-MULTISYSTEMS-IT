@@ -48,8 +48,13 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ emailText })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to parse');
+      let data: any = {};
+      try {
+        const text = await res.text();
+        if (text) data = JSON.parse(text);
+      } catch(e) {}
+
+      if (!res.ok || data.error) throw new Error(data.error || `Failed to parse (status: ${res.status})`);
       
       const parsed: ParsedBankAlert = data;
       setParsedResult(parsed);

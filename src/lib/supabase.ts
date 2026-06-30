@@ -112,7 +112,12 @@ export async function fetchAndApplyServerConfig(): Promise<boolean> {
 
     if (!response.ok) return false;
 
-    const config = await response.json();
+    let config: any = {};
+    try {
+      const text = await response.text();
+      if (text) config = JSON.parse(text);
+    } catch(e) {}
+    
     if (config.configured && config.supabaseUrl && config.supabaseAnonKey) {
       localStorage.setItem('ehi_supabase_url', config.supabaseUrl);
       localStorage.setItem('ehi_supabase_anon_key', config.supabaseAnonKey);

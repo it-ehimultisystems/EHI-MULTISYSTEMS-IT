@@ -152,7 +152,12 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
         },
         body: JSON.stringify({ userId: member.id, active: !member.active }),
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        const text = await res.text();
+        if (text) data = JSON.parse(text);
+      } catch(e) {}
+      
       if (!res.ok || data.error) {
         if (res.status === 503) {
           const { error } = await supabase.from('user_profiles').update({ active: !member.active }).eq('id', member.id);

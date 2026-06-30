@@ -366,7 +366,12 @@ export const Analytics = ({
           marketingCount: stats.mktgCount
         })
       });
-      const data = await response.json();
+      let data: any = {};
+      try {
+        const text = await response.text();
+        if (text) data = JSON.parse(text);
+      } catch(e) {}
+      
       if (data.success && Array.isArray(data.insights)) {
         setInsights(data.insights);
       } else {

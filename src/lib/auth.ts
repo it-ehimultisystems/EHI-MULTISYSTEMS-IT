@@ -118,12 +118,22 @@ export async function createStaffAccount(payload: CreateStaffPayload): Promise<{
     },
     body:    JSON.stringify(payload),
   });
-  const data = await res.json();
+
+  let data: any = {};
+  try {
+    const text = await res.text();
+    if (text) {
+      data = JSON.parse(text);
+    }
+  } catch (e) {
+    // If it's not valid JSON, we'll handle it below using res.status
+  }
+
   if (!res.ok || data.error) {
     if (res.status === 503) {
-      throw new Error('Staff account creation is not configured on the server. Add SUPABASE_SERVICE_ROLE_KEY to your Vercel environment variables — there is no client-side fallback for security reasons.');
+      throw new Error('Staff account creation is not configured on the server. Add SUPABASE_SERVICE_ROLE_KEY to your environment variables.');
     }
-    throw new Error(data.error || 'Failed to create account');
+    throw new Error(data.error || `Server returned error status ${res.status}`);
   }
   return { id: data.id, email: data.email };
 }
@@ -158,7 +168,12 @@ export async function updateStaffProfile(
     },
     body:    JSON.stringify({ userId, updates }),
   });
-  const data = await res.json();
+  
+  let data: any = {};
+  try {
+    const text = await res.text();
+    if (text) data = JSON.parse(text);
+  } catch(e) {}
 
   if (!res.ok || data.error) {
     if (res.status === 503) {
