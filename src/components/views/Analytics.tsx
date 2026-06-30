@@ -291,6 +291,61 @@ export const Analytics = ({
       .slice(0, 8);
   }, [periodFilteredTxs]);
 
+  // Marketing agents performance computed from real data
+  const marketingAgentsData = useMemo(() => {
+    const map: Record<string, { entries: number; revenue: number; expenses: number }> = {};
+    
+    // Process marketing revenues
+    periodFilteredTxs.filter(t => t.type === 'marketing').forEach(t => {
+      // Find the user who created it, or default
+      const loggedBy = (t as any).logged_by || 'Agent';
+      if (!map[loggedBy]) map[loggedBy] = { entries: 0, revenue: 0, expenses: 0 };
+      map[loggedBy].entries++;
+      map[loggedBy].revenue += t.amount;
+    });
+
+    // Process expenses by agent
+    periodFilteredExpenses.forEach(e => {
+      const loggedBy = (e as any).loggedBy || (e as any).logged_by || 'Agent';
+      if (map[loggedBy]) {
+        map[loggedBy].expenses += e.amount;
+      } else {
+        // If they only have expenses but no revenue in this period
+        map[loggedBy] = { entries: 0, revenue: 0, expenses: e.amount };
+      }
+    });
+
+    return Object.entries(map)
+      .map(([name, data]) => ({
+        name,
+        entries: data.entries,
+        revenue: data.revenue,
+        expenses: data.expenses,
+        remit: data.revenue - data.expenses
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }, [periodFilteredTxs, periodFilteredExpenses]);
+
+  // Top airlines computed from real transaction data
+  const topAirlines = useMemo(() => {
+    const map: Record<string, number> = {};
+    const cargoTxs = periodFilteredTxs.filter(t => t.type === 'cargo');
+    let totalRevenue = 0;
+    
+    cargoTxs.forEach(t => {
+      const airline = normalizeAirlineName(t.airline);
+      if (!map[airline]) map[airline] = 0;
+      map[airline] += t.amount;
+      totalRevenue += t.amount;
+    });
+    
+    return Object.entries(map)
+      .map(([name, revenue]) => ({ name, revenue, pct: totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0 }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 3);
+  }, [periodFilteredTxs]);
+
   // Trigger Gemini AI Insights from server proxy
   const fetchAIInsights = useCallback(async () => {
     setLoadingInsights(true);
@@ -625,22 +680,28 @@ export const Analytics = ({
         </div>
 
         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[rgba(255,255,255,0.05)]">
-          {[
-            { name: 'Arik Air', color: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
-            { name: 'Green Africa', color: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
-            { name: 'United Nig.', color: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.2)' }
-          ].map((item, index) => (
+          {topAirlines.length > 0 ? topAirlines.map((item, index) => {
+            const colors = [
+              { color: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
+              { color: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
+              { color: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.2)' }
+            ];
+            const theme = colors[index % colors.length];
+            return (
             <div 
               key={index} 
-              style={{ backgroundColor: item.color, borderColor: item.border }}
+              style={{ backgroundColor: theme.color, borderColor: theme.border }}
               className="border rounded p-2 text-center"
             >
               <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase truncate">{item.name}</div>
               <div className="text-[12px] font-bold font-mono text-[var(--color-foreground)] mt-1">
-                {index === 0 ? '43%' : (index === 1 ? '32%' : '25%')}
+                {item.pct}%
               </div>
             </div>
-          ))}
+            );
+          }) : (
+            <div className="col-span-3 text-center text-[10px] text-[var(--color-muted)] py-2">No airline data for this period</div>
+          )}
         </div>
       </div>
 
@@ -662,11 +723,7 @@ export const Analytics = ({
               </tr>
             </thead>
             <tbody>
-              {[
-                { name: 'B. Alao', entries: 11, revenue: stats.mktgRev * 0.45 + 40000, expenses: 15000, remit: stats.mktgRev * 0.45 + 40000 - 15000 },
-                { name: 'J. Sanni', entries: 8, revenue: stats.mktgRev * 0.35 + 15000, expenses: 5000, remit: stats.mktgRev * 0.35 + 15000 - 5000 },
-                { name: 'F. Adebayo', entries: 5, revenue: stats.mktgRev * 0.20 + 5000, expenses: 8000, remit: stats.mktgRev * 0.20 + 5000 - 8000 }
-              ].map((agent, i) => (
+              {marketingAgentsData.length > 0 ? marketingAgentsData.map((agent, i) => (
                 <tr key={i} className="border-b border-[rgba(255,255,255,0.03)] text-[10px]">
                   <td className="py-2 text-[var(--color-foreground)] font-bold">{agent.name}</td>
                   <td className="text-center py-2 text-[var(--color-light-muted)]">{agent.entries}</td>
@@ -675,7 +732,9 @@ export const Analytics = ({
                     {fmt(agent.remit)}
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr><td colSpan={4} className="text-center text-[10px] text-[var(--color-muted)] py-4">No field marketing activity for this period</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -692,8 +751,11 @@ export const Analytics = ({
         </div>
         <div className="grid grid-cols-2 gap-2">
           {activeHubs.slice(1).map((hub) => {
-            const ratio = hub.id === 'hub-lagos' ? 0.45 : (hub.id === 'hub-murtala' ? 0.25 : (hub.id === 'hub-abuja' ? 0.20 : 0.10));
-            const hubRevenue = stats.totalRev * ratio;
+            // Compute real hub revenue from periodFilteredTxs based on hub_id
+            const hubRevenue = periodFilteredTxs
+              .filter(t => t.hub_id === hub.id)
+              .reduce((sum, t) => sum + t.amount, 0);
+            
             return (
               <div 
                 key={hub.id} 
