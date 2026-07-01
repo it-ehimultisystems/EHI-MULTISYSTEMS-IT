@@ -63,12 +63,6 @@ export const Settings = ({
   const [companyAddress, setCompanyAddress] = useState(
     () => localStorage.getItem('ehi_company_address') || ''
   );
-  const [vjFreeKg, setVjFreeKg] = useState(
-    () => localStorage.getItem('ehi_vj_free_kg') || '20'
-  );
-  const [vjRatePerKg, setVjRatePerKg] = useState(
-    () => localStorage.getItem('ehi_vj_rate_per_kg') || '1000'
-  );
 
   const connectionMode = getConnectionMode();
 
@@ -105,8 +99,6 @@ export const Settings = ({
     localStorage.setItem('ehi_company_name', companyName.trim());
     localStorage.setItem('ehi_company_phone', companyPhone.trim());
     localStorage.setItem('ehi_company_address', companyAddress.trim());
-    localStorage.setItem('ehi_vj_free_kg', vjFreeKg);
-    localStorage.setItem('ehi_vj_rate_per_kg', vjRatePerKg);
   };
 
   // Option Toggles (persisted locally)

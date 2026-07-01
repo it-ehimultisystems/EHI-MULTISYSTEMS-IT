@@ -357,7 +357,7 @@ export const ValueJetForm = ({
                 className="h-12 px-4 flex items-center justify-between rounded-[var(--radius-sm)] bg-[var(--color-surface-3)] border border-[var(--color-border-strong)]"
               >
                 <span className="text-[12px] font-bold font-mono text-[var(--color-accent-cobalt)]">
-                  ₦1,000<span className="text-[10px] font-normal text-[var(--color-muted)]">/kg</span>
+                  ₦{vjRatePerKg.toLocaleString('en-NG')}<span className="text-[10px] font-normal text-[var(--color-muted)]">/kg</span>
                 </span>
               </div>
             </div>
@@ -460,11 +460,11 @@ export const ValueJetForm = ({
                 }}>TOTAL DUE</div>
                 <div style={{
                   fontSize: 28, fontWeight: 800, fontFamily: 'monospace',
-                  color: excessKg > 0
+                  color: totalAmount > 0
                     ? 'var(--color-accent-cobalt)'
                     : 'var(--color-muted)',
                 }}>
-                  {excessKg > 0
+                  {totalAmount > 0
                     ? '₦' + totalAmount.toLocaleString('en-NG')
                     : '₦0'}
                 </div>
@@ -473,7 +473,7 @@ export const ValueJetForm = ({
                     fontSize: 10, fontFamily: 'monospace',
                     color: 'var(--color-muted)', marginTop: 6,
                   }}>
-                    {excessKg} kg × ₦1,000/kg
+                    {excessKg} kg × ₦{vjRatePerKg.toLocaleString('en-NG')}/kg
                   </div>
                 )}
               </div>

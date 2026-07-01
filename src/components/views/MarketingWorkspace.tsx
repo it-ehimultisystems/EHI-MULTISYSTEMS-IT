@@ -244,8 +244,8 @@ export const MarketingWorkspace = ({
 
   return (
     <div
-      className="overflow-y-auto pb-24 p-4"
-      style={{ width: "100%", boxSizing: "border-box" }}
+      className="overflow-y-auto overflow-x-hidden pb-24 p-4 max-w-5xl mx-auto"
+      style={{ width: "100%", boxSizing: "border-box", minHeight: 0, flex: 1 }}
     >
       {/* Workspace Header */}
       <div className="flex justify-between items-center text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-widest border-b border-[var(--color-border)] pb-2 mb-6">
@@ -269,7 +269,7 @@ export const MarketingWorkspace = ({
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[1fr_280px]">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_280px]">
         {/* Left Column - Forms */}
         <div className="space-y-6">
           {successTx ? (
