@@ -581,6 +581,9 @@ export const CargoForm = ({
 
   // --- RETAIL BILLING SUBMIT ---
   const actualConsignee = consignee === "Other" ? customConsignee : consignee;
+  const w = Math.round(parseFloat(kg)) || 0;
+  const rate = standardRates[route] || 500;
+  const minAmount = w * rate;
   const parsedAmount = parseFloat(amount) || 0;
 
   const isRetailFormValid =
@@ -588,7 +591,7 @@ export const CargoForm = ({
     awb.trim().length > 0 &&
     route.trim().length > 0 &&
     contentType.trim().length > 0 &&
-    parsedAmount > 0 &&
+    parsedAmount >= minAmount && parsedAmount > 0 &&
     senderPhone.trim().length > 0;
 
   const handleRetailSubmit = async () => {
@@ -984,15 +987,22 @@ export const CargoForm = ({
           <div className="flex w-full space-x-3 mb-3">
             <button
               onClick={handlePrintReceipt}
-              className="flex-1 py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[14px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
+              className="flex-1 py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
             >
-              Print Receipt
+              PDF Receipt
             </button>
             <button
               onClick={handlePrintWaybill}
-              className="flex-1 py-3.5 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[14px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none"
+              className="flex-1 py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
             >
-              Print Tag
+              PDF Tag
+            </button>
+            <button
+              onClick={() => import('../../lib/escposReceipts').then(m => m.printBluetoothReceipt(printData, 'cargo'))}
+              className="flex-1 py-2 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
+            >
+              <span className="text-[14px] mb-0.5">🖨️</span>
+              <span>POS Print</span>
             </button>
           </div>
 

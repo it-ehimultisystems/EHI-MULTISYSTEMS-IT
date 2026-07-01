@@ -48,6 +48,7 @@ export const MarketingWorkspace = ({
   const [bb, setBb] = useState(0);
   const [mb, setMb] = useState(0);
   const [sb, setSb] = useState(0);
+  const [amountOverride, setAmountOverride] = useState("");
 
   const [narrationCode, setNarrationCode] = useState<string>("");
 
@@ -74,10 +75,11 @@ export const MarketingWorkspace = ({
   const [expDesc, setExpDesc] = useState("");
 
   const routePrices = pricingMatrix[route] || { BB: 0, MB: 0, SB: 0 };
-  const totalAmount =
-    bb * routePrices.BB + mb * routePrices.MB + sb * routePrices.SB;
+  const minAmount = bb * routePrices.BB + mb * routePrices.MB + sb * routePrices.SB;
+  const parsedOverride = parseFloat(amountOverride) || 0;
+  const totalAmount = amountOverride !== "" ? parsedOverride : minAmount;
 
-  const isValid = name.trim().length > 0 && totalAmount > 0 && phone.trim().length > 0;
+  const isValid = name.trim().length > 0 && totalAmount > 0 && phone.trim().length > 0 && (amountOverride === "" || parsedOverride >= minAmount);
 
   const marketingTxs = transactions.filter((t) => t.type === "marketing");
   const totalSales = marketingTxs.reduce((sum, t) => sum + t.amount, 0);
@@ -215,6 +217,7 @@ export const MarketingWorkspace = ({
     setBb(0);
     setMb(0);
     setSb(0);
+    setAmountOverride("");
     setMode("Transfer");
     setSuccessTx(null);
   };
@@ -325,12 +328,35 @@ export const MarketingWorkspace = ({
                 </div>
               </div>
 
-              <div className="flex w-full">
+              <div className="flex w-full space-x-2">
                 <button
                   onClick={handleReset}
-                  className="flex-1 py-3 bg-[var(--color-success)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer flex justify-center items-center gap-2"
+                  className="flex-1 py-3 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-bold font-mono rounded cursor-pointer flex justify-center items-center gap-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-2)]"
                 >
                   <Plus size={14} /> NEW ENTRY
+                </button>
+                <button
+                  onClick={() => {
+                    let bagsList: string[] = [];
+                    if (bb > 0) bagsList.push(`${bb} BB`);
+                    if (mb > 0) bagsList.push(`${mb} MB`);
+                    if (sb > 0) bagsList.push(`${sb} SB`);
+                    
+                    import('../../lib/escposReceipts').then(m => m.printBluetoothReceipt({
+                      entryRef: successTx.id,
+                      hubName: 'Marketing Desk',
+                      name: successTx.name,
+                      route: route,
+                      destination: bagsList.join(' · '),
+                      amount: successTx.amount,
+                      paymentMode: successTx.mode,
+                      bank: successTx.bank
+                    }, 'marketing'));
+                  }}
+                  className="flex-1 py-3 bg-[var(--color-success)] text-[#0D1117] text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
+                >
+                  <span className="text-[14px] mb-0.5">🖨️</span>
+                  <span>POS PRINT</span>
                 </button>
               </div>
               <button
@@ -456,16 +482,21 @@ export const MarketingWorkspace = ({
                   ))}
                 </div>
 
-                <div className="flex justify-between items-center py-2">
+                <div className="flex justify-between items-center py-2 bg-[var(--color-surface-1)] px-3 rounded border border-[rgba(255,255,255,0.07)]">
                   <span className="text-[10px] font-mono text-[var(--color-light-muted)]">
-                    AUTO-CALCULATED
+                    TOTAL AMOUNT
                   </span>
-                  <span
-                    className={`text-[18px] font-bold font-mono ${totalAmount > 0 ? "text-[var(--color-success)]" : "text-[var(--color-muted)]"}`}
-                    style={{ fontFamily: "JetBrains Mono" }}
-                  >
-                    {fmt(totalAmount)}
-                  </span>
+                  <div className="flex items-center">
+                    <span className="text-[14px] font-bold font-mono text-[var(--color-muted)] mr-1">₦</span>
+                    <input
+                      type="number"
+                      value={amountOverride !== "" ? amountOverride : (minAmount > 0 ? minAmount : "")}
+                      onChange={(e) => setAmountOverride(e.target.value)}
+                      placeholder={minAmount > 0 ? minAmount.toString() : "0"}
+                      className={`w-24 bg-transparent border-none text-right text-[18px] font-bold font-mono p-0 focus:ring-0 ${totalAmount > 0 ? "text-[var(--color-success)]" : "text-[var(--color-muted)]"} ${amountOverride !== "" && parsedOverride < minAmount ? "text-[var(--color-error)]" : ""}`}
+                      style={{ fontFamily: "JetBrains Mono" }}
+                    />
+                  </div>
                 </div>
 
                 <button

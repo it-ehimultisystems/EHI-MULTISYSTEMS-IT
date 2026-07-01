@@ -23,6 +23,7 @@ export const ValueJetForm = ({
   const [kg, setKg] = useState('');
   const [phone, setPhone] = useState('');
   const [mode, setMode] = useState<PaymentMode>('POS');
+  const [amountOverride, setAmountOverride] = useState<string>('');
   const [narrationCode, setNarrationCode] = useState<string>('');
 
   const [successTx, setSuccessTx] = useState<{ tx: Transaction, kgs: number, exc: number } | null>(null);
@@ -47,9 +48,11 @@ export const ValueJetForm = ({
 
   const kgVal = Math.round(parseFloat(kg)) || 0;
   const excessKg = Math.max(0, kgVal - vjFreeAllowance);
-  const totalAmount = excessKg * vjRatePerKg;
+  const minAmount = excessKg * vjRatePerKg;
+  const parsedOverride = parseFloat(amountOverride) || 0;
+  const totalAmount = amountOverride !== "" ? parsedOverride : minAmount;
 
-  const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0 && phone.trim().length > 0;
+  const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0 && phone.trim().length > 0 && (amountOverride === "" || parsedOverride >= minAmount);
 
   const handleSubmit = () => {
     if (!isValid || submitting) return;
@@ -105,6 +108,7 @@ export const ValueJetForm = ({
     setFlight('');
     setDest(CARGO_ROUTES[0]);
     setKg('');
+    setAmountOverride('');
     setPhone('');
     setSuccessTx(null);
   };
@@ -211,8 +215,26 @@ export const ValueJetForm = ({
             <button onClick={handleReset} className="flex-1 py-3 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-mono rounded cursor-pointer flex justify-center items-center gap-2">
               <Plus size={14} /> NEXT PASSENGER
             </button>
-            <button onClick={handlePrintReceipt} className="flex-1 py-3 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex justify-center items-center gap-2">
-              <Printer size={14} /> PRINT RECEIPT
+            <button
+              onClick={() => {
+                import('../../lib/escposReceipts').then(m => m.printBluetoothReceipt({
+                  entryRef: s.tx.id,
+                  hubName: 'ValueJet Counter',
+                  name: s.tx.name,
+                  flight: flight.toUpperCase(),
+                  destination: dest,
+                  totalBaggage: s.kgs,
+                  freeAllowance: vjFreeAllowance,
+                  excessKg: s.exc,
+                  amount: s.tx.amount,
+                  paymentMode: s.tx.mode,
+                  pnr: pnr.trim().toUpperCase(),
+                }, 'valuejet'));
+              }}
+              className="flex-1 py-3 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
+            >
+              <span className="text-[14px] mb-0.5">🖨️</span>
+              <span>POS PRINT</span>
             </button>
           </div>
           <button
@@ -229,7 +251,7 @@ export const ValueJetForm = ({
               marginTop: 8,
             }}
           >
-            ↓ PRINT RECEIPT
+            ↓ PDF RECEIPT
           </button>
         </div>
       </div>
@@ -338,6 +360,24 @@ export const ValueJetForm = ({
                   ₦1,000<span className="text-[10px] font-normal text-[var(--color-muted)]">/kg</span>
                 </span>
               </div>
+            </div>
+          </div>
+          
+          <div className="space-y-1.5">
+            <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Total Amount (₦)</span>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder={minAmount > 0 ? minAmount.toString() : "0"}
+                value={amountOverride !== "" ? amountOverride : (minAmount > 0 ? minAmount : "")}
+                onChange={(e) => setAmountOverride(e.target.value)}
+                className={`${formInputClass} font-mono font-bold ${amountOverride !== "" && parsedOverride < minAmount ? "text-[var(--color-error)]" : ""}`}
+              />
+              {amountOverride !== "" && parsedOverride < minAmount && (
+                <span className="text-[10px] text-[var(--color-error)] absolute right-3 top-1/2 -translate-y-1/2">
+                  Min: {minAmount}
+                </span>
+              )}
             </div>
           </div>
           
