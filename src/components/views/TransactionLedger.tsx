@@ -59,6 +59,8 @@ export const TransactionLedger = ({
   const [typeFilter, setTypeFilter] = useState(defaultTypeFilter || "All");
   const [modeFilter, setModeFilter] = useState("All");
   const [posCodeInput, setPosCodeInput] = useState<{ id: string; code: string }>({ id: '', code: '' });
+  const [vjFlightFilter, setVjFlightFilter] = useState("All");
+  const [vjDestFilter, setVjDestFilter] = useState("All");
 
   const entries = useMemo(() => {
     const list: Entry[] = [
@@ -103,6 +105,12 @@ export const TransactionLedger = ({
   const filteredEntries = useMemo(() => entries.filter((e) => {
     if (typeFilter !== "All" && e.type !== typeFilter.toLowerCase())
       return false;
+
+    if (typeFilter.toLowerCase() === 'baggage' && e.source === 'transaction') {
+      const tx = e.raw as Transaction;
+      if (vjFlightFilter !== "All" && tx.flight !== vjFlightFilter) return false;
+      if (vjDestFilter !== "All" && tx.destination !== vjDestFilter) return false;
+    }
 
     if (modeFilter !== "All") {
       if (modeFilter === "Revenue") {
@@ -202,37 +210,106 @@ export const TransactionLedger = ({
   const transferAmount = filteredEntries.filter(e => e.mode === 'Transfer').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
   const posAmount = filteredEntries.filter(e => e.mode === 'POS').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
 
+  const vjFlights = useMemo(() => {
+    if (defaultTypeFilter !== 'baggage') return [];
+    const set = new Set<string>();
+    entries.forEach(e => {
+      if (e.source === 'transaction' && e.raw.type === 'baggage' && e.raw.flight) {
+        set.add(e.raw.flight);
+      }
+    });
+    return Array.from(set).sort();
+  }, [entries, defaultTypeFilter]);
+
+  const vjDests = useMemo(() => {
+    if (defaultTypeFilter !== 'baggage') return [];
+    const set = new Set<string>();
+    entries.forEach(e => {
+      if (e.source === 'transaction' && e.raw.type === 'baggage' && e.raw.destination) {
+        set.add(e.raw.destination);
+      }
+    });
+    return Array.from(set).sort();
+  }, [entries, defaultTypeFilter]);
+
   return (
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
-        <button
-          onClick={onBack}
-          className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent"
-        >
-          <ArrowLeft size={16} />
-          <span className="text-[11px] font-mono">Back</span>
-        </button>
-        <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">
-          {defaultTypeFilter === 'cargo' ? '● CARGO LEDGER'
-           : defaultTypeFilter === 'baggage' ? '● VALUEJET LEDGER'
-           : defaultTypeFilter === 'marketing' ? '● MARKETING LEDGER'
-           : '● MASTER LEDGER'}
-          {viewOnly && <span className="ml-2 text-[var(--color-muted)] tracking-normal normal-case">view only</span>}
-        </span>
-        {/* Download today's entries as CSV */}
-        {defaultTypeFilter && (
+      <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shrink-0">
+        <div className="flex items-center space-x-4">
           <button
-            onClick={() => {
-              import('../../lib/helpers').then(({ downloadDailyCSV }) => {
-                downloadDailyCSV(defaultTypeFilter, transactions, user.hub || 'EHI Hub');
-              });
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg text-[10px] font-mono text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors ml-auto"
+            onClick={onBack}
+            className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent"
           >
-            <Download size={11} /> Download Today
+            <ArrowLeft size={16} />
+            <span className="text-[11px] font-mono">Back</span>
           </button>
-        )}
+          <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">
+            {defaultTypeFilter === 'cargo' ? '● CARGO LEDGER'
+             : defaultTypeFilter === 'baggage' ? '● VALUEJET LEDGER'
+             : defaultTypeFilter === 'marketing' ? '● MARKETING LEDGER'
+             : '● MASTER LEDGER'}
+            {viewOnly && <span className="ml-2 text-[var(--color-muted)] tracking-normal normal-case">view only</span>}
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {defaultTypeFilter === 'baggage' && (
+            <div className="flex items-center gap-2">
+              <select
+                value={vjFlightFilter}
+                onChange={e => setVjFlightFilter(e.target.value)}
+                className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-md text-[10px] font-mono text-[var(--color-foreground)] px-2 py-1.5 focus:outline-none focus:border-[var(--color-accent-amber)]"
+              >
+                <option value="All">All Flights</option>
+                {vjFlights.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+              <select
+                value={vjDestFilter}
+                onChange={e => setVjDestFilter(e.target.value)}
+                className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-md text-[10px] font-mono text-[var(--color-foreground)] px-2 py-1.5 focus:outline-none focus:border-[var(--color-accent-amber)]"
+              >
+                <option value="All">All Dests</option>
+                {vjDests.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Download today's entries */}
+          {defaultTypeFilter && (
+            <button
+              onClick={() => {
+                if (defaultTypeFilter === 'baggage') {
+                  import('./ValueJetLedgerPDF').then(({ downloadVJLedgerPDF }) => {
+                    const txs = filteredEntries
+                      .filter(e => e.source === 'transaction')
+                      .map(e => e.raw as Transaction);
+                    downloadVJLedgerPDF({
+                      date: new Date().toLocaleDateString('en-GB'),
+                      hubName: user.hub || 'EHI Hub',
+                      transactions: txs,
+                      filters: {
+                        flight: vjFlightFilter === 'All' ? '' : vjFlightFilter,
+                        destination: vjDestFilter === 'All' ? '' : vjDestFilter
+                      }
+                    });
+                  });
+                } else {
+                  import('../../lib/helpers').then(({ downloadDailyCSV }) => {
+                    // Export only filtered if we want, but CSV exports 'transactions' directly. Let's pass filtered transactions.
+                    const txs = filteredEntries
+                      .filter(e => e.source === 'transaction')
+                      .map(e => e.raw as Transaction);
+                    downloadDailyCSV(defaultTypeFilter, txs, user.hub || 'EHI Hub');
+                  });
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg text-[10px] font-mono text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors"
+            >
+              <Download size={11} /> {defaultTypeFilter === 'baggage' ? 'Download PDF' : 'Download CSV'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary Strip */}

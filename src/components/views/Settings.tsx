@@ -436,30 +436,6 @@ export const Settings = ({
                     className="w-full px-3 py-2 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] resize-none"
                   />
                 </div>
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
-                      VJ Free Allowance (KG)
-                    </label>
-                    <input
-                      type="number"
-                      value={vjFreeKg}
-                      onChange={e => setVjFreeKg(e.target.value)}
-                      className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
-                      VJ Rate ₦/KG
-                    </label>
-                    <input
-                      type="number"
-                      value={vjRatePerKg}
-                      onChange={e => setVjRatePerKg(e.target.value)}
-                      className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
-                    />
-                  </div>
-                </div>
                 <button
                   onClick={handleSaveCompany}
                   className="w-full py-2.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer"
@@ -519,55 +495,6 @@ export const Settings = ({
           >
             {driveSync ? <ToggleRight size={38} className="text-[var(--color-success)]" /> : <ToggleLeft size={38} className="text-gray-600" />}
           </button>
-        </div>
-      </div>
-
-      {/* Routing Matrix Pricing Configuration List */}
-      <div className="ehi-card p-4 space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
-            <DollarSign size={12} className="text-[var(--color-accent-amber)]" />
-            <span>ROUTE PRICING MATRIX (STREAM 1)</span>
-          </div>
-          <span className="text-[8px] font-mono text-[var(--color-muted)] bg-black/40 px-1.5 py-0.5 rounded uppercase">BB/MB/SB ONLY</span>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {pricing.map((r: any) => (
-            <div key={r.id} className="p-3 bg-black/30 rounded border border-[rgba(255,255,255,0.04)] space-y-2">
-              <span className="text-[11px] font-bold text-[var(--color-foreground)] uppercase tracking-wide block">{r.route}</span>
-              
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">BB BAG (₦)</label>
-                  <input 
-                    type="number"
-                    value={r.bb}
-                    onChange={(e) => handlePriceUpdate(r.id, 'bb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">MB BAG (₦)</label>
-                  <input 
-                    type="number"
-                    value={r.mb}
-                    onChange={(e) => handlePriceUpdate(r.id, 'mb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">SB BAG (₦)</label>
-                  <input 
-                    type="number"
-                    value={r.sb}
-                    onChange={(e) => handlePriceUpdate(r.id, 'sb', e.target.value)}
-                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 

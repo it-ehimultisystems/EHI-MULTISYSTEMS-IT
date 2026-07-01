@@ -27,9 +27,22 @@ export const MarketingWorkspace = ({
   onShowHistory?: () => void;
 }) => {
   // New Entry State
+  const [pricingMatrix, setPricingMatrix] = useState(() => {
+    const saved = localStorage.getItem('ehi_setting_pricing');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const matrix: Record<string, { BB: number; MB: number; SB: number }> = {};
+      parsed.forEach((p: any) => {
+        matrix[p.route] = { BB: p.bb, MB: p.mb, SB: p.sb };
+      });
+      return matrix;
+    }
+    return PRICING;
+  });
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [route, setRoute] = useState<string>(Object.keys(PRICING)[0]);
+  const [route, setRoute] = useState<string>(Object.keys(pricingMatrix)[0]);
   const [mode, setMode] = useState<string>("Transfer");
   const [bank, setBank] = useState<string>(BANKS[0]);
   const [bb, setBb] = useState(0);
@@ -60,7 +73,7 @@ export const MarketingWorkspace = ({
   const [expAmount, setExpAmount] = useState("");
   const [expDesc, setExpDesc] = useState("");
 
-  const routePrices = PRICING[route];
+  const routePrices = pricingMatrix[route] || { BB: 0, MB: 0, SB: 0 };
   const totalAmount =
     bb * routePrices.BB + mb * routePrices.MB + sb * routePrices.SB;
 
@@ -383,7 +396,7 @@ export const MarketingWorkspace = ({
                     onChange={(e) => setRoute(e.target.value)}
                     className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans min-w-0 ${mktgFocusClasses}`}
                   >
-                    {Object.keys(PRICING).map((r) => (
+                    {Object.keys(pricingMatrix).map((r) => (
                       <option key={r} value={r}>
                         {r}
                       </option>

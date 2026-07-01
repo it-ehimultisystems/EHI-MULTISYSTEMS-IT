@@ -7,8 +7,6 @@ import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notificati
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
 import { CARGO_ROUTES } from '../../lib/constants';
 
-const VJ_RATE_PER_KG = 1000;
-
 export const ValueJetForm = ({
   onAddTx,
   user,
@@ -40,12 +38,16 @@ export const ValueJetForm = ({
   }, [mode, narrationCode, user.hub]);
 
   const vjFreeAllowance = parseFloat(
-    localStorage.getItem('ehi_vj_free_kg') || '20'
+    localStorage.getItem('ehi_vj_free_kg') || '23'
+  );
+
+  const vjRatePerKg = parseFloat(
+    localStorage.getItem('ehi_vj_rate_per_kg') || '1000'
   );
 
   const kgVal = Math.round(parseFloat(kg)) || 0;
   const excessKg = Math.max(0, kgVal - vjFreeAllowance);
-  const totalAmount = excessKg * VJ_RATE_PER_KG;
+  const totalAmount = excessKg * vjRatePerKg;
 
   const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0 && phone.trim().length > 0;
 
@@ -121,7 +123,7 @@ export const ValueJetForm = ({
         totalBaggage: successTx.kgs,
         freeAllowance: vjFreeAllowance,
         excessKg: successTx.exc,
-        ratePerKg: VJ_RATE_PER_KG,
+        ratePerKg: vjRatePerKg,
         amount: successTx.tx.amount,
         paymentMode: successTx.tx.mode,
         paymentNarration: successTx.tx.paymentNarration,
@@ -144,7 +146,7 @@ export const ValueJetForm = ({
       totalBaggage: successTx.kgs,
       freeAllowance: vjFreeAllowance,
       excessKg: successTx.exc,
-      ratePerKg: VJ_RATE_PER_KG,
+      ratePerKg: vjRatePerKg,
       amount: successTx.tx.amount,
       paymentMode: successTx.tx.mode,
       paymentNarration: successTx.tx.paymentNarration,

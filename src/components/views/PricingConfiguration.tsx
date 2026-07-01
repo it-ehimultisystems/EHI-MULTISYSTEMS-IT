@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CARGO_ROUTES } from '../../lib/constants';
-import { Save, Plus, ArrowLeft, Trash2, Edit3, Building } from 'lucide-react';
+import { Save, Plus, ArrowLeft, Trash2, Edit3, Building, DollarSign, Plane } from 'lucide-react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 
@@ -28,6 +28,32 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   const [selectedRateClient, setSelectedRateClient] = useState<CorporateClient | null>(null);
   const [rateRoute, setRateRoute] = useState(CARGO_ROUTES[0]);
   const [ratePrice, setRatePrice] = useState('');
+
+  const [vjFreeKg, setVjFreeKg] = useState(() => localStorage.getItem('ehi_vj_free_kg') || '23');
+  const [vjRatePerKg, setVjRatePerKg] = useState(() => localStorage.getItem('ehi_vj_rate_per_kg') || '1000');
+
+  const [pricing, setPricing] = useState(() => {
+    const saved = localStorage.getItem('ehi_setting_pricing');
+    return saved ? JSON.parse(saved) : [
+      { id: '1', route: 'LOS/Lagos - ABV/Abuja', bb: 18000, mb: 12000, sb: 7500 },
+      { id: '2', route: 'LOS/Lagos - PHC/Port Harcourt', bb: 22000, mb: 15000, sb: 9500 },
+      { id: '3', route: 'ABV/Abuja - LOS/Lagos', bb: 18000, mb: 12000, sb: 7500 },
+      { id: '4', route: 'PHC/Port Harcourt - LOS/Lagos', bb: 22000, mb: 15000, sb: 9500 },
+      { id: '5', route: 'LOS/Lagos - ENU/Enugu', bb: 19500, mb: 13000, sb: 8000 }
+    ];
+  });
+
+  const handleSaveVjSettings = () => {
+    localStorage.setItem('ehi_vj_free_kg', vjFreeKg);
+    localStorage.setItem('ehi_vj_rate_per_kg', vjRatePerKg);
+  };
+
+  const handlePriceUpdate = (id: string, field: 'bb'|'mb'|'sb', value: string) => {
+    const next = pricing.map((p: any) => p.id === id ? { ...p, [field]: Number(value) } : p);
+    setPricing(next);
+    localStorage.setItem('ehi_setting_pricing', JSON.stringify(next));
+  };
+
 
   // Fetch standard rates from Supabase
   useEffect(() => {
@@ -146,6 +172,90 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
         <div>
           <h2 className="text-[20px] font-sans font-bold text-[var(--color-foreground)] tracking-tight">Pricing Configuration</h2>
           <p className="text-[12px] font-mono text-[var(--color-muted)]">Manage standard retail rates and B2B negotiated tariffs</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 mb-6">
+        <div className="ehi-card p-4 space-y-4">
+          <div className="flex justify-between items-center">
+            <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
+              <Plane size={12} className="text-[var(--color-accent-amber)]" />
+              <span>VALUEJET CONFIGURATION</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">VJ FREE ALLOWANCE (KG)</label>
+              <input 
+                type="number"
+                value={vjFreeKg}
+                onChange={(e) => setVjFreeKg(e.target.value)}
+                className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-3 py-2 text-[12px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">VJ RATE ₦/KG</label>
+              <input 
+                type="number"
+                value={vjRatePerKg}
+                onChange={(e) => setVjRatePerKg(e.target.value)}
+                className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-3 py-2 text-[12px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+              />
+            </div>
+          </div>
+          <button 
+            onClick={handleSaveVjSettings}
+            className="w-full bg-[var(--color-accent-amber)] hover:bg-amber-600 text-black py-2 rounded-md text-[12px] font-bold transition-colors mt-2"
+          >
+            SAVE COMPANY SETTINGS
+          </button>
+        </div>
+      </div>
+
+      <div className="ehi-card p-4 space-y-4 mb-6">
+        <div className="flex justify-between items-center">
+          <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
+            <DollarSign size={12} className="text-[var(--color-accent-amber)]" />
+            <span>ROUTE PRICING MATRIX (STREAM 1)</span>
+          </div>
+          <span className="text-[8px] font-mono text-[var(--color-muted)] bg-black/40 px-1.5 py-0.5 rounded uppercase">BB/MB/SB ONLY</span>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {pricing.map((r: any) => (
+            <div key={r.id} className="p-3 bg-black/30 rounded border border-[rgba(255,255,255,0.04)] space-y-2">
+              <span className="text-[11px] font-bold text-[var(--color-foreground)] uppercase tracking-wide block">{r.route}</span>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">BB BAG (₦)</label>
+                  <input 
+                    type="number"
+                    value={r.bb}
+                    onChange={(e) => handlePriceUpdate(r.id, 'bb', e.target.value)}
+                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">MB BAG (₦)</label>
+                  <input 
+                    type="number"
+                    value={r.mb}
+                    onChange={(e) => handlePriceUpdate(r.id, 'mb', e.target.value)}
+                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">SB BAG (₦)</label>
+                  <input 
+                    type="number"
+                    value={r.sb}
+                    onChange={(e) => handlePriceUpdate(r.id, 'sb', e.target.value)}
+                    className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
