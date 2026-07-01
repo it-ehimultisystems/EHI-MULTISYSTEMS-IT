@@ -344,7 +344,7 @@ export const MarketingWorkspace = ({
               </button>
             </div>
           ) : (
-            <div className="space-y-4 bg-[rgba(255,255,255,0.02)] -mx-4 px-4 py-4 md:mx-0 md:rounded-xl md:border border-y border-[var(--color-border)]">
+            <div className="space-y-4 bg-[rgba(255,255,255,0.02)] p-4 md:mx-0 md:rounded-xl md:border border-y border-[var(--color-border)]">
               <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
                 <span
                   style={{

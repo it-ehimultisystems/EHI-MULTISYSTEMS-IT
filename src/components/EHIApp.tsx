@@ -609,7 +609,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         />
 
         <main
-          className="flex-1 overflow-y-auto"
+          className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ display: 'flex', flexDirection: 'column' }}
         >
           <div
@@ -673,7 +673,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         </main>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 w-full z-50 md:hidden block bg-[var(--color-nav-bg)] ehi-bottom-nav-wrapper">
+      <div className="fixed bottom-0 left-0 right-0 w-full z-50 md:hidden block bg-[var(--color-nav-bg)]">
         <BottomNav user={user} currentTab={currentTab} onChangeTab={setCurrentTab} />
       </div>
 
