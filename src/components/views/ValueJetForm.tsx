@@ -371,7 +371,12 @@ export const ValueJetForm = ({
                 placeholder={minAmount > 0 ? minAmount.toString() : "0"}
                 value={amountOverride !== "" ? amountOverride : (minAmount > 0 ? minAmount : "")}
                 onChange={(e) => setAmountOverride(e.target.value)}
-                className={`${formInputClass} font-mono font-bold ${amountOverride !== "" && parsedOverride < minAmount ? "text-[var(--color-error)]" : ""}`}
+                onBlur={() => {
+                  if (amountOverride !== "" && parsedOverride < minAmount) {
+                    setAmountOverride("");
+                  }
+                }}
+                className={`${formInputClass} font-mono font-bold ${amountOverride !== "" && parsedOverride < minAmount ? "text-[var(--color-error)] border-[var(--color-error)]" : ""}`}
               />
               {amountOverride !== "" && parsedOverride < minAmount && (
                 <span className="text-[10px] text-[var(--color-error)] absolute right-3 top-1/2 -translate-y-1/2">

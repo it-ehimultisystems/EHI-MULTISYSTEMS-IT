@@ -1254,9 +1254,17 @@ export const CargoForm = ({
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="ehi-input pl-12"
+                    onBlur={() => {
+                      if (parsedAmount < minAmount) {
+                        setAmount(minAmount.toString());
+                      }
+                    }}
+                    className={`ehi-input pl-12 ${parsedAmount < minAmount ? 'border-[var(--color-error)]' : ''}`}
                   />
                 </div>
+                {parsedAmount > 0 && parsedAmount < minAmount && (
+                  <div className="text-[10px] text-[var(--color-error)] mt-1">Amount cannot be less than ₦{minAmount.toLocaleString()}</div>
+                )}
               </div>
 
               <div>

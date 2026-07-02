@@ -43,14 +43,18 @@ export const TransactionLedger = ({
   onUpdateTx,
   defaultTypeFilter,
   viewOnly = false,
+  dateRange,
+  onDateRangeChange,
 }: {
   user: User;
   transactions: Transaction[];
   expenses?: Expense[];
   onBack: () => void;
   onUpdateTx: (tx: Transaction) => void;
-  defaultTypeFilter?: 'cargo' | 'baggage' | 'marketing';
+  defaultTypeFilter?: 'cargo' | 'baggage' | 'marketing' | null;
   viewOnly?: boolean;
+  dateRange?: { start: string; end: string };
+  onDateRangeChange?: (range: { start: string; end: string }) => void;
 }) => {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [viewingQrTx, setViewingQrTx] = useState<Entry | null>(null);
@@ -359,7 +363,24 @@ export const TransactionLedger = ({
           />
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          {dateRange && onDateRangeChange && (
+            <div className="flex items-center gap-2 ehi-card overflow-hidden h-10 px-2 font-mono text-[11px]">
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
+                className="bg-transparent text-white border-none focus:outline-none h-full"
+              />
+              <span className="text-[var(--color-muted)]">to</span>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
+                className="bg-transparent text-white border-none focus:outline-none h-full"
+              />
+            </div>
+          )}
           <div className="flex items-center ehi-card overflow-hidden h-10 px-2 font-mono text-[11px]">
             <Filter size={12} className="text-[var(--color-muted)] mx-2" />
             <select

@@ -492,6 +492,11 @@ export const MarketingWorkspace = ({
                       type="number"
                       value={amountOverride !== "" ? amountOverride : (minAmount > 0 ? minAmount : "")}
                       onChange={(e) => setAmountOverride(e.target.value)}
+                      onBlur={() => {
+                        if (amountOverride !== "" && parsedOverride < minAmount) {
+                          setAmountOverride("");
+                        }
+                      }}
                       placeholder={minAmount > 0 ? minAmount.toString() : "0"}
                       className={`w-24 bg-transparent border-none text-right text-[18px] font-bold font-mono p-0 focus:ring-0 ${totalAmount > 0 ? "text-[var(--color-success)]" : "text-[var(--color-muted)]"} ${amountOverride !== "" && parsedOverride < minAmount ? "text-[var(--color-error)]" : ""}`}
                       style={{ fontFamily: "JetBrains Mono" }}

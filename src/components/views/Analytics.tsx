@@ -387,45 +387,20 @@ export const Analytics = ({
     }
   }, [stats.cargoRev, stats.mktgRev, stats.vjRev, stats.topRoute, stats.debt, stats.cargoCount, stats.mktgCount]);
 
-  const handleDownloadCSV = () => {
+  const handleDownloadPDF = async () => {
     try {
       if (!periodFilteredTxs || periodFilteredTxs.length === 0) {
         alert("No transactions available to download for this period.");
         return;
       }
       
-      const headers = ['ID', 'Date', 'Type', 'Status', 'Amount', 'Payment Mode', 'Route/Detail', 'AWB/Tag'];
-      
-      const rows = periodFilteredTxs.map(t => {
-        let route = t.route || '';
-        let awb = t.awb_tag_number || '';
-        if (!route && t.detail) {
-          route = t.detail.split('·')[0]?.trim() || '';
-        }
-        return [
-          t.id || '',
-          t.created_at || new Date().toISOString(),
-          t.type || '',
-          t.status || '',
-          (t.amount || 0).toString(),
-          t.mode || '',
-          `"${route}"`,
-          `"${awb}"`
-        ].join(',');
+      const { downloadAnalyticsPDF } = await import('./AnalyticsPDF');
+      await downloadAnalyticsPDF({
+        period,
+        transactions: periodFilteredTxs,
       });
-      
-      const csvContent = [headers.join(','), ...rows].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `ehi_transactions_${period}_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err: any) {
-      alert("Error downloading CSV: " + err.message);
+      alert("Error downloading PDF: " + err.message);
     }
   };
 
@@ -454,9 +429,9 @@ export const Analytics = ({
           </div>
           
           <button 
-            onClick={handleDownloadCSV}
+            onClick={handleDownloadPDF}
             className="flex items-center justify-center bg-[var(--color-surface-1)] hover:bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[var(--color-border)] h-7 px-2 rounded transition-colors"
-            title="Download CSV"
+            title="Download PDF"
           >
             <Download size={14} className="text-[var(--color-accent-amber)]" />
           </button>

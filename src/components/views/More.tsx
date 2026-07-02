@@ -43,7 +43,7 @@ import {
 
 import { StaffManagement } from './StaffManagement';
 
-export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onChangeTab }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: () => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onChangeTab: (t: TabView) => void }) => {
+export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onChangeTab, dateRange, onDateRangeChange }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: () => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; }) => {
   const [eodView, setEodView] = useState(false);
   const [accountingView, setAccountingView] = useState(false);
   const [reportsView, setReportsView] = useState(false);
@@ -111,7 +111,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (ledgerView) {
-    return <TransactionLedger user={user} transactions={transactions} expenses={expenses} onBack={() => setLedgerView(false)} onUpdateTx={onFullUpdateTx || onAddTx} />;
+    return <TransactionLedger user={user} transactions={transactions} expenses={expenses} onBack={() => setLedgerView(false)} onUpdateTx={onFullUpdateTx || onAddTx} dateRange={dateRange} onDateRangeChange={onDateRangeChange} />;
   }
 
   if (auditLogView) {

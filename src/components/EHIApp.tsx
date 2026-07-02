@@ -29,6 +29,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   };
   const [currentTab, setCurrentTab] = useState<TabView>(getDefaultTab(user.role));
   const [streamLedger, setStreamLedger] = useState<'cargo' | 'baggage' | 'marketing' | null>(null);
+  const [globalDateRange, setGlobalDateRange] = useState({
+    start: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -96,12 +100,19 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         const addHubFilter = (q: any) =>
           (!isAdmin && user.hub_id) ? q.eq('hub_id', user.hub_id) : q;
 
-        const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+        const startDate = new Date(globalDateRange.start);
+        startDate.setHours(0,0,0,0);
+        const endDate = new Date(globalDateRange.end);
+        endDate.setHours(23,59,59,999);
+        
+        const startISO = startDate.toISOString();
+        const endISO = endDate.toISOString();
+
         const [cargoRes, vjRes, mktRes, expRes] = await Promise.all([
-          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name)').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('expenses').select('*').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }).limit(500))
+          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name)').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('expenses').select('*').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500))
         ]);
 
         if (cargoRes.error) console.error('Cargo fetch error:', cargoRes.error);
@@ -190,7 +201,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             logged_by: e.logged_by || undefined,
           }));
           setExpenses(prev => {
-            const combined = [...prev, ...fetchedExpenses];
+            const combined = [...fetchedExpenses];
             const unique = combined.filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
             return unique.sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime());
           });
@@ -199,11 +210,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         allTx.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
         
         setTransactions(prev => {
-          // Merge to prevent overwriting ones added locally before fetch completes
-          const combined = [...prev, ...allTx];
-          const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-          unique.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-          return unique.slice(0, 1000);
+          // Instead of merging unconditionally, we just set to what we fetched to respect the date filter.
+          // But we keep locally pending transactions.
+          const localOnly = pendingTxRef.current.filter(p => !allTx.some(t => t.id === p.id));
+          const combined = [...localOnly, ...allTx];
+          combined.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+          return combined.slice(0, 1000);
         });
       } catch (err) {
         console.error("Failed to fetch initial tx:", err);
@@ -211,7 +223,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     };
     
     fetchInitial();
-  }, [isOffline]);
+  }, [isOffline, globalDateRange, user.role, user.hub_id]);
 
   // Supabase real-time
   useEffect(() => {
@@ -663,6 +675,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                   onFullUpdateTx={handleUpdateTx}
                   onChangeTab={setCurrentTab}
                   onAddExpense={handleAddExpense}
+                  dateRange={globalDateRange}
+                  onDateRangeChange={setGlobalDateRange}
                   onEOD={() => {
                     showToast({ message: 'EOD Report Dispatched — Saved to Drive · Emailed to management', type: 'success' });
                   }}
@@ -687,6 +701,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             onUpdateTx={handleUpdateTx}
             defaultTypeFilter={streamLedger}
             viewOnly={user.role !== 'super_admin' && !user.can_edit_ledger}
+            dateRange={globalDateRange}
+            onDateRangeChange={setGlobalDateRange}
           />
         </div>
       )}
