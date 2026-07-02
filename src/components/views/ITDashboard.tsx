@@ -62,6 +62,37 @@ const PRE_PROPOSALS: ImprovementProposal[] = [
 
 export const ITDashboard = ({ user }: { user: User }) => {
   const [activeTab, setActiveTab] = useState<'bugs' | 'logs' | 'diagnostics' | 'proposals'>('bugs');
+  const [sentryTestState, setSentryTestState] = useState<'idle' | 'sending' | 'sent'>('idle');
+
+  const runSentryTest = async () => {
+    setSentryTestState('sending');
+    const { appLogger } = await import('../../lib/logger');
+    const Sentry = await import('@sentry/react');
+    const { supabase } = await import('../../lib/supabase');
+
+    // Three distinct, separately-labeled events — if only some show up in
+    // Sentry, that tells you exactly which path is misconfigured rather
+    // than a single ambiguous "did it work?" signal.
+    Sentry.captureException(new Error('[TEST] Direct client capture — safe to ignore, no action needed'));
+    appLogger.log('ERROR', 'SENTRY_TEST', '[TEST] appLogger bridge — safe to ignore, no action needed');
+
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token || '';
+      await fetch('/api/admin/test-sentry', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      // A non-2xx response here is the EXPECTED outcome (the route
+      // deliberately errors) — not a failure of this test.
+    } catch {
+      // Network-level failure reaching the route at all — the other two
+      // client-side events still went out regardless.
+    }
+
+    setSentryTestState('sent');
+    setTimeout(() => setSentryTestState('idle'), 8000);
+  };
   
   // States
   const [bugs, setBugs] = useState<BugLog[]>(() => {
@@ -710,12 +741,21 @@ export const ITDashboard = ({ user }: { user: User }) => {
               <div className="text-[11px] font-mono text-[var(--color-light-muted)]">SHELL: ehi-logistics-daemon v2.4.1 (active pings)</div>
             </div>
             
-            <button 
-              onClick={() => setLogs([])}
-              className="text-[10px] font-mono text-[var(--color-error)] hover:bg-red-500/10 border border-red-500/10 px-2 py-1 rounded"
-            >
-              CLEAR TERMINAL
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={runSentryTest}
+                disabled={sentryTestState === 'sending'}
+                className="text-[10px] font-mono text-[var(--color-accent-cobalt)] hover:bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded disabled:opacity-50"
+              >
+                {sentryTestState === 'sent' ? '✓ SENT — CHECK SENTRY' : sentryTestState === 'sending' ? 'SENDING...' : 'TEST SENTRY'}
+              </button>
+              <button 
+                onClick={() => setLogs([])}
+                className="text-[10px] font-mono text-[var(--color-error)] hover:bg-red-500/10 border border-red-500/10 px-2 py-1 rounded"
+              >
+                CLEAR TERMINAL
+              </button>
+            </div>
           </div>
 
           {/* Interactive Shell terminal window */}

@@ -1,16 +1,31 @@
 import 'dotenv/config';
 import express from 'express';
+import crypto from 'crypto';
+import * as Sentry from '@sentry/node';
 import paystackRoutes from './paystack.js';
 import notificationRoutes from './notifications.js';
 import eodRoutes from './eod.js';
 import geminiRoutes from './gemini.js';
 import { parseBankAlert } from './emailParser.js';
 
+// Same DSN as the client (VITE_SENTRY_DSN reads fine server-side too --
+// the VITE_ prefix only controls client bundling, same pattern already
+// used for VITE_SUPABASE_URL elsewhere in this file). Skipped entirely
+// if unset. No tracesSampleRate -- error capture only, deliberately,
+// same reasoning as the client-side init in main.tsx.
+if (process.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.VITE_SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'production',
+  });
+}
+
 // Distributed rate limiter — see supabase/migrations/20260702_rate_limiting.sql
 // for why this replaced the old in-memory Map version: on Vercel, concurrent
 // serverless invocations each get their own process memory, so an in-memory
 // counter doesn't actually enforce a shared limit. This checks a shared table
-// instead, using the same FOR UPDATE pattern as allocate_awb(). Costs a
+// instead via a single atomic INSERT ... ON CONFLICT DO UPDATE (see the
+// migration for why that replaced an earlier FOR UPDATE draft). Costs a
 // network round trip per check (~120ms, Supabase is EU West) — only wire
 // this onto low-frequency, deliberate actions, not hot-path UI calls.
 const rateLimiter = (name: string, maxReqs: number, windowMs: number) => {
@@ -53,6 +68,27 @@ const rateLimiter = (name: string, maxReqs: number, windowMs: number) => {
     }
   };
 };
+
+// Cryptographically random temp password for bulk-created accounts — CSV
+// input should never carry plaintext passwords, so one is generated per
+// row instead. Mixed character classes, 12 chars: comfortably clears any
+// reasonable password policy without producing something unreadable when
+// an admin has to relay it to a new hire over WhatsApp/SMS.
+function generateTempPassword(): string {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O — easy to misread when relayed by phone
+  const lower = 'abcdefghjkmnpqrstuvwxyz';
+  const digits = '23456789'; // no 0/1 — same reasoning
+  const all = upper + lower + digits;
+  const pick = (set: string) => set[crypto.randomInt(set.length)];
+  const chars = [pick(upper), pick(lower), pick(digits)];
+  for (let i = chars.length; i < 12; i++) chars.push(pick(all));
+  // Shuffle so the fixed-class characters aren't always in the same position
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
 
 async function requireAdminCaller(req: any, res: any): Promise<{ admin: any; supabaseUrl: string; serviceKey: string; callerRole: string; callerId: string } | null> {
   try {
@@ -177,6 +213,94 @@ export function createApp() {
     }
   });
 
+  app.post('/api/admin/create-staff-bulk', adminLimiter, async (req, res) => {
+    const adminCtx = await requireAdminCaller(req, res);
+    if (!adminCtx) return;
+    const { admin: adminClient } = adminCtx;
+
+    const { staff } = req.body;
+    if (!Array.isArray(staff) || staff.length === 0) {
+      return res.status(400).json({ error: 'Missing or empty staff array' });
+    }
+    // Chunk cap, not a total-import cap — the client sends multiple requests
+    // for a larger CSV. Keeps a single request comfortably inside a 60s
+    // Vercel function timeout even in the worst case (~50 sequential
+    // createUser + upsert pairs), rather than one giant request that risks
+    // FUNCTION_INVOCATION_TIMEOUT partway through with no partial results.
+    if (staff.length > 50) {
+      return res.status(400).json({ error: 'Max 50 rows per request — the client should chunk larger files' });
+    }
+
+    const { data: hubs } = await adminClient.from('hubs').select('id, code').eq('active', true);
+    const hubByCode = new Map((hubs || []).map((h: any) => [String(h.code).toUpperCase(), h.id]));
+
+    // super_admin is deliberately not a selectable role here, same reasoning
+    // as the update-staff fix: granting the top role should be a conscious
+    // one-at-a-time action, never something a CSV typo can do to N rows at once.
+    const VALID_ROLES = ['admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'accountant', 'auditor'];
+
+    const results: Array<{ row: number; email: string; success: boolean; tempPassword?: string; error?: string }> = [];
+
+    for (let i = 0; i < staff.length; i++) {
+      const row = staff[i] || {};
+      const rowNum = Number(row.row) || i + 1; // client passes original CSV row number for clean error reporting across chunks
+      const name = String(row.name || '').trim();
+      const email = String(row.email || '').trim().toLowerCase();
+      const role = String(row.role || '').trim();
+      const hubCode = String(row.hub_code || '').trim().toUpperCase();
+      const phone = String(row.phone || '').trim();
+
+      if (!name || !email || !role || !hubCode) {
+        results.push({ row: rowNum, email, success: false, error: 'Missing required field (need name, email, role, hub_code)' });
+        continue;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        results.push({ row: rowNum, email, success: false, error: 'Invalid email format' });
+        continue;
+      }
+      if (!VALID_ROLES.includes(role)) {
+        results.push({ row: rowNum, email, success: false, error: `Invalid role "${role}". Must be one of: ${VALID_ROLES.join(', ')}` });
+        continue;
+      }
+      const hub_id = hubByCode.get(hubCode);
+      if (!hub_id) {
+        results.push({ row: rowNum, email, success: false, error: `Unknown or inactive hub code "${hubCode}"` });
+        continue;
+      }
+
+      const tempPassword = generateTempPassword();
+
+      try {
+        const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+          email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: { name, role, hub_id },
+        });
+        if (authError || !authData.user) {
+          results.push({ row: rowNum, email, success: false, error: authError?.message || 'Failed to create auth user' });
+          continue;
+        }
+
+        const { error: profileError } = await adminClient
+          .from('user_profiles')
+          .upsert({ id: authData.user.id, email, name, role, hub_id, hub_type: row.hub_type || 'Cargo Station', phone: phone || null, active: true });
+
+        if (profileError) {
+          results.push({ row: rowNum, email, success: false, error: `Auth account created but profile failed: ${profileError.message}` });
+          continue;
+        }
+
+        results.push({ row: rowNum, email, success: true, tempPassword });
+      } catch (err: any) {
+        results.push({ row: rowNum, email, success: false, error: err.message || 'Unexpected error' });
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    return res.json({ results, successCount, failureCount: results.length - successCount });
+  });
+
   app.post('/api/admin/set-staff-active', adminLimiter, async (req, res) => {
     const adminCtx = await requireAdminCaller(req, res);
     if (!adminCtx) return;
@@ -229,6 +353,21 @@ export function createApp() {
     res.json({ status: 'ok' });
   });
 
+  // Deliberately errors so this flows through the real catch-all error
+  // handler below (the same path any actual forwarded server error takes)
+  // rather than calling Sentry.captureException directly, which would only
+  // prove the SDK loaded — not that the pipeline that matters actually
+  // works. Explicit next(err), not a bare throw: Express 4 (unlike 5) does
+  // not auto-forward a rejected async handler to error middleware, so a
+  // bare throw here would just hang the request instead of testing
+  // anything. A 500 response is the expected, correct outcome of calling
+  // this, not a bug.
+  app.post('/api/admin/test-sentry', adminLimiter, async (req, res, next) => {
+    const adminCtx = await requireAdminCaller(req, res);
+    if (!adminCtx) return;
+    next(new Error('[TEST] Manual Sentry verification from IT Debug panel — safe to ignore, no action needed'));
+  });
+
   app.post('/api/validate-payment/parse', (req, res) => {
     try {
       const { emailText } = req.body;
@@ -270,6 +409,7 @@ export function createApp() {
   // Express's raw, non-JSON default error response.
   app.use((err: any, req: any, res: any, next: any) => {
     console.error('Unhandled API error:', err);
+    Sentry.captureException(err);
     if (res.headersSent) return next(err);
     res.status(err.status || err.statusCode || 500).json({
       error: err.message || 'Unexpected server error',

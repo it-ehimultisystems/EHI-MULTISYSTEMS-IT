@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react';
+
 export type LogLevel = 'INFO' | 'DEBUG' | 'WARN' | 'ERROR' | 'FATAL';
 
 export interface AppLogMessage {
@@ -26,6 +28,15 @@ class Logger {
 
     this.logs = [newLog, ...this.logs].slice(0, 100);
     this.notify();
+
+    // This 100-entry buffer is per-tab and vanishes on refresh — it's a
+    // handy live view for whoever is looking at that device right now,
+    // but it was previously the ONLY record of errors anywhere. Mirror
+    // ERROR/FATAL to Sentry so a problem at a remote hub is actually
+    // visible without someone happening to have the IT Debug tab open.
+    if (level === 'ERROR' || level === 'FATAL') {
+      Sentry.captureMessage(`[${source}] ${text}`, level === 'FATAL' ? 'fatal' : 'error');
+    }
   }
 
   getLogs() {

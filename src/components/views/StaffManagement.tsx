@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft, Plus, RefreshCw, Search, Edit2, UserX, UserCheck,
-  MapPin, Phone, Mail, Loader, AlertTriangle, Check, Eye, EyeOff, Shield
+  MapPin, Phone, Mail, Loader, AlertTriangle, Check, Eye, EyeOff, Shield, Upload
 } from 'lucide-react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { createStaffAccount, updateStaffProfile } from '../../lib/auth';
+import { BulkStaffImport } from './BulkStaffImport';
 
 interface StaffMember {
   id: string;
@@ -61,6 +62,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
     hub_id: '', hub_type: 'Cargo Station', phone: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   const isSuperAdmin = user.role === 'super_admin';
   const isAdmin      = user.role === 'admin' || isSuperAdmin;
@@ -236,7 +238,21 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
             <Plus size={13} /> Add Staff
           </button>
         )}
+        {isAdmin && (
+          <button onClick={() => setShowBulkImport(true)}
+            className="flex items-center gap-1.5 ehi-card border border-[var(--color-border)] text-[var(--color-foreground)] text-[11px] font-bold px-3 py-2 rounded-lg hover:border-[var(--color-accent-amber)] transition-colors">
+            <Upload size={13} /> Bulk Import
+          </button>
+        )}
       </div>
+
+      {showBulkImport && (
+        <BulkStaffImport
+          hubCodes={hubs.map(h => h.code)}
+          onClose={() => setShowBulkImport(false)}
+          onImported={loadData}
+        />
+      )}
 
       {/* Stats row */}
       <div className="px-4 pb-3 flex gap-3 shrink-0">

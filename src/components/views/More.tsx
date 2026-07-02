@@ -38,7 +38,9 @@ import {
   Percent,
   Users,
   Plane,
-  CreditCard
+  CreditCard,
+  Terminal,
+  ChevronRight
 } from 'lucide-react';
 
 import { StaffManagement } from './StaffManagement';
@@ -157,237 +159,168 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   const MenuItem = ({
     icon: Icon,
     title,
-    subtitle,
     onClick,
     disabled = false,
   }: {
     icon: any;
     title: any;
-    subtitle: string;
+    subtitle?: string; // Kept in prop signature so existing usages don't error immediately, but we ignore it in render
     onClick: () => void;
     disabled?: boolean;
   }) => (
     <button
       onClick={onClick}
-      className={`w-full bg-[var(--color-surface-1)] transition-colors border border-[rgba(255,255,255,0.07)] rounded p-4 flex items-center space-x-3 ${
+      disabled={disabled}
+      className={`w-full bg-transparent flex items-center justify-between py-4 group transition-colors ${
         disabled
           ? 'opacity-40 cursor-not-allowed'
-          : 'hover:bg-[var(--color-surface-2)] hover:border-[var(--color-accent-amber)] cursor-pointer group'
+          : 'hover:bg-[rgba(255,255,255,0.03)] cursor-pointer'
       }`}
     >
-      <Icon size={18} strokeWidth={1.5} className="text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] transition-colors shrink-0" />
-      <div className="text-left flex-1">
-        <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)] group-hover:text-[var(--color-accent-amber)] transition-colors flex items-center gap-1.5">
+      <div className="flex items-center space-x-4">
+        <Icon size={20} strokeWidth={1.5} className="text-[#d8cdb4] group-hover:text-[var(--color-accent-amber)] transition-colors shrink-0" />
+        <div className="text-[15px] font-sans text-[var(--color-foreground)] transition-colors flex items-center gap-2">
           {title}
         </div>
-        <div className="text-[10px] font-mono text-[var(--color-muted)]">{subtitle}</div>
       </div>
+      <ChevronRight size={16} className="text-[var(--color-muted)] opacity-50 group-hover:opacity-100 transition-opacity" />
     </button>
   );
 
-  const SectionLabel = ({ label }: { label: string }) => (
-    <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.12em] uppercase pt-4 pb-1.5 px-1">
-      ▸ {label}
-    </div>
-  );
+  const SectionLabel = ({ label }: { label: string }) => null; // Hide sections completely
 
   return (
     <div className="p-4 pb-8 select-none">
-
-      {/* Daily Operations */}
-      <SectionLabel label="Daily Operations" />
-      <div className="space-y-2">
+      <div className="divide-y divide-[rgba(255,255,255,0.08)] px-2">
         <MenuItem
           icon={FileText}
           title="EOD Daily Close"
-          subtitle="Generate and dispatch end of day reports"
           onClick={() => setEodView(true)}
         />
         <MenuItem
           icon={Activity}
           title="Transaction Ledger"
-          subtitle={`${transactions.length} entries — view, search and export`}
           onClick={() => setLedgerView(true)}
         />
         {(user.role === 'super_admin' || user.role === 'admin') && (
           <MenuItem
             icon={Plane}
             title="ValueJet POS"
-            subtitle="Excess baggage counter — MMA2 terminal"
             onClick={() => onChangeTab('VJ POS')}
           />
         )}
-      </div>
-
-      {/* Finance */}
-      <SectionLabel label="Finance" />
-      <div className="space-y-2">
         <MenuItem
           icon={CreditCard}
           title="Credit & Debit"
-          subtitle="View receivables and payables (Airline commissions)"
           onClick={() => onChangeTab('Credit & Debit')}
           disabled={!canAccessAccounting}
         />
         <MenuItem
           icon={Layers}
-          title={
-            <span className="flex items-center gap-1.5">
-              Bank Reconciliation
-              <span className="text-[8px] font-mono bg-[var(--color-surface-2)] text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase transition-colors">CSV AUTO</span>
-            </span>
-          }
-          subtitle="Match bank deposits with system payment ledgers"
+          title="Bank Reconciliation"
           onClick={() => { if (canAccessRecon) setBankReconView(true); }}
           disabled={!canAccessRecon}
         />
         <MenuItem
-          icon={Activity}
-          title="Transaction Ledger"
-          subtitle={`${transactions.length} total records logged`}
-          onClick={() => { if (canAccessAccounting) setLedgerView(true); }}
-          disabled={!canAccessAccounting}
-        />
-        <MenuItem
           icon={Database}
           title="Central Accounting ERP"
-          subtitle="Check balance sheets and cash flows dashboard"
           onClick={() => { if (canAccessAccounting) setAccountingView(true); }}
           disabled={!canAccessAccounting}
         />
         <MenuItem
           icon={BarChart}
           title="Advanced Reports"
-          subtitle="Operational audits and trend sheets"
           onClick={() => { if (canAccessAccounting) setReportsView(true); }}
           disabled={!canAccessAccounting}
         />
         <MenuItem
           icon={Percent}
           title="Airline Commissions"
-          subtitle="Set percentage cuts for partner airlines"
           onClick={() => { if (canAccessAccounting) setAirlineCommissionsView(true); }}
           disabled={!canAccessAccounting}
         />
-      </div>
-
-      {/* Intelligence */}
-      <SectionLabel label="Intelligence" />
-      <div className="space-y-2">
         <MenuItem
           icon={Brain}
-          title={
-            <span className="flex items-center gap-1.5">
-              Demand Forecasting AI
-              <span className="text-[8px] font-mono bg-[var(--color-surface-2)] text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] px-1.5 py-0.5 rounded tracking-wide font-black uppercase transition-colors">Gemini Intel</span>
-            </span>
-          }
-          subtitle="Capacity heatmap and busy periods projections"
+          title="Demand Forecasting AI"
           onClick={() => { if (canAccessFleetAndForecast) setForecastingView(true); }}
           disabled={!canAccessFleetAndForecast}
         />
         <MenuItem
           icon={ShieldAlert}
-          title={
-            <span className="flex items-center gap-2">
-              Fraud &amp; Anomalies Feed
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-muted)] group-hover:bg-amber-400 opacity-75 transition-colors"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-muted)] group-hover:bg-amber-500 transition-colors"></span>
-              </span>
-            </span>
-          }
-          subtitle="Track sudden debt spikes and duplicated AWBs"
+          title="Fraud & Anomalies Feed"
           onClick={() => { if (canAccessFraud) setFraudAlertsView(true); }}
           disabled={!canAccessFraud}
         />
         <MenuItem
           icon={History}
           title="Revision Audit Log"
-          subtitle="Strict NDPR/Financial compliance trace log"
           onClick={() => { if (canAccessAuditLog) setAuditLogView(true); }}
           disabled={!canAccessAuditLog}
         />
-      </div>
-
-      {/* Fleet & Logistics */}
-      <SectionLabel label="Fleet & Logistics" />
-      <div className="space-y-2">
         <MenuItem
           icon={Truck}
           title="Fleet Management"
-          subtitle="Vehicles registration, service scheduler, fuel expense log"
           onClick={() => { if (canAccessFleetAndForecast) setFleetView(true); }}
           disabled={!canAccessFleetAndForecast}
         />
         <MenuItem
           icon={Shield}
           title="Proof of Delivery Log"
-          subtitle="GPS trace, signatures and photo evidence"
           onClick={() => { if (canAccessFraud) setPodLogView(true); }}
           disabled={!canAccessFraud}
         />
         <MenuItem
           icon={MapPin}
           title="Dispatch & Fleet Tracking"
-          subtitle="Live driver tracking on active routes"
           onClick={() => { if (canAccessFleetAndForecast) setDispatchView(true); }}
           disabled={!canAccessFleetAndForecast}
         />
-      </div>
-
-      {/* Administration */}
-      <SectionLabel label="Administration" />
-      <div className="space-y-2">
+        <MenuItem
+          icon={Terminal}
+          title="IT Debug Console"
+          onClick={() => onChangeTab('IT Debug')}
+          disabled={!isSuperAdmin}
+        />
         <MenuItem
           icon={Key}
           title="Partners API Keys & Webhooks"
-          subtitle="Key-hashes, scopes limit, and integration documentation"
           onClick={() => { if (isSuperAdmin) setApiDashboardView(true); }}
           disabled={!isSuperAdmin}
         />
         <MenuItem
           icon={DollarSign}
           title="Pricing & Rates Configuration"
-          subtitle="B2B client rates and retail standard tariffs"
           onClick={() => { if (isSuperAdmin) setPricingView(true); }}
           disabled={!isSuperAdmin}
         />
         <MenuItem
           icon={SettingsIcon}
           title="Platform Settings"
-          subtitle="Automation and route pricing configuration"
           onClick={() => { if (isSuperAdmin) setSettingsView(true); }}
           disabled={!isSuperAdmin}
         />
-      </div>
-
-      {/* Support & Account */}
-      <SectionLabel label="Support & Account" />
-      <div className="space-y-2">
         {(user.role === 'super_admin' || user.role === 'admin') && (
           <MenuItem
             icon={Users}
             title="Staff Management"
-            subtitle="Add staff, assign hubs, set roles, deactivate accounts"
             onClick={() => setStaffView(true)}
           />
         )}
         <MenuItem
           icon={ShieldAlert}
           title="Help Desk & Issue Resolution"
-          subtitle="Report operational complaints or bugs"
           onClick={() => setSupportView(true)}
         />
 
         <button
           onClick={onLogout}
-          className="w-full mt-1 bg-[var(--color-surface-1)] transition-colors border border-[rgba(255,255,255,0.07)] hover:bg-[rgba(239,68,68,0.1)] hover:border-[rgba(239,68,68,0.3)] rounded p-4 flex items-center space-x-3 cursor-pointer group"
+          className="w-full bg-transparent flex items-center justify-between py-4 group transition-colors hover:bg-[rgba(239,68,68,0.05)] cursor-pointer"
         >
-          <LogOut size={18} strokeWidth={1.5} className="text-[var(--color-muted)] group-hover:text-[var(--color-error)] transition-colors shrink-0" />
-          <div className="text-left flex-1">
-            <div className="text-[13px] font-bold font-sans text-[var(--color-foreground)] group-hover:text-[var(--color-error)] transition-colors">Sign Out</div>
-            <div className="text-[10px] font-mono text-[var(--color-muted)] opacity-80">{user.name} &middot; {user.hub}</div>
+          <div className="flex items-center space-x-4">
+            <LogOut size={20} strokeWidth={1.5} className="text-[#ef4444] transition-colors shrink-0" />
+            <div className="text-[15px] font-sans text-[#ef4444] transition-colors flex items-center gap-2">
+              Sign out
+            </div>
           </div>
         </button>
       </div>

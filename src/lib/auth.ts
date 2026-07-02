@@ -143,6 +143,58 @@ export async function createStaffAccount(payload: CreateStaffPayload): Promise<{
   return { id: data.id, email: data.email };
 }
 
+export interface BulkStaffRow {
+  row: number; // original CSV row number, kept through chunking for clean error reporting
+  name: string;
+  email: string;
+  role: string;
+  hub_code: string;
+  hub_type?: string;
+  phone?: string;
+}
+
+export interface BulkStaffResult {
+  row: number;
+  email: string;
+  success: boolean;
+  tempPassword?: string;
+  error?: string;
+}
+
+// Creates one chunk (max 50 rows) of staff accounts via the bulk endpoint.
+// Callers with larger CSVs should split into chunks and call this
+// repeatedly — see BulkStaffImport.tsx, which does this with a visible
+// progress bar rather than one long-running request.
+export async function createStaffAccountsBulk(rows: BulkStaffRow[]): Promise<{ results: BulkStaffResult[]; successCount: number; failureCount: number }> {
+  const { data: sess } = await supabase.auth.getSession();
+  const token = sess.session?.access_token || '';
+  const res = await fetch('/api/admin/create-staff-bulk', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ staff: rows }),
+  });
+
+  let data: any = {};
+  let rawText = '';
+  try {
+    rawText = await res.text();
+    if (rawText) data = JSON.parse(rawText);
+  } catch (e) {
+    // Not valid JSON — rawText still holds whatever the server actually sent.
+  }
+
+  if (!res.ok || data.error) {
+    const fallback = rawText
+      ? `Server returned status ${res.status}: ${rawText.slice(0, 200)}`
+      : `Server returned error status ${res.status} with an empty response`;
+    throw new Error(data.error || fallback);
+  }
+  return data;
+}
+
 // Fetches all staff (super_admin sees all, hub admin sees own hub)
 export async function fetchStaffList(hubId?: string): Promise<any[]> {
   let q = supabase

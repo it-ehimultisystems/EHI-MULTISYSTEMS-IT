@@ -272,7 +272,7 @@ export const ValueJetForm = ({
               import('./ValueJetLedgerPDF').then(({ downloadVJLedgerPDF }) => {
                 const todayStr = new Date().toISOString().split('T')[0];
                 const vjToday = transactions.filter(t => 
-                  (t.type === 'baggage' || t.stream === 'baggage') && 
+                  (t.type === 'baggage' || (t as any).stream === 'baggage') && 
                   t.created_at?.startsWith(todayStr)
                 );
                 vjToday.sort((a, b) => (a.flight || '').localeCompare(b.flight || ''));
