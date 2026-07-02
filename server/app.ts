@@ -6,21 +6,45 @@ import eodRoutes from './eod.js';
 import geminiRoutes from './gemini.js';
 import { parseBankAlert } from './emailParser.js';
 
-const rateLimiter = (maxReqs: number, windowMs: number) => {
-  const store = new Map<string, { count: number; resetAt: number }>();
-  return (req: any, res: any, next: any) => {
+// Distributed rate limiter — see supabase/migrations/20260702_rate_limiting.sql
+// for why this replaced the old in-memory Map version: on Vercel, concurrent
+// serverless invocations each get their own process memory, so an in-memory
+// counter doesn't actually enforce a shared limit. This checks a shared table
+// instead, using the same FOR UPDATE pattern as allocate_awb(). Costs a
+// network round trip per check (~120ms, Supabase is EU West) — only wire
+// this onto low-frequency, deliberate actions, not hot-path UI calls.
+const rateLimiter = (name: string, maxReqs: number, windowMs: number) => {
+  return async (req: any, res: any, next: any) => {
     try {
-      const key = req.ip || 'unknown';
-      const now = Date.now();
-      const entry = store.get(key);
-      if (!entry || now > entry.resetAt) {
-        store.set(key, { count: 1, resetAt: now + windowMs });
+      const supabaseUrl = process.env.VITE_SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseUrl || !serviceKey) {
+        // Not configured — fail open, same philosophy as before.
         return next();
       }
-      if (entry.count >= maxReqs) {
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const admin = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+
+      const ip = req.ip || 'unknown';
+      const key = `${name}:${ip}`;
+
+      const { data: allowed, error } = await admin.rpc('check_rate_limit', {
+        p_key: key,
+        p_max: maxReqs,
+        p_window_ms: windowMs,
+      });
+
+      if (error) {
+        // Fail open — a broken rate limiter should never block a legitimate request
+        console.error('Rate limiter check failed (failing open):', error);
+        return next();
+      }
+
+      if (allowed === false) {
         return res.status(429).json({ error: 'Too many requests' });
       }
-      entry.count++;
+
       next();
     } catch (err) {
       // Fail open — a broken rate limiter should never block a legitimate request
@@ -30,7 +54,7 @@ const rateLimiter = (maxReqs: number, windowMs: number) => {
   };
 };
 
-async function requireAdminCaller(req: any, res: any): Promise<{ admin: any; supabaseUrl: string; serviceKey: string } | null> {
+async function requireAdminCaller(req: any, res: any): Promise<{ admin: any; supabaseUrl: string; serviceKey: string; callerRole: string; callerId: string } | null> {
   try {
     const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
     if (!token) { res.status(401).json({ error: 'Unauthorized' }); return null; }
@@ -54,13 +78,34 @@ async function requireAdminCaller(req: any, res: any): Promise<{ admin: any; sup
     if (!profile || !['super_admin', 'admin'].includes(profile.role)) {
       res.status(403).json({ error: 'Forbidden' }); return null;
     }
-    return { admin, supabaseUrl, serviceKey };
+    return { admin, supabaseUrl, serviceKey, callerRole: profile.role, callerId: user.id };
   } catch (err: any) {
     console.error('requireAdminCaller error:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Auth check failed: ' + (err?.message || 'unknown error') });
     }
     return null;
+  }
+}
+
+async function requireAuthenticatedUser(req: any, res: any, next: any) {
+  try {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !anonKey) { res.status(503).json({ error: 'Supabase not configured on server' }); return; }
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const client = createClient(supabaseUrl, anonKey);
+    const { data: { user }, error } = await client.auth.getUser(token);
+    if (error || !user) { res.status(401).json({ error: 'Invalid session' }); return; }
+
+    next();
+  } catch (err: any) {
+    console.error('requireAuthenticatedUser error:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Auth check failed' });
   }
 }
 
@@ -77,8 +122,8 @@ export function createApp() {
     next();
   });
 
-  const notifyLimiter = rateLimiter(30, 60_000);
-  const adminLimiter = rateLimiter(10, 60_000);
+  const notifyLimiter = rateLimiter('notify', 30, 60_000);
+  const adminLimiter = rateLimiter('admin', 10, 60_000);
 
   app.get('/api/config', (req, res) => {
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -93,7 +138,7 @@ export function createApp() {
   app.use('/api/paystack', paystackRoutes);
   app.use('/api/notify', notifyLimiter, notificationRoutes);
   app.use('/api/eod', eodRoutes);
-  app.use('/api/gemini', geminiRoutes);
+  app.use('/api/gemini', notifyLimiter, requireAuthenticatedUser, geminiRoutes);
 
   app.post('/api/admin/create-staff', adminLimiter, async (req, res) => {
     const adminCtx = await requireAdminCaller(req, res);
@@ -162,6 +207,14 @@ export function createApp() {
 
     const { userId, updates } = req.body;
     if (!userId || !updates) return res.status(400).json({ error: 'Missing userId or updates' });
+
+    // Only an existing super_admin may grant super_admin to someone else.
+    // Without this check, any admin (the next tier down, which already has
+    // Staff Management access) could self-escalate or promote an arbitrary
+    // account to super_admin via this generic update path.
+    if (updates.role === 'super_admin' && adminCtx.callerRole !== 'super_admin') {
+      return res.status(403).json({ error: 'Only a super_admin can grant the super_admin role.' });
+    }
 
     try {
       const { error } = await adminClient.from('user_profiles').update(updates).eq('id', userId);

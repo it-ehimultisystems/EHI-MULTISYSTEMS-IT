@@ -122,7 +122,8 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
               <div className="text-[13px] font-sans text-gray-600 mt-1">Account Type: Corporate</div>
             </div>
 
-            <table className="w-full text-left font-sans mb-8">
+            <div className="overflow-x-auto">
+            <table className="w-full text-left font-sans mb-8 min-w-[500px]">
               <thead>
                 <tr className="border-b-2 border-gray-800">
                   <th className="py-2 text-[12px] font-bold text-gray-800">Date</th>
@@ -149,6 +150,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                 </tr>
               </tbody>
             </table>
+            </div>
 
             <div className="flex justify-end mb-12">
               <div className="w-[300px]">

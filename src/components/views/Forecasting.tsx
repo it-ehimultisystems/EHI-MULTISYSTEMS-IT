@@ -110,9 +110,11 @@ export const Forecasting = ({
   const handleGenerateForecast = async () => {
     setLoading(true);
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token || '';
       const response = await fetch('/api/gemini/report-narrative', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           reportType: '7-Day Demand Forecasting and Operations Split',
           reportData: {

@@ -29,10 +29,8 @@ export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => voi
   useEffect(() => {
     async function fetchTickets() {
       setIsLoading(true);
-      const query = supabase.from('support_tickets').select('*');
-      if (!canManage) {
-        query.eq('user_id', user.id);
-      }
+      const baseQuery = supabase.from('support_tickets').select('*');
+      const query = canManage ? baseQuery : baseQuery.eq('user_id', user.id);
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (!error && data) {

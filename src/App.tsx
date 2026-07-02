@@ -19,9 +19,12 @@ const PublicTrackingPage = () => {
     setSearched(true);
     
     // Check Cargo Entries
+    // NOTE: explicit column list, not select('*') — this page is public and
+    // unauthenticated, so only the fields actually shown below should ever
+    // leave the server. amount/receipt_mode/bank/entered_by etc. must stay out.
     const { data: cargo } = await supabase
       .from('cargo_entries')
-      .select('*')
+      .select('entry_ref, awb_tag_number, consignee_name, route, content_type, total_kg, total_pcs, status')
       .or(`entry_ref.eq."${query}",awb_tag_number.eq."${query}"`)
       .limit(1);
 
@@ -44,7 +47,7 @@ const PublicTrackingPage = () => {
     // Check Marketing Entries
     const { data: marketing } = await supabase
       .from('marketing_entries')
-      .select('*')
+      .select('entry_ref, customer_name, route, status')
       .eq('entry_ref', query)
       .limit(1);
     
@@ -63,7 +66,7 @@ const PublicTrackingPage = () => {
     // Check Manifests (ValueJet)
     const { data: manifest } = await supabase
       .from('manifests')
-      .select('*')
+      .select('transaction_id, passenger_name, destination, excess_kg, total_kg, total_pcs, status')
       .eq('transaction_id', query)
       .limit(1);
 

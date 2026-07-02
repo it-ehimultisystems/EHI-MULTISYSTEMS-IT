@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Upload, CheckCircle2, AlertCircle, RefreshCw, Layers, DollarSign, FileSpreadsheet, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { fmt } from '../../lib/helpers';
 import { Transaction } from '../../lib/types';
+import { supabase } from '../../lib/supabase';
 
 export type BankFormat = 'UBA' | 'GTBank' | 'Access' | 'Zenith' | 'FirstBank';
 
@@ -159,9 +160,11 @@ export const BankReconciliation = ({
       reader.onload = async () => {
         try {
           const base64Data = (reader.result as string).split(',')[1];
+          const { data: sess } = await supabase.auth.getSession();
+          const token = sess.session?.access_token || '';
           const res = await fetch('/api/gemini/parse-pdf', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ pdfBase64: base64Data })
           });
           

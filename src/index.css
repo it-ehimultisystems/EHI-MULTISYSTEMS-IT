@@ -513,6 +513,17 @@ button:active:not(:disabled) {
     max-width: 100% !important;
     padding-bottom: calc(62px + env(safe-area-inset-bottom)) !important;
   }
+
+  /* iOS Safari zooms the whole page in on focus for any input/select/
+     textarea rendered under 16px. Several forms already set text-[16px]
+     explicitly, but that's per-element discipline across dozens of files —
+     this is the safety net for everything that doesn't. Mobile-only so
+     desktop's intentionally-denser admin/filter inputs are untouched. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 main {
@@ -524,6 +535,15 @@ main {
 @media (min-width: 768px) {
   .ehi-sidenav {
     display: flex !important;
+  }
+  .ehi-bottomnav-wrapper {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .ehi-bottomnav-wrapper {
+    display: block;
   }
 }
 

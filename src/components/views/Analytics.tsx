@@ -353,9 +353,11 @@ export const Analytics = ({
     setLoadingInsights(true);
     setInsightError(null);
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token || '';
       const response = await fetch('/api/gemini/insights', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           cargoRevenue: stats.cargoRev,
           marketingRevenue: stats.mktgRev,
