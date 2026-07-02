@@ -11,10 +11,12 @@ export const ValueJetForm = ({
   onAddTx,
   user,
   onShowHistory,
+  transactions = [],
 }: {
   onAddTx: (tx: Transaction) => void;
   user: User;
   onShowHistory?: () => void;
+  transactions?: Transaction[];
 }) => {
   const [name, setName] = useState('');
   const [pnr, setPnr]   = useState('');
@@ -264,14 +266,37 @@ export const ValueJetForm = ({
         <span style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 700, color: 'var(--color-accent-cobalt)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           ▸ VALUEJET EXCESS BAGGAGE TICKETING
         </span>
-        {onShowHistory && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={onShowHistory}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-cobalt)] hover:border-[var(--color-accent-cobalt)] transition-colors"
+            onClick={() => {
+              import('./ValueJetLedgerPDF').then(({ downloadVJLedgerPDF }) => {
+                const todayStr = new Date().toISOString().split('T')[0];
+                const vjToday = transactions.filter(t => 
+                  (t.type === 'baggage' || t.stream === 'baggage') && 
+                  t.created_at?.startsWith(todayStr)
+                );
+                vjToday.sort((a, b) => (a.flight || '').localeCompare(b.flight || ''));
+                downloadVJLedgerPDF({
+                  date: new Date().toLocaleDateString('en-GB'),
+                  hubName: user.hub || 'EHI Hub',
+                  transactions: vjToday,
+                  filters: { flight: '', destination: '' }
+                });
+              });
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)] transition-colors cursor-pointer"
           >
-            <ClipboardList size={14} /> <span>History</span>
+            <Printer size={14} /> <span>Daily PDF</span>
           </button>
-        )}
+          {onShowHistory && (
+            <button
+              onClick={onShowHistory}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-cobalt)] hover:border-[var(--color-accent-cobalt)] transition-colors cursor-pointer"
+            >
+              <ClipboardList size={14} /> <span>History</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">

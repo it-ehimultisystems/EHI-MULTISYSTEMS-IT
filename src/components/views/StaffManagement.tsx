@@ -241,10 +241,10 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       {/* Stats row */}
       <div className="px-4 pb-3 flex gap-3 shrink-0">
         {[
-          { label: 'Total Staff', value: staff.length },
-          { label: 'Active',      value: staff.filter(s => s.active).length, color: 'var(--color-success)' },
-          { label: 'Inactive',    value: staff.filter(s => !s.active).length, color: 'var(--color-error)' },
-          { label: 'Hubs',        value: new Set(staff.map(s => s.hub_id)).size, color: 'var(--color-accent-cobalt)' },
+          { label: 'Total Staff', value: filtered.length },
+          { label: 'Active',      value: filtered.filter(s => s.active).length, color: 'var(--color-success)' },
+          { label: 'Inactive',    value: filtered.filter(s => !s.active).length, color: 'var(--color-error)' },
+          { label: 'Hubs',        value: new Set(filtered.map(s => s.hub_id)).size, color: 'var(--color-accent-cobalt)' },
         ].map(({ label, value, color }) => (
           <div key={label} className="flex-1 ehi-card p-3 rounded-xl">
             <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase">{label}</div>

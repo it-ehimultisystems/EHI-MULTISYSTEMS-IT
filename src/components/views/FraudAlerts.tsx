@@ -280,7 +280,7 @@ export const FraudAlerts = ({
               {!alert.reviewed && (
                 <button 
                   onClick={() => setSelectedAlert(alert)}
-                  className="bg-neutral-800 hover:bg-neutral-700 text-slate-300 hover:text-[var(--color-foreground)] font-mono text-[9px] uppercase font-bold px-3 py-2 rounded flex items-center space-x-1 cursor-pointer self-start sm:self-center"
+                  className="bg-[var(--color-surface-3)] hover:bg-[var(--color-surface-4)] text-[var(--color-foreground)] font-mono text-[9px] uppercase font-bold px-3 py-2 rounded flex items-center space-x-1 cursor-pointer self-start sm:self-center"
                 >
                   <Eye size={12} />
                   <span>Log Resolution</span>
@@ -295,26 +295,26 @@ export const FraudAlerts = ({
       {selectedAlert && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-55">
           <div className="ehi-card max-w-sm w-full overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex justify-between items-center bg-black/40">
+            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface-2)]">
               <span className="text-[9px] font-mono text-[var(--color-error)] uppercase font-bold tracking-wider">SECURE SECURITY ANOMALY EVALUATION</span>
-              <button onClick={() => setSelectedAlert(null)} className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
+              <button onClick={() => setSelectedAlert(null)} className="text-[var(--color-muted)] hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
             </div>
 
             <form onSubmit={handleReviewAlert} className="p-4 space-y-4 font-mono text-xs">
               <div className="space-y-1">
-                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block">Anomaly Threat description:</span>
-                <p className="text-slate-300 leading-relaxed bg-black/20 p-2.5 rounded border border-solid border-[var(--color-border)] text-[11px]">{selectedAlert.description}</p>
+                <span className="text-[8px] font-bold text-[var(--color-muted)] uppercase tracking-widest block">Anomaly Threat description:</span>
+                <p className="text-[var(--color-foreground)] leading-relaxed bg-[var(--color-surface-2)] p-2.5 rounded border border-solid border-[var(--color-border)] text-[11px]">{selectedAlert.description}</p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block">RESOLUTION LOG DESCRIPTION</label>
+                <label className="text-[8px] font-bold text-[var(--color-muted)] uppercase tracking-widest block">RESOLUTION LOG DESCRIPTION</label>
                 <textarea 
                   required
                   rows={3}
                   value={resolutionText}
                   onChange={(e) => setResolutionText(e.target.value)}
                   placeholder="e.g. Cleared. Confirmed corresponding bank deposit statement matches duplicated tags series."
-                  className="w-full bg-[var(--color-obsidian)] border border-[var(--color-border-strong)] p-2 rounded text-[11px] font-mono text-[var(--color-foreground)] placeholder-slate-600 focus:outline-none focus:border-[var(--color-error)]"
+                  className="w-full bg-[var(--color-surface-3)] border border-[var(--color-border-strong)] p-2 rounded text-[11px] font-mono text-[var(--color-foreground)] placeholder-[var(--color-muted)] focus:outline-none focus:border-[var(--color-error)]"
                 />
               </div>
 
@@ -328,7 +328,7 @@ export const FraudAlerts = ({
                 <button 
                   type="button"
                   onClick={() => setSelectedAlert(null)}
-                  className="bg-neutral-800 text-slate-300 font-mono text-[10px] uppercase font-bold px-4 rounded hover:bg-neutral-700 cursor-pointer"
+                  className="bg-[var(--color-surface-2)] text-[var(--color-foreground)] font-mono text-[10px] uppercase font-bold px-4 rounded hover:bg-[var(--color-surface-3)] cursor-pointer"
                 >
                   Cancel
                 </button>

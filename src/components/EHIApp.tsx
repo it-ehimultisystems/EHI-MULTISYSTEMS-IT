@@ -42,6 +42,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   const { theme, toggle } = useTheme();
 
   const pendingTxRef = useRef<Transaction[]>([]);
+  const pendingExpenseRef = useRef<Expense[]>([]);
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transactionsRef = useRef<Transaction[]>([]);
 
@@ -201,7 +202,15 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             logged_by: e.logged_by || undefined,
           }));
           setExpenses(prev => {
-            const combined = [...fetchedExpenses];
+            // Same reasoning as the transactions merge below: a date-range
+            // change can refire this fetch before an optimistically-added
+            // expense (handleAddExpense) has actually landed in Supabase.
+            // Without this, that expense would silently vanish from the UI.
+            const stillPending = pendingExpenseRef.current.filter(
+              p => !fetchedExpenses.some((f: any) => f.id === p.id)
+            );
+            pendingExpenseRef.current = stillPending;
+            const combined = [...stillPending, ...fetchedExpenses];
             const unique = combined.filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
             return unique.sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime());
           });
@@ -233,6 +242,17 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     // Postgres changes filter — non-admins only receive their own hub's rows
     const hubFilter = (!isAdmin && user.hub_id) ? `hub_id=eq.${user.hub_id}` : undefined;
 
+    // Only open the channels this role actually has a use for. Every user
+    // was previously opening all 3 channels regardless of role, which at
+    // scale (Supabase Pro includes 500 concurrent Realtime connections)
+    // means a driver or single-stream agent spends 3 connections for data
+    // Dashboard.tsx's own showCargo/showVJ/showMktg logic already hides
+    // from them. Mirrors that exact same gating so nobody's visible data
+    // changes — this only removes waste, not functionality.
+    const needsCargo = isAdmin || user.role === 'cargo_agent';
+    const needsVJ = isAdmin || user.role === 'vj_agent';
+    const needsMarketing = isAdmin || user.role === 'marketing_agent';
+
     // Guard against pushing a row that already exists locally (e.g. our own insert)
     const pushUnique = (tx: Transaction) => {
       const exists =
@@ -244,7 +264,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       flushTimerRef.current = setTimeout(flushPendingTx, 300);
     };
 
-    const cargoChannel = supabase
+    const cargoChannel = needsCargo ? supabase
       .channel('ehi-cargo-live')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'cargo_entries', filter: hubFilter },
@@ -284,9 +304,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           ));
         }
       )
-      .subscribe();
+      .subscribe() : null;
 
-    const vjChannel = supabase
+    const vjChannel = needsVJ ? supabase
       .channel('ehi-vj-live')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'manifests', filter: hubFilter },
@@ -325,9 +345,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           ));
         }
       )
-      .subscribe();
+      .subscribe() : null;
 
-    const marketingChannel = supabase
+    const marketingChannel = needsMarketing ? supabase
       .channel('ehi-marketing-live')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'marketing_entries', filter: hubFilter },
@@ -362,12 +382,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           ));
         }
       )
-      .subscribe();
+      .subscribe() : null;
 
     return () => {
-      supabase.removeChannel(cargoChannel);
-      supabase.removeChannel(vjChannel);
-      supabase.removeChannel(marketingChannel);
+      if (cargoChannel) supabase.removeChannel(cargoChannel);
+      if (vjChannel) supabase.removeChannel(vjChannel);
+      if (marketingChannel) supabase.removeChannel(marketingChannel);
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     };
   }, [isOffline, flushPendingTx, user.hub_id, user.role]);
@@ -543,6 +563,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
   const handleAddExpense = useCallback(async (expense: Expense) => {
     setExpenses(prev => [expense, ...prev]);
+    pendingExpenseRef.current.push(expense);
     const today = new Date().toISOString().split('T')[0];
     // expense.time may be "14:30" (no date) — only use it as a date if it looks like one
     const parsedDate = /^\d{4}-\d{2}-\d{2}/.test(expense.time) ? expense.time.split(' ')[0] : today;

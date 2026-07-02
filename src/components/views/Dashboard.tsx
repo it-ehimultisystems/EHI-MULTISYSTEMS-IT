@@ -112,7 +112,7 @@ const TxRow = React.memo(
             {onQrClick && (
               <button
                 onClick={() => onQrClick(t)}
-                style={{ background: 'rgba(255,255,255,0.07)', border: 'none', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                style={{ background: 'var(--color-surface-3)', border: 'none', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
                 title="View QR Code"
               >
                 <QrCode size={13} color="var(--color-muted)" />
@@ -333,13 +333,13 @@ export const Dashboard = React.memo(
         )}
 
         {/* Live Feed Header */}
-        <div className="border-b border-[rgba(255,255,255,0.07)] pb-2 flex items-center justify-between shrink-0">
+        <div className="border-b border-[var(--color-border)] pb-2 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-sans font-semibold text-[var(--color-foreground)]">
               Today's Activity
             </span>
             {allVisibleTx.length > 0 && (
-              <span className="text-[10px] font-mono text-[var(--color-muted)] bg-[rgba(255,255,255,0.06)] px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-mono text-[var(--color-muted)] bg-[var(--color-surface-3)] px-2 py-0.5 rounded-full">
                 {allVisibleTx.length} {allVisibleTx.length === 1 ? 'entry' : 'entries'}
               </span>
             )}

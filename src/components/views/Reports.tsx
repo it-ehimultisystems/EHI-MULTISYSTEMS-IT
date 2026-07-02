@@ -331,22 +331,16 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
             <button
               key={r.id}
               onClick={() => setSelectedReport(r.id)}
-              className="ehi-card text-left p-4 flex items-start gap-3"
-              style={{ background: 'var(--color-surface-card)' }}
+              className="ehi-card text-left p-4 flex items-start gap-3 bg-[var(--color-surface-card)] hover:bg-[var(--color-surface-2)] transition-colors cursor-pointer"
             >
-              <div style={{
-                width: 36, height: 36, borderRadius: 'var(--radius-sm)',
-                background: 'rgba(245,158,11,0.12)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <FileText size={16} style={{ color: 'var(--color-accent-amber)' }} />
+              <div className="w-9 h-9 rounded-[var(--radius-sm)] bg-[rgba(245,158,11,0.12)] flex items-center justify-center shrink-0">
+                <FileText size={16} className="text-[var(--color-accent-amber)]" />
               </div>
               <div className="flex-1">
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-foreground)' }}>{r.label}</div>
-                <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 2 }}>{r.desc}</div>
+                <div className="text-[14px] font-bold text-[var(--color-foreground)]">{r.label}</div>
+                <div className="text-[11px] text-[var(--color-muted)] mt-0.5">{r.desc}</div>
               </div>
-              <ChevronRight size={16} style={{ color: 'var(--color-muted)' }} />
+              <ChevronRight size={16} className="text-[var(--color-muted)] mt-1" />
             </button>
           ))}
         </div>
@@ -355,7 +349,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
         <div className="space-y-4">
           <button
             onClick={() => setSelectedReport(null)}
-            style={{ fontSize: 11, color: 'var(--color-muted)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+            className="text-[11px] text-[var(--color-muted)] bg-transparent border-none cursor-pointer hover:text-[var(--color-foreground)] transition-colors"
           >
             ← Back to reports
           </button>
@@ -363,7 +357,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
           {/* Date range selector */}
           <div className="ehi-card space-y-3">
             <div className="flex items-center gap-2">
-              <Calendar size={13} style={{ color: 'var(--color-accent-amber)' }} />
+              <Calendar size={13} className="text-[var(--color-accent-amber)]" />
               <span className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-accent-amber)] font-bold">Date Range</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -371,16 +365,11 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
                 <button
                   key={p.id}
                   onClick={() => setPreset(p.id)}
-                  style={{
-                    padding: '8px 12px',
-                    fontSize: 11, fontFamily: 'monospace',
-                    background: preset === p.id ? 'var(--color-accent-amber)' : 'var(--color-surface-2)',
-                    color: preset === p.id ? '#0D1117' : 'var(--color-muted)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontWeight: preset === p.id ? 700 : 500,
-                    cursor: 'pointer',
-                  }}
+                  className={`px-3 py-2 text-[11px] font-mono border rounded-[var(--radius-sm)] transition-colors cursor-pointer ${
+                    preset === p.id 
+                      ? 'bg-[var(--color-foreground)] text-[var(--color-background)] border-[var(--color-foreground)] font-bold' 
+                      : 'bg-[var(--color-surface-2)] text-[var(--color-muted)] border-[var(--color-border)] font-medium hover:bg-[var(--color-surface-3)] hover:text-[var(--color-foreground)]'
+                  }`}
                 >
                   {p.label}
                 </button>
@@ -418,28 +407,21 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
 
           {/* Export buttons */}
           <div className="flex gap-2">
-            <button onClick={exportToExcel}
-              style={{
-                flex: 1, padding: '12px',
-                background: 'transparent',
-                border: '1px solid var(--color-success)',
-                color: 'var(--color-success)',
-                borderRadius: 'var(--radius-md)',
-                fontWeight: 700, fontSize: 12, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}>
+            <button 
+              onClick={exportToExcel}
+              className="flex-1 p-3 bg-transparent border border-[var(--color-success)] text-[var(--color-success)] rounded-[var(--radius-md)] font-bold text-[12px] cursor-pointer flex items-center justify-center gap-1.5 hover:bg-[rgba(16,185,129,0.1)] transition-colors"
+            >
               <Download size={14} /> EXCEL
             </button>
-            <button onClick={exportToPdf} disabled={generating}
+            <button 
+              onClick={exportToPdf} 
+              disabled={generating}
+              className={`flex-[2] p-3 rounded-[var(--radius-md)] font-extrabold text-[13px] cursor-pointer flex items-center justify-center gap-2 transition-opacity ${generating ? 'opacity-60' : 'opacity-100 hover:opacity-90'}`}
               style={{
-                flex: 2, padding: '12px',
                 background: 'linear-gradient(135deg, var(--color-accent-amber) 0%, #C87900 100%)',
                 color: '#0D1117', border: 'none',
-                borderRadius: 'var(--radius-md)',
-                fontWeight: 800, fontSize: 13, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                opacity: generating ? 0.6 : 1,
-              }}>
+              }}
+            >
               {generating ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
               {generating ? 'GENERATING...' : 'DOWNLOAD PDF'}
             </button>
@@ -456,29 +438,29 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
 const RevenueReportView = ({ data }: { data: any }) => (
   <div className="space-y-4">
     <div>
-      <div style={{ fontSize: 10, color: 'var(--color-muted)', marginBottom: 6, textTransform: 'uppercase' }}>By Stream</div>
+      <div className="text-[10px] text-[var(--color-muted)] mb-1.5 uppercase font-bold tracking-wider">By Stream</div>
       {data.streams.map((s: any) => (
-        <div key={s.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
-          <span style={{ fontSize: 12, color: 'var(--color-foreground)' }}>{s.name}</span>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-foreground)' }}>{fmt(s.amount)}</div>
-            <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>{s.count} entries</div>
+        <div key={s.name} className="flex justify-between py-2 border-b border-[var(--color-border)]">
+          <span className="text-[12px] text-[var(--color-foreground)] font-medium">{s.name}</span>
+          <div className="text-right">
+            <div className="text-[13px] font-mono font-bold text-[var(--color-foreground)]">{fmt(s.amount)}</div>
+            <div className="text-[10px] text-[var(--color-muted)]">{s.count} entries</div>
           </div>
         </div>
       ))}
     </div>
     <div>
-      <div style={{ fontSize: 10, color: 'var(--color-muted)', marginBottom: 6, textTransform: 'uppercase' }}>By Payment Mode</div>
+      <div className="text-[10px] text-[var(--color-muted)] mb-1.5 uppercase font-bold tracking-wider">By Payment Mode</div>
       {data.modes.map((m: any) => (
-        <div key={m.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-          <span style={{ fontSize: 12 }}>{m.name}</span>
-          <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700 }}>{fmt(m.amount)}</span>
+        <div key={m.name} className="flex justify-between py-1.5 border-b border-[var(--color-border)] border-dashed last:border-0">
+          <span className="text-[12px] text-[var(--color-foreground)]">{m.name}</span>
+          <span className="text-[12px] font-mono font-bold text-[var(--color-foreground)]">{fmt(m.amount)}</span>
         </div>
       ))}
     </div>
-    <div style={{ paddingTop: 12, borderTop: '1px solid var(--color-accent-amber)', display: 'flex', justifyContent: 'space-between' }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-accent-amber)' }}>TOTAL</span>
-      <span style={{ fontSize: 16, fontFamily: 'monospace', fontWeight: 800, color: 'var(--color-accent-amber)' }}>{fmt(data.total)}</span>
+    <div className="pt-3 border-t border-[var(--color-accent-amber)] flex justify-between items-center">
+      <span className="text-[12px] font-bold text-[var(--color-accent-amber)] tracking-wider">TOTAL</span>
+      <span className="text-[16px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(data.total)}</span>
     </div>
   </div>
 );
@@ -486,15 +468,15 @@ const RevenueReportView = ({ data }: { data: any }) => (
 const RouteReportView = ({ data }: { data: any[] }) => (
   <div className="space-y-1">
     {data.map((r, i) => (
-      <div key={r.route} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
-        <span style={{ fontSize: 10, color: 'var(--color-muted)', minWidth: 20 }}>#{i + 1}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{r.route}</div>
-          <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>
+      <div key={r.route} className="flex items-center gap-3 py-2.5 border-b border-[var(--color-border)] last:border-0">
+        <span className="text-[10px] text-[var(--color-muted)] min-w-[20px] font-mono">#{i + 1}</span>
+        <div className="flex-1">
+          <div className="text-[13px] font-bold text-[var(--color-foreground)]">{r.route}</div>
+          <div className="text-[10px] text-[var(--color-muted)]">
             Cargo: {fmt(r.cargo)} · Mktg: {fmt(r.mktg)} · {r.count} entries
           </div>
         </div>
-        <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent-amber)' }}>{fmt(r.revenue)}</span>
+        <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(r.revenue)}</span>
       </div>
     ))}
   </div>
@@ -503,25 +485,25 @@ const RouteReportView = ({ data }: { data: any[] }) => (
 const CustomerReportView = ({ data }: { data: any[] }) => (
   <div className="space-y-1">
     {data.map((c, i) => (
-      <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
-        <span style={{ fontSize: 10, color: 'var(--color-muted)', minWidth: 20 }}>#{i + 1}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{c.name}</div>
-          <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>{c.transactions} transactions · Last: {c.lastSeen}</div>
+      <div key={c.name} className="flex items-center gap-3 py-2.5 border-b border-[var(--color-border)] last:border-0">
+        <span className="text-[10px] text-[var(--color-muted)] min-w-[20px] font-mono">#{i + 1}</span>
+        <div className="flex-1">
+          <div className="text-[13px] font-bold text-[var(--color-foreground)]">{c.name}</div>
+          <div className="text-[10px] text-[var(--color-muted)]">{c.transactions} transactions · Last: {c.lastSeen}</div>
         </div>
-        <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent-amber)' }}>{fmt(c.revenue)}</span>
+        <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(c.revenue)}</span>
       </div>
     ))}
   </div>
 );
 
 const DebtorReportView = ({ data }: { data: any }) => (
-  <div className="space-y-3">
+  <div className="space-y-4">
     <div className="grid grid-cols-4 gap-2">
       {Object.entries(data.buckets).map(([bucket, amount]) => (
-        <div key={bucket} style={{ padding: 10, background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
-          <div style={{ fontSize: 9, color: 'var(--color-muted)', textTransform: 'uppercase' }}>{bucket} days</div>
-          <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: bucket === '90+' ? 'var(--color-error)' : 'var(--color-foreground)' }}>
+        <div key={bucket} className="p-2.5 bg-[var(--color-surface-2)] rounded-[var(--radius-sm)] text-center border border-[var(--color-border)]">
+          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider font-bold mb-1">{bucket} days</div>
+          <div className={`text-[13px] font-mono font-bold ${bucket === '90+' ? 'text-[var(--color-error)]' : 'text-[var(--color-foreground)]'}`}>
             {fmt(amount as number)}
           </div>
         </div>
@@ -529,18 +511,18 @@ const DebtorReportView = ({ data }: { data: any }) => (
     </div>
     <div className="space-y-1">
       {data.items.slice(0, 15).map((d: any, i: number) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
+        <div key={i} className="flex justify-between py-2 border-b border-[var(--color-border)] last:border-0">
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600 }}>{d.name}</div>
-            <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>Bucket: {d.bucket} · {d.age} days old</div>
+            <div className="text-[12px] font-bold text-[var(--color-foreground)]">{d.name}</div>
+            <div className="text-[10px] text-[var(--color-muted)]">Bucket: {d.bucket} · {d.age} days old</div>
           </div>
-          <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-error)' }}>{fmt(d.amount)}</span>
+          <span className="text-[13px] font-mono font-bold text-[var(--color-error)]">{fmt(d.amount)}</span>
         </div>
       ))}
     </div>
-    <div style={{ paddingTop: 10, borderTop: '1px solid var(--color-error)', display: 'flex', justifyContent: 'space-between' }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-error)' }}>TOTAL OUTSTANDING</span>
-      <span style={{ fontSize: 16, fontFamily: 'monospace', fontWeight: 800, color: 'var(--color-error)' }}>{fmt(data.total)}</span>
+    <div className="pt-3 border-t border-[var(--color-error)] flex justify-between items-center">
+      <span className="text-[12px] font-bold text-[var(--color-error)] tracking-wider">TOTAL OUTSTANDING</span>
+      <span className="text-[16px] font-mono font-bold text-[var(--color-error)]">{fmt(data.total)}</span>
     </div>
   </div>
 );
@@ -548,12 +530,12 @@ const DebtorReportView = ({ data }: { data: any }) => (
 const StaffReportView = ({ data }: { data: any[] }) => (
   <div className="space-y-1">
     {data.map(s => (
-      <div key={s.role} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
+      <div key={s.role} className="flex justify-between py-2.5 border-b border-[var(--color-border)] last:border-0">
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{s.role}</div>
-          <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>{s.entries} entries</div>
+          <div className="text-[13px] font-bold text-[var(--color-foreground)]">{s.role}</div>
+          <div className="text-[10px] text-[var(--color-muted)]">{s.entries} entries</div>
         </div>
-        <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent-amber)' }}>{fmt(s.revenue)}</span>
+        <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(s.revenue)}</span>
       </div>
     ))}
   </div>
@@ -562,12 +544,12 @@ const StaffReportView = ({ data }: { data: any[] }) => (
 const HubReportView = ({ data }: { data: any[] }) => (
   <div className="space-y-1">
     {data.map(h => (
-      <div key={h.hub} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
+      <div key={h.hub} className="flex justify-between py-2.5 border-b border-[var(--color-border)] last:border-0">
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{h.hub}</div>
-          <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>{h.entries} entries</div>
+          <div className="text-[13px] font-bold text-[var(--color-foreground)]">{h.hub}</div>
+          <div className="text-[10px] text-[var(--color-muted)]">{h.entries} entries</div>
         </div>
-        <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent-amber)' }}>{fmt(h.revenue)}</span>
+        <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(h.revenue)}</span>
       </div>
     ))}
   </div>
