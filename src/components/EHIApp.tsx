@@ -114,7 +114,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
         const [cargoRes, vjRes, mktRes, expRes] = await Promise.all([
           addHubFilter(supabase.from('cargo_entries').select(`entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id${canSeePin ? ',pickup_pin' : ''}`).gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name)').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('expenses').select('*').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500))
         ]);
@@ -168,6 +168,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               flight: r.flight_no,
               pnr: r.pnr || undefined,
               kg: r.excess_kg,
+              pieces: r.total_pcs,
             });
           });
         }
@@ -337,6 +338,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             totalKg: r.total_kg,
             flight: r.flight_no,
             kg: r.excess_kg,
+            pieces: r.total_pcs,
           });
         }
       )
@@ -487,6 +489,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       const dest      = tx.destination || (tx as any).destination || '';
       const flightNo  = tx.flight      || (tx as any).flight      || tx.detail?.split(' · ')[0] || '';
       const pnr       = tx.pnr         || (tx as any).pnr         || null;
+      const pcs       = tx.pieces      || (tx as any).pieces      || 1;
 
       payload = {
         id: tx.id,
@@ -496,6 +499,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         flight_no: flightNo,
         destination: dest,
         pnr: pnr,
+        total_pcs: pcs,
         excess_kg: excessKg,
         total_kg: totalKg,
         free_allowance_kg: 20,
