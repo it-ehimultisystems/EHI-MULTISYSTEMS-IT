@@ -1002,7 +1002,17 @@ export const CargoForm = ({
               PDF Tag
             </button>
             <button
-              onClick={() => import('../../lib/escposReceipts').then(m => m.printBluetoothReceipt(printData, 'cargo'))}
+              onClick={() => {
+                import('../../lib/escposCargoReceiptPrinting').then(async (m) => {
+                  const thermalPrintData = {
+                    ...printData,
+                    trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                  };
+                  const bytes = await m.compileCargoReceiptStream(thermalPrintData, '80mm');
+                  const { printViaBluetooth } = await import('../../lib/escpos');
+                  await printViaBluetooth(bytes);
+                });
+              }}
               className="flex-1 py-2 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
             >
               <span className="text-[14px] mb-0.5">🖨️</span>
