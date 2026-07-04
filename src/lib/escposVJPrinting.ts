@@ -20,6 +20,8 @@ export interface VJReceiptPrintData {
   amount: number;
   paymentMode: string;
   trackingUrl: string;
+  paymentNarration?: string;
+  bankName?: string;
 }
 
 export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '58mm' | '80mm'): Promise<Uint8Array> {
@@ -42,22 +44,41 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
   chunks.push(encoder.encode(fieldRow('PASSENGER:', data.passengerName, maxChars)));
   chunks.push(encoder.encode(fieldRow('FLIGHT:', data.flight, maxChars)));
   chunks.push(encoder.encode(fieldRow('DESTINATION:', data.destination, maxChars)));
-  chunks.push(encoder.encode(divider(maxChars)));
-
-  chunks.push(new Uint8Array(BOLD_ON));
+  
+  // Clean, structured border for Baggage Breakdown section
+  chunks.push(encoder.encode(divider(maxChars, '=')));
+  chunks.push(new Uint8Array(CENTER), new Uint8Array(BOLD_ON));
   chunks.push(encoder.encode("BAGGAGE BREAKDOWN\n"));
-  chunks.push(new Uint8Array(BOLD_OFF));
-  chunks.push(encoder.encode(fieldRow('TOTAL PIECES:', `${data.totalPieces} PCS`, maxChars)));
-  chunks.push(encoder.encode(fieldRow('TOTAL WEIGHT:', `${data.totalWeightKg} KG`, maxChars)));
-  chunks.push(encoder.encode(fieldRow('FREE ALLOW.:', `${data.freeAllowanceKg} KG`, maxChars)));
-  chunks.push(encoder.encode(fieldRow('EXCESS CHRG:', `${data.excessChargeKg} KG`, maxChars)));
+  chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(LEFT));
+  chunks.push(encoder.encode(divider(maxChars, '=')));
+
+  chunks.push(encoder.encode(fieldRow('  Total Pieces:', `${data.totalPieces} PCS`, maxChars)));
+  chunks.push(encoder.encode(fieldRow('  Total Weight:', `${data.totalWeightKg} KG`, maxChars)));
+  chunks.push(encoder.encode(fieldRow('  Free Allowance:', `${data.freeAllowanceKg} KG`, maxChars)));
+  
+  if (data.excessChargeKg > 0) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(fieldRow('  EXCESS WEIGHT:', `${data.excessChargeKg} KG`, maxChars)));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  } else {
+    chunks.push(encoder.encode(fieldRow('  Excess Weight:', '0 KG', maxChars)));
+  }
+  
+  chunks.push(encoder.encode(fieldRow('  Rate per KG:', `NGN ${data.ratePerKg.toLocaleString('en-NG')}`, maxChars)));
   chunks.push(encoder.encode(divider(maxChars)));
 
-  chunks.push(encoder.encode(fieldRow('RATE PER KG:', `NGN ${data.ratePerKg.toLocaleString('en-NG')}`, maxChars)));
+  // Double-height highlight on amount to capture attention clearly
   chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
-  chunks.push(encoder.encode(fieldRow('AMOUNT:', `NGN ${data.amount.toLocaleString('en-NG')}`, maxChars)));
+  chunks.push(encoder.encode(fieldRow('AMOUNT DUE:', `NGN ${data.amount.toLocaleString('en-NG')}`, maxChars)));
   chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
-  chunks.push(encoder.encode(fieldRow('PAYMENT:', data.paymentMode, maxChars)));
+  chunks.push(encoder.encode(fieldRow('PAYMENT MODE:', data.paymentMode, maxChars)));
+
+  if (data.paymentMode === 'Transfer' && data.paymentNarration) {
+    chunks.push(encoder.encode(fieldRow('NARRATION:', data.paymentNarration, maxChars)));
+  }
+  if (data.bankName) {
+    chunks.push(encoder.encode(fieldRow('BANK:', data.bankName, maxChars)));
+  }
 
   chunks.push(new Uint8Array(CENTER));
   chunks.push(encoder.encode(`\n${data.entryRef}\n`));

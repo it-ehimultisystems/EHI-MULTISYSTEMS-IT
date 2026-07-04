@@ -114,7 +114,24 @@ export async function validateScan(
   localTransactions?: any[]
 ): Promise<ScanValidationResult> {
 
-  let ref = rawRef;
+  let ref = rawRef.trim();
+
+  // Extract reference ID if scanned as a full URL (e.g. https://ehimultisystems.com/track/MK-260704-3Y0RQF)
+  if (ref.startsWith('http://') || ref.startsWith('https://')) {
+    try {
+      const url = new URL(ref);
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      if (pathParts.length > 0) {
+        ref = pathParts[pathParts.length - 1];
+      }
+    } catch {
+      const lastSlash = ref.lastIndexOf('/');
+      if (lastSlash !== -1) {
+        ref = ref.slice(lastSlash + 1);
+      }
+    }
+  }
+
   let inlineCargoData: any = null;
 
   // Try parsing the QR code as JSON to support offline payloads

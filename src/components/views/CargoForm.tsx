@@ -988,19 +988,22 @@ export const CargoForm = ({
             </div>
           </div>
 
-          <div className="flex w-full space-x-3 mb-3">
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <button
               onClick={handlePrintReceipt}
-              className="flex-1 py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
+              className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
             >
               PDF Receipt
             </button>
             <button
               onClick={handlePrintWaybill}
-              className="flex-1 py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
+              className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
             >
               PDF Tag
             </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <button
               onClick={() => {
                 import('../../lib/escposCargoReceiptPrinting').then(async (m) => {
@@ -1013,10 +1016,27 @@ export const CargoForm = ({
                   await printViaBluetooth(bytes);
                 });
               }}
-              className="flex-1 py-2 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
+              className="py-2.5 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
             >
               <span className="text-[14px] mb-0.5">🖨️</span>
-              <span>POS Print</span>
+              <span>POS Print (80mm)</span>
+            </button>
+            <button
+              onClick={() => {
+                import('../../lib/escposCargoReceiptPrinting').then(async (m) => {
+                  const thermalPrintData = {
+                    ...printData,
+                    trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                  };
+                  const bytes = await m.compileCargoReceiptStream(thermalPrintData, '58mm');
+                  const { printViaBluetooth } = await import('../../lib/escpos');
+                  await printViaBluetooth(bytes);
+                });
+              }}
+              className="py-2.5 bg-[var(--color-accent-amber)] hover:bg-opacity-85 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
+            >
+              <span className="text-[14px] mb-0.5">🖨️</span>
+              <span>POS Print (58mm)</span>
             </button>
           </div>
 

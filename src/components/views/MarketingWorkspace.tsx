@@ -337,19 +337,18 @@ export const MarketingWorkspace = ({
                 </div>
               </div>
 
-              <div className="flex w-full space-x-2">
-                <button
-                  onClick={handleReset}
-                  className="flex-1 py-3 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-bold font-mono rounded cursor-pointer flex justify-center items-center gap-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-2)]"
-                >
-                  <Plus size={14} /> NEW ENTRY
-                </button>
+              <button
+                onClick={handleReset}
+                className="w-full py-3 mb-2 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-bold font-mono rounded cursor-pointer flex justify-center items-center gap-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-2)]"
+              >
+                <Plus size={14} /> NEW ENTRY
+              </button>
+
+              <div className="grid grid-cols-2 gap-2 mb-2">
                 <button
                   onClick={() => {
                     import('../../lib/escposMarketingPrinting').then(async (m) => {
                       // Build the MarketingReceiptPrintData object
-                      // Note: Default to 80mm printer width since there is no form width selector, 
-                      // but this could eventually read from the same preference settings.
                       const printData = {
                         entryRef: successTx.id,
                         date: new Date().toLocaleDateString("en-GB"),
@@ -371,10 +370,40 @@ export const MarketingWorkspace = ({
                       await printViaBluetooth(bytes);
                     });
                   }}
-                  className="flex-1 py-3 bg-[var(--color-success)] text-[#0D1117] text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
+                  className="py-2.5 bg-[var(--color-success)] text-[#0D1117] text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
                   <span className="text-[14px] mb-0.5">🖨️</span>
-                  <span>POS PRINT</span>
+                  <span>PRINT POS (80mm)</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    import('../../lib/escposMarketingPrinting').then(async (m) => {
+                      const printData = {
+                        entryRef: successTx.id,
+                        date: new Date().toLocaleDateString("en-GB"),
+                        agentName: user.name,
+                        customerName: successTx.name,
+                        phone: phone || undefined,
+                        route: route,
+                        bigBags: bb,
+                        medBags: mb,
+                        smallBags: sb,
+                        amount: successTx.amount,
+                        paymentMode: successTx.mode,
+                        paymentNarration: successTx.paymentNarration,
+                        bankName: bank || undefined,
+                        trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                      };
+                      const bytes = await m.compileMarketingReceiptStream(printData, '58mm');
+                      const { printViaBluetooth } = await import('../../lib/escpos');
+                      await printViaBluetooth(bytes);
+                    });
+                  }}
+                  className="py-2.5 bg-[var(--color-success)] bg-opacity-80 text-[#0D1117] text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
+                >
+                  <span className="text-[14px] mb-0.5">🖨️</span>
+                  <span>PRINT POS (58mm)</span>
                 </button>
               </div>
               <button

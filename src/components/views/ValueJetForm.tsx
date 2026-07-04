@@ -229,16 +229,18 @@ export const ValueJetForm = ({
             </div>
           </div>
 
-          <div className="flex w-full space-x-2">
-            <button onClick={handleReset} className="flex-1 py-3 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-mono rounded cursor-pointer flex justify-center items-center gap-2">
-              <Plus size={14} /> NEXT PASSENGER
-            </button>
+          <button
+            onClick={handleReset}
+            className="w-full py-3 mb-2 bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-mono rounded cursor-pointer flex justify-center items-center gap-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-2)]"
+          >
+            <Plus size={14} /> NEXT PASSENGER
+          </button>
+
+          <div className="grid grid-cols-2 gap-2 mb-2">
             <button
               onClick={() => {
                 import('../../lib/escposVJPrinting').then(async (m) => {
                   // Build the VJReceiptPrintData object
-                  // Note: Default to 80mm printer width since there is no form width selector, 
-                  // but this could eventually read from the same preference settings.
                   const printData = {
                     entryRef: s.tx.id,
                     date: new Date().toLocaleDateString('en-GB'),
@@ -255,16 +257,48 @@ export const ValueJetForm = ({
                     amount: s.tx.amount,
                     paymentMode: s.tx.mode,
                     trackingUrl: `https://ehimultisystems.com/track/${s.tx.id}`,
+                    paymentNarration: s.tx.paymentNarration,
                   };
                   const bytes = await m.compileVJReceiptStream(printData, '80mm');
                   const { printViaBluetooth } = await import('../../lib/escpos');
                   await printViaBluetooth(bytes);
                 });
               }}
-              className="flex-1 py-3 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
+              className="py-2.5 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
             >
               <span className="text-[14px] mb-0.5">🖨️</span>
-              <span>POS PRINT</span>
+              <span>PRINT POS (80mm)</span>
+            </button>
+            <button
+              onClick={() => {
+                import('../../lib/escposVJPrinting').then(async (m) => {
+                  const printData = {
+                    entryRef: s.tx.id,
+                    date: new Date().toLocaleDateString('en-GB'),
+                    originState: user.hub || 'Lagos',
+                    agentName: user.name || 'VJ Agent',
+                    passengerName: s.tx.name,
+                    flight: flight.toUpperCase(),
+                    destination: dest || 'Unknown',
+                    totalPieces: s.pcs,
+                    totalWeightKg: s.kgs,
+                    freeAllowanceKg: vjFreeAllowance,
+                    excessChargeKg: s.exc,
+                    ratePerKg: vjRatePerKg,
+                    amount: s.tx.amount,
+                    paymentMode: s.tx.mode,
+                    trackingUrl: `https://ehimultisystems.com/track/${s.tx.id}`,
+                    paymentNarration: s.tx.paymentNarration,
+                  };
+                  const bytes = await m.compileVJReceiptStream(printData, '58mm');
+                  const { printViaBluetooth } = await import('../../lib/escpos');
+                  await printViaBluetooth(bytes);
+                });
+              }}
+              className="py-2.5 bg-[var(--color-accent-cobalt)] bg-opacity-80 text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
+            >
+              <span className="text-[14px] mb-0.5">🖨️</span>
+              <span>PRINT POS (58mm)</span>
             </button>
           </div>
           <button

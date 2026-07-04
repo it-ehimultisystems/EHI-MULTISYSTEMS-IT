@@ -42,18 +42,23 @@ export async function compileMarketingReceiptStream(data: MarketingReceiptPrintD
   chunks.push(encoder.encode(fieldRow('ROUTE:', data.route, maxChars)));
   chunks.push(encoder.encode(divider(maxChars)));
 
-  chunks.push(new Uint8Array(BOLD_ON));
+  // Clean, structured border for Bag Breakdown section
+  chunks.push(encoder.encode(divider(maxChars, '=')));
+  chunks.push(new Uint8Array(CENTER), new Uint8Array(BOLD_ON));
   chunks.push(encoder.encode("BAG BREAKDOWN\n"));
-  chunks.push(new Uint8Array(BOLD_OFF));
-  if (data.bigBags > 0) chunks.push(encoder.encode(fieldRow('BIG BAGS:', `${data.bigBags}`, maxChars)));
-  if (data.medBags > 0) chunks.push(encoder.encode(fieldRow('MEDIUM BAGS:', `${data.medBags}`, maxChars)));
-  if (data.smallBags > 0) chunks.push(encoder.encode(fieldRow('SMALL BAGS:', `${data.smallBags}`, maxChars)));
+  chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(LEFT));
+  chunks.push(encoder.encode(divider(maxChars, '=')));
+
+  if (data.bigBags > 0) chunks.push(encoder.encode(fieldRow('  Big Bags:', `${data.bigBags}`, maxChars)));
+  if (data.medBags > 0) chunks.push(encoder.encode(fieldRow('  Medium Bags:', `${data.medBags}`, maxChars)));
+  if (data.smallBags > 0) chunks.push(encoder.encode(fieldRow('  Small Bags:', `${data.smallBags}`, maxChars)));
   chunks.push(encoder.encode(divider(maxChars)));
 
+  // Double-height highlight on amount to capture attention clearly
   chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
-  chunks.push(encoder.encode(fieldRow('AMOUNT:', `NGN ${data.amount.toLocaleString('en-NG')}`, maxChars)));
+  chunks.push(encoder.encode(fieldRow('AMOUNT DUE:', `NGN ${data.amount.toLocaleString('en-NG')}`, maxChars)));
   chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
-  chunks.push(encoder.encode(fieldRow('PAYMENT:', data.paymentMode, maxChars)));
+  chunks.push(encoder.encode(fieldRow('PAYMENT MODE:', data.paymentMode, maxChars)));
   if (data.paymentMode === 'Transfer' && data.paymentNarration) {
     chunks.push(encoder.encode(fieldRow('NARRATION:', data.paymentNarration, maxChars)));
   }
