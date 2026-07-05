@@ -2,7 +2,7 @@ import {
   encoder, INIT, CENTER, LEFT, TEXT_NORMAL, TEXT_DOUBLE_HEIGHT,
   BOLD_ON, BOLD_OFF, REVERSE_ON, REVERSE_OFF, FEED_AND_CUT,
   concatChunks, brandingHeader, fieldRow, divider,
-  getAirlineLogoPath, imageToEscPosRaster, qrAsRaster
+  getAirlineLogoRaster, imageToEscPosRaster, qrAsRaster
 } from './escposShared';
 import { printViaBluetooth } from './escpos';
 
@@ -24,14 +24,17 @@ export async function compileSingleTag(item: CargoTagData, width: '58mm' | '80mm
     ...(await brandingHeader())
   ];
 
-  const airlineLogoPath = getAirlineLogoPath(item.airline || '');
-  if (airlineLogoPath) {
-    try {
-      chunks.push(await imageToEscPosRaster(airlineLogoPath, 120));
-      chunks.push(encoder.encode('\n'));
-    } catch {
-      // No airline logo available -- print without one rather than fail
-    }
+  const airlineRaster = await getAirlineLogoRaster(item.airline || '', 120);
+  if (airlineRaster) {
+    chunks.push(airlineRaster);
+    chunks.push(encoder.encode('\n'));
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`${(item.airline || '').toUpperCase()}\n\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  } else if (item.airline) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`${item.airline.toUpperCase()}\n\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
   }
 
   chunks.push(new Uint8Array(CENTER));
@@ -43,6 +46,10 @@ export async function compileSingleTag(item: CargoTagData, width: '58mm' | '80mm
     chunks.push(encoder.encode(`${item.route.toUpperCase()}\n`));
     chunks.push(new Uint8Array(TEXT_NORMAL));
   }
+  
+  chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT));
+  chunks.push(encoder.encode(`AWB: ${item.id}\n`));
+  chunks.push(new Uint8Array(TEXT_NORMAL));
   chunks.push(encoder.encode('\n'));
 
   // Use qrAsRaster for the QR code
@@ -50,22 +57,16 @@ export async function compileSingleTag(item: CargoTagData, width: '58mm' | '80mm
   chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 140 : 180));
   chunks.push(encoder.encode('\n\n'));
 
-  chunks.push(new Uint8Array(LEFT));
-  chunks.push(new Uint8Array(BOLD_ON));
-  chunks.push(encoder.encode(`REF: ${item.id}\n`));
-  chunks.push(encoder.encode(`AWB: ${item.id}\n`));
-  chunks.push(new Uint8Array(BOLD_OFF));
-  chunks.push(encoder.encode(divider(maxChars)));
-
+    chunks.push(new Uint8Array(LEFT));
+  chunks.push(encoder.encode(divider(maxChars, '=')));
   chunks.push(new Uint8Array(CENTER));
-  chunks.push(new Uint8Array(REVERSE_ON));
-  chunks.push(encoder.encode(` PIECE ${item.pieceNo}  |  WEIGHT: ${item.weight} KG `));
-  chunks.push(new Uint8Array(REVERSE_OFF));
-  chunks.push(encoder.encode('\n'));
+  chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
+  chunks.push(encoder.encode(`PIECE ${item.pieceNo}\n`));
+  chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
+  chunks.push(encoder.encode(`WEIGHT: ${item.weight} KG\n`));
+  chunks.push(encoder.encode(divider(maxChars, '=')));
   
   chunks.push(new Uint8Array(LEFT));
-  chunks.push(encoder.encode(divider(maxChars)));
-  
   if (item.name) chunks.push(encoder.encode(`CONSIGNEE: ${item.name}\n`));
   if (item.airline) chunks.push(encoder.encode(`AIRLINE: ${item.airline}\n`));
   if (item.hubName) chunks.push(encoder.encode(`HUB: ${item.hubName}\n`));

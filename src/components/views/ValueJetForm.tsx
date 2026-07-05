@@ -114,7 +114,7 @@ export const ValueJetForm = ({
           excessKg,
           amount: totalAmount,
           mode,
-        }),
+        }, vjFreeAllowance, vjRatePerKg),
       });
     }
   };

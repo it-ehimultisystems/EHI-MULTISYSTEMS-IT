@@ -132,8 +132,9 @@ export const TransactionLedger = ({
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
+      const raw = e.raw as any;
       const text =
-        `${e.id} ${e.time} ${e.type} ${e.name} ${e.detail} ${e.mode}`.toLowerCase();
+        `${e.id} ${e.time} ${e.type} ${e.name} ${e.detail} ${e.mode} ${raw.awb_tag_number || ''} ${raw.route || ''}`.toLowerCase();
       if (!text.includes(q)) return false;
     }
 

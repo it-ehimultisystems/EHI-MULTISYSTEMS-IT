@@ -64,6 +64,7 @@ export const SideNav = ({
         "admin",
         "cargo_agent",
         "vj_agent",
+        "marketing_agent",
         "accountant",
         "auditor",
       ],
@@ -96,6 +97,8 @@ export const SideNav = ({
         "cargo_agent",
         "vj_agent",
         "marketing_agent",
+        "accountant",
+        "auditor",
         "driver",
         "office_work"
       ],

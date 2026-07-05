@@ -58,6 +58,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
   const [success, setSuccess]   = useState('');
+  const [credModal, setCredModal] = useState<{ email: string; password: string } | null>(null);
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', role: 'cargo_agent',
@@ -121,8 +122,10 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       setError('Password must be at least 8 characters.'); setSaving(false); return;
     }
     try {
+      const tempPassword = form.password;
       await createStaffAccount(form);
-      setSuccess(`Account created for ${form.name}. Share these credentials: ${form.email} / ${form.password}`);
+      setCredModal({ email: form.email, password: tempPassword });
+      setSuccess('Account created successfully for ' + form.name);
       setForm({ name:'', email:'', password:'', role:'cargo_agent', hub_id: user.hub_id||'', hub_type:'Cargo Station', phone:'' });
       setShowCreate(false);
       await loadData();
@@ -532,6 +535,27 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {credModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 max-w-sm w-full">
+            <div className="text-[13px] font-bold mb-4 text-[var(--color-foreground)]">New Staff Credentials — Share Once</div>
+            <div className="space-y-2 mb-4">
+              <div className="text-[11px] text-[var(--color-muted)] font-mono">Email</div>
+              <div className="text-[13px] font-mono bg-[var(--color-surface-2)] p-2 rounded text-[var(--color-foreground)]">{credModal.email}</div>
+              <div className="text-[11px] text-[var(--color-muted)] font-mono mt-2">Temporary Password</div>
+              <div className="text-[20px] font-mono font-bold bg-[var(--color-surface-2)] p-2 rounded tracking-widest text-[var(--color-foreground)]">{credModal.password}</div>
+            </div>
+            <p className="text-[11px] text-[var(--color-muted)] mb-4">Copy and share these with the new staff member. This dialog will not appear again.</p>
+            <button
+              onClick={() => setCredModal(null)}
+              className="w-full py-2 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] rounded-lg text-[12px] font-bold cursor-pointer"
+            >
+              Done — I've shared the credentials
+            </button>
           </div>
         </div>
       )}

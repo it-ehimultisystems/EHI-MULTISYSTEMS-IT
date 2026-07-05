@@ -1,7 +1,7 @@
 import { View, Text, Image } from '@react-pdf/renderer';
 import aeroLogo from '../assets/airlines/aero-contractors.png';
 import valuejetLogo from '../assets/airlines/valuejet.png';
-import unitedNigeriaLogo from '../assets/airlines/united-nigeria.png';
+import unitedNigeriaLogo from '../assets/airlines/united-nigeria.gif';
 import arikLogo from '../assets/airlines/arik-air.png';
 import greenAfricaLogo from '../assets/airlines/green-africa.png';
 

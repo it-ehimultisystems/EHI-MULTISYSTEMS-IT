@@ -40,7 +40,8 @@ import {
   Plane,
   CreditCard,
   Terminal,
-  ChevronRight
+  ChevronRight,
+  PackageCheck
 } from 'lucide-react';
 
 import { StaffManagement } from './StaffManagement';
@@ -202,6 +203,14 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
       {/* Daily Operations */}
       <SectionLabel label="Daily Operations" />
       <div>
+        {['super_admin', 'admin', 'cargo_agent', 'office_work'].includes(user.role) && (
+          <MenuItem
+            icon={PackageCheck}
+            title="Incoming to Hub"
+            subtitle="Manage arriving cargo"
+            onClick={() => onChangeTab('Incoming')}
+          />
+        )}
         <MenuItem
           icon={FileText}
           title="EOD Daily Close"
@@ -337,6 +346,13 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
       {/* Administration */}
       <SectionLabel label="Administration" />
       <div>
+        <MenuItem
+          icon={Plane}
+          title="Airline Logos"
+          subtitle="Manage uploaded logos for all partner airlines"
+          onClick={() => onChangeTab('AirlineLogos')}
+          disabled={!isSuperAdmin && user.role !== 'admin'}
+        />
         <MenuItem
           icon={Terminal}
           title="IT Debug Console"

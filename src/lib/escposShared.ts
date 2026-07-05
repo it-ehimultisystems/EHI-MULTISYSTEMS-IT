@@ -1,11 +1,7 @@
 import QRCode from 'qrcode';
 
 import ehiLogoFile from '../assets/branding/ehi-logo.png';
-import aeroLogoFile from '../assets/airlines/aero-contractors.png';
-import arikLogoFile from '../assets/airlines/arik-air.png';
-import valuejetLogoFile from '../assets/airlines/valuejet.png';
-import unitedNigeriaLogoFile from '../assets/airlines/united-nigeria.png';
-import greenAfricaLogoFile from '../assets/airlines/green-africa.png';
+import { airlineLogoUrl } from './airlineLogos';
 
 export const encoder = new TextEncoder();
 
@@ -72,7 +68,11 @@ async function loadImageElement(url: string): Promise<HTMLImageElement> {
 // format at print time. targetWidthDots should be a multiple of 8 --
 // round down if not, since raster rows are byte-packed. Transparent
 // pixels are treated as white/unprinted, not black.
-export async function imageToEscPosRaster(imageUrl: string, targetWidthDots: number): Promise<Uint8Array> {
+export async function imageToEscPosRaster(
+  imageUrl: string,
+  targetWidthDots: number,
+  threshold = 160
+): Promise<Uint8Array> {
   const img = await loadImageElement(imageUrl);
   const widthDots = targetWidthDots - (targetWidthDots % 8);
   const scale = widthDots / img.width;
@@ -95,7 +95,7 @@ export async function imageToEscPosRaster(imageUrl: string, targetWidthDots: num
       const idx = (y * widthDots + x) * 4;
       const r = imageData[idx], g = imageData[idx + 1], b = imageData[idx + 2], a = imageData[idx + 3];
       const luminance = r * 0.299 + g * 0.587 + b * 0.114;
-      if (a > 128 && luminance < 128) {
+      if (a > 128 && luminance < threshold) {
         const byteIndex = y * widthBytes + Math.floor(x / 8);
         raster[byteIndex] |= (1 << (7 - (x % 8)));
       }
@@ -112,17 +112,39 @@ export async function imageToEscPosRaster(imageUrl: string, targetWidthDots: num
   return out;
 }
 
-// Same city/airline name matching AirlineLogoPDF.tsx already uses --
-// don't invent different matching rules, reuse the logic, just return
-// a file path instead of a React component.
-export function getAirlineLogoPath(airline: string): string | null {
-  const norm = airline.toLowerCase();
-  if (norm.includes('aero')) return aeroLogoFile;
-  if (norm.includes('arik')) return arikLogoFile;
-  if (norm.includes('valuejet')) return valuejetLogoFile;
-  if (norm.includes('united') || norm.includes('un')) return unitedNigeriaLogoFile;
-  if (norm.includes('green africa') || norm.includes('greenafrica')) return greenAfricaLogoFile;
-  return null;
+// Now async — fetches from Supabase Storage, no hardcoded airline list.
+// Any airline whose logo has been uploaded via AirlineLogoManager will print correctly.
+export async function getAirlineLogoRaster(
+  airline: string,
+  widthDots: number
+): Promise<Uint8Array | null> {
+  if (!airline) return null;
+  const url = airlineLogoUrl(airline);
+  if (!url) return null;
+  try {
+    return await imageToEscPosRaster(url, widthDots, 160);
+  } catch {
+    return null;
+  }
+}
+
+const EHI_SVG = `<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="white"/>
+  <path d="M 180 140 C 140 140 90 110 70 95 C 110 115 150 160 170 170 Z" fill="#000000"/>
+  <path d="M 170 170 C 190 120 250 80 350 70 C 290 90 220 130 180 180 Z" fill="#000000"/>
+  <text x="210" y="240" font-family="Arial,sans-serif" font-weight="900" font-size="110" fill="#000000" text-anchor="middle">EHI</text>
+  <rect x="95" y="255" width="230" height="30" fill="#000000"/>
+  <text x="210" y="277" font-family="Arial,sans-serif" font-weight="bold" font-size="19" fill="#ffffff" text-anchor="middle">MULTISYSTEMS</text>
+</svg>`;
+
+export async function ehiSvgToRaster(widthDots: number): Promise<Uint8Array> {
+  const blob = new Blob([EHI_SVG], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  try {
+    return await imageToEscPosRaster(url, widthDots, 200);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 // Every document type calls this for its header -- change it once,
@@ -130,15 +152,19 @@ export function getAirlineLogoPath(airline: string): string | null {
 export async function brandingHeader(logoWidthDots = 160): Promise<Uint8Array[]> {
   const chunks: Uint8Array[] = [new Uint8Array(CENTER)];
   try {
-    const logoRaster = await imageToEscPosRaster(ehiLogoFile, logoWidthDots);
+    const logoRaster = await ehiSvgToRaster(logoWidthDots);
     chunks.push(logoRaster);
     chunks.push(encoder.encode('\n'));
   } catch {
-    // Fall back to text branding if the logo file isn't there yet or
-    // fails to load -- never let a missing image break printing entirely.
-    chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
-    chunks.push(encoder.encode("EHI\n"));
-    chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
+    try {
+      const logoRaster = await imageToEscPosRaster(ehiLogoFile, logoWidthDots, 160);
+      chunks.push(logoRaster);
+      chunks.push(encoder.encode('\n'));
+    } catch {
+      chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
+      chunks.push(encoder.encode("EHI\n"));
+      chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
+    }
   }
   chunks.push(new Uint8Array(REVERSE_ON));
   chunks.push(encoder.encode(" MULTISYSTEMS \n"));

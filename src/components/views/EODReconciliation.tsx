@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { ArrowLeft, Check, AlertTriangle, Printer, Lock, ChevronRight } from 'lucide-react';
@@ -14,6 +14,19 @@ interface Props {
 }
 
 export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD }: Props) => {
+  const [alreadyLocked, setAlreadyLocked] = useState<{ closed_by: string; created_at: string } | null>(null);
+  
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    supabase
+      .from('eod_locks')
+      .select('closed_by, created_at')
+      .eq('hub_id', user.hub_id)
+      .gte('created_at', today + 'T00:00:00')
+      .maybeSingle()
+      .then(({ data }) => { if (data) setAlreadyLocked(data); });
+  }, [user.hub_id]);
+
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -518,6 +531,12 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] overflow-y-auto">
+      {alreadyLocked && (
+        <div className="mx-4 mt-4 p-3 bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.3)] rounded-lg text-[12px] font-mono text-[var(--color-accent-amber)] flex items-center gap-2">
+          <span>⚠</span>
+          <span>Today's EOD was already closed by <strong>{alreadyLocked.closed_by}</strong>. Re-submitting will overwrite the existing record.</span>
+        </div>
+      )}
       {/* Sticky header */}
       <div className="ehi-view-header">
         <button onClick={onBack} className="flex items-center space-x-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">

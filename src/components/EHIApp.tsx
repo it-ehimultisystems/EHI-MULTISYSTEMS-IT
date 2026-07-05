@@ -20,6 +20,8 @@ import { IncomingToHub as IncomingToHubRaw } from './views/IncomingToHub';
 import { MyTrips as MyTripsRaw } from './views/MyTrips';
 import { ITDashboard as ITDashboardRaw } from './views/ITDashboard';
 import { CreditDebit as CreditDebitRaw } from './views/CreditDebit';
+import { AirlineLogoManager } from './views/AirlineLogoManager';
+
 import { ErrorBoundary } from './ErrorBoundary';
 
 const Header = memo(HeaderRaw);
@@ -55,6 +57,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [initError, setInitError] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [toast, setToast] = useState<ToastProps | null>(null);
   
@@ -98,7 +102,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       if (['super_admin', 'admin', 'marketing_agent', 'office_work'].includes(role)) allowed.push('Marketing');
       if (['super_admin', 'admin', 'vj_agent'].includes(role)) allowed.push('VJ POS');
       if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('Scan');
-      if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'driver', 'office_work'].includes(role)) allowed.push('IncomingToHub');
+      if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'driver', 'office_work'].includes(role)) allowed.push('Incoming');
       if (['driver'].includes(role)) allowed.push('MyTrips');
       if (['super_admin', 'admin', 'accountant', 'auditor', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('More');
       
@@ -132,6 +136,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     if (isOffline) return;
     
     const fetchInitial = async () => {
+      setInitError(false);
       try {
         const isAdmin = ['super_admin','admin','accountant','auditor'].includes(user.role);
         // Deliberately narrower than isAdmin -- pickup PIN visibility is
@@ -270,11 +275,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         });
       } catch (err) {
         console.error("Failed to fetch initial tx:", err);
+        setInitError(true);
       }
     };
     
     fetchInitial();
-  }, [isOffline, globalDateRange, user.role, user.hub_id]);
+  }, [isOffline, globalDateRange, user.role, user.hub_id, retryTrigger]);
 
   // Supabase real-time
   useEffect(() => {
@@ -298,7 +304,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     // channels relevant to their active tab (currentTab). Aggregate views like 
     // Tower, Scan, and More hold all channels, while type-specific views hold one.
     // Non-admin roles retain their original scale-readiness behavior.
-    let needsCargo = user.role === 'cargo_agent';
+    let needsCargo = ['cargo_agent', 'office_work', 'auditor'].includes(user.role);
     let needsVJ = user.role === 'vj_agent';
     let needsMarketing = user.role === 'marketing_agent';
 
@@ -363,7 +369,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               status: r.status || t.status,
               mode: r.receipt_mode || t.mode,
               paymentConfirmed: r.payment_confirmed,
-              posApprovalCode: r.pos_approval_code
+              posApprovalCode: r.pos_approval_code,
+              bank: r.bank ?? t.bank,
+              confirmedBy: r.confirmed_by ?? t.confirmedBy,
+              confirmedAt: r.confirmed_at ?? t.confirmedAt
             } : t
           ));
         }
@@ -750,6 +759,19 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             style={{ maxWidth: 'var(--content-max-width)' }}
           >
             <ErrorBoundary>
+              {initError && (
+                <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+                  <div className="text-[var(--color-error)] font-mono text-[13px] text-center">
+                    Failed to load data. Check your internet connection.
+                  </div>
+                  <button
+                    onClick={() => setRetryTrigger(p => p + 1)}
+                    className="px-6 py-2 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] rounded-lg text-[12px] font-bold"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
               {currentTab === 'Tower' && (
                 (user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant') ? (
                   <Analytics user={user} transactions={transactions} expenses={expenses} />
@@ -784,10 +806,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                 />
               )}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
-              {currentTab === 'IncomingToHub' && <IncomingToHub user={user} onBack={() => setCurrentTab('Scan')} />}
+              {currentTab === 'Incoming' && <IncomingToHub user={user} onBack={() => setCurrentTab('More')} />}
               {currentTab === 'MyTrips' && <MyTrips user={user} />}
               {currentTab === 'IT Debug' && <ITDashboard user={user} onBack={() => setCurrentTab('More')} />}
               {currentTab === 'Credit & Debit' && <CreditDebit user={user} transactions={transactions} onBack={() => setCurrentTab('More')} />}
+              {currentTab === 'AirlineLogos' && <AirlineLogoManager user={user} onBack={() => setCurrentTab('More')} />}
               {currentTab === 'More' && (
                 <More 
                    user={user} 

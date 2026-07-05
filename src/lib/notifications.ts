@@ -92,7 +92,7 @@ export function buildValueJetWhatsApp(data: {
   amount: number;
   mode: string;
   paymentNarration?: string;
-}): string {
+}, freeAllowanceKg: number, ratePerKg: number): string {
   let text = 
     `✈️ *EHI Multisystems — ValueJet*\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
@@ -102,8 +102,8 @@ export function buildValueJetWhatsApp(data: {
     `🛫 *Flight:* ${data.flight}\n\n` +
     `🎒 Total pieces: ${data.totalPieces || 1} pcs\n` +
     `⚖️ Total weight: ${data.totalKg} kg\n` +
-    `🟢 Free allowance: 20.0 kg\n` +
-    `🔴 Excess charged: ${data.excessKg} kg × ₦1,000\n\n` +
+    `🟢 Free allowance: ${freeAllowanceKg.toFixed(1)} kg\n` +
+    `🔴 Excess charged: ${data.excessKg} kg × ₦${ratePerKg.toLocaleString('en-NG')}\n\n` +
     `💰 *Amount: NGN ${Number(data.amount).toLocaleString('en-NG')}*\n` +
     `💳 *Payment:* ${data.mode}\n`;
 

@@ -2,6 +2,7 @@ import {
   encoder, INIT, CENTER, LEFT, TEXT_NORMAL, TEXT_DOUBLE_HEIGHT,
   BOLD_ON, BOLD_OFF, FEED_AND_CUT,
   concatChunks, qrAsRaster, brandingHeader, fieldRow, divider,
+  getAirlineLogoRaster, imageToEscPosRaster,
 } from './escposShared';
 
 export interface VJReceiptPrintData {
@@ -28,10 +29,20 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
   const maxChars = width === '58mm' ? 32 : 48;
   const chunks: Uint8Array[] = [new Uint8Array(INIT), ...(await brandingHeader())];
 
+  const airlineRaster = await getAirlineLogoRaster('ValueJet', width === '58mm' ? 100 : 130);
+  if (airlineRaster) {
+    chunks.push(airlineRaster);
+    chunks.push(encoder.encode('\n'));
+  } else {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode("VALUEJET AIRLINES\n"));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
+
   chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
   chunks.push(encoder.encode("EXCESS BAGGAGE RECEIPT\n"));
   chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
-  chunks.push(encoder.encode("Origin: ValueJet Counter\n\n"));
+  chunks.push(encoder.encode(`ValueJet Counter — ${data.originState}\n\n`));
 
   chunks.push(await qrAsRaster(data.trackingUrl, width === '58mm' ? 120 : 140));
   chunks.push(encoder.encode('\n\n'));

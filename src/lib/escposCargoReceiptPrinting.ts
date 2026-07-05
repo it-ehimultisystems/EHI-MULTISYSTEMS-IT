@@ -2,6 +2,7 @@ import {
   encoder, INIT, CENTER, LEFT, TEXT_NORMAL, TEXT_DOUBLE_HEIGHT,
   BOLD_ON, BOLD_OFF, FEED_AND_CUT,
   concatChunks, qrAsRaster, brandingHeader, fieldRow, divider,
+  getAirlineLogoRaster, imageToEscPosRaster,
 } from './escposShared';
 
 export interface CargoReceiptPrintData {
@@ -29,6 +30,18 @@ export interface CargoReceiptPrintData {
 export async function compileCargoReceiptStream(data: CargoReceiptPrintData, width: '58mm' | '80mm'): Promise<Uint8Array> {
   const maxChars = width === '58mm' ? 32 : 48;
   const chunks: Uint8Array[] = [new Uint8Array(INIT), ...(await brandingHeader())];
+
+  // Airline logo — mirrors the PDF header which shows EHI logo + airline logo
+  const airlineRaster = await getAirlineLogoRaster(data.airline || '', width === '58mm' ? 100 : 130);
+  if (airlineRaster) {
+    chunks.push(airlineRaster);
+    chunks.push(encoder.encode('\n'));
+  } else if (data.airline) {
+    // Airline logo failed — fall back to text
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`${data.airline.toUpperCase()}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
 
   chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
   chunks.push(encoder.encode("CARGO ENTRY RECEIPT\n"));

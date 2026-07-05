@@ -216,20 +216,21 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
 
   const debtorReport = useMemo(() => {
     const debts = filteredTx.filter(t => t.mode === 'Debt');
-    // Deterministic aging by tx id hash
-    const stableAge = (id: string): number => {
-      let h = 0;
-      for (let i = 0; i < id.length; i++) { h = ((h << 5) - h) + id.charCodeAt(i); h |= 0; }
-      return Math.abs(h) % 120;
-    };
-    const buckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };
+    
+    const buckets = { 'Current': 0, 'Overdue': 0, 'Critical': 0, 'Write-off risk': 0 };
     const items: Array<{ name: string; amount: number; age: number; bucket: string }> = [];
+    
     debts.forEach(t => {
-      const age = stableAge(t.id);
-      const bucket = age <= 30 ? '0-30' : age <= 60 ? '31-60' : age <= 90 ? '61-90' : '90+';
+      const agedays = Math.floor(
+        (Date.now() - new Date(t.created_at || (t as any).date || Date.now()).getTime())
+        / (1000 * 60 * 60 * 24)
+      );
+      
+      const bucket = agedays <= 30 ? 'Current' : agedays <= 60 ? 'Overdue' : agedays <= 90 ? 'Critical' : 'Write-off risk';
       buckets[bucket as keyof typeof buckets] += t.amount;
-      items.push({ name: t.name, amount: t.amount, age, bucket });
+      items.push({ name: t.name, amount: t.amount, age: agedays, bucket });
     });
+    
     return { buckets, items: items.sort((a, b) => b.age - a.age), total: debts.reduce((s,t) => s+t.amount, 0) };
   }, [filteredTx]);
 
@@ -502,8 +503,8 @@ const DebtorReportView = ({ data }: { data: any }) => (
     <div className="grid grid-cols-4 gap-2">
       {Object.entries(data.buckets).map(([bucket, amount]) => (
         <div key={bucket} className="p-2.5 bg-[var(--color-surface-2)] rounded-[var(--radius-sm)] text-center border border-[var(--color-border)]">
-          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider font-bold mb-1">{bucket} days</div>
-          <div className={`text-[13px] font-mono font-bold ${bucket === '90+' ? 'text-[var(--color-error)]' : 'text-[var(--color-foreground)]'}`}>
+          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider font-bold mb-1">{bucket}</div>
+          <div className={`text-[13px] font-mono font-bold ${bucket === 'Write-off risk' ? 'text-[var(--color-error)]' : 'text-[var(--color-foreground)]'}`}>
             {fmt(amount as number)}
           </div>
         </div>
