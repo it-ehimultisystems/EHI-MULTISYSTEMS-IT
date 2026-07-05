@@ -450,9 +450,13 @@ export const ValueJetForm = ({
               <input 
                 type="number"
                 step="1"
+                min="0"
                 placeholder="0"
                 value={kg}
-                onChange={(e) => setKg(e.target.value)}
+                onChange={(e) => {
+                  const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                  setKg(cleanVal);
+                }}
                 className={formInputClass}
               />
             </div>

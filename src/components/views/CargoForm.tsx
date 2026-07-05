@@ -1216,9 +1216,13 @@ export const CargoForm = ({
                   {renderLabel(Package, "KG")}
                   <input
                     type="number"
-                    step="0.1"
+                    step="1"
+                    min="1"
                     value={kg}
-                    onChange={(e) => setKg(e.target.value)}
+                    onChange={(e) => {
+                      const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                      setKg(cleanVal);
+                    }}
                     className={formInputClass}
                   />
                 </div>
@@ -1971,10 +1975,14 @@ export const CargoForm = ({
                       <div className="relative">
                         <input
                           type="number"
-                          step="0.1"
+                          step="1"
+                          min="1"
                           placeholder="Scale Reading"
                           value={gateWeight}
-                          onChange={(e) => setGateWeight(e.target.value)}
+                          onChange={(e) => {
+                            const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                            setGateWeight(cleanVal);
+                          }}
                           className="w-full h-12 pl-4 pr-12 text-[16px] font-bold text-[var(--color-accent-amber)] rounded-md bg-[var(--color-bg)] border border-[var(--color-surface-2)] font-mono focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-muted)] font-bold text-[12px] font-sans">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft, Plus, RefreshCw, Search, Edit2, UserX, UserCheck,
-  MapPin, Phone, Mail, Loader, AlertTriangle, Check, Eye, EyeOff, Shield, Upload
+  MapPin, Phone, Mail, Loader, AlertTriangle, Check, Eye, EyeOff, Shield, Upload, Printer
 } from 'lucide-react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
@@ -18,6 +18,8 @@ interface StaffMember {
   active: boolean;
   phone?: string;
   can_edit_ledger?: boolean;
+  can_print_receipts?: boolean;
+  can_print_tags?: boolean;
   hub?: { name: string; code: string };
 }
 
@@ -27,6 +29,7 @@ const ROLES = [
   { value: 'cargo_agent',      label: 'Cargo Agent',      desc: 'Log cargo entries, view own hub' },
   { value: 'vj_agent',         label: 'ValueJet POS',     desc: 'Excess baggage at terminal counter' },
   { value: 'marketing_agent',  label: 'Marketing Agent',  desc: 'Field marketing entries' },
+  { value: 'office_work',      label: 'Office Work',      desc: 'Only cargo and marketing view' },
   { value: 'driver',           label: 'Driver',           desc: 'Trip tracking and delivery logs' },
   { value: 'accountant',       label: 'Accountant',       desc: 'Financial reports, all hubs read access' },
   { value: 'auditor',          label: 'Auditor',          desc: 'Read-only audit trail access' },
@@ -43,6 +46,7 @@ const roleColor = (role: string) => ({
   auditor:         'text-orange-400 bg-[rgba(249,115,22,0.12)]',
   driver:          'text-[var(--color-muted)] bg-[rgba(100,116,139,0.12)]',
   marketing_agent: 'text-[var(--color-success)] bg-[rgba(16,185,129,0.10)]',
+  office_work:     'text-blue-400 bg-[rgba(96,165,250,0.10)]',
 }[role] || 'text-[var(--color-muted)] bg-[var(--color-surface-2)]');
 
 export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => void }) => {
@@ -75,7 +79,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       if (hubData) setHubs(hubData as Hub[]);
 
       let q = supabase.from('user_profiles')
-        .select('id, email, name, role, hub_id, hub_type, active, phone, can_edit_ledger, hubs(name, code)')
+        .select('id, email, name, role, hub_id, hub_type, active, phone, can_edit_ledger, can_print_receipts, can_print_tags, hubs(name, code)')
         .order('name');
 
       if (!isSuperAdmin && user.hub_id) {
@@ -88,6 +92,8 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
           ...s,
           hub: Array.isArray(s.hubs) ? s.hubs[0] : s.hubs,
           can_edit_ledger: s.can_edit_ledger ?? false,
+          can_print_receipts: s.can_print_receipts ?? false,
+          can_print_tags: s.can_print_tags ?? false,
         })));
       }
     } catch {
@@ -469,6 +475,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
               )}
               {/* Ledger Edit Permission — super_admin only */}
               {isSuperAdmin && (
+                <>
                 <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -499,6 +506,56 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     </div>
                   )}
                 </div>
+
+                <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3 mt-3">
+                  <div className="flex items-center gap-1.5 mb-2 border-b border-[var(--color-border)] pb-2">
+                    <Printer size={12} className="text-[var(--color-accent-cobalt)]" />
+                    <span className="text-[12px] font-bold text-[var(--color-foreground)]">Print Settings</span>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="text-[11px] font-bold text-[var(--color-foreground)] mb-0.5">Reprint Receipts</div>
+                      <p className="text-[10px] text-[var(--color-muted)] leading-snug">
+                        Allows user to reprint receipts from the transaction ledger.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setEditingStaff(s => s ? {...s, can_print_receipts: !s.can_print_receipts} : null)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors ml-3 ${
+                        editingStaff.can_print_receipts
+                          ? 'bg-[var(--color-accent-cobalt)] border-[var(--color-accent-cobalt)]'
+                          : 'bg-[var(--color-surface-2)] border-[var(--color-border)]'
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow transition-transform ${
+                        editingStaff.can_print_receipts ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-bold text-[var(--color-foreground)] mb-0.5">Reprint Tags</div>
+                      <p className="text-[10px] text-[var(--color-muted)] leading-snug">
+                        Allows user to reprint cargo/marketing tags from the ledger.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setEditingStaff(s => s ? {...s, can_print_tags: !s.can_print_tags} : null)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors ml-3 ${
+                        editingStaff.can_print_tags
+                          ? 'bg-[var(--color-accent-cobalt)] border-[var(--color-accent-cobalt)]'
+                          : 'bg-[var(--color-surface-2)] border-[var(--color-border)]'
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow transition-transform ${
+                        editingStaff.can_print_tags ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                </div>
+                </>
               )}
 
               <div className="flex gap-3 pt-1">
@@ -510,6 +567,8 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     role: editingStaff.role,
                     hub_id: editingStaff.hub_id,
                     can_edit_ledger: editingStaff.can_edit_ledger,
+                    can_print_receipts: editingStaff.can_print_receipts,
+                    can_print_tags: editingStaff.can_print_tags,
                   })}
                   disabled={saving}
                   className="flex-1 h-11 bg-[var(--color-accent-cobalt)] text-white rounded-lg text-[12px] font-bold disabled:opacity-60"

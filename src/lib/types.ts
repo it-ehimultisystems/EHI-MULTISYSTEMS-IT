@@ -26,7 +26,8 @@ export type UserRole =
   | 'marketing_agent'
   | 'driver'
   | 'accountant'
-  | 'auditor';
+  | 'auditor'
+  | 'office_work';
 
 export interface User {
   id?: string;
@@ -39,6 +40,8 @@ export interface User {
   hub_id?: string;
   active?: boolean;
   can_edit_ledger?: boolean;   // Super admin grants this per user
+  can_print_receipts?: boolean; // Super admin grants this per user
+  can_print_tags?: boolean;     // Super admin grants this per user
 }
 
 export type PaymentMode = 'Cash' | 'POS' | 'Transfer' | 'Debt' | 'Debt Paid';

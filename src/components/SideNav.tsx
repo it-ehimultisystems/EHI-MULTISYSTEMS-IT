@@ -70,13 +70,13 @@ export const SideNav = ({
       id: "Cargo",
       icon: Package,
       label: "Cargo Entry",
-      roles: ["super_admin", "admin", "cargo_agent"],
+      roles: ["super_admin", "admin", "cargo_agent", "office_work"],
     },
     {
       id: "Marketing",
       icon: TrendingUp,
       label: "Marketing",
-      roles: ["super_admin", "admin", "marketing_agent"],
+      roles: ["super_admin", "admin", "marketing_agent", "office_work"],
     },
     {
       id: "VJ POS",
@@ -95,6 +95,7 @@ export const SideNav = ({
         "vj_agent",
         "marketing_agent",
         "driver",
+        "office_work"
       ],
     },
     { id: "MyTrips", icon: Truck, label: "My Trips", roles: ["driver"] },
@@ -102,7 +103,7 @@ export const SideNav = ({
       id: "More",
       icon: MoreHorizontal,
       label: "More",
-      roles: ["super_admin", "admin", "accountant", "auditor"],
+      roles: ["super_admin", "admin", "accountant", "auditor", "cargo_agent", "vj_agent", "marketing_agent", "driver", "office_work"],
     },
   ];
 

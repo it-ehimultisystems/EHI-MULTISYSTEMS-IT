@@ -34,6 +34,8 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
         return [home, scan, more];
       case 'auditor':
         return [home, scan, more];
+      case 'office_work':
+        return [cargo, mkt, scan, more];
       default:
         return [home, scan, more];
     }

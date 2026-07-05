@@ -17,6 +17,7 @@ import {
   Minus,
   ChevronRight,
   Download,
+  Printer,
 } from "lucide-react";
 import { QRCode } from "../QRCode";
 
@@ -147,6 +148,120 @@ export const TransactionLedger = ({
     if (editingTx) {
       onUpdateTx(editingTx);
       setEditingTx(null);
+    }
+  };
+
+  const handleReprintReceipt = async (width: '58mm' | '80mm') => {
+    if (!viewingDetail || !viewingDetail.raw) return;
+    const tx = viewingDetail.raw;
+    const { printViaBluetooth } = await import('../../lib/escpos');
+
+    try {
+      if (tx.type === 'cargo') {
+        const { compileCargoReceiptStream } = await import('../../lib/escposCargoReceiptPrinting');
+        const bytes = await compileCargoReceiptStream({
+          entryRef: tx.id,
+          serialNumber: 0,
+          date: tx.time,
+          hubName: tx.hub || user.hub,
+          agentName: tx.enteredByName || user.name,
+          airline: tx.airline || "Unknown",
+          consignee: tx.consignee || tx.name,
+          awbTagNumber: tx.awb_tag_number || "N/A",
+          pieces: tx.pieces || 1,
+          kg: tx.kg || 1,
+          route: tx.route || "Unknown",
+          contentType: tx.detail?.split(" · ")[5] || "General Goods",
+          amount: tx.amount,
+          paymentMode: tx.mode,
+          bankName: tx.bank,
+          pickupPin: tx.pickupPin,
+          trackingUrl: `https://ehimultisystems.com/track/${tx.id}`,
+        }, width);
+        await printViaBluetooth(bytes);
+      } else if (tx.type === 'baggage') {
+        const { compileVJReceiptStream } = await import('../../lib/escposVJPrinting');
+        const bytes = await compileVJReceiptStream({
+          entryRef: tx.id,
+          date: tx.time,
+          originState: tx.hub || user.hub,
+          agentName: tx.enteredByName || user.name,
+          passengerName: tx.name,
+          flight: tx.flight || "Unknown",
+          destination: tx.destination || "Unknown",
+          totalPieces: tx.pieces || 1,
+          totalWeightKg: tx.totalKg || tx.kg || 0,
+          freeAllowanceKg: (tx.totalKg || 0) - (tx.excessKg || 0),
+          excessChargeKg: tx.excessKg || 0,
+          ratePerKg: (tx.excessKg || 0) > 0 ? Math.round(tx.amount / tx.excessKg!) : 0,
+          amount: tx.amount,
+          paymentMode: tx.mode,
+          trackingUrl: `https://ehimultisystems.com/track/${tx.id}`,
+        }, width);
+        await printViaBluetooth(bytes);
+      } else if (tx.type === 'marketing') {
+        const { compileMarketingReceiptStream } = await import('../../lib/escposMarketingPrinting');
+        const parts = tx.detail?.split(' · ') || [];
+        let route = parts[0] || 'Unknown';
+        let big = 0, med = 0, small = 0;
+        if (parts[1]) {
+          const bagMatch = parts[1].match(/(\d+) Big, (\d+) Med, (\d+) Sml/);
+          if (bagMatch) {
+            big = parseInt(bagMatch[1]);
+            med = parseInt(bagMatch[2]);
+            small = parseInt(bagMatch[3]);
+          }
+        }
+        const bytes = await compileMarketingReceiptStream({
+          entryRef: tx.id,
+          date: tx.time,
+          agentName: tx.enteredByName || user.name,
+          customerName: tx.name,
+          phone: tx.remarks || '',
+          route: route,
+          bigBags: big,
+          medBags: med,
+          smallBags: small,
+          amount: tx.amount,
+          paymentMode: tx.mode,
+          paymentNarration: tx.paymentNarration,
+          bankName: tx.bank,
+          trackingUrl: `https://ehimultisystems.com/track/${tx.id}`,
+        }, width);
+        await printViaBluetooth(bytes);
+      }
+    } catch (error) {
+      console.error('Error printing receipt:', error);
+      alert('Error connecting to Bluetooth printer. Ensure it is paired and on.');
+    }
+  };
+
+  const handleReprintTag = async (width: '58mm' | '80mm') => {
+    if (!viewingDetail || !viewingDetail.raw) return;
+    try {
+      const { printBluetoothTag } = await import('../../lib/escposTagPrinting');
+      const tx = { ...viewingDetail.raw };
+      
+      // Calculate pieces for marketing tags if necessary
+      if (tx.type === 'marketing') {
+        const parts = tx.detail?.split(' · ') || [];
+        tx.route = parts[0] || 'Unknown';
+        if (parts[1]) {
+          let big = 0, med = 0, small = 0;
+          const bagMatch = parts[1].match(/(\d+) Big, (\d+) Med, (\d+) Sml/);
+          if (bagMatch) {
+            big = parseInt(bagMatch[1]) || 0;
+            med = parseInt(bagMatch[2]) || 0;
+            small = parseInt(bagMatch[3]) || 0;
+          }
+          tx.pieces = big + med + small || 1;
+        }
+      }
+      
+      await printBluetoothTag(tx, width);
+    } catch (error) {
+      console.error('Error printing tag:', error);
+      alert('Error connecting to Bluetooth printer. Ensure it is paired and on.');
     }
   };
 
@@ -798,29 +913,59 @@ export const TransactionLedger = ({
             </div>
 
             {/* Actions Footer */}
-            <div className="p-4 bg-[var(--color-obsidian)] border-t border-[var(--color-border)] flex gap-2 shrink-0">
+            <div className="p-4 bg-[var(--color-obsidian)] border-t border-[var(--color-border)] flex flex-col gap-2 shrink-0">
               {viewingDetail.source === 'transaction' && (
                 <>
-                  <button 
-                    onClick={() => setViewingQrTx(viewingDetail)}
-                    className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
-                  >
-                    <QrCode size={14} /> Scan
-                  </button>
-                  {viewingDetail.mode !== 'Debt' && viewingDetail.mode !== 'Transfer' && !viewingDetail.raw.paymentConfirmed && isAccountantOrAdmin && (
+                  <div className="flex gap-2">
                     <button 
-                      onClick={(evt) => toggleConfirm(viewingDetail, evt)}
-                      className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold"
+                      onClick={() => setViewingQrTx(viewingDetail)}
+                      className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
                     >
-                      <CheckSquare size={14} /> Confirm
+                      <QrCode size={14} /> Scan
                     </button>
+                    {viewingDetail.mode !== 'Debt' && viewingDetail.mode !== 'Transfer' && !viewingDetail.raw.paymentConfirmed && isAccountantOrAdmin && (
+                      <button 
+                        onClick={(evt) => toggleConfirm(viewingDetail, evt)}
+                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold"
+                      >
+                        <CheckSquare size={14} /> Confirm
+                      </button>
+                    )}
+                    <button 
+                      onClick={(evt) => handleEditClick(viewingDetail, evt)}
+                      className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
+                    >
+                      <Edit2 size={14} /> Edit
+                    </button>
+                  </div>
+                  {(user.role === 'super_admin' || user.can_print_receipts || user.can_print_tags) && (
+                    <div className="flex gap-2 mt-2">
+                      {(user.role === 'super_admin' || user.can_print_receipts) && (
+                        <>
+                          <button
+                            onClick={() => handleReprintReceipt('80mm')}
+                            className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
+                          >
+                            <Printer size={14} /> Receipt (80)
+                          </button>
+                          <button
+                            onClick={() => handleReprintReceipt('58mm')}
+                            className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
+                          >
+                            <Printer size={14} /> Receipt (58)
+                          </button>
+                        </>
+                      )}
+                      {(user.role === 'super_admin' || user.can_print_tags) && (viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing') && (
+                        <button
+                          onClick={() => handleReprintTag('80mm')} // Tag printing defaulting to 80mm
+                          className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
+                        >
+                          <Printer size={14} /> Print Tag
+                        </button>
+                      )}
+                    </div>
                   )}
-                  <button 
-                    onClick={(evt) => handleEditClick(viewingDetail, evt)}
-                    className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
-                  >
-                    <Edit2 size={14} /> Edit
-                  </button>
                 </>
               )}
             </div>

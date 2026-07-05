@@ -38,8 +38,10 @@ const CreditDebit = memo(CreditDebitRaw);
 
 export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const getDefaultTab = (role: string): TabView => {
+    if (role === 'office_work') return 'Cargo';
     if (role === 'marketing_agent') return 'Marketing';
     if (role === 'driver') return 'MyTrips';
+    if (role === 'vj_agent') return 'VJ POS';
     return 'Tower';
   };
   const [currentTab, setCurrentTab] = useState<TabView>(getDefaultTab(user.role));
