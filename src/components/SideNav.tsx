@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ehiLogo from '../assets/branding/ehi-logo.png';
 import {
   LayoutDashboard,
   Package,
@@ -156,16 +157,20 @@ export const SideNav = ({
               flexShrink: 0,
             }}
           >
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 11,
-                fontWeight: 800,
-                color: "#F59E0B",
+            <img
+              src={ehiLogo}
+              alt="EHI"
+              style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 7 }}
+              onError={(e) => {
+                // Falls back to the original text treatment if the file is
+                // missing or fails to load, rather than showing a broken image icon
+                (e.target as HTMLImageElement).style.display = 'none';
+                const fallback = document.createElement('span');
+                fallback.textContent = 'EHI';
+                fallback.style.cssText = "font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;color:#F59E0B;";
+                (e.target as HTMLImageElement).parentElement?.appendChild(fallback);
               }}
-            >
-              EHI
-            </span>
+            />
           </div>
 
           <div

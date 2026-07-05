@@ -20,6 +20,8 @@ import {
   Printer,
 } from "lucide-react";
 import { QRCode } from "../QRCode";
+import TagPrintHistory from "./TagPrintHistory";
+import { supabase } from "../../lib/supabase";
 
 type Entry = {
   id: string;
@@ -57,6 +59,7 @@ export const TransactionLedger = ({
   dateRange?: { start: string; end: string };
   onDateRangeChange?: (range: { start: string; end: string }) => void;
 }) => {
+  const [showPrintHistory, setShowPrintHistory] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [viewingQrTx, setViewingQrTx] = useState<Entry | null>(null);
   const [viewingDetail, setViewingDetail] = useState<Entry | null>(null);
@@ -259,6 +262,21 @@ export const TransactionLedger = ({
       }
       
       await printBluetoothTag(tx, width);
+      
+      try {
+        await supabase.from('tag_print_log').insert({
+          cargo_ref: tx.id,
+          awb_tag_number: tx.awb_tag_number || tx.entryRef || tx.id,
+          printed_by: user.id,
+          printed_by_name: user.name,
+          hub_id: user.hub_id,
+          hub_name: user.hub || 'Unknown',
+          print_method: 'pos_bluetooth',
+          pieces_printed: tx.pieces || 1,
+        });
+      } catch (err) {
+        console.error('Failed to log tag print', err);
+      }
     } catch (error) {
       console.error('Error printing tag:', error);
       alert('Error connecting to Bluetooth printer. Ensure it is paired and on.');
@@ -432,11 +450,30 @@ export const TransactionLedger = ({
               <Download size={11} /> {defaultTypeFilter === 'baggage' ? 'Download PDF' : 'Download CSV'}
             </button>
           )}
+
+          {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant' || user.role === 'auditor') && (
+            <button
+              onClick={() => setShowPrintHistory(!showPrintHistory)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[10px] font-mono transition-colors ${
+                showPrintHistory 
+                  ? 'bg-[var(--color-accent-amber)] border-[var(--color-accent-amber)] text-black'
+                  : 'bg-[var(--color-surface-card)] border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)]'
+              }`}
+            >
+              <Printer size={11} /> {showPrintHistory ? 'Close Print Logs' : 'Print Logs'}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Summary Strip */}
-      <div className="px-4 py-2 bg-[var(--color-surface-card)] border-b border-[var(--color-border)] flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0">
+      {showPrintHistory ? (
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar relative z-10">
+          <TagPrintHistory />
+        </div>
+      ) : (
+        <>
+          {/* Summary Strip */}
+          <div className="px-4 py-2 bg-[var(--color-surface-card)] border-b border-[var(--color-border)] flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0">
         <div className="px-2 py-1 rounded-full bg-[var(--color-border)] text-[10px] font-mono border border-[var(--color-border)] text-[var(--color-foreground)]">
           Total: <span className="font-bold">{fmt(totalAmount)}</span>
         </div>
@@ -750,6 +787,7 @@ export const TransactionLedger = ({
       </div>
 
       {/* Detail Popup Overlay */}
+      </>)}
       {viewingDetail && (
         <div 
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in"
@@ -938,9 +976,9 @@ export const TransactionLedger = ({
                       <Edit2 size={14} /> Edit
                     </button>
                   </div>
-                  {(user.role === 'super_admin' || user.can_print_receipts || user.can_print_tags) && (
+                  {(['super_admin', 'admin', 'accountant', 'cargo_agent', 'marketing_agent', 'vj_agent'].includes(user.role)) && (
                     <div className="flex gap-2 mt-2">
-                      {(user.role === 'super_admin' || user.can_print_receipts) && (
+                      {(['super_admin', 'admin', 'accountant', 'cargo_agent', 'marketing_agent', 'vj_agent'].includes(user.role)) && (
                         <>
                           <button
                             onClick={() => handleReprintReceipt('80mm')}
@@ -956,7 +994,7 @@ export const TransactionLedger = ({
                           </button>
                         </>
                       )}
-                      {(user.role === 'super_admin' || user.can_print_tags) && (viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing') && (
+                      {(['super_admin', 'admin', 'cargo_agent', 'marketing_agent'].includes(user.role)) && (viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing') && (
                         <button
                           onClick={() => handleReprintTag('80mm')} // Tag printing defaulting to 80mm
                           className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"

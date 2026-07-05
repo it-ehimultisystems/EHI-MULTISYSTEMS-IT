@@ -199,7 +199,7 @@ export async function createStaffAccountsBulk(rows: BulkStaffRow[]): Promise<{ r
 export async function fetchStaffList(hubId?: string): Promise<any[]> {
   let q = supabase
     .from('user_profiles')
-    .select('id, email, name, role, hub_type, active, hub_id, hubs(name, code)')
+    .select('id, email, name, role, hub_type, active, hub_id, can_edit_ledger, hubs(name, code)')
     .order('name');
 
   if (hubId) q = q.eq('hub_id', hubId) as any;

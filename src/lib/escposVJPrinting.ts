@@ -1,7 +1,7 @@
 import {
   encoder, INIT, CENTER, LEFT, TEXT_NORMAL, TEXT_DOUBLE_HEIGHT,
   BOLD_ON, BOLD_OFF, FEED_AND_CUT,
-  concatChunks, qrCommands, brandingHeader, fieldRow, divider,
+  concatChunks, qrAsRaster, brandingHeader, fieldRow, divider,
 } from './escposShared';
 
 export interface VJReceiptPrintData {
@@ -33,7 +33,8 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
   chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
   chunks.push(encoder.encode("Origin: ValueJet Counter\n\n"));
 
-  chunks.push(...qrCommands(data.trackingUrl));
+  chunks.push(await qrAsRaster(data.trackingUrl, width === '58mm' ? 120 : 140));
+  chunks.push(encoder.encode('\n\n'));
   chunks.push(new Uint8Array(LEFT));
   chunks.push(encoder.encode(divider(maxChars)));
   chunks.push(encoder.encode(fieldRow('REF:', data.entryRef, maxChars)));

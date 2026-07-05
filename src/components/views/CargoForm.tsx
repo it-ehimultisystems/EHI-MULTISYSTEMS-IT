@@ -828,6 +828,21 @@ export const CargoForm = ({
         pickupPin: (successTx as any).pickupPin || undefined,
       };
       downloadCargoWaybill(printData);
+      
+      try {
+        await supabase.from('tag_print_log').insert({
+          cargo_ref: successTx.id,
+          awb_tag_number: successTx.awb_tag_number || awb,
+          printed_by: user.id,
+          printed_by_name: user.name,
+          hub_id: user.hub_id,
+          hub_name: user.hub || 'Unknown',
+          print_method: 'pdf',
+          pieces_printed: successTx.pieces || parseInt(pcs) || 1,
+        });
+      } catch (err) {
+        console.error('Failed to log tag print', err);
+      }
     }
   };
 

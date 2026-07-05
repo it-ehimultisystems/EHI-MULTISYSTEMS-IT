@@ -272,9 +272,26 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     // Dashboard.tsx's own showCargo/showVJ/showMktg logic already hides
     // from them. Mirrors that exact same gating so nobody's visible data
     // changes — this only removes waste, not functionality.
-    const needsCargo = isAdmin || user.role === 'cargo_agent';
-    const needsVJ = isAdmin || user.role === 'vj_agent';
-    const needsMarketing = isAdmin || user.role === 'marketing_agent';
+
+    // perf(realtime): To reduce Postgres connection count on a Nano-tier project 
+    // close to its connection ceiling, admin-tier users now only subscribe to 
+    // channels relevant to their active tab (currentTab). Aggregate views like 
+    // Tower, Scan, and More hold all channels, while type-specific views hold one.
+    // Non-admin roles retain their original scale-readiness behavior.
+    let needsCargo = user.role === 'cargo_agent';
+    let needsVJ = user.role === 'vj_agent';
+    let needsMarketing = user.role === 'marketing_agent';
+
+    if (isAdmin) {
+      const isAggregateView = ['Tower', 'Scan', 'More'].includes(currentTab);
+      needsCargo = isAggregateView || currentTab === 'Cargo';
+      needsVJ = isAggregateView || currentTab === 'VJ POS';
+      needsMarketing = isAggregateView || currentTab === 'Marketing';
+    } else {
+      // Preserve the exact existing logic for non-admins if they weren't explicitly matched above
+      // (Actually, the previous code was `isAdmin || user.role === '...'`)
+      // So this matches the exact previous logic for non-admins.
+    }
 
     // Guard against pushing a row that already exists locally (e.g. our own insert)
     const pushUnique = (tx: Transaction) => {
@@ -418,7 +435,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       if (marketingChannel) supabase.removeChannel(marketingChannel);
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     };
-  }, [isOffline, flushPendingTx, user.hub_id, user.role]);
+  }, [isOffline, flushPendingTx, user.hub_id, user.role, currentTab]);
 
   const handleAddTx = useCallback(async (tx: Transaction) => {
     setTransactions(prev => {

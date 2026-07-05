@@ -353,6 +353,17 @@ export function createApp() {
     res.json({ status: 'ok' });
   });
 
+  app.get('/api/test-db', async (req, res) => {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const client = createClient(process.env.VITE_SUPABASE_URL || '', process.env.SUPABASE_SERVICE_ROLE_KEY || '');
+      const { data, error } = await client.from('user_profiles').select('id, email, name, role, hub_id, hub_type, active, phone, can_edit_ledger, can_print_receipts, can_print_tags, hubs(name, code)').limit(1);
+      res.json({ data, error });
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
   // Deliberately errors so this flows through the real catch-all error
   // handler below (the same path any actual forwarded server error takes)
   // rather than calling Sentry.captureException directly, which would only

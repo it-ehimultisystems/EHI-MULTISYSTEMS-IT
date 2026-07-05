@@ -1,3 +1,5 @@
+import QRCode from 'qrcode';
+
 export const encoder = new TextEncoder();
 
 export const INIT = [0x1B, 0x40];
@@ -17,6 +19,16 @@ export function concatChunks(chunks: Uint8Array[]): Uint8Array {
   let offset = 0;
   for (const c of chunks) { out.set(c, offset); offset += c.length; }
   return out;
+}
+
+// Renders a QR code as an actual bitmap image and prints it via the
+// same raster path as logos, rather than relying on printer-native
+// GS(k 2D symbol commands -- confirmed via real prints that at least
+// one deployed printer doesn't properly support those commands, even
+// though basic text/reverse-print work fine on it.
+export async function qrAsRaster(url: string, sizeDots: number): Promise<Uint8Array> {
+  const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: sizeDots });
+  return imageToEscPosRaster(dataUrl, sizeDots);
 }
 
 export function qrCommands(url: string): Uint8Array[] {
