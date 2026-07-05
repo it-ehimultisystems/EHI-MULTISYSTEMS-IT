@@ -59,8 +59,9 @@ export async function compileSingleTag(item: CargoTagData, width: '58mm' | '80mm
 
   chunks.push(new Uint8Array(CENTER));
   chunks.push(new Uint8Array(REVERSE_ON));
-  chunks.push(encoder.encode(` PIECE ${item.pieceNo}   ·   WEIGHT: ${item.weight} KG \n`));
+  chunks.push(encoder.encode(` PIECE ${item.pieceNo}  |  WEIGHT: ${item.weight} KG `));
   chunks.push(new Uint8Array(REVERSE_OFF));
+  chunks.push(encoder.encode('\n'));
   
   chunks.push(new Uint8Array(LEFT));
   chunks.push(encoder.encode(divider(maxChars)));

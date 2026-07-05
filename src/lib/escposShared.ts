@@ -1,5 +1,12 @@
 import QRCode from 'qrcode';
 
+import ehiLogoFile from '../assets/branding/ehi-logo.png';
+import aeroLogoFile from '../assets/airlines/aero-contractors.png';
+import arikLogoFile from '../assets/airlines/arik-air.png';
+import valuejetLogoFile from '../assets/airlines/valuejet.png';
+import unitedNigeriaLogoFile from '../assets/airlines/united-nigeria.png';
+import greenAfricaLogoFile from '../assets/airlines/green-africa.png';
+
 export const encoder = new TextEncoder();
 
 export const INIT = [0x1B, 0x40];
@@ -110,11 +117,11 @@ export async function imageToEscPosRaster(imageUrl: string, targetWidthDots: num
 // a file path instead of a React component.
 export function getAirlineLogoPath(airline: string): string | null {
   const norm = airline.toLowerCase();
-  if (norm.includes('aero')) return '/src/assets/airlines/aero-contractors.png';
-  if (norm.includes('arik')) return '/src/assets/airlines/arik-air.png';
-  if (norm.includes('valuejet')) return '/src/assets/airlines/valuejet.png';
-  if (norm.includes('united') || norm.includes('un')) return '/src/assets/airlines/united-nigeria.png';
-  if (norm.includes('green africa') || norm.includes('greenafrica')) return '/src/assets/airlines/green-africa.png';
+  if (norm.includes('aero')) return aeroLogoFile;
+  if (norm.includes('arik')) return arikLogoFile;
+  if (norm.includes('valuejet')) return valuejetLogoFile;
+  if (norm.includes('united') || norm.includes('un')) return unitedNigeriaLogoFile;
+  if (norm.includes('green africa') || norm.includes('greenafrica')) return greenAfricaLogoFile;
   return null;
 }
 
@@ -123,8 +130,7 @@ export function getAirlineLogoPath(airline: string): string | null {
 export async function brandingHeader(logoWidthDots = 160): Promise<Uint8Array[]> {
   const chunks: Uint8Array[] = [new Uint8Array(CENTER)];
   try {
-    const logoPath = '/src/assets/branding/ehi-logo.png';
-    const logoRaster = await imageToEscPosRaster(logoPath, logoWidthDots);
+    const logoRaster = await imageToEscPosRaster(ehiLogoFile, logoWidthDots);
     chunks.push(logoRaster);
     chunks.push(encoder.encode('\n'));
   } catch {
