@@ -10,7 +10,7 @@ interface Props {
   transactions: Transaction[];
   expenses: Expense[];
   onBack: () => void;
-  onEOD: () => void;
+  onEOD: (summary: any) => void;
 }
 
 export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD }: Props) => {
@@ -42,7 +42,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     const grossTotal = cargoTotal + mktgTotal + vjTotal;
 
     const cashTotal = todaysTx.filter(t => t.mode === 'Cash').reduce((s, t) => s + t.amount, 0);
-    const transferTotal = todaysTx.filter(t => t.mode === 'Transfer' || t.mode === 'POS').reduce((s, t) => s + t.amount, 0);
+    const transferTotal = todaysTx.filter(t => t.mode === 'Transfer').reduce((s, t) => s + t.amount, 0);
     const posTotal = todaysTx.filter(t => t.mode === 'POS').reduce((s, t) => s + t.amount, 0);
     const debtTotal = todaysTx.filter(t => t.mode === 'Debt').reduce((s, t) => s + t.amount, 0);
     const expensesTotal = todaysExp.filter(e => !e.mode || e.mode === 'Cash').reduce((s, e) => s + e.amount, 0);
@@ -203,7 +203,16 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     }
 
     setIsGenerating(false);
-    onEOD();
+    onEOD({
+      hub: user.hub,
+      hub_id: user.hub_id || '',
+      date,
+      cashTotal: expectedTotals.cashTotal,
+      posTotal: expectedTotals.posTotal,
+      transferTotal: expectedTotals.transferTotal,
+      grandTotal: expectedTotals.grossTotal,
+      managerPhone
+    });
   };
 
   const inputClass = "ehi-input";

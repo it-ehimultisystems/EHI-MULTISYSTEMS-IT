@@ -16,6 +16,7 @@ import { More as MoreRaw } from './views/More';
 import { TransactionLedger as TransactionLedgerRaw } from './views/TransactionLedger';
 import { MarketingWorkspace as MarketingWorkspaceRaw } from './views/MarketingWorkspace';
 import { Scanner as ScannerRaw } from './views/Scanner';
+import { IncomingToHub as IncomingToHubRaw } from './views/IncomingToHub';
 import { MyTrips as MyTripsRaw } from './views/MyTrips';
 import { ITDashboard as ITDashboardRaw } from './views/ITDashboard';
 import { CreditDebit as CreditDebitRaw } from './views/CreditDebit';
@@ -32,6 +33,7 @@ const More = memo(MoreRaw);
 const TransactionLedger = memo(TransactionLedgerRaw);
 const MarketingWorkspace = memo(MarketingWorkspaceRaw);
 const Scanner = memo(ScannerRaw);
+const IncomingToHub = memo(IncomingToHubRaw);
 const MyTrips = memo(MyTripsRaw);
 const ITDashboard = memo(ITDashboardRaw);
 const CreditDebit = memo(CreditDebitRaw);
@@ -87,8 +89,26 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
     // Dashboard empty state CTA buttons dispatch this event
     const handleEhiNav = (e: Event) => {
-      const tab = (e as CustomEvent).detail as TabView;
-      if (tab) setCurrentTab(tab);
+      const requested = (e as CustomEvent).detail as TabView;
+      const role = user.role;
+      const allowed: TabView[] = [];
+
+      if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'accountant', 'auditor'].includes(role)) allowed.push('Tower');
+      if (['super_admin', 'admin', 'cargo_agent', 'office_work'].includes(role)) allowed.push('Cargo');
+      if (['super_admin', 'admin', 'marketing_agent', 'office_work'].includes(role)) allowed.push('Marketing');
+      if (['super_admin', 'admin', 'vj_agent'].includes(role)) allowed.push('VJ POS');
+      if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('Scan');
+      if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'driver', 'office_work'].includes(role)) allowed.push('IncomingToHub');
+      if (['driver'].includes(role)) allowed.push('MyTrips');
+      if (['super_admin', 'admin', 'accountant', 'auditor', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('More');
+      
+      // IT Debug and Credit & Debit are sub-views typically reached from More
+      if (role === 'super_admin') allowed.push('IT Debug');
+      if (['super_admin', 'admin', 'accountant'].includes(role)) allowed.push('Credit & Debit');
+
+      if (allowed.includes(requested) || requested === 'More') {
+        setCurrentTab(requested);
+      }
     };
     window.addEventListener('ehi-nav', handleEhiNav);
 
@@ -97,7 +117,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('ehi-nav', handleEhiNav);
     };
-  }, [showToast]);
+  }, [showToast, user.role]);
 
   const flushPendingTx = useCallback(() => {
     if (pendingTxRef.current.length === 0) return;
@@ -652,9 +672,29 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   const handleShowMarketingHistory = useCallback(() => setStreamLedger('marketing'), []);
   const handleShowBaggageHistory = useCallback(() => setStreamLedger('baggage'), []);
   const handleCloseLedger = useCallback(() => setStreamLedger(null), []);
-  const handleEOD = useCallback(() => {
-    showToast({ message: 'EOD Report Dispatched — Saved to Drive · Emailed to management', type: 'success' });
-  }, [showToast]);
+  const handleEOD = useCallback(async (summary: { 
+    hub: string; hub_id: string; date: string; 
+    cashTotal: number; posTotal: number; transferTotal: number; grandTotal: number;
+    managerPhone?: string;
+  }) => {
+    try {
+      if (summary.managerPhone) {
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token || '';
+        await fetch('/api/notify/whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            to: summary.managerPhone,
+            message: `EOD REPORT — ${summary.hub}\nDate: ${summary.date}\nCash: ₦${summary.cashTotal.toLocaleString()}\nPOS: ₦${summary.posTotal.toLocaleString()}\nTransfer: ₦${summary.transferTotal.toLocaleString()}\nTOTAL: ₦${summary.grandTotal.toLocaleString()}\n\nLocked by ${user.name}`
+          })
+        });
+      }
+      showToast({ message: 'EOD locked — manager notified', type: 'success' });
+    } catch (err) {
+      showToast({ message: 'EOD locked but notification failed', type: 'warning' });
+    }
+  }, [user.name, showToast]);
 
   const filteredLedgerTransactions = useMemo(() => {
     if (!streamLedger) return [];
@@ -744,9 +784,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                 />
               )}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
+              {currentTab === 'IncomingToHub' && <IncomingToHub user={user} onBack={() => setCurrentTab('Scan')} />}
               {currentTab === 'MyTrips' && <MyTrips user={user} />}
-              {currentTab === 'IT Debug' && <ITDashboard user={user} />}
-              {currentTab === 'Credit & Debit' && <CreditDebit user={user} transactions={transactions} />}
+              {currentTab === 'IT Debug' && <ITDashboard user={user} onBack={() => setCurrentTab('More')} />}
+              {currentTab === 'Credit & Debit' && <CreditDebit user={user} transactions={transactions} onBack={() => setCurrentTab('More')} />}
               {currentTab === 'More' && (
                 <More 
                    user={user} 
@@ -780,7 +821,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             onBack={handleCloseLedger}
             onUpdateTx={handleUpdateTx}
             defaultTypeFilter={streamLedger}
-            viewOnly={user.role !== 'super_admin' && !user.can_edit_ledger}
+            viewOnly={user.role !== 'super_admin' && !user.can_print_ledger}
             dateRange={globalDateRange}
             onDateRangeChange={setGlobalDateRange}
           />

@@ -769,7 +769,7 @@ export const CargoForm = ({
 
   const handlePrintReceipt = async () => {
     if (successTx) {
-      const { downloadCargoReceipt } = await import("./CargoReceipt");
+      const { printCargoReceipt } = await import("./CargoReceipt");
       const printData = {
         entryRef: successTx.id,
         serialNumber: serialNumber - 1,
@@ -795,7 +795,7 @@ export const CargoForm = ({
         remark: successTx.remarks || undefined,
         pickupPin: (successTx as any).pickupPin || undefined,
       };
-      downloadCargoReceipt(printData);
+      printCargoReceipt(printData);
     }
   };
 

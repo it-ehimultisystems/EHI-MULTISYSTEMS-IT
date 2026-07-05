@@ -4,6 +4,7 @@ import { PRICING, BANKS, EXPENSE_CATEGORIES } from "../../lib/constants";
 import { fmt, uid, tnow } from "../../lib/helpers";
 import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer } from "lucide-react";
 import { motion } from "motion/react";
+import { supabase } from "../../lib/supabase";
 
 import {
   sendReceiptWhatsApp,
@@ -49,11 +50,12 @@ export const MarketingWorkspace = ({
   const [mb, setMb] = useState(0);
   const [sb, setSb] = useState(0);
   const [amountOverride, setAmountOverride] = useState("");
+  const [debtorName, setDebtorName] = useState("");
 
   const [narrationCode, setNarrationCode] = useState<string>("");
 
   useEffect(() => {
-    if (mode === "Transfer" && !narrationCode) {
+    if ((mode === "Transfer" || mode === "POS") && !narrationCode) {
       import("../../lib/helpers").then(({ generatePaymentNarration }) => {
         // use a random serial for marketing if none exists
         setNarrationCode(
@@ -129,10 +131,26 @@ export const MarketingWorkspace = ({
     }
   };
 
-  const handleCloseDay = () => {
-    setShowCloseModal(false);
-    // In a real app we'd trigger a cloud function to seal these. For now reset. Let's just alert.
-    alert("Day closed and submitted successfully!");
+  const handleCloseDay = async () => {
+    if (!window.confirm('Close today\'s marketing session? This cannot be undone.')) return;
+    try {
+      setShowCloseModal(false);
+      const today = new Date().toISOString().slice(0, 10);
+      const totalSales = transactions.reduce((s, t) => s + (t.amount || 0), 0);
+      const { error } = await supabase.from('marketing_day_close').upsert({
+        hub_id: user.hub_id,
+        hub: user.hub,
+        date: today,
+        total_sales: totalSales,
+        entry_count: transactions.length,
+        closed_by: user.name,
+        closed_at: new Date().toISOString()
+      }, { onConflict: 'hub_id,date' });
+      if (error) throw error;
+      alert('Marketing day closed successfully');
+    } catch (err: any) {
+      alert('Failed to close day: ' + err.message);
+    }
   };
 
   const handleDownloadSummary = async () => {
@@ -180,12 +198,12 @@ export const MarketingWorkspace = ({
 
     const tx: Transaction = {
       id: uid("MK"),
-      name: name.trim(),
+      name: mode === "Debt" ? debtorName.trim() : name.trim(),
       detail: `${route} · ${details.join(" ")}`,
       amount: totalAmount,
       mode,
-      bank: mode === "Transfer" ? bank : undefined,
-      paymentNarration: mode === "Transfer" ? narrationCode : undefined,
+      bank: (mode === "Transfer" || mode === "POS") ? bank : undefined,
+      paymentNarration: (mode === "Transfer" || mode === "POS") ? narrationCode : undefined,
       time: tnow(),
       type: "marketing",
       status: "Intake",
@@ -214,7 +232,7 @@ export const MarketingWorkspace = ({
           bags: bagsList.join(" · "),
           amount: totalAmount,
           mode,
-          bank: mode === "Transfer" ? bank : undefined,
+          bank: (mode === "Transfer" || mode === "POS") ? bank : undefined,
         }),
       });
     }
@@ -222,6 +240,7 @@ export const MarketingWorkspace = ({
 
   const handleReset = () => {
     setName("");
+    setDebtorName("");
     setPhone("");
     setBb(0);
     setMb(0);
@@ -483,23 +502,37 @@ export const MarketingWorkspace = ({
                     <option value="Cash">Cash</option>
                     <option value="Transfer">Transfer</option>
                     <option value="POS">POS</option>
+                    <option value="Debt">Debt</option>
                   </select>
                 </div>
 
-                {mode === "Transfer" && (
+                {(mode === "Transfer" || mode === "POS") && (
                   <div className="space-y-2">
                     <select
                       value={bank}
                       onChange={(e) => setBank(e.target.value)}
                       className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                     >
+                      <option disabled value="">Bank / POS Terminal</option>
                       {BANKS.map((b) => (
                         <option key={b} value={b}>
                           {b}
                         </option>
                       ))}
                     </select>
-                    <PaymentNarrationBox narrationCode={narrationCode} />
+                    {mode === "Transfer" && <PaymentNarrationBox narrationCode={narrationCode} />}
+                  </div>
+                )}
+
+                {mode === "Debt" && (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Debtor Name / Company"
+                      value={debtorName}
+                      onChange={(e) => setDebtorName(e.target.value)}
+                      className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                    />
                   </div>
                 )}
 

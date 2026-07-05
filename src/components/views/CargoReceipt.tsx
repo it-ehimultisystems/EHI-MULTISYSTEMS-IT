@@ -399,6 +399,28 @@ const CargoWaybillOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
   );
 };
 
+export const printCargoReceipt = async (data: CargoReceiptData) => {
+  if (!data.qrCodeDataUrl) {
+    try {
+      data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
+        margin: 1,
+        width: 200,
+      });
+    } catch (e) {
+      console.warn("Failed to generate QR code", e);
+    }
+  }
+  const blob = await pdf(<CargoReceiptOnlyPDF data={data} />).toBlob();
+  const url = URL.createObjectURL(blob);
+  // Open in new tab and trigger print
+  const printWindow = window.open(url);
+  if (printWindow) {
+    printWindow.onload = () => {
+      // Browsers often have built-in PDF viewers that handle printing
+    };
+  }
+};
+
 export const downloadCargoReceipt = async (data: CargoReceiptData) => {
   if (!data.qrCodeDataUrl) {
     try {

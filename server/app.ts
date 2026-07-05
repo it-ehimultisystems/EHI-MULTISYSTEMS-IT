@@ -124,7 +124,7 @@ async function requireAdminCaller(req: any, res: any): Promise<{ admin: any; sup
   }
 }
 
-async function requireAuthenticatedUser(req: any, res: any, next: any) {
+export async function requireAuthenticatedUser(req: any, res: any, next: any) {
   try {
     const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
     if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
@@ -147,6 +147,7 @@ async function requireAuthenticatedUser(req: any, res: any, next: any) {
 
 export function createApp() {
   const app = express();
+  app.set('trust proxy', 1);
 
   app.use(express.json({ limit: '2mb' }));
 
@@ -172,7 +173,7 @@ export function createApp() {
   });
 
   app.use('/api/paystack', paystackRoutes);
-  app.use('/api/notify', notifyLimiter, notificationRoutes);
+  app.use('/api/notify', notifyLimiter, requireAuthenticatedUser, notificationRoutes);
   app.use('/api/eod', eodRoutes);
   app.use('/api/gemini', notifyLimiter, requireAuthenticatedUser, geminiRoutes);
 
@@ -351,17 +352,6 @@ export function createApp() {
 
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
-  });
-
-  app.get('/api/test-db', async (req, res) => {
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const client = createClient(process.env.VITE_SUPABASE_URL || '', process.env.SUPABASE_SERVICE_ROLE_KEY || '');
-      const { data, error } = await client.from('user_profiles').select('id, email, name, role, hub_id, hub_type, active, phone, can_edit_ledger, can_print_receipts, can_print_tags, hubs(name, code)').limit(1);
-      res.json({ data, error });
-    } catch (e: any) {
-      res.json({ error: e.message });
-    }
   });
 
   // Deliberately errors so this flows through the real catch-all error

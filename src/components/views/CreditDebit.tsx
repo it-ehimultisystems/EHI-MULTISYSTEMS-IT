@@ -5,7 +5,7 @@ import { ArrowLeft, CreditCard, Building2, Users, Search, ArrowDownLeft, ArrowUp
 import { supabase } from '../../lib/supabase';
 import { normalizeAirlineName } from '../../lib/helpers';
 
-export const CreditDebit = ({ user, transactions: _propTransactions }: { user: User; transactions: Transaction[] }) => {
+export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: { user: User; transactions: Transaction[]; onBack?: () => void }) => {
   const [activeTab, setActiveTab] = useState<'debts' | 'credits'>('debts');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -121,6 +121,11 @@ export const CreditDebit = ({ user, transactions: _propTransactions }: { user: U
     <main className="flex-1 flex flex-col h-full bg-[var(--color-bg)] overflow-hidden">
       {/* Header */}
       <div className="bg-[var(--color-surface-card)] border-b border-[var(--color-border)] p-4 flex flex-col">
+        {onBack && (
+          <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] text-[11px] font-mono mb-3 w-fit transition-colors">
+            <ArrowLeft size={12} /> Back to Menu
+          </button>
+        )}
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[rgba(245,158,11,0.1)] rounded-lg">
             <CreditCard size={20} strokeWidth={1.5} className="text-[var(--color-accent-amber)]" />

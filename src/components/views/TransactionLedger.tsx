@@ -312,14 +312,14 @@ export const TransactionLedger = ({
     setPosCodeInput({ id: '', code: '' });
   };
 
-  // Edit allowed only when not view-only AND user has can_edit_ledger or is super_admin
+  // Edit allowed only when not view-only AND user has can_print_ledger or is super_admin
   const canEdit = !viewOnly &&
     ['accountant', 'admin', 'super_admin'].includes(user.role) &&
-    (user.role === 'super_admin' || user.can_edit_ledger === true);
+    (user.role === 'super_admin' || user.can_print_ledger === true);
 
   const isAccountantOrAdmin = canEdit;
   // Separate from canEdit -- PIN visibility is admin/super_admin/
-  // accountant regardless of the can_edit_ledger flag, which is a
+  // accountant regardless of the can_print_ledger flag, which is a
   // different, edit-specific permission.
   const canSeePin = ['admin', 'super_admin', 'accountant'].includes(user.role);
 
@@ -976,27 +976,23 @@ export const TransactionLedger = ({
                       <Edit2 size={14} /> Edit
                     </button>
                   </div>
-                  {(['super_admin', 'admin', 'accountant', 'cargo_agent', 'marketing_agent', 'vj_agent'].includes(user.role)) && (
+                  {(user.can_print_ledger || user.role === 'super_admin') && (
                     <div className="flex gap-2 mt-2">
-                      {(['super_admin', 'admin', 'accountant', 'cargo_agent', 'marketing_agent', 'vj_agent'].includes(user.role)) && (
-                        <>
-                          <button
-                            onClick={() => handleReprintReceipt('80mm')}
-                            className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
-                          >
-                            <Printer size={14} /> Receipt (80)
-                          </button>
-                          <button
-                            onClick={() => handleReprintReceipt('58mm')}
-                            className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
-                          >
-                            <Printer size={14} /> Receipt (58)
-                          </button>
-                        </>
-                      )}
-                      {(['super_admin', 'admin', 'cargo_agent', 'marketing_agent'].includes(user.role)) && (viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing') && (
+                      <button
+                        onClick={() => handleReprintReceipt('80mm')}
+                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
+                      >
+                        <Printer size={14} /> Receipt (80)
+                      </button>
+                      <button
+                        onClick={() => handleReprintReceipt('58mm')}
+                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
+                      >
+                        <Printer size={14} /> Receipt (58)
+                      </button>
+                      {(viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing') && (
                         <button
-                          onClick={() => handleReprintTag('80mm')} // Tag printing defaulting to 80mm
+                          onClick={() => handleReprintTag('80mm')}
                           className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
                         >
                           <Printer size={14} /> Print Tag

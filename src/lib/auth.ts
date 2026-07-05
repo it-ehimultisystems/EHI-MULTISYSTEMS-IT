@@ -235,11 +235,7 @@ export async function updateStaffProfile(
 
   if (!res.ok || data.error) {
     if (res.status === 503) {
-      // RLS-permitted direct update is acceptable here (role/hub changes only,
-      // not account creation) — RLS policies still enforce who can write to user_profiles.
-      const { error } = await supabase.from('user_profiles').update(updates).eq('id', userId);
-      if (error) throw new Error(`Backend not configured, and direct DB update failed: ${error.message}`);
-      return;
+      throw new Error('Staff management is not available — the server is not fully configured. Contact your system administrator.');
     }
     const fallback = rawText
       ? `Server returned status ${res.status}: ${rawText.slice(0, 200)}`

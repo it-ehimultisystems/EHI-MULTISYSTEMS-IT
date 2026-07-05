@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Terminal, ShieldAlert, CheckCircle, AlertTriangle, RefreshCw, 
   Trash2, Plus, Download, Cpu, HardDrive, Wifi, Eye, Activity,
-  ThumbsUp, Send, Check
+  ThumbsUp, Send, Check, ArrowLeft
 } from 'lucide-react';
 import { User } from '../../lib/types';
 
@@ -60,7 +60,7 @@ const PRE_PROPOSALS: ImprovementProposal[] = [
   }
 ];
 
-export const ITDashboard = ({ user }: { user: User }) => {
+export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void }) => {
   const [activeTab, setActiveTab] = useState<'bugs' | 'logs' | 'diagnostics' | 'proposals'>('bugs');
   const [sentryTestState, setSentryTestState] = useState<'idle' | 'sending' | 'sent'>('idle');
 
@@ -368,6 +368,12 @@ export const ITDashboard = ({ user }: { user: User }) => {
   return (
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] p-4 md:p-6 overflow-y-auto pb-[90px] select-none">
       
+      {onBack && (
+        <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] text-[11px] font-mono mb-4 w-fit transition-colors">
+          <ArrowLeft size={12} /> Back to Menu
+        </button>
+      )}
+
       {/* Visual Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[var(--color-border)] pb-5 mb-5 gap-3">
         <div>

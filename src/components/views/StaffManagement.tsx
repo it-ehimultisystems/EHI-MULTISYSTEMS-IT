@@ -17,7 +17,7 @@ interface StaffMember {
   hub_type: string;
   active: boolean;
   phone?: string;
-  can_edit_ledger?: boolean;
+  can_print_ledger?: boolean;
   hub?: { name: string; code: string };
 }
 
@@ -77,7 +77,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       if (hubData) setHubs(hubData as Hub[]);
 
       let q = supabase.from('user_profiles')
-        .select('id, email, name, role, hub_id, hub_type, active, phone, can_edit_ledger, hubs(name, code)')
+        .select('id, email, name, role, hub_id, hub_type, active, phone, can_print_ledger, hubs(name, code)')
         .order('name');
 
       if (!isSuperAdmin && user.hub_id) {
@@ -91,7 +91,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
         setStaff(staffData.map((s: any) => ({
           ...s,
           hub: Array.isArray(s.hubs) ? s.hubs[0] : s.hubs,
-          can_edit_ledger: s.can_edit_ledger ?? false,
+          can_print_ledger: s.can_print_ledger ?? false,
         })));
       } else {
          setError('Query returned no data');
@@ -299,6 +299,12 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                       Inactive
                     </span>
                   )}
+                  {member.can_print_ledger && (
+                    <span className="text-[8px] font-bold uppercase px-2 py-0.5 rounded font-mono text-cyan-400 bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.2)]">
+                      <Printer size={8} className="inline mr-1 mb-[1px]" />
+                      Ledger Print
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-[var(--color-muted)] mb-1">
                   <Mail size={9} /><span>{member.email}</span>
@@ -488,21 +494,21 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                       </p>
                     </div>
                     <button
-                      onClick={() => setEditingStaff(s => s ? {...s, can_edit_ledger: !s.can_edit_ledger} : null)}
+                      onClick={() => setEditingStaff(s => s ? {...s, can_print_ledger: !s.can_print_ledger} : null)}
                       className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors ml-3 ${
-                        editingStaff.can_edit_ledger
+                        editingStaff.can_print_ledger
                           ? 'bg-[var(--color-accent-amber)] border-[var(--color-accent-amber)]'
                           : 'bg-[var(--color-surface-2)] border-[var(--color-border)]'
                       }`}
                     >
                       <span className={`pointer-events-none inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow transition-transform ${
-                        editingStaff.can_edit_ledger ? 'translate-x-5' : 'translate-x-0.5'
+                        editingStaff.can_print_ledger ? 'translate-x-5' : 'translate-x-0.5'
                       }`} />
                     </button>
                   </div>
-                  {editingStaff.can_edit_ledger && (
+                  {editingStaff.can_print_ledger && (
                     <div className="mt-2 text-[9px] font-mono text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.08)] px-2 py-1 rounded">
-                      ⚠ This user can edit cargo, VJ, and marketing entries
+                      ⚠ This user can print receipts/tags from the ledger
                     </div>
                   )}
                 </div>
@@ -517,7 +523,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     phone: editingStaff.phone,
                     role: editingStaff.role,
                     hub_id: editingStaff.hub_id,
-                    can_edit_ledger: editingStaff.can_edit_ledger,
+                    can_print_ledger: editingStaff.can_print_ledger,
                   })}
                   disabled={saving}
                   className="flex-1 h-11 bg-[var(--color-accent-cobalt)] text-white rounded-lg text-[12px] font-bold disabled:opacity-60"

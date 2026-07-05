@@ -1,9 +1,10 @@
 import express from 'express';
 import axios from 'axios';
+import { requireAuthenticatedUser } from './app.js';
 
 const router = express.Router();
 
-router.post('/verify', async (req, res) => {
+router.post('/verify', requireAuthenticatedUser, async (req, res) => {
   try {
     const { reference } = req.body;
     const response = await axios.get(

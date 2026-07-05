@@ -39,7 +39,7 @@ export interface User {
   hub_code?: string;
   hub_id?: string;
   active?: boolean;
-  can_edit_ledger?: boolean;   // Super admin grants this per user
+  can_print_ledger?: boolean;   // Super admin grants this per user
 }
 
 export type PaymentMode = 'Cash' | 'POS' | 'Transfer' | 'Debt' | 'Debt Paid';
@@ -211,7 +211,7 @@ export interface Expense {
   logged_by?: string;
 }
 
-export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Scan' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit';
+export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Scan' | 'IncomingToHub' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit';
 
 export interface AppState {
   user: User | null;

@@ -725,7 +725,7 @@ export const Scanner = ({
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowIncomingView(true)}
+            onClick={() => window.dispatchEvent(new CustomEvent('ehi-nav', { detail: 'IncomingToHub' }))}
             className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[var(--color-accent-cobalt)] hover:text-[var(--color-foreground)] bg-[rgba(59,130,246,0.1)] hover:bg-[rgba(59,130,246,0.2)] border border-[rgba(59,130,246,0.2)] px-3 py-1.5 rounded-full transition-colors cursor-pointer"
           >
             <Plane size={12} />

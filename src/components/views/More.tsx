@@ -45,7 +45,7 @@ import {
 
 import { StaffManagement } from './StaffManagement';
 
-export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onChangeTab, dateRange, onDateRangeChange }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: () => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; }) => {
+export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onChangeTab, dateRange, onDateRangeChange }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: (summary: any) => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; }) => {
   const [eodView, setEodView] = useState(false);
   const [accountingView, setAccountingView] = useState(false);
   const [reportsView, setReportsView] = useState(false);
@@ -68,7 +68,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
   // View controllers
   if (eodView) {
-    return <EODReconciliation user={user} transactions={transactions} expenses={expenses} onBack={() => setEodView(false)} onEOD={onEOD} />;
+    return <EODReconciliation user={user} transactions={transactions} expenses={expenses} onBack={() => setEodView(false)} onEOD={onEOD || (() => {})} />;
   }
 
   if (accountingView) {

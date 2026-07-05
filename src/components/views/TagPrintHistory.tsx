@@ -44,7 +44,7 @@ export default function TagPrintHistory() {
           .from('tracking_events')
           .select('cargo_ref')
           .in('cargo_ref', cargoRefs)
-          .eq('status', 'Departed'); // or 'Dispatched', depending on terminology used
+          .eq('event_type', 'DEPART'); // Check actual depart events
           
         if (!eventError && events) {
           events.forEach(e => departedRefs.add(e.cargo_ref));

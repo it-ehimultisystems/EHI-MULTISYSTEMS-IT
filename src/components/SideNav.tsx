@@ -6,6 +6,7 @@ import {
   TrendingUp,
   Plane,
   QrCode,
+  ArrowDownToLine,
   MoreHorizontal,
   Truck,
   LogOut,
@@ -98,6 +99,12 @@ export const SideNav = ({
         "driver",
         "office_work"
       ],
+    },
+    {
+      id: "IncomingToHub",
+      icon: ArrowDownToLine,
+      label: "Incoming To Hub",
+      roles: ["super_admin", "admin", "cargo_agent", "vj_agent", "driver", "office_work"],
     },
     { id: "MyTrips", icon: Truck, label: "My Trips", roles: ["driver"] },
     {
