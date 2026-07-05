@@ -5,7 +5,7 @@ import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer } fro
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
-import { CARGO_ROUTES } from '../../lib/constants';
+import { CARGO_ROUTES, BANKS } from '../../lib/constants';
 
 export const ValueJetForm = ({
   onAddTx,
@@ -26,6 +26,7 @@ export const ValueJetForm = ({
   const [pcs, setPcs] = useState('');
   const [phone, setPhone] = useState('');
   const [mode, setMode] = useState<PaymentMode>('POS');
+  const [bank, setBank] = useState(BANKS[0] || 'Sterling Bank');
   const [amountOverride, setAmountOverride] = useState<string>('');
   const [narrationCode, setNarrationCode] = useState<string>('');
 
@@ -78,6 +79,7 @@ export const ValueJetForm = ({
       detail: `${flight.toUpperCase()} · ${dest} · ${pcsVal}pcs · +${excessKg}kg excess`,
       amount: totalAmount,
       mode,
+      bank: mode === 'Transfer' || mode === 'POS' ? bank : undefined,
       paymentNarration: mode === 'Transfer' ? narrationCode : undefined,
       airline: 'ValueJet',
       time: tnow(),
@@ -148,6 +150,7 @@ export const ValueJetForm = ({
         amount: successTx.tx.amount,
         paymentMode: successTx.tx.mode,
         paymentNarration: successTx.tx.paymentNarration,
+        bankName: successTx.tx.bank,
       };
       downloadVJReceipt(data);
     }
@@ -172,6 +175,7 @@ export const ValueJetForm = ({
       amount: successTx.tx.amount,
       paymentMode: successTx.tx.mode,
       paymentNarration: successTx.tx.paymentNarration,
+      bankName: successTx.tx.bank,
     });
   };
 
@@ -258,6 +262,7 @@ export const ValueJetForm = ({
                     paymentMode: s.tx.mode,
                     trackingUrl: `https://ehimultisystems.com/track/${s.tx.id}`,
                     paymentNarration: s.tx.paymentNarration,
+                    bankName: s.tx.bank,
                   };
                   const bytes = await m.compileVJReceiptStream(printData, '80mm');
                   const { printViaBluetooth } = await import('../../lib/escpos');
@@ -289,6 +294,7 @@ export const ValueJetForm = ({
                     paymentMode: s.tx.mode,
                     trackingUrl: `https://ehimultisystems.com/track/${s.tx.id}`,
                     paymentNarration: s.tx.paymentNarration,
+                    bankName: s.tx.bank,
                   };
                   const bytes = await m.compileVJReceiptStream(printData, '58mm');
                   const { printViaBluetooth } = await import('../../lib/escpos');
@@ -504,6 +510,25 @@ export const ValueJetForm = ({
                 </button>
               ))}
             </div>
+            {(mode === 'Transfer' || mode === 'POS') && (
+              <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">
+                  {mode === 'POS' ? 'POS Terminal / Bank' : 'Receiving Bank'}
+                </span>
+                <select
+                  value={bank}
+                  onChange={(e) => setBank(e.target.value)}
+                  className={formInputClass}
+                  style={{ appearance: 'none' }}
+                >
+                  {BANKS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {mode === 'Transfer' && (
               <PaymentNarrationBox narrationCode={narrationCode} />
             )}

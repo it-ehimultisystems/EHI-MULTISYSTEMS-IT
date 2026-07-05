@@ -1,25 +1,40 @@
-import { useState, useEffect, lazy, Suspense, useRef, useCallback } from 'react';
+import { useState, useEffect, lazy, Suspense, useRef, useCallback, memo, useMemo } from 'react';
 import { User, TabView, Transaction, Expense } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport, cleanupOldQueue } from '../lib/sync';
 import { useTheme } from '../lib/useTheme';
-import { Header } from './Header';
-import { BottomNav } from './BottomNav';
-import { SideNav } from './SideNav';
+import { Header as HeaderRaw } from './Header';
+import { BottomNav as BottomNavRaw } from './BottomNav';
+import { SideNav as SideNavRaw } from './SideNav';
 import { Toast, ToastProps } from './Toast';
 import { supabase, writeAuditLog } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
-import { Dashboard } from './views/Dashboard';
-import { CargoForm } from './views/CargoForm';
-import { ValueJetForm } from './views/ValueJetForm';
-import { Analytics } from './views/Analytics';
-import { More } from './views/More';
-import { TransactionLedger } from './views/TransactionLedger';
-import { MarketingWorkspace } from './views/MarketingWorkspace';
-import { Scanner } from './views/Scanner';
-import { MyTrips } from './views/MyTrips';
-import { ITDashboard } from './views/ITDashboard';
-import { CreditDebit } from './views/CreditDebit';
+import { Dashboard as DashboardRaw } from './views/Dashboard';
+import { CargoForm as CargoFormRaw } from './views/CargoForm';
+import { ValueJetForm as ValueJetFormRaw } from './views/ValueJetForm';
+import { Analytics as AnalyticsRaw } from './views/Analytics';
+import { More as MoreRaw } from './views/More';
+import { TransactionLedger as TransactionLedgerRaw } from './views/TransactionLedger';
+import { MarketingWorkspace as MarketingWorkspaceRaw } from './views/MarketingWorkspace';
+import { Scanner as ScannerRaw } from './views/Scanner';
+import { MyTrips as MyTripsRaw } from './views/MyTrips';
+import { ITDashboard as ITDashboardRaw } from './views/ITDashboard';
+import { CreditDebit as CreditDebitRaw } from './views/CreditDebit';
 import { ErrorBoundary } from './ErrorBoundary';
+
+const Header = memo(HeaderRaw);
+const BottomNav = memo(BottomNavRaw);
+const SideNav = memo(SideNavRaw);
+const Dashboard = memo(DashboardRaw);
+const CargoForm = memo(CargoFormRaw);
+const ValueJetForm = memo(ValueJetFormRaw);
+const Analytics = memo(AnalyticsRaw);
+const More = memo(MoreRaw);
+const TransactionLedger = memo(TransactionLedgerRaw);
+const MarketingWorkspace = memo(MarketingWorkspaceRaw);
+const Scanner = memo(ScannerRaw);
+const MyTrips = memo(MyTripsRaw);
+const ITDashboard = memo(ITDashboardRaw);
+const CreditDebit = memo(CreditDebitRaw);
 
 export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const getDefaultTab = (role: string): TabView => {
@@ -614,6 +629,19 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     });
   }, [pendingSyncCount, showToast]);
 
+  const handleShowCargoHistory = useCallback(() => setStreamLedger('cargo'), []);
+  const handleShowMarketingHistory = useCallback(() => setStreamLedger('marketing'), []);
+  const handleShowBaggageHistory = useCallback(() => setStreamLedger('baggage'), []);
+  const handleCloseLedger = useCallback(() => setStreamLedger(null), []);
+  const handleEOD = useCallback(() => {
+    showToast({ message: 'EOD Report Dispatched — Saved to Drive · Emailed to management', type: 'success' });
+  }, [showToast]);
+
+  const filteredLedgerTransactions = useMemo(() => {
+    if (!streamLedger) return [];
+    return transactions.filter(t => t.type === streamLedger);
+  }, [transactions, streamLedger]);
+
   return (
     <div style={{
       display: 'flex',
@@ -675,7 +703,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                   onAddTx={handleAddTx}
                   user={user}
                   transactions={transactions}
-                  onShowHistory={() => setStreamLedger('cargo')}
+                  onShowHistory={handleShowCargoHistory}
                 />
               )}
               {currentTab === 'Marketing' && (
@@ -685,14 +713,15 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                   expenses={expenses}
                   onAddTx={handleAddTx}
                   onAddExpense={handleAddExpense}
-                  onShowHistory={() => setStreamLedger('marketing')}
+                  onShowHistory={handleShowMarketingHistory}
                 />
               )}
               {currentTab === 'VJ POS' && (
                 <ValueJetForm
                   onAddTx={handleAddTx}
                   user={user}
-                  onShowHistory={() => setStreamLedger('baggage')}
+                  onShowHistory={handleShowBaggageHistory}
+                  transactions={transactions}
                 />
               )}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
@@ -701,19 +730,17 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               {currentTab === 'Credit & Debit' && <CreditDebit user={user} transactions={transactions} />}
               {currentTab === 'More' && (
                 <More 
-                  user={user} 
-                  transactions={transactions} 
-                  expenses={expenses}
-                  onLogout={onLogout} 
-                  onAddTx={handleAddTx}
-                  onFullUpdateTx={handleUpdateTx}
-                  onChangeTab={setCurrentTab}
-                  onAddExpense={handleAddExpense}
-                  dateRange={globalDateRange}
-                  onDateRangeChange={setGlobalDateRange}
-                  onEOD={() => {
-                    showToast({ message: 'EOD Report Dispatched — Saved to Drive · Emailed to management', type: 'success' });
-                  }}
+                   user={user} 
+                   transactions={transactions} 
+                   expenses={expenses}
+                   onLogout={onLogout} 
+                   onAddTx={handleAddTx}
+                   onFullUpdateTx={handleUpdateTx}
+                   onChangeTab={setCurrentTab}
+                   onAddExpense={handleAddExpense}
+                   dateRange={globalDateRange}
+                   onDateRangeChange={setGlobalDateRange}
+                   onEOD={handleEOD}
                 />
               )}
             </ErrorBoundary>
@@ -730,8 +757,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-obsidian)]">
           <TransactionLedger
             user={user}
-            transactions={transactions.filter(t => t.type === streamLedger)}
-            onBack={() => setStreamLedger(null)}
+            transactions={filteredLedgerTransactions}
+            onBack={handleCloseLedger}
             onUpdateTx={handleUpdateTx}
             defaultTypeFilter={streamLedger}
             viewOnly={user.role !== 'super_admin' && !user.can_edit_ledger}
