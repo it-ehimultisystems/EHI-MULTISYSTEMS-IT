@@ -232,20 +232,26 @@ export async function validateScan(
       const isTransit = await isValidTransitHub(currentHub, destination, currentHub);
 
       if (!isTransit) {
+        const previousHub = lastAnyForArrive?.hub_name || undefined;
+
         // Log the wrong destination alert event
         await supabase.from('tracking_events').insert({
           cargo_ref: ref,
           event_type: 'WRONG_DESTINATION_ALERT',
           hub_name: currentHub,
           cargo_destination: destination,
-          alert_reason: `Cargo destined for ${destination} was scanned at ${currentHub}`,
+          previous_hub: previousHub,
+          alert_reason: `Cargo destined for ${destination} was scanned at ${currentHub}` +
+            (previousHub ? ` (last seen at ${previousHub})` : ''),
         });
 
         return {
           type: 'WRONG_DESTINATION',
           cargo: cargoInfo,
           currentHub,
-          message: `This cargo is going to ${destination.toUpperCase()}, not ${currentHub.toUpperCase()}.`
+          previousHub,
+          message: `This cargo is going to ${destination.toUpperCase()}, not ${currentHub.toUpperCase()}.` +
+            (previousHub ? ` Last seen at ${previousHub.toUpperCase()}.` : '')
         };
       }
     }
@@ -384,6 +390,54 @@ export async function validateScan(
   }
 
   return { type: 'ERROR', currentHub, message: 'Unknown scan mode.' };
+}
+
+// Fetch wrong-destination alert history, most recent first
+export async function fetchWrongDestinationAlerts(
+  filter: 'unresolved' | 'resolved' | 'all' = 'unresolved'
+): Promise<TrackingEvent[]> {
+  let query = supabase
+    .from('tracking_events')
+    .select('*')
+    .eq('event_type', 'WRONG_DESTINATION_ALERT')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (filter === 'unresolved') query = query.eq('resolved', false);
+  if (filter === 'resolved') query = query.eq('resolved', true);
+
+  const { data } = await query;
+  return (data as TrackingEvent[]) || [];
+}
+
+// Mark a wrong-destination alert as resolved by staff
+export async function resolveWrongDestinationAlert(
+  alertId: string,
+  resolvedByName: string
+): Promise<void> {
+  await supabase
+    .from('tracking_events')
+    .update({
+      resolved: true,
+      resolved_by: resolvedByName,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', alertId);
+}
+
+// Has this AWB/tag ref already completed a full DEPART -> ARRIVE -> DELIVER
+// cycle? Used to block re-issuing an already-delivered physical tag for a
+// new consignment, since a reused tag means two different shipments share
+// tracking history and can't be told apart.
+export async function isTagAlreadyDelivered(ref: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('tracking_events')
+    .select('id')
+    .eq('cargo_ref', ref.trim().toUpperCase())
+    .eq('event_type', 'DELIVER')
+    .limit(1)
+    .maybeSingle();
+  return !!data;
 }
 
 // Log a successful scan event

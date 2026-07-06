@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { QrCode, RefreshCw, Package, Plane, ArrowDown, ArrowUp, List, CheckCircle, Bell } from 'lucide-react';
-import { User, ScanMode, ScanValidationResult, BatchScanItem, ScanResultType, ProofOfDelivery } from '../../lib/types';
-import { validateScan, logScanEvent, fetchCargoByRef } from '../../lib/scanLogic';
+import { User, ScanMode, ScanValidationResult, BatchScanItem, ScanResultType, ProofOfDelivery, TrackingEvent } from '../../lib/types';
+import { validateScan, logScanEvent, fetchCargoByRef, fetchWrongDestinationAlerts, resolveWrongDestinationAlert } from '../../lib/scanLogic';
 import { supabase } from '../../lib/supabase';
 
 import { ArrivalsView } from './ArrivalsView';
@@ -278,6 +278,10 @@ export const Scanner = ({
   const [showQueueSummary, setShowQueueSummary] = useState(false);
   const [showIncomingView, setShowIncomingView] = useState(false);
   const [showArrivalsView, setShowArrivalsView] = useState(false);
+  const [showWrongDestView, setShowWrongDestView] = useState(false);
+  const [wrongDestTab, setWrongDestTab] = useState<'unresolved' | 'resolved'>('unresolved');
+  const [wrongDestAlerts, setWrongDestAlerts] = useState<TrackingEvent[]>([]);
+  const [wrongDestLoading, setWrongDestLoading] = useState(false);
   const [activePodCapture, setActivePodCapture] = useState<{ref: string, name: string, resultData: any} | null>(null);
 
   // Cargo tracking history
@@ -318,6 +322,25 @@ export const Scanner = ({
   const successfulScans = batchItems
     .filter(item => item.result === 'SUCCESS_ARRIVE' || item.result === 'SUCCESS_DEPART' || item.result === 'SUCCESS_DELIVER')
     .slice(0, 10);
+
+  const loadWrongDestAlerts = useCallback(async (tab: 'unresolved' | 'resolved') => {
+    setWrongDestLoading(true);
+    try {
+      setWrongDestAlerts(await fetchWrongDestinationAlerts(tab));
+    } finally {
+      setWrongDestLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showWrongDestView) loadWrongDestAlerts(wrongDestTab);
+  }, [showWrongDestView, wrongDestTab, loadWrongDestAlerts]);
+
+  const handleResolveAlert = async (alertId: string) => {
+    await resolveWrongDestinationAlert(alertId, user.name);
+    setWrongDestAlerts(prev => prev.filter(a => a.id !== alertId));
+    if (showToast) showToast({ message: 'Alert marked resolved.', type: 'success' });
+  };
 
   const handleTrackLookup = async (ref?: string) => {
     const query = (ref || trackRef).trim().toUpperCase();
@@ -780,6 +803,83 @@ export const Scanner = ({
     return <ArrivalsView user={user} onBack={() => setShowArrivalsView(false)} />;
   }
 
+  // Wrong Destination Alert History
+  if (showWrongDestView) {
+    return (
+      <div className="p-4 pb-20 space-y-4">
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+          <button
+            onClick={() => setShowWrongDestView(false)}
+            className="text-[11px] font-mono text-[var(--color-muted)] flex items-center gap-1 hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent"
+          >
+            ← BACK TO SCANNER
+          </button>
+          <span className="text-[10px] font-mono text-[var(--color-error)] uppercase tracking-wider font-bold">
+            ⚠ WRONG DESTINATION ALERTS
+          </span>
+        </div>
+
+        <div className="flex bg-[var(--color-surface-2)] p-1 rounded-lg shadow-inner" style={{ width: '100%' }}>
+          {(['unresolved', 'resolved'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setWrongDestTab(tab)}
+              style={{
+                flex: 1, padding: '8px 4px',
+                background: wrongDestTab === tab ? 'var(--color-surface-1)' : 'transparent',
+                borderRadius: 8, border: 'none', cursor: 'pointer',
+                color: wrongDestTab === tab ? 'var(--color-error)' : '#64748B',
+              }}
+              className="font-mono text-[11px] font-bold uppercase tracking-wide"
+            >
+              {tab === 'unresolved' ? 'Unresolved' : 'Resolved'}
+            </button>
+          ))}
+        </div>
+
+        {wrongDestLoading ? (
+          <div className="flex justify-center py-10">
+            <RefreshCw size={22} className="animate-spin text-[var(--color-error)]" />
+          </div>
+        ) : wrongDestAlerts.length === 0 ? (
+          <div className="text-center py-10 text-[var(--color-muted)] text-[12px] font-mono border border-dashed border-[var(--color-border)] rounded-xl">
+            {wrongDestTab === 'unresolved' ? 'No unresolved wrong-destination alerts.' : 'No resolved alerts yet.'}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {wrongDestAlerts.map(alert => (
+              <div key={alert.id} className="ehi-card p-3 space-y-1.5 border border-[rgba(239,68,68,0.2)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-mono font-bold text-[var(--color-accent-amber)]">{alert.cargo_ref}</span>
+                  <span className="text-[9px] font-mono text-[var(--color-muted)]">
+                    {new Date(alert.created_at).toLocaleString('en-NG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-[var(--color-foreground)] flex flex-wrap gap-x-3 gap-y-1">
+                  {alert.previous_hub && <span>Came from: <span className="text-[var(--color-muted)]">{alert.previous_hub}</span></span>}
+                  <span>Scanned at: <span className="text-[var(--color-error)]">{alert.hub_name}</span></span>
+                  {alert.cargo_destination && <span>Belongs at: <span className="text-[var(--color-success)]">{alert.cargo_destination}</span></span>}
+                </div>
+                {alert.resolved ? (
+                  <div className="text-[10px] font-mono text-[var(--color-success)] pt-1">
+                    ✓ Resolved by {alert.resolved_by || 'Unknown'} · {alert.resolved_at ? new Date(alert.resolved_at).toLocaleString('en-NG') : ''}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleResolveAlert(alert.id)}
+                    className="mt-1 w-full py-2 bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] text-[10px] font-mono font-bold uppercase rounded border border-[rgba(16,185,129,0.25)] cursor-pointer hover:bg-[rgba(16,185,129,0.2)] transition-colors"
+                  >
+                    Mark Resolved
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // Tracking history view
   if (showTrackView) {
     const statusColor = (type: string) =>
@@ -1097,6 +1197,12 @@ export const Scanner = ({
           >
             <ArrowDown size={12} />
             Hub Arrivals
+          </button>
+          <button
+            onClick={() => setShowWrongDestView(true)}
+            className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[var(--color-error)] hover:text-[var(--color-foreground)] bg-[rgba(239,68,68,0.1)] hover:bg-[rgba(239,68,68,0.2)] border border-[rgba(239,68,68,0.2)] px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+          >
+            ⚠ Alerts
           </button>
           {batchItems.length > 0 && (
             <button
