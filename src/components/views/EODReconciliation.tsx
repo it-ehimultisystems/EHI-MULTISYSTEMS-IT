@@ -41,7 +41,14 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     });
   }, [transactions]);
 
-  const todaysExp = useMemo(() => expenses, [expenses]);
+  const todaysExp = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return expenses.filter(e => {
+      const d = e.created_at ? new Date(e.created_at) : new Date();
+      return d >= today;
+    });
+  }, [expenses]);
 
   // System Totals
   const expectedTotals = useMemo(() => {
@@ -68,7 +75,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       cashTotal, transferTotal, posTotal, debtTotal, expensesTotal, netExpectedCash,
       cargoCount: cargoTx.length, mktgCount: mktgTx.length, vjCount: vjTx.length
     };
-  }, [transactions, expenses]);
+  }, [todaysTx, todaysExp]);
 
   // Actual Counted
   const [countedCash, setCountedCash] = useState<number | ''>('');

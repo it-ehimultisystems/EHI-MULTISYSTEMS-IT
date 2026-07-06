@@ -38,7 +38,7 @@ export const IncomingToHub = ({ user, onBack }: { user: User; onBack: () => void
       // of issue as the SupportTickets fix. Admin-tier roles still see
       // everything, matching how the rest of the app scopes visibility.
       if (!isAdmin) {
-        const hubWords = user.hub.toLowerCase().split(' ').filter(w => w.length > 3);
+        const hubWords = user.hub.toLowerCase().split(' ').filter(w => w.length >= 3);
         if (hubWords.length > 0) {
           q = q.or(hubWords.map(w => `route.ilike.%${w}%`).join(','));
         }
@@ -52,7 +52,7 @@ export const IncomingToHub = ({ user, onBack }: { user: User; onBack: () => void
       // since ilike is a broader net than the exact substring check below,
       // and this costs nothing now that the server-side query already did
       // the heavy lifting of not shipping cross-hub data over the wire.
-      const hubWords = user.hub.toLowerCase().split(' ').filter(w => w.length > 3);
+      const hubWords = user.hub.toLowerCase().split(' ').filter(w => w.length >= 3);
       const filtered = isAdmin ? (data || []) : (data || []).filter(c => {
         const dest = (c.route || '').toLowerCase();
         return hubWords.some(w => dest.includes(w));

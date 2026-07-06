@@ -50,7 +50,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
         }
         if (mktDebts.data) {
           mktDebts.data.forEach(r => mappedDebts.push({
-            id: r.entry_ref || r.id, name: r.customer_name || 'Customer', detail: `${r.route || ''}`, amount: r.amount_paid || 0, mode: 'Debt', time: r.created_at, type: 'marketing', status: 'Intake'
+            id: r.entry_ref || r.id, name: r.customer_name || 'Customer', detail: `${r.route || ''}`, amount: r.amount || 0, mode: 'Debt', time: r.created_at, type: 'marketing', status: 'Intake'
           }));
         }
         setDebtsData(mappedDebts);

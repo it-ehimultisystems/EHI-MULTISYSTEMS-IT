@@ -174,7 +174,7 @@ export function createApp() {
 
   app.use('/api/paystack', paystackRoutes);
   app.use('/api/notify', notifyLimiter, requireAuthenticatedUser, notificationRoutes);
-  app.use('/api/eod', eodRoutes);
+  app.use('/api/eod', requireAuthenticatedUser, eodRoutes);
   app.use('/api/gemini', notifyLimiter, requireAuthenticatedUser, geminiRoutes);
 
   app.post('/api/admin/create-staff', adminLimiter, async (req, res) => {
@@ -185,6 +185,10 @@ export function createApp() {
     const { name, email, password, role, hub_id, hub_type, phone } = req.body;
     if (!name || !email || !password || !role || !hub_id) {
       return res.status(400).json({ error: 'Missing required fields: name, email, password, role, hub_id' });
+    }
+
+    if (adminCtx.callerRole === 'admin' && role === 'super_admin') {
+      return res.status(403).json({ error: 'Admins cannot create super_admin accounts.' });
     }
 
     try {

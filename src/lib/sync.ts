@@ -42,9 +42,11 @@ export async function writeWithOfflineSupport(
     }
 
     // expenses uses its own id column, others use entry_ref / transaction_id
-    const onConflictColumn = tableName === 'manifests' ? 'transaction_id'
-      : tableName === 'expenses' ? 'id'
-      : 'entry_ref';
+    const onConflictColumn =
+      tableName === 'manifests'      ? 'transaction_id' :
+      tableName === 'expenses'       ? 'id'             :
+      tableName === 'trip_pings'     ? 'id'             :
+      'entry_ref';
     const { error } = await supabase.from(tableName).upsert(supabasePayload, { onConflict: onConflictColumn });
     if (!error) {
       await db.sync_queue.where('record_id').equals(payload.id as string).delete();
@@ -77,13 +79,14 @@ export async function processSyncQueue(): Promise<number> {
         delete supabasePayload.id;
       }
       
+      const onConflictColumn =
+        item.table_name === 'manifests'      ? 'transaction_id' :
+        item.table_name === 'expenses'       ? 'id'             :
+        item.table_name === 'trip_pings'     ? 'id'             :
+        'entry_ref';
       const { error } = await supabase
         .from(item.table_name)
-        .upsert(supabasePayload, {
-          onConflict: item.table_name === 'manifests' ? 'transaction_id'
-            : item.table_name === 'expenses' ? 'id'
-            : 'entry_ref'
-        });
+        .upsert(supabasePayload, { onConflict: onConflictColumn });
       if (!error) {
         await db.sync_queue.delete(item.id!);
         synced++;

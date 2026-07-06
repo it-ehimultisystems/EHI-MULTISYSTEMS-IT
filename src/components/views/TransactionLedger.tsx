@@ -970,12 +970,14 @@ export const TransactionLedger = ({
                         <CheckSquare size={14} /> Confirm
                       </button>
                     )}
-                    <button 
-                      onClick={(evt) => handleEditClick(viewingDetail, evt)}
-                      className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
-                    >
-                      <Edit2 size={14} /> Edit
-                    </button>
+                    {isAccountantOrAdmin && (
+                      <button
+                        onClick={(evt) => handleEditClick(viewingDetail, evt)}
+                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
+                      >
+                        <Edit2 size={14} /> Edit
+                      </button>
+                    )}
                   </div>
                   {(user.can_print_ledger || user.role === 'super_admin') && (
                     <div className="flex gap-2 mt-2">

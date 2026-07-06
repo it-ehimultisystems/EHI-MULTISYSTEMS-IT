@@ -3,7 +3,7 @@ import aeroLogo from '../assets/airlines/aero-contractors.png';
 import valuejetLogo from '../assets/airlines/valuejet.png';
 import unitedNigeriaLogo from '../assets/airlines/united-nigeria.gif';
 import arikLogo from '../assets/airlines/arik-air.png';
-import greenAfricaLogo from '../assets/airlines/green-africa.png';
+import greenAfricaLogo from '../assets/airlines/green-africa-airways.png';
 
 export const AirlineLogoPDF = ({ airline, width = 80 }: { airline: string; width?: number }) => {
   const norm = airline.toLowerCase();

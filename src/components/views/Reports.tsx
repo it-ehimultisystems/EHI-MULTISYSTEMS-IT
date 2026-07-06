@@ -216,7 +216,6 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
 
   const debtorReport = useMemo(() => {
     const debts = filteredTx.filter(t => t.mode === 'Debt');
-    
     const buckets = { 'Current': 0, 'Overdue': 0, 'Critical': 0, 'Write-off risk': 0 };
     const items: Array<{ name: string; amount: number; age: number; bucket: string }> = [];
     
@@ -225,7 +224,6 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
         (Date.now() - new Date(t.created_at || (t as any).date || Date.now()).getTime())
         / (1000 * 60 * 60 * 24)
       );
-      
       const bucket = agedays <= 30 ? 'Current' : agedays <= 60 ? 'Overdue' : agedays <= 90 ? 'Critical' : 'Write-off risk';
       buckets[bucket as keyof typeof buckets] += t.amount;
       items.push({ name: t.name, amount: t.amount, age: agedays, bucket });
@@ -235,18 +233,17 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
   }, [filteredTx]);
 
   const staffReport = useMemo(() => {
-    // In demo: derive from tx.id prefix (CG = cargo agent, MK = marketing agent, VJ = VJ agent)
     const map: Record<string, { entries: number; revenue: number; cargo: number; mktg: number; vj: number }> = {};
     filteredTx.forEach(t => {
-      const role = t.type === 'cargo' ? 'Cargo Agent' : t.type === 'marketing' ? 'Marketing Agent' : 'VJ Agent';
-      if (!map[role]) map[role] = { entries: 0, revenue: 0, cargo: 0, mktg: 0, vj: 0 };
-      map[role].entries  += 1;
-      map[role].revenue  += t.amount;
-      if (t.type === 'cargo')     map[role].cargo += t.amount;
-      if (t.type === 'marketing') map[role].mktg += t.amount;
-      if (t.type === 'baggage')   map[role].vj += t.amount;
+      const agent = (t.enteredByName || 'Unknown Agent').trim();
+      if (!map[agent]) map[agent] = { entries: 0, revenue: 0, cargo: 0, mktg: 0, vj: 0 };
+      map[agent].entries  += 1;
+      map[agent].revenue  += t.amount;
+      if (t.type === 'cargo')     map[agent].cargo += t.amount;
+      if (t.type === 'marketing') map[agent].mktg  += t.amount;
+      if (t.type === 'baggage')   map[agent].vj    += t.amount;
     });
-    return Object.entries(map).map(([role, d]) => ({ role, ...d })).sort((a, b) => b.revenue - a.revenue);
+    return Object.entries(map).map(([role, d]) => ({ role, ...d })).sort((a, b) => b.revenue - a.revenue).slice(0, 20);
   }, [filteredTx]);
 
   const hubReport = useMemo(() => {

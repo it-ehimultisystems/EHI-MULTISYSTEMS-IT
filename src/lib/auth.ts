@@ -38,7 +38,7 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       hub_type,
       active,
       hub_id,
-      can_edit_ledger,
+      can_print_ledger,
       hubs (
         name,
         code,
@@ -68,7 +68,7 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       hubType: profile.hub_type || (Array.isArray(prof.hubs) ? prof.hubs[0]?.type : prof.hubs?.type) || 'Cargo Station',
       hub_id: profile.hub_id,
       active: profile.active,
-      can_edit_ledger: profile.can_edit_ledger ?? false,
+      can_print_ledger: profile.can_print_ledger ?? false,
   };
 
   // Write audit log (fire-and-forget)
@@ -199,7 +199,7 @@ export async function createStaffAccountsBulk(rows: BulkStaffRow[]): Promise<{ r
 export async function fetchStaffList(hubId?: string): Promise<any[]> {
   let q = supabase
     .from('user_profiles')
-    .select('id, email, name, role, hub_type, active, hub_id, can_edit_ledger, hubs(name, code)')
+    .select('id, email, name, role, hub_type, active, hub_id, can_print_ledger, hubs(name, code)')
     .order('name');
 
   if (hubId) q = q.eq('hub_id', hubId) as any;
@@ -212,7 +212,7 @@ export async function fetchStaffList(hubId?: string): Promise<any[]> {
 // Update a staff profile (role, hub, active status)
 export async function updateStaffProfile(
   userId: string,
-  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string; can_edit_ledger?: boolean }
+  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string; can_print_ledger?: boolean }
 ): Promise<void> {
   const { data: sess } = await supabase.auth.getSession();
   const token = sess.session?.access_token || '';
@@ -259,7 +259,7 @@ export async function getSession(): Promise<UserProfile | null> {
         hub_type,
         active,
         hub_id,
-        can_edit_ledger,
+        can_print_ledger,
         hubs (
           name,
           code,
@@ -285,7 +285,7 @@ export async function getSession(): Promise<UserProfile | null> {
       hubType: profile.hub_type || (Array.isArray(prof.hubs) ? prof.hubs[0]?.type : prof.hubs?.type) || 'Cargo Station',
       hub_id: profile.hub_id,
       active: profile.active,
-      can_edit_ledger: profile.can_edit_ledger ?? false,
+      can_print_ledger: profile.can_print_ledger ?? false,
     } as any;
   } catch (err) {
     console.error('Failed to get session:', err);
