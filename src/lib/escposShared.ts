@@ -173,6 +173,80 @@ export async function brandingHeader(logoWidthDots = 160): Promise<Uint8Array[]>
   return chunks;
 }
 
+// Composites EHI logo and airline logo side-by-side into a single raster
+// image, sized to the paper width so both are clearly readable at any scale.
+// Falls back to brandingHeader() if the airline logo cannot be loaded.
+export async function brandingHeaderWithAirline(
+  airline: string,
+  paperWidth: '58mm' | '80mm' = '80mm',
+): Promise<Uint8Array[]> {
+  const widthDots = paperWidth === '58mm' ? 280 : 360;
+  if (!airline) return brandingHeader(widthDots);
+
+  const { airlineLogoUrl } = await import('./airlineLogos');
+  const airlineUrl = airlineLogoUrl(airline);
+  if (!airlineUrl) return brandingHeader(widthDots);
+
+  const chunks: Uint8Array[] = [new Uint8Array(CENTER)];
+  const logoH = Math.round(widthDots * 0.38); // proportional height
+  const halfW = Math.floor(widthDots / 2);
+
+  const ehiBlob = new Blob([EHI_SVG], { type: 'image/svg+xml' });
+  const ehiUrl = URL.createObjectURL(ehiBlob);
+
+  try {
+    const [ehiImg, airlineImg] = await Promise.all([
+      loadImageElement(ehiUrl),
+      loadImageElement(airlineUrl),
+    ]);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = widthDots;
+    canvas.height = logoH;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, widthDots, logoH);
+
+    // EHI on left half — scale to fit, keep aspect ratio, centre in cell
+    const ehiAspect = ehiImg.width / ehiImg.height;
+    const ehiH = Math.min(logoH - 6, (halfW - 10) / ehiAspect);
+    const ehiW = ehiH * ehiAspect;
+    ctx.drawImage(ehiImg,
+      Math.floor((halfW - ehiW) / 2), Math.floor((logoH - ehiH) / 2),
+      ehiW, ehiH);
+
+    // Thin separator line between logos
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(halfW - 1, 8, 1, logoH - 16);
+
+    // Airline logo on right half — same fit logic
+    const alAspect = airlineImg.width / airlineImg.height;
+    const alH = Math.min(logoH - 6, (halfW - 10) / alAspect);
+    const alW = alH * alAspect;
+    ctx.drawImage(airlineImg,
+      halfW + Math.floor((halfW - alW) / 2), Math.floor((logoH - alH) / 2),
+      alW, alH);
+
+    const dataUrl = canvas.toDataURL('image/png');
+    const raster = await imageToEscPosRaster(dataUrl, widthDots, 160);
+    chunks.push(raster);
+    chunks.push(encoder.encode('\n'));
+
+  } catch {
+    // Either logo failed to load — fall back to EHI-only header
+    URL.revokeObjectURL(ehiUrl);
+    return brandingHeader(widthDots);
+  }
+
+  URL.revokeObjectURL(ehiUrl);
+
+  chunks.push(new Uint8Array(REVERSE_ON));
+  chunks.push(encoder.encode(" MULTISYSTEMS \n"));
+  chunks.push(new Uint8Array(REVERSE_OFF));
+  chunks.push(encoder.encode("NIGERIA LIMITED\n\n"));
+  return chunks;
+}
+
 // Shared label/value row formatter for the paired-field sections every
 // document type uses (REF/DATE, PASSENGER/FLIGHT, etc). Plain ASCII
 // only in both label and value -- no arrow characters, no currency

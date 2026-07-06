@@ -1,7 +1,7 @@
 import {
   encoder, INIT, CENTER, LEFT, TEXT_NORMAL, TEXT_DOUBLE_HEIGHT,
   BOLD_ON, BOLD_OFF, FEED_AND_CUT,
-  concatChunks, qrAsRaster, brandingHeader, fieldRow, divider,
+  concatChunks, qrAsRaster, brandingHeaderWithAirline, fieldRow, divider,
 } from './escposShared';
 
 export interface MarketingReceiptPrintData {
@@ -18,12 +18,13 @@ export interface MarketingReceiptPrintData {
   paymentMode: string;
   paymentNarration?: string;
   bankName?: string;
+  airline?: string;
   trackingUrl: string;
 }
 
 export async function compileMarketingReceiptStream(data: MarketingReceiptPrintData, width: '58mm' | '80mm'): Promise<Uint8Array> {
   const maxChars = width === '58mm' ? 32 : 48;
-  const chunks: Uint8Array[] = [new Uint8Array(INIT), ...(await brandingHeader())];
+  const chunks: Uint8Array[] = [new Uint8Array(INIT), ...(await brandingHeaderWithAirline(data.airline || '', width))];
 
   chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
   chunks.push(encoder.encode("MARKETING SALES RECEIPT\n\n"));

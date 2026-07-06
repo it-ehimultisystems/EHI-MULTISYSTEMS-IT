@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, Transaction, Expense } from "../../lib/types";
-import { PRICING, BANKS, EXPENSE_CATEGORIES } from "../../lib/constants";
+import { PRICING, BANKS, EXPENSE_CATEGORIES, AIRLINES } from "../../lib/constants";
 import { fmt, uid, tnow } from "../../lib/helpers";
 import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer, Minus, TrendingDown, BarChart2 } from "lucide-react";
 import { motion } from "motion/react";
@@ -40,6 +40,27 @@ export const MarketingWorkspace = ({
     }
     return PRICING;
   });
+
+  const generateMktAwb = () => `AWB-MK-${Math.floor(100000 + Math.random() * 900000)}`;
+  const [awb, setAwb] = useState(generateMktAwb);
+
+  // Available airlines — loaded from Supabase Storage (uploaded via AirlineLogoManager)
+  const [availableAirlines, setAvailableAirlines] = useState<string[]>(
+    AIRLINES.map(a => a.name)
+  );
+  const [airline, setAirline] = useState(AIRLINES[0]?.name || '');
+
+  useEffect(() => {
+    import('../../lib/airlineLogos').then(({ listAirlineLogos }) => {
+      listAirlineLogos().then(logos => {
+        if (logos.length > 0) {
+          const names = logos.map(l => l.name);
+          setAvailableAirlines(names);
+          setAirline(names[0]);
+        }
+      }).catch(() => {});
+    });
+  }, []);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -137,6 +158,8 @@ export const MarketingWorkspace = ({
       const { downloadMarketingReceipt } = await import("./MarketingReceipt");
       const data = {
         entryRef: successTx.id,
+        awbTagNumber: successTx.awb_tag_number,
+        airline: successTx.airline,
         date: new Date().toLocaleDateString("en-GB"),
         agentName: user.name,
         customerName: successTx.name,
@@ -229,6 +252,8 @@ export const MarketingWorkspace = ({
 
     const tx: Transaction = {
       id: uid("MK"),
+      awb_tag_number: awb,
+      airline,
       name: mode === "Debt" ? debtorName.trim() : name.trim(),
       detail: `${route} · ${details.join(" ")}`,
       amount: totalAmount,
@@ -239,6 +264,7 @@ export const MarketingWorkspace = ({
       type: "marketing",
       status: "Intake",
       route,
+      hub: user.hub,
       // Explicit fields so EHIApp doesn't need to parse the detail string
       ...(bb > 0 || mb > 0 || sb > 0 ? { _bb: bb, _mb: mb, _sb: sb } as any : {}),
     };
@@ -280,6 +306,7 @@ export const MarketingWorkspace = ({
     setMode("Transfer");
     setNarrationCode("");
     setSuccessTx(null);
+    setAwb(generateMktAwb());
   };
 
   const handleAddExpense = () => {
@@ -334,7 +361,7 @@ export const MarketingWorkspace = ({
         <div className="space-y-6">
           {successTx ? (
             <div className="bg-[rgba(16,185,129,0.05)] border border-[rgba(16,185,129,0.2)] rounded p-6 md:p-8 flex flex-col animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex justify-center animate-pulse">
+              <div className="flex justify-center">
                 <CheckCircle
                   size={32}
                   className="text-[var(--color-success)] mb-3"
@@ -351,6 +378,20 @@ export const MarketingWorkspace = ({
               </div>
 
               <div className="bg-[var(--color-obsidian)] rounded p-3 mb-4 space-y-2 border border-[var(--color-border)]">
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1">
+                  <span className="text-[10px] font-mono text-[var(--color-muted)]">AWB</span>
+                  <span className="text-[11px] font-mono text-[var(--color-success)] font-bold">
+                    {successTx.awb_tag_number}
+                  </span>
+                </div>
+                {successTx.airline && (
+                  <div className="flex justify-between border-b border-[var(--color-border)] pb-1">
+                    <span className="text-[10px] font-mono text-[var(--color-muted)]">Airline</span>
+                    <span className="text-[11px] font-mono text-[var(--color-foreground)]">
+                      {successTx.airline}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1">
                   <span className="text-[10px] font-mono text-[var(--color-muted)]">
                     Customer
@@ -414,6 +455,7 @@ export const MarketingWorkspace = ({
                         paymentMode: successTx.mode,
                         paymentNarration: successTx.paymentNarration,
                         bankName: bank || undefined,
+                        airline: successTx.airline,
                         trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
                       };
                       const bytes = await m.compileMarketingReceiptStream(printData, '80mm');
@@ -459,26 +501,44 @@ export const MarketingWorkspace = ({
               </div>
               <button
                 onClick={handleDownloadReceipt}
-                style={{
-                  width: "100%",
-                  padding: "11px",
-                  background: "transparent",
-                  border: "1px solid rgba(16,185,129,0.3)",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  fontSize: 11,
-                  fontFamily: "monospace",
-                  fontWeight: 700,
-                  color: "var(--color-success)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  marginTop: 8,
-                }}
+                className="w-full py-3 bg-transparent border border-[rgba(16,185,129,0.3)] rounded-lg cursor-pointer text-[11px] font-bold font-mono text-[var(--color-success)] flex items-center justify-center gap-2 mt-2"
               >
-                <Printer size={14} /> PRINT RECEIPT
+                <Printer size={14} /> PRINT RECEIPT (PDF)
               </button>
+
+              {/* Tag print buttons — one tag per bag (BB/MB/SB) */}
+              {(bb > 0 || mb > 0 || sb > 0) && (
+                <div className="mt-3 space-y-1">
+                  <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-widest text-center mb-2">
+                    Print Routing Tags · {bb + mb + sb} tag{bb + mb + sb !== 1 ? 's' : ''} total
+                    {' '}({[bb > 0 && `${bb}BB`, mb > 0 && `${mb}MB`, sb > 0 && `${sb}SB`].filter(Boolean).join(' ')})
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        import('../../lib/escposTagPrinting').then(async (m) => {
+                          await m.printMarketingTags(successTx!, bb, mb, sb, '80mm');
+                        }).catch(() => alert('Bluetooth printer not connected'));
+                      }}
+                      className="py-2.5 bg-[rgba(16,185,129,0.12)] border border-[rgba(16,185,129,0.3)] text-[var(--color-success)] text-[11px] font-bold font-mono rounded-lg cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-[rgba(16,185,129,0.2)] transition-colors"
+                    >
+                      <span className="text-[14px] mb-0.5">🏷️</span>
+                      <span>TAGS (80mm)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        import('../../lib/escposTagPrinting').then(async (m) => {
+                          await m.printMarketingTags(successTx!, bb, mb, sb, '58mm');
+                        }).catch(() => alert('Bluetooth printer not connected'));
+                      }}
+                      className="py-2.5 bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)] text-[var(--color-success)] text-[11px] font-bold font-mono rounded-lg cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-[rgba(16,185,129,0.15)] transition-colors"
+                    >
+                      <span className="text-[14px] mb-0.5">🏷️</span>
+                      <span>TAGS (58mm)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4 bg-[rgba(255,255,255,0.02)] p-4 md:mx-0 md:rounded-xl md:border border-y border-[var(--color-border)]">
@@ -497,6 +557,20 @@ export const MarketingWorkspace = ({
               </div>
 
               <div className="space-y-3">
+                {/* Auto-generated AWB — read-only, regenerates on New Entry */}
+                <div className="flex items-center justify-between px-3 h-9 rounded bg-[var(--color-surface-1)] border border-[rgba(16,185,129,0.2)]">
+                  <span className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider">AWB</span>
+                  <span className="text-[11px] font-mono text-[var(--color-success)] font-bold">{awb}</span>
+                </div>
+                <select
+                  value={airline}
+                  onChange={(e) => setAirline(e.target.value)}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                >
+                  {availableAirlines.map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
                 <input
                   placeholder="Customer Name"
                   value={name}

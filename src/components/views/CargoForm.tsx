@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Transaction, User } from "../../lib/types";
 import {
   CORPORATE_CLIENTS,
@@ -148,7 +148,9 @@ export const CargoForm = ({
         setNarrationCode(generatePaymentNarration(user.hub_code || user.hub, serialNumber));
       });
     }
-  }, [mode, narrationCode, user.hub, serialNumber]);
+    // Only regenerate when mode switches TO Transfer — not on every narrationCode change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   const [standardRates, setStandardRates] = useState<Record<string, number>>(
     {},
@@ -181,15 +183,12 @@ export const CargoForm = ({
     fetchRates();
   }, []);
 
-  // Auto calculate amount for retail
-  useEffect(() => {
+  // Compute auto-price from KG × rate — used to pre-fill the amount field.
+  // Derived without setState so there is no extra re-render on every keystroke.
+  const autoAmount = useMemo(() => {
     const w = Math.round(parseFloat(kg)) || 0;
     const rate = standardRates[route] || 500;
-    if (w > 0) {
-      setAmount((w * rate).toString());
-    } else {
-      setAmount("");
-    }
+    return w > 0 ? (w * rate).toString() : "";
   }, [kg, route, standardRates]);
 
   const [availableAirlines, setAvailableAirlines] = useState<string[]>([
@@ -240,13 +239,12 @@ export const CargoForm = ({
 
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const successRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (successTx) {
-      document.querySelectorAll('.overflow-y-auto, main').forEach(el => {
-        el.scrollTop = 0;
-      });
-      window.scrollTo({ top: 0, behavior: 'instant' });
+    if (successTx && successRef.current) {
+      // Scroll the nearest scrollable ancestor, not window — avoids iOS jank
+      successRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [successTx]);
 
@@ -589,14 +587,19 @@ export const CargoForm = ({
   const w = Math.round(parseFloat(kg)) || 0;
   const rate = standardRates[route] || 500;
   const minAmount = w * rate;
-  const parsedAmount = parseFloat(amount) || 0;
+  // Use manual amount if typed, else fall back to auto-computed price
+  const effectiveAmount = amount || autoAmount;
+  const parsedAmount = parseFloat(effectiveAmount) || 0;
 
-  const isRetailFormValid =
-    actualConsignee.trim().length > 0 &&
-    awb.trim().length > 0 &&
-    route.trim().length > 0 &&
-    contentType.trim().length > 0 &&
-    parsedAmount >= minAmount && parsedAmount > 0;
+  const isRetailFormValid = useMemo(
+    () =>
+      actualConsignee.trim().length > 0 &&
+      awb.trim().length > 0 &&
+      route.trim().length > 0 &&
+      contentType.trim().length > 0 &&
+      parsedAmount >= minAmount && parsedAmount > 0,
+    [actualConsignee, awb, route, contentType, parsedAmount, minAmount],
+  );
 
   const handleRetailSubmit = async () => {
     if (!isRetailFormValid || submitting) return;
@@ -890,7 +893,7 @@ export const CargoForm = ({
     };
 
     return (
-      <div className="p-4 space-y-4 max-w-xl mx-auto w-full">
+      <div ref={successRef} className="p-4 space-y-4 max-w-xl mx-auto w-full">
         <div className="border-b border-[var(--color-border)] pb-2 mb-2">
           <span className="text-[14px] font-sans font-semibold text-[var(--color-foreground)]">
             Cargo Receipt Portal
@@ -898,12 +901,10 @@ export const CargoForm = ({
         </div>
 
         <div className="bg-[rgba(16,185,129,0.05)] border border-[var(--color-success)] rounded-[var(--radius-md)] text-center p-8 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
-          <div className="animate-pulse">
-            <CheckCircle
-              size={40}
-              className="text-[var(--color-success)] mb-3"
-            />
-          </div>
+          <CheckCircle
+            size={40}
+            className="text-[var(--color-success)] mb-3"
+          />
           <div className="text-[15px] font-semibold font-sans text-[var(--color-success)] mb-1">
             {successTx.mode === "Debt"
               ? "Corporate Debt Invoice Saved!"
@@ -1116,8 +1117,8 @@ export const CargoForm = ({
 
   return (
     <div
-      className="overflow-y-auto pb-24"
-      style={{ width: "100%", boxSizing: "border-box", minHeight: 0, flex: 1 }}
+      className="pb-24"
+      style={{ width: "100%", boxSizing: "border-box" }}
     >
       {/* SECTION SELECTOR / HUB MODE NAVIGATION */}
       <div className="px-4 pt-4">
@@ -1142,7 +1143,7 @@ export const CargoForm = ({
         >
           <Users size={16} /> Corporate Contract (B2B)
           {pendingIntakes.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-600 text-white font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-[var(--color-obsidian)] animate-bounce font-bold">
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-[var(--color-obsidian)] font-bold">
               {pendingIntakes.length}
             </span>
           )}
@@ -1262,6 +1263,7 @@ export const CargoForm = ({
                     onChange={(e) => {
                       const cleanVal = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
                       setKg(cleanVal);
+                      setAmount(""); // reset manual override so autoAmount takes over
                     }}
                     className={formInputClass}
                   />
@@ -1273,7 +1275,7 @@ export const CargoForm = ({
                   {renderLabel(MapPin, "Route")}
                   <select
                     value={route}
-                    onChange={(e) => setRoute(e.target.value)}
+                    onChange={(e) => { setRoute(e.target.value); setAmount(""); }}
                     className={formInputClass}
                   >
                     {CARGO_ROUTES.map((r) => (
@@ -1335,7 +1337,7 @@ export const CargoForm = ({
                   </span>
                   <input
                     type="number"
-                    value={amount}
+                    value={effectiveAmount}
                     onChange={(e) => setAmount(e.target.value)}
                     onBlur={() => {
                       if (parsedAmount < minAmount) {

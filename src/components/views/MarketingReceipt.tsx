@@ -7,9 +7,12 @@ import {
   pdf,
 } from "@react-pdf/renderer";
 import { EHILogoPDF } from "../EHILogoPDF";
+import { AirlineLogoPDF } from "../AirlineLogoPDF";
 
 export interface MarketingReceiptData {
   entryRef: string;
+  awbTagNumber?: string;
+  airline?: string;
   date: string;
   agentName: string;
   customerName: string;
@@ -140,8 +143,10 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => {
   return (
   <Document>
     <Page size={[226, h]} style={styles.page}>
-      <View style={{ alignItems: "flex-start", marginBottom: 15 }}>
+      {/* Header: EHI logo left, airline logo right */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
         <EHILogoPDF width={70} />
+        {data.airline && <AirlineLogoPDF airline={data.airline} width={55} />}
       </View>
       <Text style={styles.title}>FIELD MARKETING RECEIPT</Text>
 
@@ -151,6 +156,12 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => {
         <Text style={styles.label}>Ref:</Text>
         <Text style={styles.value}>{data.entryRef}</Text>
       </View>
+      {data.awbTagNumber && (
+        <View style={styles.row}>
+          <Text style={styles.label}>AWB:</Text>
+          <Text style={styles.value}>{data.awbTagNumber}</Text>
+        </View>
+      )}
       <View style={styles.row}>
         <Text style={styles.label}>Date:</Text>
         <Text style={styles.value}>{data.date}</Text>
@@ -176,6 +187,12 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => {
         <Text style={styles.label}>Route:</Text>
         <Text style={styles.value}>{data.route}</Text>
       </View>
+      {data.airline && (
+        <View style={styles.row}>
+          <Text style={styles.label}>Airline:</Text>
+          <Text style={styles.value}>{data.airline}</Text>
+        </View>
+      )}
 
       <View style={styles.divider} />
       <Text style={styles.sectionTitle}>BAG BREAKDOWN</Text>
