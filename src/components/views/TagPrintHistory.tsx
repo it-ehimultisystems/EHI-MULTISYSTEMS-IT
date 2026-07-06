@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { User } from '../../lib/types';
 import { RefreshCw, Search, Printer, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface PrintLog {
@@ -14,7 +15,7 @@ interface PrintLog {
   departed?: boolean;
 }
 
-export default function TagPrintHistory() {
+export default function TagPrintHistory({ user }: { user: User }) {
   const [logs, setLogs] = useState<PrintLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -22,41 +23,42 @@ export default function TagPrintHistory() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      // 1. Fetch the print logs
-      const { data, error } = await supabase
+      const isAdmin = ['super_admin', 'admin'].includes(user.role);
+
+      // 1. Fetch the print logs, scoped to this hub for non-admins
+      let q = supabase
         .from('tag_print_log')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(200);
 
+      if (!isAdmin) {
+        q = q.eq('hub_name', user.hub);
+      }
+
+      const { data, error } = await q;
       if (error) throw error;
-      
+
       const printLogs: PrintLog[] = data || [];
-      
+
       // 2. Extract unique cargo_refs to check tracking events
       const cargoRefs = [...new Set(printLogs.map(l => l.cargo_ref))];
-      
+
       let departedRefs = new Set<string>();
-      
+
       if (cargoRefs.length > 0) {
-        // Fetch departure events for these cargo_refs
         const { data: events, error: eventError } = await supabase
           .from('tracking_events')
           .select('cargo_ref')
           .in('cargo_ref', cargoRefs)
-          .eq('event_type', 'DEPART'); // Check actual depart events
-          
+          .eq('event_type', 'DEPART');
+
         if (!eventError && events) {
           events.forEach(e => departedRefs.add(e.cargo_ref));
         }
       }
 
-      const mergedLogs = printLogs.map(log => ({
-        ...log,
-        departed: departedRefs.has(log.cargo_ref)
-      }));
-
-      setLogs(mergedLogs);
+      setLogs(printLogs.map(log => ({ ...log, departed: departedRefs.has(log.cargo_ref) })));
     } catch (err) {
       console.error('Error fetching print logs:', err);
     } finally {
@@ -66,9 +68,9 @@ export default function TagPrintHistory() {
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [user.hub, user.role]);
 
-  const filteredLogs = logs.filter(l => 
+  const filteredLogs = logs.filter(l =>
     l.awb_tag_number?.toLowerCase().includes(search.toLowerCase()) ||
     l.cargo_ref.toLowerCase().includes(search.toLowerCase()) ||
     l.printed_by_name?.toLowerCase().includes(search.toLowerCase())
@@ -86,7 +88,7 @@ export default function TagPrintHistory() {
             Monitor waybill and POS tag prints. Flags prints missing departure scans.
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
@@ -98,7 +100,7 @@ export default function TagPrintHistory() {
               className="pl-9 pr-4 py-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-md text-[13px] font-sans focus:outline-none focus:border-[var(--color-accent-amber)]"
             />
           </div>
-          <button 
+          <button
             onClick={fetchLogs}
             className="p-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-md transition-colors"
             title="Refresh logs"
@@ -147,7 +149,7 @@ export default function TagPrintHistory() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-mono text-[13px] text-[var(--color-foreground)]">{log.cargo_ref.slice(0,8)}...</div>
+                      <div className="font-mono text-[13px] text-[var(--color-foreground)]">{log.cargo_ref.slice(0, 8)}...</div>
                       <div className="font-mono text-[11px] text-[var(--color-muted)] mt-0.5">{log.awb_tag_number}</div>
                     </td>
                     <td className="px-4 py-3 text-[13px] font-sans text-[var(--color-foreground)]">

@@ -469,7 +469,7 @@ export const TransactionLedger = ({
 
       {showPrintHistory ? (
         <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar relative z-10">
-          <TagPrintHistory />
+          <TagPrintHistory user={user} />
         </div>
       ) : (
         <>

@@ -63,14 +63,27 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
   return null;
 }
 
-// Check if a hub is a valid transit point for a route
+// Check if a hub is a valid transit point for a route.
+// Looks up the routing_hubs table (origin_hub, destination_hub, transit_hub).
+// Fails safe to false if the table doesn't exist yet.
 export async function isValidTransitHub(
   origin: string,
   destination: string,
   transitHub: string
 ): Promise<boolean> {
-  // Route definitions table not yet configured.
-  // Always returns false — cargo must go directly to destination.
+  const norm = (s: string) => s.toLowerCase().trim().split(' ')[0];
+  try {
+    const { data, error } = await supabase
+      .from('routing_hubs')
+      .select('id')
+      .ilike('destination_hub', `%${norm(destination)}%`)
+      .ilike('transit_hub', `%${norm(transitHub)}%`)
+      .limit(1)
+      .maybeSingle();
+    if (!error && data) return true;
+  } catch {
+    // routing_hubs table not yet created — fail safe
+  }
   return false;
 }
 
@@ -216,7 +229,7 @@ export async function validateScan(
 
     // Check if cargo belongs here (final dest or valid transit)
     if (!isCorrectDestination) {
-      const isTransit = await isValidTransitHub('Lagos', destination, currentHub);
+      const isTransit = await isValidTransitHub(currentHub, destination, currentHub);
 
       if (!isTransit) {
         // Log the wrong destination alert event

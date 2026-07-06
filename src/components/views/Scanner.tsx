@@ -87,6 +87,9 @@ export const Scanner = ({
 
   // New states for batch queuing
   const [isBatchQueueMode, setIsBatchQueueMode] = useState(false);
+
+  const BATCH_QUEUE_KEY = `ehi_scan_batch_queue_${user.hub_id || user.hub}`;
+
   const [batchQueue, setBatchQueue] = useState<{
     ref: string;
     name: string;
@@ -95,7 +98,28 @@ export const Scanner = ({
     destination?: string;
     time: string;
     kg?: number;
-  }[]>([]);
+  }[]>(() => {
+    try {
+      const saved = localStorage.getItem(BATCH_QUEUE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist batch queue to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (batchQueue.length > 0) {
+        localStorage.setItem(BATCH_QUEUE_KEY, JSON.stringify(batchQueue));
+      } else {
+        localStorage.removeItem(BATCH_QUEUE_KEY);
+      }
+    } catch {
+      // localStorage unavailable — queue lives in memory only
+    }
+  }, [batchQueue]);
+
   const [submittingBatch, setSubmittingBatch] = useState(false);
   const [showQueueSummary, setShowQueueSummary] = useState(false);
   const [showIncomingView, setShowIncomingView] = useState(false);
@@ -168,6 +192,7 @@ export const Scanner = ({
       }
 
       setBatchQueue([]);
+      localStorage.removeItem(BATCH_QUEUE_KEY);
       setShowQueueSummary(false);
     } catch (error) {
       console.error('Failed to submit batch scans:', error);
