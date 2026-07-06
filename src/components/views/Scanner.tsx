@@ -660,6 +660,12 @@ export const Scanner = ({
       }
     }
 
+    // Release the QR scanner's camera stream before the POD form opens its
+    // own getUserMedia() call for the delivery photo — otherwise the device
+    // is still held by the (now-unmounted) scanner and the second camera
+    // request fails, surfacing on Android as a misleading NotAllowedError.
+    if (isScanning) await stopScanner();
+
     // Switch to POD form
     setActivePodCapture({ ref, name: resultData.cargo?.name || 'Unknown', resultData });
     setPendingDelivery(null);
