@@ -71,11 +71,12 @@ export const CONTENT_TYPES = [
 ] as const;
 
 export const EXPENSE_CATEGORIES = [
-  'Cars',
+  'Card/Cardboard',
   'Carrier',
   'Transport',
   'Bus Hire',
   'Sack & Nylon',
+  'Marker',
   'Miscellaneous',
 ] as const;
 

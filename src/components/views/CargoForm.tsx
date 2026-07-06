@@ -1062,28 +1062,53 @@ export const CargoForm = ({
             New Entry
           </button>
 
-          <button
-            onClick={handleDownloadReceipt}
-            style={{
-              width: "100%",
-              padding: "11px",
-              background: "transparent",
-              border: "1.5px solid rgba(245,158,11,0.3)",
-              borderRadius: "var(--radius-sm)",
-              cursor: "pointer",
-              fontSize: 11,
-              fontFamily: "monospace",
-              fontWeight: 700,
-              color: "var(--color-accent-amber)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              marginTop: 10,
-            }}
-          >
-            ↓ PRINT PDF RECEIPT
-          </button>
+          <div className="flex gap-2 mt-2.5">
+            <button
+              onClick={handleDownloadReceipt}
+              style={{
+                flex: 1,
+                padding: "11px",
+                background: "transparent",
+                border: "1.5px solid rgba(245,158,11,0.3)",
+                borderRadius: "var(--radius-sm)",
+                cursor: "pointer",
+                fontSize: 11,
+                fontFamily: "monospace",
+                fontWeight: 700,
+                color: "var(--color-accent-amber)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              ↓ Download PDF
+            </button>
+            <button
+              onClick={async () => {
+                const { printCargoReceipt } = await import('../../lib/escpos');
+                printCargoReceipt && printCargoReceipt(submittedEntry as any);
+              }}
+              style={{
+                flex: 1,
+                padding: "11px",
+                background: "transparent",
+                border: "1.5px solid rgba(245,158,11,0.5)",
+                borderRadius: "var(--radius-sm)",
+                cursor: "pointer",
+                fontSize: 11,
+                fontFamily: "monospace",
+                fontWeight: 700,
+                color: "var(--color-accent-amber)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              🖨️ Print Receipt
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1235,7 +1260,7 @@ export const CargoForm = ({
                     min="1"
                     value={kg}
                     onChange={(e) => {
-                      const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                      const cleanVal = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
                       setKg(cleanVal);
                     }}
                     className={formInputClass}
@@ -1995,7 +2020,7 @@ export const CargoForm = ({
                           placeholder="Scale Reading"
                           value={gateWeight}
                           onChange={(e) => {
-                            const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                            const cleanVal = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
                             setGateWeight(cleanVal);
                           }}
                           className="w-full h-12 pl-4 pr-12 text-[16px] font-bold text-[var(--color-accent-amber)] rounded-md bg-[var(--color-bg)] border border-[var(--color-surface-2)] font-mono focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"

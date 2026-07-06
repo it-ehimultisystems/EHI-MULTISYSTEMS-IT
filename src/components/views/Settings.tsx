@@ -156,7 +156,7 @@ export const Settings = ({
   }, [notifyWhatsApp]);
 
   useEffect(() => {
-    if (managerPhone) localStorage.setItem('ehi_manager_phone', managerPhone);
+    localStorage.setItem('ehi_manager_phone', managerPhone);
   }, [managerPhone]);
 
   useEffect(() => {
@@ -211,13 +211,13 @@ export const Settings = ({
             </span>
           </div>
 
-          {/* Sub-tabs */}
-          <div className="flex border-b border-[var(--color-border)]">
+          {/* Sub-tabs — min 11px for mobile readability */}
+          <div className="flex border-b border-[var(--color-border)] overflow-x-auto">
             {(['CONNECTION','PAYMENTS','NOTIFICATIONS','COMPANY'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setConfigTab(tab)}
-                className="flex-1 py-2.5 text-[9px] font-mono tracking-wider cursor-pointer border-none bg-transparent transition-colors"
+                className="flex-1 min-w-[72px] py-3 text-[11px] font-mono tracking-wide cursor-pointer border-none bg-transparent transition-colors whitespace-nowrap px-1"
                 style={{
                   color: configTab === tab
                     ? 'var(--color-accent-amber)'

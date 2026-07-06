@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { QrCode, RefreshCw, Package, Plane, TrendingUp, ArrowDown, ArrowUp, List, CheckCircle } from 'lucide-react';
+import { QrCode, RefreshCw, Package, Plane, ArrowDown, ArrowUp, List, CheckCircle, Bell } from 'lucide-react';
 import { User, ScanMode, ScanValidationResult, BatchScanItem, ScanResultType, ProofOfDelivery } from '../../lib/types';
 import { validateScan, logScanEvent, fetchCargoByRef } from '../../lib/scanLogic';
 import { supabase } from '../../lib/supabase';
@@ -84,6 +84,8 @@ export const Scanner = ({
   const [manualRef, setManualRef] = useState('');
   const scannerRef = useRef<any>(null);
   const processingRef = useRef(false);
+  // Held true while a WRONG_DESTINATION popup is visible — prevents re-scans until dismissed
+  const alertActiveRef = useRef(false);
 
   // New states for batch queuing
   const [isBatchQueueMode, setIsBatchQueueMode] = useState(false);
