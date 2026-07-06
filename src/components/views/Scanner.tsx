@@ -169,14 +169,13 @@ export const Scanner = ({
 
   const handleTrackLookup = async (ref?: string) => {
     const query = (ref || trackRef).trim().toUpperCase();
-    // Stop camera before switching to tracking view
     if (isScanning) await stopScanner();
     setTrackRef(query);
-    setTrackLoading(true);
     setTrackCargo(null);
     setTrackEvents([]);
     setShowTrackView(true);
-    if (!query) return;
+    if (!query) { setTrackLoading(false); return; }
+    setTrackLoading(true);
     try {
       const [cargo, eventsRes] = await Promise.all([
         fetchCargoByRef(query),
@@ -387,46 +386,49 @@ export const Scanner = ({
     processCodeRef.current = processCode;
   }, [processCode]);
 
-  // Start camera scanner
-  const startScanner = useCallback(async () => {
-    // Request camera permission explicitly on iOS
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      stream.getTracks().forEach(track => track.stop());
-    } catch (err) {
-      if (showToast) {
-        showToast({
-          message: 'Camera permission denied. Enable in Settings → Safari → Camera.',
-          type: 'error',
-        });
-      } else {
-        alert('Camera permission denied. Enable in Settings → Safari → Camera.');
-      }
-      return;
-    }
+  const showToastRef = useRef(showToast);
+  useEffect(() => { showToastRef.current = showToast; }, [showToast]);
+
+  // Start camera scanner — just flips the flag; the effect below does the real work
+  const startScanner = useCallback(() => {
     setIsScanning(true);
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
-    if (isScanning && !scannerRef.current) {
-      const scanner = new Html5Qrcode('qr-reader-div');
-      
-      scanner.start(
-        { facingMode: 'environment' },
-        {
-          fps: 15,
-          qrbox: { width: 220, height: 220 },
-          aspectRatio: 1.0,
-        },
-        (decodedText) => processCodeRef.current(decodedText),
-        () => { /* ignore */ }
-      ).catch(err => {
-        console.error("Scanner start error:", err);
-        setIsScanning(false);
-      });
+    if (!isScanning || scannerRef.current) return;
 
-      scannerRef.current = scanner as any;
-    }
+    const scanner = new Html5Qrcode('qr-reader-div');
+    // Set ref immediately so the !scannerRef.current guard blocks a second init
+    // while start() is still resolving.
+    scannerRef.current = scanner as any;
+
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 15, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+      (decodedText) => processCodeRef.current(decodedText),
+      () => { /* ignore scan errors */ }
+    ).catch((err: any) => {
+      console.error('Scanner start error:', err);
+      // Clear the ref so the next tap on "Start Scanner" can retry.
+      scannerRef.current = null;
+      setIsScanning(false);
+
+      const name: string = err?.name || (typeof err === 'string' ? err : '');
+      let msg = 'Camera failed to start. Tap again to retry.';
+      if (name.includes('NotAllowed') || name.includes('PermissionDenied')) {
+        msg = 'Camera permission denied. Open browser Settings → Site permissions → Camera and allow access.';
+      } else if (name.includes('NotFound') || name.includes('DevicesNotFound')) {
+        msg = 'No camera detected on this device.';
+      } else if (name.includes('NotReadable') || name.includes('TrackStart') || name.includes('Abort')) {
+        msg = 'Camera is busy — another app may be using it. Close it and tap again.';
+      } else if (name.includes('NotSupported') || name.includes('OverConstrained')) {
+        msg = 'Back camera not available. Try a different browser or device.';
+      }
+
+      if (showToastRef.current) {
+        showToastRef.current({ message: msg, type: 'error' });
+      }
+    });
   }, [isScanning]);
 
   const stopScanner = useCallback(async () => {
