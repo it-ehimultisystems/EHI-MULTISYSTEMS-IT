@@ -104,11 +104,20 @@ export const printViaBluetooth = async (data: Uint8Array): Promise<void> => {
         "Could not find a writable characteristic for this printer.",
       );
 
-    // Send chunks (max 512 bytes per chunk usually, keeping it 256 to be safe)
-    const chunkSize = 256;
+    // Web Bluetooth doesn't expose the negotiated ATT MTU, and Chrome on
+    // Android will silently truncate a writeValue() call larger than it
+    // instead of throwing. The default ATT MTU is 23 bytes (20 usable
+    // payload), so 256-byte chunks were being clipped mid-write on many
+    // Android/printer combos, corrupting everything downstream in the
+    // stream (this is why the logo image and the fields right after it
+    // were the ones coming out garbled). Use the universally-safe chunk
+    // size with a short delay between writes so the printer's own buffer
+    // isn't overrun even when writeValue resolves before printing finishes.
+    const chunkSize = 20;
     for (let i = 0; i < data.length; i += chunkSize) {
       const chunk = data.slice(i, i + chunkSize);
       await writeCharacteristic.writeValue(chunk);
+      await new Promise((resolve) => setTimeout(resolve, 20));
     }
 
     // Give it a moment to finish printing before disconnecting
