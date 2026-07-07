@@ -41,6 +41,21 @@ export const MarketingWorkspace = ({
     return PRICING;
   });
 
+  // This used to be localStorage-only, so a rate change made in Pricing
+  // Configuration on another device never reached this screen -- fetch the
+  // live server copy on mount (localStorage above just gives an instant
+  // first paint / offline fallback while this is in flight).
+  useEffect(() => {
+    supabase.from('marketing_route_rates').select('*').then(({ data, error }) => {
+      if (data && !error && data.length > 0) {
+        const matrix: Record<string, { BB: number; MB: number; SB: number }> = {};
+        data.forEach((r: any) => { matrix[r.route_name] = { BB: Number(r.bb_rate), MB: Number(r.mb_rate), SB: Number(r.sb_rate) }; });
+        setPricingMatrix(matrix);
+        localStorage.setItem('ehi_setting_pricing', JSON.stringify(data.map((r: any) => ({ id: r.id, route: r.route_name, bb: Number(r.bb_rate), mb: Number(r.mb_rate), sb: Number(r.sb_rate) }))));
+      }
+    });
+  }, []);
+
   const generateMktAwb = () => `AWB-MK-${Math.floor(100000 + Math.random() * 900000)}`;
   const [awb, setAwb] = useState(generateMktAwb);
 

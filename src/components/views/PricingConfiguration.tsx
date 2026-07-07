@@ -29,8 +29,49 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   const [rateRoute, setRateRoute] = useState(CARGO_ROUTES[0]);
   const [ratePrice, setRatePrice] = useState('');
 
+  // VJ settings and the BB/MB/SB pricing matrix used to be localStorage-only
+  // -- a value set on one device was invisible everywhere else. Both now
+  // load from Supabase (localStorage is kept only as an offline-read cache,
+  // never the source of truth) and every edit writes straight back to the
+  // server so other devices see it on their next fetch.
   const [vjFreeKg, setVjFreeKg] = useState(() => localStorage.getItem('ehi_vj_free_kg') || '23');
   const [vjRatePerKg, setVjRatePerKg] = useState(() => localStorage.getItem('ehi_vj_rate_per_kg') || '1000');
+  const [vjSaving, setVjSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchVjSettings = async () => {
+      const { data, error } = await supabase.from('pricing_config')
+        .select('config_value')
+        .eq('config_key', 'vj_settings')
+        .single();
+      if (data?.config_value && !error) {
+        const cfg = data.config_value as { freeKg?: string | number; ratePerKg?: string | number };
+        if (cfg.freeKg !== undefined) setVjFreeKg(String(cfg.freeKg));
+        if (cfg.ratePerKg !== undefined) setVjRatePerKg(String(cfg.ratePerKg));
+        localStorage.setItem('ehi_vj_free_kg', String(cfg.freeKg ?? vjFreeKg));
+        localStorage.setItem('ehi_vj_rate_per_kg', String(cfg.ratePerKg ?? vjRatePerKg));
+      }
+    };
+    fetchVjSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSaveVjSettings = async () => {
+    setVjSaving(true);
+    const { error } = await supabase.from('pricing_config').upsert({
+      config_key: 'vj_settings',
+      config_value: { freeKg: vjFreeKg, ratePerKg: vjRatePerKg },
+      description: 'ValueJet excess-baggage free allowance and rate per KG',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'config_key' });
+    setVjSaving(false);
+    if (error) {
+      alert(`Failed to save VJ settings: ${error.message}. Not saved to other devices -- try again.`);
+      return;
+    }
+    localStorage.setItem('ehi_vj_free_kg', vjFreeKg);
+    localStorage.setItem('ehi_vj_rate_per_kg', vjRatePerKg);
+  };
 
   const [pricing, setPricing] = useState(() => {
     const saved = localStorage.getItem('ehi_setting_pricing');
@@ -43,15 +84,36 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
     ];
   });
 
-  const handleSaveVjSettings = () => {
-    localStorage.setItem('ehi_vj_free_kg', vjFreeKg);
-    localStorage.setItem('ehi_vj_rate_per_kg', vjRatePerKg);
-  };
+  useEffect(() => {
+    const fetchRoutePricing = async () => {
+      const { data, error } = await supabase.from('marketing_route_rates').select('*').order('route_name');
+      if (data && !error && data.length > 0) {
+        const mapped = data.map((r: any) => ({ id: r.id, route: r.route_name, bb: Number(r.bb_rate), mb: Number(r.mb_rate), sb: Number(r.sb_rate) }));
+        setPricing(mapped);
+        localStorage.setItem('ehi_setting_pricing', JSON.stringify(mapped));
+      }
+    };
+    fetchRoutePricing();
+  }, []);
 
-  const handlePriceUpdate = (id: string, field: 'bb'|'mb'|'sb', value: string) => {
-    const next = pricing.map((p: any) => p.id === id ? { ...p, [field]: Number(value) } : p);
+  const handlePriceUpdate = async (id: string, field: 'bb'|'mb'|'sb', value: string) => {
+    const numVal = Number(value);
+    const next = pricing.map((p: any) => p.id === id ? { ...p, [field]: numVal } : p);
     setPricing(next);
     localStorage.setItem('ehi_setting_pricing', JSON.stringify(next));
+
+    const row = next.find((p: any) => p.id === id);
+    if (!row) return;
+    const { error } = await supabase.from('marketing_route_rates').upsert({
+      route_name: row.route,
+      bb_rate: row.bb,
+      mb_rate: row.mb,
+      sb_rate: row.sb,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'route_name' });
+    if (error) {
+      alert(`Failed to save ${row.route} rate to the server: ${error.message}. This change will not appear on other devices.`);
+    }
   };
 
 
@@ -95,14 +157,21 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   const handleUpdateStandardRate = async (route: string, val: string) => {
     const num = parseFloat(val);
     if (isNaN(num)) return;
-    const next = { ...standardRates, [route]: num };
-    setStandardRates(next);
+    const prev = standardRates;
+    setStandardRates({ ...standardRates, [route]: num });
 
-    await supabase.from('standard_cargo_rates').upsert({
+    const { error } = await supabase.from('standard_cargo_rates').upsert({
       route_name: route,
       rate_per_kg: num,
       updated_at: new Date().toISOString()
     }, { onConflict: 'route_name' });
+    if (error) {
+      // Roll back the optimistic update -- otherwise the screen shows a
+      // rate that was never actually saved, and every other device keeps
+      // using the real (unchanged) server value.
+      setStandardRates(prev);
+      alert(`Failed to save ${route} rate: ${error.message}. Not saved to other devices -- try again.`);
+    }
   };
 
   const handleCreateCorpClient = async () => {
@@ -112,17 +181,26 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
       company_name: newClientName,
       contact_phone: newClientPhone
     };
-    setCorpClients([...corpClients, newClient]);
-    setNewClientName('');
-    setNewClientPhone('');
-    setSelectedRateClient(newClient);
 
-    await supabase.from('corporate_clients').insert({
+    const { error } = await supabase.from('corporate_clients').insert({
       id: newClient.id,
       company_name: newClient.company_name,
       contact_phone: newClient.contact_phone,
       created_at: new Date().toISOString()
     });
+    if (error) {
+      // Do not add to local state on failure -- a client that only exists
+      // in this browser's memory (e.g. a duplicate company_name rejected
+      // by the DB's unique constraint) would look real here but be
+      // invisible on every other device.
+      alert(`Failed to create ${newClientName}: ${error.message}`);
+      return;
+    }
+
+    setCorpClients([...corpClients, newClient]);
+    setNewClientName('');
+    setNewClientPhone('');
+    setSelectedRateClient(newClient);
   };
 
   const handleSetCorpRate = async () => {
@@ -130,36 +208,36 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
     const priceNum = parseFloat(ratePrice);
     if (isNaN(priceNum) || priceNum <= 0) return;
 
-    const existingIndex = corpRates.findIndex(
-      r => r.corporate_client_id === selectedRateClient.id && r.route_name === rateRoute
-    );
+    // Upsert on the (corporate_client_id, route_name) unique constraint
+    // instead of branching on whether *this device's* stale local corpRates
+    // snapshot already has a row for this client/route -- deciding insert
+    // vs. update from local state races if two devices set the same
+    // client's rate around the same time: both would see no existing row
+    // and both attempt INSERT, and the second would fail on the unique
+    // constraint with no error handling. An upsert is correct either way
+    // regardless of what this device has actually seen.
+    const { data, error } = await supabase.from('corporate_route_rates').upsert({
+      corporate_client_id: selectedRateClient.id,
+      route_name: rateRoute,
+      rate_per_kg: priceNum,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'corporate_client_id,route_name' }).select().single();
 
-    let updatedRates = [...corpRates];
-    const newId = 'rate_' + Date.now().toString();
-
-    if (existingIndex >= 0) {
-      updatedRates[existingIndex].rate_per_kg = priceNum;
-      await supabase.from('corporate_route_rates')
-        .update({ rate_per_kg: priceNum, updated_at: new Date().toISOString() })
-        .eq('id', updatedRates[existingIndex].id);
-    } else {
-      const newRate = {
-        id: newId,
-        corporate_client_id: selectedRateClient.id,
-        route_name: rateRoute,
-        rate_per_kg: priceNum
-      };
-      updatedRates.push(newRate);
-      await supabase.from('corporate_route_rates').insert({
-        id: newRate.id,
-        corporate_client_id: newRate.corporate_client_id,
-        route_name: newRate.route_name,
-        rate_per_kg: newRate.rate_per_kg,
-        created_at: new Date().toISOString()
-      });
+    if (error) {
+      alert(`Failed to save rate: ${error.message}. Not saved to other devices -- try again.`);
+      return;
     }
 
-    setCorpRates(updatedRates);
+    setCorpRates(prev => {
+      const idx = prev.findIndex(r => r.corporate_client_id === selectedRateClient.id && r.route_name === rateRoute);
+      const saved: CorporateRouteRate = { id: data.id, corporate_client_id: data.corporate_client_id, route_name: data.route_name, rate_per_kg: data.rate_per_kg };
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = saved;
+        return next;
+      }
+      return [...prev, saved];
+    });
     setRatePrice('');
   };
 
@@ -203,11 +281,12 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
               />
             </div>
           </div>
-          <button 
+          <button
             onClick={handleSaveVjSettings}
-            className="w-full bg-[var(--color-accent-amber)] hover:bg-amber-600 text-black py-2 rounded-md text-[12px] font-bold transition-colors mt-2"
+            disabled={vjSaving}
+            className="w-full bg-[var(--color-accent-amber)] hover:bg-amber-600 disabled:opacity-60 text-black py-2 rounded-md text-[12px] font-bold transition-colors mt-2"
           >
-            SAVE COMPANY SETTINGS
+            {vjSaving ? 'SAVING...' : 'SAVE COMPANY SETTINGS'}
           </button>
         </div>
       </div>

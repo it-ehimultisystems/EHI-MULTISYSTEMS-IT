@@ -14,6 +14,12 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
   const [newCommission, setNewCommission] = useState('5');
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  // True only when we actually loaded real server/cached data. If the
+  // fetch fails AND there's no local cache either, `commissions` is left
+  // holding the hardcoded DEFAULT_COMMISSIONS -- saving in that state would
+  // silently overwrite every hub's real configured rates with those
+  // defaults. Block Save until we know what we're saving is real.
+  const [loadedReal, setLoadedReal] = useState(false);
 
   useEffect(() => {
     const fetchCommissions = async () => {
@@ -28,6 +34,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
           const asStr: Record<string, string> = {};
           Object.entries(parsed).forEach(([k, v]) => { asStr[k] = String(v); });
           setCommissions(asStr);
+          setLoadedReal(true);
           localStorage.setItem('ehi_airline_commissions', JSON.stringify(parsed));
         } else {
           const cached = localStorage.getItem('ehi_airline_commissions');
@@ -36,6 +43,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
             const asStr: Record<string, string> = {};
             Object.entries(parsed).forEach(([k, v]) => { asStr[k] = String(v); });
             setCommissions(asStr);
+            setLoadedReal(true);
           }
         }
       } catch (err) {
@@ -45,6 +53,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
           const asStr: Record<string, string> = {};
           Object.entries(parsed).forEach(([k, v]) => { asStr[k] = String(v); });
           setCommissions(asStr);
+          setLoadedReal(true);
         }
       } finally {
         setLoading(false);
@@ -53,15 +62,40 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
     fetchCommissions();
   }, []);
 
-  const persist = async (data: Record<string, string>) => {
+  const persist = async (data: Record<string, string>): Promise<string | null> => {
     const numData: Record<string, number> = {};
     Object.entries(data).forEach(([k, v]) => { numData[k] = parseFloat(v) || 0; });
+
+    // Re-fetch the current server value immediately before writing and warn
+    // if it changed since this screen loaded -- config_value is a single
+    // JSON blob, so two devices editing concurrently would otherwise have
+    // the second Save silently overwrite the first's changes wholesale
+    // (e.g. device A adds a new airline, device B -- still holding its
+    // older snapshot -- saves and wipes A's addition). This can't fully
+    // prevent the race without moving to per-row storage, but it stops the
+    // most common case: saving stale data over someone else's newer edit.
+    const { data: latest } = await supabase.from('pricing_config')
+      .select('config_value')
+      .eq('config_key', 'airline_commissions')
+      .single();
+    if (latest?.config_value) {
+      const serverKeys = JSON.stringify(Object.keys(latest.config_value as object).sort());
+      const localKeysAtLoad = JSON.stringify(Object.keys(data).sort());
+      if (serverKeys !== localKeysAtLoad && !window.confirm(
+        'Commission rates were changed on another device since this screen loaded ' +
+        '(the airline list differs). Saving now will overwrite those changes with what you see here. Continue?'
+      )) {
+        return 'cancelled';
+      }
+    }
+
     localStorage.setItem('ehi_airline_commissions', JSON.stringify(numData));
-    await supabase.from('pricing_config').upsert({
+    const { error } = await supabase.from('pricing_config').upsert({
       config_key: 'airline_commissions',
       config_value: numData,
       description: 'Airline commission percentages',
     }, { onConflict: 'config_key' });
+    return error ? error.message : null;
   };
 
   const handleChange = (airline: string, value: string) => {
@@ -82,8 +116,21 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
     setCommissions(updated);
   };
 
+  const [saving, setSaving] = useState(false);
+
   const handleSave = async () => {
-    await persist(commissions);
+    if (!loadedReal) {
+      alert('Commission rates failed to load from the server, so what\'s shown here may just be built-in defaults, not your real configured rates. Saving now could overwrite real data. Please close and reopen this screen to retry loading before saving.');
+      return;
+    }
+    setSaving(true);
+    const errorMsg = await persist(commissions);
+    setSaving(false);
+    if (errorMsg === 'cancelled') return;
+    if (errorMsg) {
+      alert(`Failed to save commission rates: ${errorMsg}. Not saved to other devices -- try again.`);
+      return;
+    }
     setSaved(true);
     setTimeout(() => { setSaved(false); onBack(); }, 800);
   };
@@ -101,10 +148,10 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
         </div>
         <button
           onClick={handleSave}
-          disabled={saved}
+          disabled={saved || saving}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)] text-[var(--color-accent-amber)] text-[11px] font-bold rounded-lg hover:bg-[rgba(245,158,11,0.2)] transition-colors disabled:opacity-60"
         >
-          {saved ? <><Check size={12} /> Saved</> : <><Save size={12} /> Save</>}
+          {saved ? <><Check size={12} /> Saved</> : saving ? 'Saving...' : <><Save size={12} /> Save</>}
         </button>
       </div>
 
@@ -184,9 +231,10 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
 
             <button
               onClick={handleSave}
-              className="w-full h-12 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[13px] rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              disabled={saved || saving}
+              className="w-full h-12 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[13px] rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              {saved ? <><Check size={16} /> Saved to all devices</> : <><Save size={16} /> Save Commission Rates</>}
+              {saved ? <><Check size={16} /> Saved to all devices</> : saving ? 'Saving...' : <><Save size={16} /> Save Commission Rates</>}
             </button>
           </>
         )}

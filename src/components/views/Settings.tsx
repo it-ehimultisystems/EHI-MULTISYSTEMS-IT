@@ -167,13 +167,40 @@ export const Settings = ({
     localStorage.setItem('ehi_setting_pricing', JSON.stringify(pricing));
   }, [pricing]);
 
+  // This screen and PricingConfiguration.tsx were two separate editors for
+  // the exact same BB/MB/SB matrix, both localStorage-only -- neither knew
+  // about the other's edits, and neither reached any other device at all.
+  // Both now read/write the same marketing_route_rates table.
+  useEffect(() => {
+    supabase.from('marketing_route_rates').select('*').order('route_name').then(({ data, error }) => {
+      if (data && !error && data.length > 0) {
+        setPricing(data.map((r: any) => ({ id: r.id, route: r.route_name, bb: Number(r.bb_rate), mb: Number(r.mb_rate), sb: Number(r.sb_rate) })));
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('ehi_setting_carriers', JSON.stringify(carriers));
   }, [carriers]);
 
-  const handlePriceUpdate = (id: string, field: 'bb' | 'mb' | 'sb', value: string) => {
+  const handlePriceUpdate = async (id: string, field: 'bb' | 'mb' | 'sb', value: string) => {
     const num = parseInt(value) || 0;
-    setPricing((prev: any) => prev.map((p: any) => p.id === id ? { ...p, [field]: num } : p));
+    const next = pricing.map((p: any) => p.id === id ? { ...p, [field]: num } : p);
+    setPricing(next);
+
+    const row = next.find((p: any) => p.id === id);
+    if (!row) return;
+    const { error } = await supabase.from('marketing_route_rates').upsert({
+      route_name: row.route,
+      bb_rate: row.bb,
+      mb_rate: row.mb,
+      sb_rate: row.sb,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'route_name' });
+    if (error) {
+      alert(`Failed to save ${row.route} rate to the server: ${error.message}. This change will not appear on other devices.`);
+    }
   };
 
   const handleToggleHub = async (id: string) => {

@@ -6,6 +6,7 @@ import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
 import { CARGO_ROUTES, BANKS } from '../../lib/constants';
+import { supabase } from '../../lib/supabase';
 
 export const ValueJetForm = ({
   onAddTx,
@@ -51,13 +52,34 @@ export const ValueJetForm = ({
     }
   }, [mode, narrationCode, user.hub]);
 
-  const vjFreeAllowance = parseFloat(
-    localStorage.getItem('ehi_vj_free_kg') || '23'
+  // Was reading localStorage directly on every render -- a value set in
+  // Pricing Configuration on another device would never reach this screen
+  // at all. Now loads from the same Supabase-backed config, with the
+  // localStorage read as an instant first-paint value while that fetch
+  // is in flight (and as an offline fallback).
+  const [vjFreeAllowance, setVjFreeAllowance] = useState(() =>
+    parseFloat(localStorage.getItem('ehi_vj_free_kg') || '23')
+  );
+  const [vjRatePerKg, setVjRatePerKg] = useState(() =>
+    parseFloat(localStorage.getItem('ehi_vj_rate_per_kg') || '1000')
   );
 
-  const vjRatePerKg = parseFloat(
-    localStorage.getItem('ehi_vj_rate_per_kg') || '1000'
-  );
+  useEffect(() => {
+    supabase.from('pricing_config').select('config_value').eq('config_key', 'vj_settings').single()
+      .then(({ data, error }) => {
+        if (data?.config_value && !error) {
+          const cfg = data.config_value as { freeKg?: string | number; ratePerKg?: string | number };
+          if (cfg.freeKg !== undefined) {
+            setVjFreeAllowance(parseFloat(String(cfg.freeKg)));
+            localStorage.setItem('ehi_vj_free_kg', String(cfg.freeKg));
+          }
+          if (cfg.ratePerKg !== undefined) {
+            setVjRatePerKg(parseFloat(String(cfg.ratePerKg)));
+            localStorage.setItem('ehi_vj_rate_per_kg', String(cfg.ratePerKg));
+          }
+        }
+      });
+  }, []);
 
   const kgVal = Math.round(parseFloat(kg)) || 0;
   const pcsVal = Math.max(1, parseInt(pcs) || 1);
