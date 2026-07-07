@@ -6,7 +6,7 @@ import {
   BANKS,
   CARGO_ROUTES,
 } from "../../lib/constants";
-import { fmt, uid, tnow, generatePickupPin, normalizeAirlineName } from "../../lib/helpers";
+import { fmt, uid, tnow, generatePickupPin, normalizeAirlineName, getHubCode } from "../../lib/helpers";
 import { isTagAlreadyDelivered } from "../../lib/scanLogic";
 import {
   CheckCircle,
@@ -743,45 +743,24 @@ export const CargoForm = ({
       // Ignore -- commissionRate stays 0
     }
 
-    const airlineCode = ({ 'Arik Air': 'AK', 'Green Africa': 'GA', 'Green Africa Airways': 'GA', 'United Nigeria': 'UN', 'United Nigeria Airlines': 'UN' } as Record<string, string>)[airline] || null;
-
-    let resolvedAwb = awb;
-    let usedRpcAllocation = false;
-    try {
-      if (user.hub_id && airlineCode) {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('allocate_awb', {
-          p_hub_id: user.hub_id,
-          p_airline: airlineCode,
-        });
-        if (rpcError) {
-          console.warn('allocate_awb RPC failed, using form-entered AWB:', rpcError.message);
-        } else if (rpcData) {
-          resolvedAwb = rpcData;
-          usedRpcAllocation = true;
-        }
-      }
-    } catch (err) {
-      console.warn('allocate_awb RPC threw, using form-entered AWB:', err);
-      /* fall back to form AWB */
+    // AWB is EHI-{HUBCODE}-{6-digit per-hub sequence}, e.g. EHI-LOS-001042.
+    // The sequence comes from next_awb_number(), an atomic Postgres-side
+    // counter per hub_code -- not a client-side "read max, add one" scheme,
+    // which would race under concurrent submissions at a busy hub (the same
+    // class of bug already fixed once in this project's rate limiter). On
+    // failure we surface it directly rather than silently falling back to a
+    // random number, which would defeat the whole point of guaranteed
+    // per-hub uniqueness.
+    const hubCode = getHubCode(user.hub);
+    const { data: awbSeq, error: awbError } = await supabase.rpc('next_awb_number', {
+      p_hub_code: hubCode,
+    });
+    if (awbError) {
+      alert(`Failed to generate AWB number: ${awbError.message}. Please try again.`);
+      setSubmitting(false);
+      return;
     }
-
-    // The RPC is the source of uniqueness truth; its client-side fallback
-    // (a random 6-digit number) has no such guarantee, so under concurrent
-    // submissions from multiple hubs while the RPC is unreachable, two
-    // agents could otherwise generate the same AWB. Verify and regenerate
-    // on collision before proceeding.
-    if (!usedRpcAllocation) {
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const { data: existing } = await supabase
-          .from('cargo_entries')
-          .select('entry_ref')
-          .eq('awb_tag_number', resolvedAwb)
-          .limit(1)
-          .maybeSingle();
-        if (!existing) break;
-        resolvedAwb = generateAwb();
-      }
-    }
+    const resolvedAwb = `EHI-${hubCode}-${String(awbSeq).padStart(6, '0')}`;
 
     // Block reusing a tag whose previous consignment already completed
     // delivery -- a duplicated physical tag makes two shipments share one
