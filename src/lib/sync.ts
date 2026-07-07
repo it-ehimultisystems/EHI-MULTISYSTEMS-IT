@@ -16,7 +16,7 @@ export async function cleanupOldQueue(): Promise<void> {
 }
 
 export async function writeWithOfflineSupport(
-  tableName: 'manifests' | 'marketing_entries' | 'cargo_entries' | 'expenses',
+  tableName: 'manifests' | 'marketing_entries' | 'cargo_entries' | 'package_entries' | 'expenses',
   payload: Record<string, unknown>
 ): Promise<{ success: boolean; offline: boolean; error?: any }> {
   const record = { id: payload.id as string, data: payload, synced: 0 as const, created_at: new Date().toISOString() };
@@ -41,7 +41,7 @@ export async function writeWithOfflineSupport(
     const supabasePayload = { ...payload };
     // Remove the client-side ID since Supabase uses a UUID for the primary key.
     // Our client-side ID is stored in entry_ref or transaction_id
-    if (tableName === 'marketing_entries' || tableName === 'cargo_entries' || tableName === 'manifests') {
+    if (tableName === 'marketing_entries' || tableName === 'cargo_entries' || tableName === 'manifests' || tableName === 'package_entries') {
       delete supabasePayload.id;
     }
 
@@ -79,7 +79,7 @@ export async function processSyncQueue(): Promise<number> {
   for (const item of pending) {
     try {
       const supabasePayload = { ...(item.payload as any) };
-      if (item.table_name === 'marketing_entries' || item.table_name === 'cargo_entries' || item.table_name === 'manifests') {
+      if (item.table_name === 'marketing_entries' || item.table_name === 'cargo_entries' || item.table_name === 'manifests' || item.table_name === 'package_entries') {
         delete supabasePayload.id;
       }
       

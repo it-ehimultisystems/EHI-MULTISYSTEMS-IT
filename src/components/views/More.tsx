@@ -234,6 +234,14 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             onClick={() => onChangeTab('VJ POS')}
           />
         )}
+        {['super_admin', 'admin', 'cargo_agent', 'marketing_agent', 'office_work'].includes(user.role) && (
+          <MenuItem
+            icon={Truck}
+            title="Package & Parcel Desk"
+            subtitle="Flat-fee package and parcel counter"
+            onClick={() => onChangeTab('Packages')}
+          />
+        )}
       </div>
 
       {/* Finance */}

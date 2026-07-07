@@ -151,7 +151,7 @@ export interface Transaction {
   mode: PaymentMode | string;
   time: string;
   created_at?: string;
-  type: 'cargo' | 'baggage' | 'marketing';
+  type: 'cargo' | 'baggage' | 'marketing' | 'package';
   status: 'Intake' | 'Departure' | 'In-Transit' | 'Arrived' | 'Delivered' | 'Pending' | 'Received' | 'Dispatched' | 'Cancelled';
   isPending?: boolean;
   route?: string;
@@ -188,6 +188,10 @@ export interface Transaction {
   paymentNarration?: string;
   confirmedBy?: string;
   posApprovalCode?: string;
+  // Package Desk specifics -- lightweight debt tracking (no registered
+  // client required, matching the paper ledger's free-text debtor names)
+  debtPaid?: boolean;
+  debtPaidAt?: string;
 }
 
 export interface ParsedBankAlert {
@@ -227,7 +231,7 @@ export interface Expense {
   rejectedAt?: string;
 }
 
-export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Scan' | 'Incoming' | 'IncomingToHub' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit' | 'AirlineLogos' | 'DataImport' | 'AirlineLedger' | 'WeightManifest';
+export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Packages' | 'Scan' | 'Incoming' | 'IncomingToHub' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit' | 'AirlineLogos' | 'DataImport' | 'AirlineLedger' | 'WeightManifest';
 
 export interface AppState {
   user: User | null;

@@ -88,6 +88,12 @@ export const SideNav = ({
       roles: ["super_admin", "admin", "vj_agent"],
     },
     {
+      id: "Packages",
+      icon: Truck,
+      label: "Package Desk",
+      roles: ["super_admin", "admin", "cargo_agent", "marketing_agent", "office_work"],
+    },
+    {
       id: "Scan",
       icon: QrCode,
       label: "QR Scanner",

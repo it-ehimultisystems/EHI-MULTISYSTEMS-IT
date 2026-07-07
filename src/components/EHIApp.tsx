@@ -15,6 +15,7 @@ import { Analytics as AnalyticsRaw } from './views/Analytics';
 import { More as MoreRaw } from './views/More';
 import { TransactionLedger as TransactionLedgerRaw } from './views/TransactionLedger';
 import { MarketingWorkspace as MarketingWorkspaceRaw } from './views/MarketingWorkspace';
+import { PackageForm as PackageFormRaw } from './views/PackageForm';
 import { Scanner as ScannerRaw } from './views/Scanner';
 import { IncomingToHub as IncomingToHubRaw } from './views/IncomingToHub';
 import { MyTrips as MyTripsRaw } from './views/MyTrips';
@@ -37,6 +38,7 @@ const Analytics = memo(AnalyticsRaw);
 const More = memo(MoreRaw);
 const TransactionLedger = memo(TransactionLedgerRaw);
 const MarketingWorkspace = memo(MarketingWorkspaceRaw);
+const PackageForm = memo(PackageFormRaw);
 const Scanner = memo(ScannerRaw);
 const IncomingToHub = memo(IncomingToHubRaw);
 const MyTrips = memo(MyTripsRaw);
@@ -114,6 +116,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       if (['super_admin', 'admin', 'cargo_agent', 'office_work'].includes(role)) allowed.push('Cargo');
       if (['super_admin', 'admin', 'marketing_agent', 'office_work'].includes(role)) allowed.push('Marketing');
       if (['super_admin', 'admin', 'vj_agent'].includes(role)) allowed.push('VJ POS');
+      if (['super_admin', 'admin', 'cargo_agent', 'marketing_agent', 'office_work'].includes(role)) allowed.push('Packages');
       if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('Scan');
       if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'driver', 'office_work'].includes(role)) allowed.push('Incoming');
       if (['driver'].includes(role)) allowed.push('MyTrips');
@@ -168,10 +171,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         const startISO = startDate.toISOString();
         const endISO = endDate.toISOString();
 
-        const [cargoRes, vjRes, mktRes, expRes] = await Promise.all([
+        const [cargoRes, vjRes, mktRes, packageRes, expRes] = await Promise.all([
           addHubFilter(supabase.from('cargo_entries').select(`entry_ref,consignee_name,airline,commission_rate,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id${canSeePin ? ',pickup_pin' : ''}`).gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name)').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,created_at,hub_id').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('expenses').select('*').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500))
         ]);
 
@@ -249,6 +253,29 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               hub_id: r.hub_id,
               route: r.route,
               enteredByName: enteredByName || undefined,
+            });
+          });
+        }
+
+        if (packageRes.data) {
+          packageRes.data.forEach((r: any) => {
+            allTx.push({
+              id: r.entry_ref || r.id,
+              name: r.customer_name || 'Customer',
+              detail: `${r.destination || ''} · ${r.content_type || 'Package'}`,
+              amount: r.amount || 0,
+              mode: r.payment_mode || 'Cash',
+              time: new Date(r.created_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+              type: 'package',
+              status: 'Intake',
+              created_at: r.created_at,
+              bank: r.bank,
+              hub_id: r.hub_id,
+              destination: r.destination,
+              contentType: r.content_type,
+              paymentNarration: r.payment_narration || undefined,
+              debtPaid: r.debt_paid ?? undefined,
+              debtPaidAt: r.debt_paid_at || undefined,
             });
           });
         }
@@ -492,9 +519,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       }
       return [tx, ...prev].slice(0, 200);
     });
-    const tableName = tx.type === 'marketing' ? 'marketing_entries' 
-      : tx.type === 'cargo' ? 'cargo_entries' 
-      : tx.type === 'baggage' ? 'manifests' 
+    const tableName = tx.type === 'marketing' ? 'marketing_entries'
+      : tx.type === 'cargo' ? 'cargo_entries'
+      : tx.type === 'baggage' ? 'manifests'
+      : tx.type === 'package' ? 'package_entries'
       : 'shipments';
     
     let hubId = user.hub_id;
@@ -588,6 +616,24 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         payment_mode: tx.mode,
         bank: tx.bank,
         hub_id: hubId,
+        entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
+        created_at: new Date().toISOString()
+      };
+    } else if (tx.type === 'package') {
+      payload = {
+        id: tx.id,
+        entry_ref: tx.id,
+        customer_name: tx.name,
+        destination: tx.destination || '',
+        content_type: (tx as any).contentType || 'Package',
+        amount: tx.amount,
+        payment_mode: tx.mode,
+        bank: tx.bank,
+        payment_narration: tx.paymentNarration,
+        debt_paid: (tx as any).debtPaid ?? false,
+        debt_paid_at: (tx as any).debtPaidAt || null,
+        hub_id: hubId,
+        hub: user.hub,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
         created_at: new Date().toISOString()
       };
@@ -838,6 +884,15 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                   user={user}
                   onShowHistory={handleShowBaggageHistory}
                   transactions={transactions}
+                />
+              )}
+              {currentTab === 'Packages' && (
+                <PackageForm
+                  user={user}
+                  transactions={transactions}
+                  expenses={expenses}
+                  onAddTx={handleAddTx}
+                  onAddExpense={handleAddExpense}
                 />
               )}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}

@@ -145,7 +145,41 @@ export function buildMarketingWhatsApp(data: {
     text += `📝 *Narration:* ${data.paymentNarration}\n`;
   }
 
-  text += 
+  text +=
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `Thank you for your business.\n` +
+    `_EHI Multisystems Nigeria Ltd_`;
+
+  return text;
+}
+
+export function buildPackageWhatsApp(data: {
+  ref: string;
+  customer: string;
+  destination: string;
+  contentType: string;
+  amount: number;
+  mode: string;
+  bank?: string;
+  paymentNarration?: string;
+}): string {
+  const payment = data.bank ? `${data.mode} (${data.bank})` : data.mode;
+  let text =
+    `📦 *EHI Multisystems Nigeria Ltd*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `*PACKAGE / PARCEL RECEIPT*\n` +
+    `Ref: \`${data.ref}\`\n\n` +
+    `👤 *Customer:* ${data.customer}\n` +
+    `📍 *Destination:* ${data.destination}\n` +
+    `📦 *Type:* ${data.contentType}\n\n` +
+    `💰 *Amount: NGN ${Number(data.amount).toLocaleString('en-NG')}*\n` +
+    `💳 *Payment:* ${payment}\n`;
+
+  if (data.mode === 'Transfer' && data.paymentNarration) {
+    text += `📝 *Narration:* ${data.paymentNarration}\n`;
+  }
+
+  text +=
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `Thank you for your business.\n` +
     `_EHI Multisystems Nigeria Ltd_`;

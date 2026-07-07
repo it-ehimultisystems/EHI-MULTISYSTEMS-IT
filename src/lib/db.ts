@@ -23,6 +23,7 @@ class EHILocalDB extends Dexie {
   manifests!: Table<LocalShipment>;
   marketing_entries!: Table<LocalShipment>;
   cargo_entries!: Table<LocalShipment>;
+  package_entries!: Table<LocalShipment>;
   proof_of_delivery!: Table<ProofOfDelivery>;
   trip_pings!: Table<TripPing>;
   sync_queue!: Table<SyncQueueItem>;
@@ -63,6 +64,15 @@ class EHILocalDB extends Dexie {
       cargo_entries: 'id, synced, created_at',
       manifests: 'id, synced, created_at',
       marketing_entries: 'id, synced, created_at',
+      proof_of_delivery: 'id, awbNumber, synced, deliveredAt',
+      trip_pings: '++id, tripId, timestamp, synced',
+      sync_queue: '++id, table_name, record_id, synced, created_at',
+    });
+    this.version(6).stores({
+      cargo_entries: 'id, synced, created_at',
+      manifests: 'id, synced, created_at',
+      marketing_entries: 'id, synced, created_at',
+      package_entries: 'id, synced, created_at',
       proof_of_delivery: 'id, awbNumber, synced, deliveredAt',
       trip_pings: '++id, tripId, timestamp, synced',
       sync_queue: '++id, table_name, record_id, synced, created_at',
