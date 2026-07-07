@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, signIn } from '../lib/auth';
-import { EHILogo } from './EHILogo';
+import ehiLogo from '../assets/branding/ehi-logo.png';
 import { getConnectionMode, testSupabaseConnection, supabase } from '../lib/supabase';
 
 type ConnStatus = 'checking' | 'live' | 'offline' | 'unconfigured';
@@ -99,7 +99,7 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
         {/* Header */}
         <div className="text-center mb-10 flex flex-col items-center">
           <div className="mb-4">
-            <EHILogo width={180} height={100} />
+            <img src={ehiLogo} alt="EHI Multisystems" style={{ width: 180, height: 'auto', objectFit: 'contain' }} />
           </div>
           {/* Dynamic connection status badge */}
           <div

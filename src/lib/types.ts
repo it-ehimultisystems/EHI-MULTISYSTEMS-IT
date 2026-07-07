@@ -227,6 +227,7 @@ export interface Expense {
   created_at?: string;
   status?: 'pending' | 'approved' | 'rejected';
   mode?: string;
+  bank?: string;
   posApprovalCode?: string;
   logged_by?: string;
   approvedBy?: string;

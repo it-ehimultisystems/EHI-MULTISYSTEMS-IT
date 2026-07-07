@@ -159,7 +159,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                   <td className="py-3 text-[13px] font-mono text-gray-700 text-right">-</td>
                   <td className="py-3 text-[13px] font-mono font-medium text-gray-900 text-right">{fmt(statementPrint.amount).replace('₦','')}</td>
                 </tr>
-                {((statementPrint as any).paymentHistory || []).reduce((rows: JSX.Element[], p: { amount: number; mode: string; at: string }, idx: number, arr: any[]) => {
+                {((statementPrint as any).paymentHistory || []).reduce((rows: React.JSX.Element[], p: { amount: number; mode: string; at: string }, idx: number, arr: any[]) => {
                   const paidSoFar = arr.slice(0, idx + 1).reduce((s, x) => s + x.amount, 0);
                   const runningBalance = statementPrint.amount - paidSoFar;
                   rows.push(

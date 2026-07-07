@@ -146,7 +146,6 @@ export async function writeWithOfflineSupport(
     const onConflictColumn =
       tableName === 'manifests'      ? 'transaction_id' :
       tableName === 'expenses'       ? 'id'             :
-      tableName === 'trip_pings'     ? 'id'             :
       'entry_ref';
     const { error } = await supabase.from(tableName).upsert(supabasePayload, { onConflict: onConflictColumn });
     if (!error) {
