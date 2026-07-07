@@ -289,6 +289,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             time: e.created_at,
             created_at: e.created_at,
             status: e.status || 'pending',
+            mode: e.mode || undefined,
+            bank: e.bank || undefined,
             logged_by: e.logged_by || undefined,
             approvedBy: e.approved_by || undefined,
             approvedAt: e.approved_at || undefined,
@@ -729,7 +731,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       logged_by: user.name,
       logged_by_id: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : null,
       status: expense.status || 'pending',
-      requires_approval: expense.amount > 20000
+      requires_approval: expense.amount > 20000,
+      mode: expense.mode || 'Cash',
+      bank: expense.bank || null
     };
     const { offline, error } = await writeWithOfflineSupport('expenses', payload);
     if (offline) {

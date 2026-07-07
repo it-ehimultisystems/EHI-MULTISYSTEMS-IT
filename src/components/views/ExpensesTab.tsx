@@ -75,13 +75,16 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
       description: desc + (subCategory ? ` - ${subCategory}` : ''),
       time: tnow(),
       created_at: new Date().toISOString(),
-      status
+      status,
+      mode,
+      bank: mode === 'Transfer' ? bank : undefined
     };
 
     if (onAddExpense) onAddExpense(exp);
     setAmount('');
     setDesc('');
     setSubCategory('');
+    setBank('');
   };
 
   const numAmount = parseFloat(amount) || 0;
