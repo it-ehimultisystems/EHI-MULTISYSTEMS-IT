@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Upload, CheckCircle2, AlertCircle, RefreshCw, Layers, DollarSign, FileSpreadsheet, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { fmt } from '../../lib/helpers';
-import { Transaction } from '../../lib/types';
+import { Transaction, User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 
 export type BankFormat = 'UBA' | 'GTBank' | 'Access' | 'Zenith' | 'FirstBank';
@@ -103,14 +103,16 @@ const parseNigerianBankCSV = (csvText: string, bank: BankFormat): BankTx[] => {
   return results;
 };
 
-export const BankReconciliation = ({ 
-  transactions, 
+export const BankReconciliation = ({
+  transactions,
   onBack,
-  onConfirm
-}: { 
-  transactions: Transaction[]; 
+  onConfirm,
+  user
+}: {
+  transactions: Transaction[];
   onBack: () => void;
   onConfirm?: (s: { matched: number, unmatched: number, totalMatched: number, matchedIds: string[] }) => void;
+  user?: User;
 }) => {
   const [method, setMethod] = useState<'CSV' | 'PDF'>('CSV');
   const [bankType, setBankType] = useState<BankFormat>('UBA');
@@ -123,6 +125,7 @@ export const BankReconciliation = ({
   const [pdfError, setPdfError] = useState('');
   const [fileName, setFileName] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [matchWarning, setMatchWarning] = useState<string | null>(null);
 
   // Consider all transfers or POS as possible deposits
   const systemPayments = transactions.filter(t => t.mode === 'Transfer' || t.mode === 'POS').map(t => ({
@@ -209,20 +212,25 @@ export const BankReconciliation = ({
   const handleAutoMatch = () => {
     setMatchingInProgress(true);
     setTimeout(() => {
+      const claimedIds = new Set(
+        bankTxList.filter(b => b.matchedId).map(b => b.matchedId as string)
+      );
       setBankTxList(prev => prev.map(btx => {
         if (btx.status !== 'Unmatched' && btx.status !== 'Near-Match') return btx;
 
+        const available = (sp: { id: string }) => !claimedIds.has(sp.id);
+
         // Exact Priority: amount matches AND description contains client name
-        const exactMatch = systemPayments.find(sp => sp.amount === btx.credit && btx.description.toLowerCase().includes(sp.name.toLowerCase().split(' ')[0]));
-        if (exactMatch) return { ...btx, status: 'Auto-Matched', matchedId: exactMatch.id };
+        const exactMatch = systemPayments.find(sp => available(sp) && sp.amount === btx.credit && btx.description.toLowerCase().includes(sp.name.toLowerCase().split(' ')[0]));
+        if (exactMatch) { claimedIds.add(exactMatch.id); return { ...btx, status: 'Auto-Matched', matchedId: exactMatch.id }; }
 
         // Amount Priority
-        const amtMatch = systemPayments.find(sp => sp.amount === btx.credit);
-        if (amtMatch) return { ...btx, status: 'Auto-Matched', matchedId: amtMatch.id };
+        const amtMatch = systemPayments.find(sp => available(sp) && sp.amount === btx.credit);
+        if (amtMatch) { claimedIds.add(amtMatch.id); return { ...btx, status: 'Auto-Matched', matchedId: amtMatch.id }; }
 
         // Fuzzy Priority
-        const fuzzyMatch = systemPayments.find(sp => Math.abs(sp.amount - btx.credit) <= 500);
-        if (fuzzyMatch) return { ...btx, status: 'Near-Match', matchedId: fuzzyMatch.id };
+        const fuzzyMatch = systemPayments.find(sp => available(sp) && Math.abs(sp.amount - btx.credit) <= 500);
+        if (fuzzyMatch) { claimedIds.add(fuzzyMatch.id); return { ...btx, status: 'Near-Match', matchedId: fuzzyMatch.id }; }
 
         return btx;
       }));
@@ -231,6 +239,12 @@ export const BankReconciliation = ({
   };
 
   const handleManualMatch = (btxId: string, sysId: string) => {
+    const alreadyClaimedBy = bankTxList.find(b => b.id !== btxId && b.matchedId === sysId);
+    if (alreadyClaimedBy) {
+      setMatchWarning('This system transaction is already matched to another bank line.');
+      return;
+    }
+    setMatchWarning(null);
     setBankTxList(prev => prev.map(btx => {
       if (btx.id === btxId) return { ...btx, status: 'Manual-Matched', matchedId: sysId };
       return btx;
@@ -258,6 +272,18 @@ export const BankReconciliation = ({
   const confirmRecon = () => {
     const matchedIds = bankTxList.filter(b => b.status === 'Auto-Matched' || b.status === 'Manual-Matched').map(b => b.matchedId).filter(Boolean) as string[];
     if (onConfirm) onConfirm({ matched: matchedBtxCount, unmatched: unmatchedBtxCount, totalMatched: totalCredits, matchedIds });
+    supabase.from('bank_reconciliations').insert({
+      bank_type: bankType,
+      file_name: fileName || null,
+      run_by: user?.name || null,
+      run_by_id: user?.id && user.id.includes('-') && user.id.length > 30 ? user.id : null,
+      matched_count: matchedBtxCount,
+      unmatched_count: unmatchedBtxCount,
+      total_credits: totalCredits,
+      bank_tx_snapshot: bankTxList,
+    }).then(({ error }) => {
+      if (error) console.error('Failed to persist bank reconciliation run:', error);
+    });
     setShowSuccess(true);
   };
 
@@ -430,6 +456,13 @@ export const BankReconciliation = ({
               </button>
             </div>
           </div>
+
+          {matchWarning && (
+            <div className="bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.3)] rounded-xl p-3 flex items-center justify-between gap-3">
+              <span className="text-[12px] font-sans text-[var(--color-error)]">{matchWarning}</span>
+              <button onClick={() => setMatchWarning(null)} className="text-[11px] font-sans text-[var(--color-muted)] hover:text-[var(--color-foreground)]">Dismiss</button>
+            </div>
+          )}
 
           <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl overflow-hidden">
             <div className="p-4 border-b border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.01)] flex justify-between items-center">

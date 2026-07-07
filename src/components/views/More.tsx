@@ -88,9 +88,10 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (bankReconView) {
-    return <BankReconciliation 
-      transactions={transactions} 
-      onBack={() => setBankReconView(false)} 
+    return <BankReconciliation
+      transactions={transactions}
+      onBack={() => setBankReconView(false)}
+      user={user}
       onConfirm={({ matchedIds }) => {
         if (onFullUpdateTx) {
           matchedIds.forEach(id => {
