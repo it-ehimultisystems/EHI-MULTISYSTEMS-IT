@@ -259,18 +259,10 @@ export async function validateScan(
     // Check if already arrived here (prevent duplicate ARRIVE)
     const lastEvent = await getLastEventAtHub(ref, currentHub);
     if (lastEvent?.event_type === 'ARRIVE') {
-      // Check if it has departed since then
-      const allEvents = await supabase
-        .from('tracking_events')
-        .select('*')
-        .eq('cargo_ref', ref)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      const events = allEvents.data || [];
-      const lastEventAny = events[0];
-      if (lastEventAny?.event_type === 'ARRIVE' &&
-          lastEventAny.hub_name.includes(currentHub.split(' ')[0])) {
+      // Confirm it hasn't departed since then — reuse the "last event anywhere"
+      // fetched above instead of firing a third, near-identical query.
+      if (lastAnyForArrive?.event_type === 'ARRIVE' &&
+          lastAnyForArrive.hub_name.includes(currentHub.split(' ')[0])) {
         return {
           type: 'ALREADY_PROCESSED',
           cargo: cargoInfo,

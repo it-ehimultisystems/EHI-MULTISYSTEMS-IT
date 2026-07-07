@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../lib/db';
-import { ProofOfDelivery } from '../../lib/types';
+import { fetchProofOfDeliveryRecords } from '../../lib/sync';
+import { ProofOfDelivery, User } from '../../lib/types';
 import { ShieldCheck, MapPin, Search, Calendar, ChevronRight, RefreshCw, X, ArrowLeft } from 'lucide-react';
 
-export const PODLog = ({ onBack }: { onBack: () => void }) => {
+export const PODLog = ({ user, onBack }: { user: User; onBack: () => void }) => {
   const [pods, setPods] = useState<ProofOfDelivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPod, setSelectedPod] = useState<ProofOfDelivery | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const isAdmin = ['super_admin', 'admin'].includes(user.role);
+
   const fetchPods = async () => {
     setLoading(true);
     try {
-      const data = await db.proof_of_delivery.orderBy('deliveredAt').reverse().toArray();
+      const data = await fetchProofOfDeliveryRecords(user.hub, isAdmin);
       setPods(data);
     } catch (err) {
       console.error(err);

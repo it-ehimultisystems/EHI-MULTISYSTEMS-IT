@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { ArrowLeft, Package, CheckCircle, RefreshCw, Loader, History } from 'lucide-react';
+import { isTagAlreadyDelivered, logScanEvent } from '../../lib/scanLogic';
+import { ProofOfDeliveryForm } from './ProofOfDelivery';
 
 type MainTab = 'AWAITING' | 'DELIVERED' | 'LOG';
 type DateFilter = 'today' | 'yesterday' | '7days';
@@ -60,8 +62,11 @@ export const ArrivalsView = ({ user, onBack }: { user: User; onBack: () => void 
   const [selectedCargo, setSelectedCargo] = useState<any | null>(null);
   const [pinValue, setPinValue] = useState(['', '', '', '', '']);
   const [pinError, setPinError] = useState('');
-  const [pinSuccess, setPinSuccess] = useState('');
   const [releasing, setReleasing] = useState(false);
+  // Set once the PIN is verified — swaps the modal for the signature-capture
+  // screen. Delivery isn't finalized until that signature is collected, so
+  // there's always a proof-of-delivery record even when the consignee has no ID.
+  const [activePodCapture, setActivePodCapture] = useState<{ ref: string; cargo: any } | null>(null);
 
   const firstPinRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -186,33 +191,23 @@ export const ArrivalsView = ({ user, onBack }: { user: User; onBack: () => void 
     }
 
     if (storedPin === entered) {
-      try {
-        const ref = selectedCargo.entry_ref || selectedCargo.id;
-        await supabase.from('cargo_entries').update({
-          status: 'Delivered',
-          pin_used_at: new Date().toISOString(),
-          released_by: user.id && user.id.length > 30 ? user.id : null,
-        }).eq('entry_ref', ref);
+      const ref = selectedCargo.entry_ref || selectedCargo.id;
 
-        await supabase.from('tracking_events').insert({
-          cargo_ref: ref,
-          event_type: 'DELIVER',
-          hub_name: user.hub,
-          hub_id: user.hub_id || null,
-          scanned_by_name: user.name,
-        });
-
-        setPinSuccess('Cargo released to consignee ✓');
-        setTimeout(() => {
-          setPinModalOpen(false);
-          setPinSuccess('');
-          setPinValue(['', '', '', '', '']);
-          setSelectedCargo(null);
-          fetchCargo();
-        }, 2000);
-      } catch {
-        setPinError('Failed to update status. Try again.');
+      // Guard against a duplicate DELIVER log — e.g. two staff opening the
+      // PIN modal for the same cargo, or a retried submit after a slow
+      // network response, would otherwise both pass validation above and
+      // each write their own DELIVER row.
+      if (await isTagAlreadyDelivered(ref)) {
+        setPinError('This cargo was already marked as delivered.');
+        setReleasing(false);
+        return;
       }
+
+      // PIN confirmed — hand off to signature capture. Delivery isn't
+      // finalized (status/tracking event) until that completes, so a
+      // signature is always on file, ID or no ID.
+      setPinModalOpen(false);
+      setActivePodCapture({ ref, cargo: selectedCargo });
     } else {
       setPinError('Incorrect PIN — consignee must present the correct 5-digit PIN sent to their phone.');
       setPinValue(['', '', '', '', '']);
@@ -220,6 +215,43 @@ export const ArrivalsView = ({ user, onBack }: { user: User; onBack: () => void 
     }
     setReleasing(false);
   };
+
+  const handlePodComplete = async () => {
+    if (!activePodCapture) return;
+    const { ref, cargo } = activePodCapture;
+    try {
+      await supabase.from('cargo_entries').update({
+        status: 'Delivered',
+        pin_used_at: new Date().toISOString(),
+        released_by: user.id && user.id.length > 30 ? user.id : null,
+      }).eq('entry_ref', ref);
+
+      // Route through the shared scan-logging path so this gets the same
+      // single tracking_events row, status sync, and consignee/sender SMS
+      // notification as a DELIVER done via the QR scanner.
+      await logScanEvent(ref, 'DELIVER', user.hub, user.name, cargo.route);
+    } catch (err) {
+      console.error('Failed to finalize delivery after signature capture:', err);
+    }
+    setActivePodCapture(null);
+    setSelectedCargo(null);
+    setPinValue(['', '', '', '', '']);
+    fetchCargo();
+  };
+
+  if (activePodCapture) {
+    return (
+      <div className="fixed inset-0 z-[150] bg-[var(--color-bg)] flex flex-col">
+        <ProofOfDeliveryForm
+          awbNumber={activePodCapture.ref}
+          consigneeName={activePodCapture.cargo.consignee_name}
+          user={user}
+          onComplete={handlePodComplete}
+          onCancel={() => setActivePodCapture(null)}
+        />
+      </div>
+    );
+  }
 
   // ── Event type helpers ────────────────────────────────────────────────────
   const eventColor = (type: string) =>
@@ -380,7 +412,6 @@ export const ArrivalsView = ({ user, onBack }: { user: User; onBack: () => void 
                     setSelectedCargo(c);
                     setPinModalOpen(true);
                     setPinError('');
-                    setPinSuccess('');
                     setPinValue(['', '', '', '', '']);
                   }}
                   className="shrink-0 px-5 py-2.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[12px] rounded-lg hover:opacity-90 transition-opacity cursor-pointer border-none"
@@ -410,54 +441,45 @@ export const ArrivalsView = ({ user, onBack }: { user: User; onBack: () => void 
               <div className="text-[10px] font-mono text-[var(--color-accent-amber)] mt-1">{selectedCargo.entry_ref || selectedCargo.id}</div>
             </div>
             <div className="p-6">
-              {pinSuccess ? (
-                <div className="flex flex-col items-center py-6 text-[var(--color-success)] space-y-3">
-                  <CheckCircle size={48} />
-                  <div className="font-bold text-[15px] text-center">{pinSuccess}</div>
+              <p className="text-[11px] text-[var(--color-muted)] text-center mb-4 font-sans">
+                Ask the consignee to provide the 5-digit PIN sent to their phone when the cargo was logged.
+              </p>
+              <div className="flex justify-center gap-2 mb-5">
+                {pinValue.map((v, idx) => (
+                  <input
+                    key={idx}
+                    id={`pin-${idx}`}
+                    ref={idx === 0 ? firstPinRef : undefined}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={v}
+                    onChange={(e) => handlePinChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    className="w-12 h-14 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-xl text-center text-[22px] font-mono font-bold text-[var(--color-foreground)] focus:border-[var(--color-accent-amber)] focus:ring-1 focus:ring-[var(--color-accent-amber)] outline-none transition-colors"
+                  />
+                ))}
+              </div>
+              {pinError && (
+                <div className="bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.25)] text-[var(--color-error)] p-3 rounded-lg text-[11px] font-sans leading-relaxed mb-4">
+                  {pinError}
                 </div>
-              ) : (
-                <>
-                  <p className="text-[11px] text-[var(--color-muted)] text-center mb-4 font-sans">
-                    Ask the consignee to provide the 5-digit PIN sent to their phone when the cargo was logged.
-                  </p>
-                  <div className="flex justify-center gap-2 mb-5">
-                    {pinValue.map((v, idx) => (
-                      <input
-                        key={idx}
-                        id={`pin-${idx}`}
-                        ref={idx === 0 ? firstPinRef : undefined}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={v}
-                        onChange={(e) => handlePinChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(idx, e)}
-                        className="w-12 h-14 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-xl text-center text-[22px] font-mono font-bold text-[var(--color-foreground)] focus:border-[var(--color-accent-amber)] focus:ring-1 focus:ring-[var(--color-accent-amber)] outline-none transition-colors"
-                      />
-                    ))}
-                  </div>
-                  {pinError && (
-                    <div className="bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.25)] text-[var(--color-error)] p-3 rounded-lg text-[11px] font-sans leading-relaxed mb-4">
-                      {pinError}
-                    </div>
-                  )}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => { setPinModalOpen(false); setPinError(''); setPinValue(['', '', '', '', '']); }}
-                      className="flex-1 h-11 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[12px] font-bold rounded-lg hover:bg-[var(--color-surface-card)] transition-colors cursor-pointer border-none"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleConfirmPin}
-                      disabled={releasing || pinValue.join('').length !== 5}
-                      className="flex-1 h-11 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[12px] font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer border-none"
-                    >
-                      {releasing ? 'Releasing…' : 'Confirm PIN'}
-                    </button>
-                  </div>
-                </>
               )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setPinModalOpen(false); setPinError(''); setPinValue(['', '', '', '', '']); }}
+                  className="flex-1 h-11 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[12px] font-bold rounded-lg hover:bg-[var(--color-surface-card)] transition-colors cursor-pointer border-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmPin}
+                  disabled={releasing || pinValue.join('').length !== 5}
+                  className="flex-1 h-11 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[12px] font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer border-none"
+                >
+                  {releasing ? 'Releasing…' : 'Confirm PIN'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { Camera, RefreshCw, X, ShieldCheck } from 'lucide-react';
 import { db } from '../../lib/db';
+import { syncProofOfDelivery } from '../../lib/sync';
 import { User, ProofOfDelivery } from '../../lib/types';
 
 interface PODProps {
@@ -85,13 +86,16 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
         gpsLongitude: longitude,
       };
 
+      // Local save first so signature capture always succeeds instantly and
+      // works offline; PODLog reads this table directly on this device.
       await db.proof_of_delivery.add(pod);
-      // NOTE: Proof of Delivery is currently local-device-only. There is no
-      // `proof_of_delivery` table in Supabase yet, so we do not queue a sync
-      // attempt here — doing so would fail every time and spam the network.
-      // A dedicated Supabase table + sync mapping is needed before this can
-      // be made cross-device visible (tracked as a follow-up, not part of this fix).
       onComplete(pod);
+
+      // Fire the Supabase sync in the background (not awaited) — the staff
+      // member has already captured the signature and moved on. A failure
+      // here queues silently for background retry rather than blocking or
+      // erroring out this screen (see syncProofOfDelivery).
+      syncProofOfDelivery(pod).catch(() => { /* already queued for retry internally */ });
     };
 
     if (navigator.geolocation) {

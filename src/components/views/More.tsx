@@ -130,7 +130,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (podLogView) {
-    return <PODLog onBack={() => setPodLogView(false)} />;
+    return <PODLog user={user} onBack={() => setPodLogView(false)} />;
   }
 
   if (dispatchView) {
