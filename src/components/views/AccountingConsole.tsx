@@ -23,6 +23,8 @@ export interface AccountingConsoleProps {
 export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddExpense, onUpdateExpense, onUpdateTx, onOpenBankRecon, onFullUpdateTx }: AccountingConsoleProps) => {
   const [activeTab, setActiveTab] = useState<'Summary' | 'Cash Register' | 'Credit Sales' | 'Expenses' | 'Remittances' | 'Payment Validation'>('Summary');
   const [period, setPeriod] = useState<'Today' | 'This Week' | 'This Month' | 'Custom'>('Today');
+  const [customStart, setCustomStart] = useState(new Date().toISOString().split('T')[0]);
+  const [customEnd, setCustomEnd] = useState(new Date().toISOString().split('T')[0]);
 
   const unconfirmedCount = useMemo(() => {
     return transactions.filter(t => t.mode === 'Transfer' && !t.paymentConfirmed).length;
@@ -42,6 +44,12 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       if (period === 'Today') return d >= today;
       if (period === 'This Week') return d >= weekAgo;
       if (period === 'This Month') return d >= monthAgo;
+      if (period === 'Custom') {
+        const start = new Date(customStart);
+        const end = new Date(customEnd);
+        end.setHours(23, 59, 59, 999);
+        return d >= start && d <= end;
+      }
       return true;
     });
 
@@ -50,11 +58,17 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       if (period === 'Today') return d >= today;
       if (period === 'This Week') return d >= weekAgo;
       if (period === 'This Month') return d >= monthAgo;
+      if (period === 'Custom') {
+        const start = new Date(customStart);
+        const end = new Date(customEnd);
+        end.setHours(23, 59, 59, 999);
+        return d >= start && d <= end;
+      }
       return true;
     });
 
     return { filteredTx: fTx, filteredExp: fExp };
-  }, [transactions, expenses, period]);
+  }, [transactions, expenses, period, customStart, customEnd]);
 
   // ==== SUMMARY TAB CALCULATIONS ====
   const cargoTx = filteredTx.filter(t => t.type === 'cargo');
@@ -253,6 +267,23 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                </button>
              ))}
           </div>
+          {period === 'Custom' && (
+            <div className="flex items-center space-x-2">
+              <input
+                type="date"
+                value={customStart}
+                onChange={e => setCustomStart(e.target.value)}
+                className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] font-sans text-[var(--color-foreground)] focus:outline-none"
+              />
+              <span className="text-[12px] font-sans text-[var(--color-muted)]">to</span>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={e => setCustomEnd(e.target.value)}
+                className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] font-sans text-[var(--color-foreground)] focus:outline-none"
+              />
+            </div>
+          )}
 
           {/* REVENUE SUMMARY ROW */}
           <div className="flex space-x-4 overflow-x-auto pb-2 snap-x">
