@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
+import { supabase } from '../../lib/supabase';
 import { ArrowLeft, Box, Plane, TrendingUp, Lock, Unlock, AlertCircle } from 'lucide-react';
 import { DebtorsTab } from './DebtorsTab';
 import { ExpensesTab } from './ExpensesTab';
@@ -88,10 +89,12 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
   const vatEstimate = grandRevenue * 0.075;
 
   // ==== CASH REGISTER STATE ====
+  // Backed by eod_records (hub_id, date) -- the same table EODReconciliation.tsx
+  // locks the day against -- instead of a separate localStorage register that
+  // could silently disagree with it.
   const todayStr = new Date().toISOString().split('T')[0];
   const [regDate, setRegDate] = useState(todayStr);
-  const storageKey = `ehi-cash-register-${regDate}-${user.hub}`;
-  
+
   const [openingBalance, setOpeningBalance] = useState<number | null>(null);
   const [physicalCount, setPhysicalCount] = useState<number | null>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -100,44 +103,83 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
   const [physicalInput, setPhysicalInput] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      const data = JSON.parse(saved);
-      setOpeningBalance(data.openingBalance);
-      setPhysicalCount(data.physicalCount || null);
-      setIsLocked(data.isLocked || false);
-      setShowOpeningModal(data.openingBalance === null);
-    } else {
+    if (!user.hub_id) {
       setOpeningBalance(null);
       setPhysicalCount(null);
       setIsLocked(false);
       setShowOpeningModal(true);
+      return;
     }
-  }, [regDate, storageKey]);
+    let cancelled = false;
+    (async () => {
+      const { data: todayRow } = await supabase
+        .from('eod_records')
+        .select('opening_balance, physical_count, status')
+        .eq('hub_id', user.hub_id)
+        .eq('date', regDate)
+        .maybeSingle();
+      if (cancelled) return;
 
-  const saveRegister = (ob: number | null, pc: number | null, loc: boolean) => {
-    localStorage.setItem(storageKey, JSON.stringify({
-      openingBalance: ob,
-      physicalCount: pc,
-      isLocked: loc
-    }));
-  };
+      if (todayRow && todayRow.opening_balance !== null) {
+        setOpeningBalance(todayRow.opening_balance);
+        setPhysicalCount(todayRow.physical_count ?? null);
+        setIsLocked(todayRow.status === 'locked');
+        setShowOpeningModal(false);
+        setPhysicalInput('');
+        return;
+      }
 
-  const handleSetOpening = () => {
+      // No opening balance recorded yet for regDate -- auto-fill from
+      // yesterday's closing physical count, but still require confirmation
+      // through the same modal before it's actually set.
+      const yesterday = new Date(regDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const { data: prevRow } = await supabase
+        .from('eod_records')
+        .select('physical_count')
+        .eq('hub_id', user.hub_id)
+        .eq('date', yesterdayStr)
+        .maybeSingle();
+      if (cancelled) return;
+
+      setOpeningBalance(null);
+      setPhysicalCount(null);
+      setIsLocked(false);
+      setShowOpeningModal(true);
+      setOpeningInput(prevRow?.physical_count != null ? String(prevRow.physical_count) : '');
+    })();
+    return () => { cancelled = true; };
+  }, [regDate, user.hub_id]);
+
+  const handleSetOpening = async () => {
     const val = parseFloat(openingInput);
     if (!isNaN(val)) {
       setOpeningBalance(val);
       setShowOpeningModal(false);
-      saveRegister(val, physicalCount, isLocked);
+      await supabase.from('eod_records').upsert({
+        hub_id: user.hub_id,
+        hub: user.hub,
+        date: regDate,
+        opening_balance: val,
+        status: 'open'
+      }, { onConflict: 'hub_id,date' });
     }
   };
 
-  const handleLockRegister = () => {
+  const handleLockRegister = async () => {
     const val = parseFloat(physicalInput);
     if (!isNaN(val)) {
       setPhysicalCount(val);
       setIsLocked(true);
-      saveRegister(openingBalance, val, true);
+      await supabase.from('eod_records').upsert({
+        hub_id: user.hub_id,
+        hub: user.hub,
+        date: regDate,
+        opening_balance: openingBalance,
+        physical_count: val,
+        status: 'locked'
+      }, { onConflict: 'hub_id,date' });
     }
   };
 

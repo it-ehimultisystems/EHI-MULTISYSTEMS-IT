@@ -186,6 +186,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       debt_total: expectedTotals.debtTotal,
       expense_total: expectedTotals.expensesTotal,
       net_cash: expectedTotals.netExpectedCash,
+      physical_count: Number(countedCash) || 0,
       status: 'locked'
     }, { onConflict: 'hub_id,date' });
     // Write to audit trail
