@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Transaction, ParsedBankAlert, PaymentMatch } from '../../lib/types';
+import { Transaction, ParsedBankAlert, PaymentMatch, User } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { AlertCircle, CheckCircle, Mail, Clock, Search, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface PaymentValidationProps {
   transactions: Transaction[];
   onUpdateTx: (tx: Transaction) => void;
+  user?: User;
 }
 
-export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactions, onUpdateTx }) => {
+export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactions, onUpdateTx, user }) => {
   const [emailText, setEmailText] = useState('');
   const [parsing, setParsing] = useState(false);
   const [parsedResult, setParsedResult] = useState<ParsedBankAlert | null>(null);
@@ -144,7 +145,14 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
   };
 
   const confirmMatch = (tx: Transaction, parsedAlert?: ParsedBankAlert) => {
-    const updatedTx = { ...tx, paymentConfirmed: true, confirmedAt: new Date().toISOString() };
+    // Basic maker-checker: whoever logged the transaction can't also be the
+    // one who confirms its payment landed -- otherwise one person can
+    // unilaterally push money in and out with no independent check.
+    if (user?.name && tx.enteredByName && tx.enteredByName === user.name) {
+      alert(`${user.name} logged this transaction and cannot also confirm its payment. Ask another staff member to confirm it.`);
+      return;
+    }
+    const updatedTx = { ...tx, paymentConfirmed: true, confirmedAt: new Date().toISOString(), confirmedBy: user?.name };
     if (parsedAlert) {
       updatedTx.bankReference = parsedAlert.reference;
       updatedTx.bankSender = parsedAlert.senderName;

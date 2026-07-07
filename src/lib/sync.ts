@@ -4,10 +4,14 @@ import Dexie from 'dexie';
 import { appLogger } from './logger';
 
 export async function cleanupOldQueue(): Promise<void> {
+  // Only prune items that already made it to Supabase (synced: 1).
+  // Deleting unsynced (synced: 0) items regardless of age was silently
+  // discarding real, never-uploaded records after a week.
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
   await db.sync_queue
     .where('created_at')
     .below(sevenDaysAgo)
+    .and(item => item.synced === 1)
     .delete();
 }
 

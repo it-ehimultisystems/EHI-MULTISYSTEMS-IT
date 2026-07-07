@@ -91,6 +91,16 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     };
     const handleOffline = () => setIsOffline(true);
 
+    // The 'online' event only fires on an offline->online transition. If the
+    // app was closed with items still queued and reopens while already
+    // online, that transition never happens and queued records would sit
+    // unsynced indefinitely. Run once on mount, then retry periodically as
+    // a backstop in case a sync attempt failed for a transient reason.
+    if (navigator.onLine) handleOnline();
+    const syncInterval = window.setInterval(() => {
+      if (navigator.onLine) handleOnline();
+    }, 60000);
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
@@ -120,6 +130,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     window.addEventListener('ehi-nav', handleEhiNav);
 
     return () => {
+      window.clearInterval(syncInterval);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('ehi-nav', handleEhiNav);

@@ -531,6 +531,15 @@ export const CargoForm = ({
         )
       : undefined;
 
+    if (customRateOverwrite) {
+      const overwriteNum = parseFloat(customRateOverwrite);
+      if (isNaN(overwriteNum) || overwriteNum <= 0) {
+        alert("Custom rate must be a positive number greater than zero.");
+        setIsWeighingSubmitting(false);
+        return;
+      }
+    }
+
     const rateToUse = customRateOverwrite
       ? parseFloat(customRateOverwrite)
       : contractRateRecord
@@ -737,6 +746,7 @@ export const CargoForm = ({
     const airlineCode = ({ 'Arik Air': 'AK', 'Green Africa': 'GA', 'Green Africa Airways': 'GA', 'United Nigeria': 'UN', 'United Nigeria Airlines': 'UN' } as Record<string, string>)[airline] || null;
 
     let resolvedAwb = awb;
+    let usedRpcAllocation = false;
     try {
       if (user.hub_id && airlineCode) {
         const { data: rpcData, error: rpcError } = await supabase.rpc('allocate_awb', {
@@ -747,11 +757,30 @@ export const CargoForm = ({
           console.warn('allocate_awb RPC failed, using form-entered AWB:', rpcError.message);
         } else if (rpcData) {
           resolvedAwb = rpcData;
+          usedRpcAllocation = true;
         }
       }
     } catch (err) {
       console.warn('allocate_awb RPC threw, using form-entered AWB:', err);
       /* fall back to form AWB */
+    }
+
+    // The RPC is the source of uniqueness truth; its client-side fallback
+    // (a random 6-digit number) has no such guarantee, so under concurrent
+    // submissions from multiple hubs while the RPC is unreachable, two
+    // agents could otherwise generate the same AWB. Verify and regenerate
+    // on collision before proceeding.
+    if (!usedRpcAllocation) {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data: existing } = await supabase
+          .from('cargo_entries')
+          .select('entry_ref')
+          .eq('awb_tag_number', resolvedAwb)
+          .limit(1)
+          .maybeSingle();
+        if (!existing) break;
+        resolvedAwb = generateAwb();
+      }
     }
 
     // Block reusing a tag whose previous consignment already completed

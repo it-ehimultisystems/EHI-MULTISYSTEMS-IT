@@ -175,6 +175,12 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
             )}
           </button>
         ))}
+        <button
+          onClick={onOpenBankRecon}
+          className="px-4 py-2 text-[13px] font-sans font-medium rounded-full whitespace-nowrap transition-colors focus:outline-none flex items-center bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+        >
+          Bank Reconciliation
+        </button>
       </div>
 
       {activeTab === 'Summary' && (
@@ -412,7 +418,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
         />
       )}
       {activeTab === 'Expenses' && <ExpensesTab expenses={expenses} user={user} onAddExpense={onAddExpense} onUpdateExpense={onUpdateExpense} />}
-      {activeTab === 'Payment Validation' && <PaymentValidation transactions={transactions} onUpdateTx={onFullUpdateTx!} />}
+      {activeTab === 'Payment Validation' && <PaymentValidation transactions={transactions} onUpdateTx={onFullUpdateTx!} user={user} />}
       {activeTab === 'Remittances' && (
         <div className="flex flex-col items-center justify-center p-8 py-16 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[var(--color-surface-2)] mt-4">
            <Unlock size={36} className="text-[var(--color-muted)] mb-3" />
