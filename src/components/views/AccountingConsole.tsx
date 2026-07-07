@@ -143,8 +143,11 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
   const regReceipts = transactions
     .filter(t => t.mode === 'Cash' && t.created_at && t.created_at.split('T')[0] === regDate)
     .reduce((sum, t) => sum + t.amount, 0);
+  // Only approved expenses actually left the register -- a pending or
+  // rejected expense hasn't (or won't) be paid out, so counting it here
+  // would falsely shrink the expected closing balance.
   const regPayments = expenses
-    .filter(e => e.amount > 0 && e.created_at && e.created_at.split('T')[0] === regDate)
+    .filter(e => e.amount > 0 && e.status === 'approved' && e.created_at && e.created_at.split('T')[0] === regDate)
     .reduce((sum, e) => sum + e.amount, 0); // Mock all expenses as cash for now
   const expectedClosing = (openingBalance || 0) + regReceipts - regPayments;
   const variance = physicalCount !== null ? physicalCount - expectedClosing : 0;

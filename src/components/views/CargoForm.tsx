@@ -751,7 +751,7 @@ export const CargoForm = ({
     // failure we surface it directly rather than silently falling back to a
     // random number, which would defeat the whole point of guaranteed
     // per-hub uniqueness.
-    const hubCode = getHubCode(user.hub);
+    const hubCode = getHubCode(user.hub_code || user.hub);
     const { data: awbSeq, error: awbError } = await supabase.rpc('next_awb_number', {
       p_hub_code: hubCode,
     });

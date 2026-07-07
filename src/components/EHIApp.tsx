@@ -290,6 +290,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             created_at: e.created_at,
             status: e.status || 'pending',
             logged_by: e.logged_by || undefined,
+            approvedBy: e.approved_by || undefined,
+            approvedAt: e.approved_at || undefined,
+            rejectedBy: e.rejected_by || undefined,
+            rejectedAt: e.rejected_at || undefined,
           }));
           setExpenses(prev => {
             // Same reasoning as the transactions merge below: a date-range
@@ -635,7 +639,14 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         hub_id: hubId,
         hub: user.hub,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
-        created_at: new Date().toISOString()
+        // This upserts on entry_ref, so a debt-paid update (which spreads the
+        // existing tx and calls onAddTx again) must not stamp a fresh
+        // timestamp here -- that would move the row's created_at to the
+        // payment date, making it vanish from the day it was actually
+        // created in any day-scoped query. tx.created_at is always already
+        // set (PackageForm stamps it once at creation), so just carry it
+        // through instead of regenerating it.
+        created_at: tx.created_at || new Date().toISOString()
       };
     } else {
       payload = { ...tx, created_at: new Date().toISOString(), hub_id: hubId };

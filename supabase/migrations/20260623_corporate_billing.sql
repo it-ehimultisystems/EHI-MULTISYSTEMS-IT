@@ -1,6 +1,17 @@
 -- ==========================================
 -- EHI MULTISYSTEMS - B2B CORPORATE BILLING MIGRATION
 -- ==========================================
+-- NOTE: this originally included a BEFORE INSERT trigger on a "shipments"
+-- table that was never the real table name (the actual cargo table is
+-- cargo_entries -- see 20260706_full_schema.sql) and used column names
+-- (amount_to_pay, destination_route, is_corporate_account, cargo_weight_kg)
+-- that don't match cargo_entries' real columns (amount, route, is_corporate,
+-- total_kg) either. That trigger was dead on arrival: corporate/B2B billing
+-- has always actually run client-side in CargoForm.tsx's
+-- handleFinalizeWeighing, which looks up corporate_clients/
+-- corporate_route_rates directly and writes the computed Transaction itself.
+-- Removed the trigger entirely rather than leaving unreachable, broken SQL
+-- blocking this migration from ever completing.
 
 -- 1. Corporate Directory Table
 CREATE TABLE IF NOT EXISTS corporate_clients (
@@ -10,6 +21,13 @@ CREATE TABLE IF NOT EXISTS corporate_clients (
     accumulated_monthly_debt NUMERIC(12, 2) DEFAULT 0.00 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- Backfill columns for a corporate_clients table that already existed
+-- with an older/different shape before this migration ran -- CREATE TABLE
+-- IF NOT EXISTS above is a no-op in that case and leaves old columns as-is.
+ALTER TABLE corporate_clients ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50);
+ALTER TABLE corporate_clients ADD COLUMN IF NOT EXISTS accumulated_monthly_debt NUMERIC(12, 2) DEFAULT 0.00 NOT NULL;
+ALTER TABLE corporate_clients ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL;
 
 -- 2. Corporate Route Rates Table (Mapping Custom Contract Rates)
 CREATE TABLE IF NOT EXISTS corporate_route_rates (
@@ -21,57 +39,8 @@ CREATE TABLE IF NOT EXISTS corporate_route_rates (
     CONSTRAINT unique_corporate_route UNIQUE (corporate_client_id, route_name)
 );
 
--- 3. Update Existing Shipments/Transactions table to link Corporate Accounts
--- (Assuming a shipments/transactions table exists in your database)
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS is_corporate_account BOOLEAN DEFAULT FALSE NOT NULL;
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS corporate_client_id UUID REFERENCES corporate_clients(id) ON DELETE SET NULL;
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS cargo_weight_kg NUMERIC(10, 2);
-ALTER TABLE shipments ADD COLUMN IF NOT EXISTS custom_rate_per_kg NUMERIC(10, 2);
-
--- 4. Immutable PL/pgSQL Database Trigger Function
-CREATE OR REPLACE FUNCTION process_corporate_shipment_billing()
-RETURNS TRIGGER AS $$
-DECLARE
-    found_rate NUMERIC(10, 2);
-    baseline_rate NUMERIC(10, 2) := 500.00; -- Fallback baseline rate if no rate is set
-BEGIN
-    -- Only run pricing if is_corporate_account is TRUE and client is specified
-    IF NEW.is_corporate_account = TRUE AND NEW.corporate_client_id IS NOT NULL THEN
-        -- Look up custom contracted rate per KG matching corporate client & destination route
-        SELECT rate_per_kg INTO found_rate
-        FROM corporate_route_rates
-        WHERE corporate_client_id = NEW.corporate_client_id
-          AND LOWER(route_name) = LOWER(NEW.destination_route)
-        LIMIT 1;
-
-        -- Fallback if no matching rate is found
-        IF found_rate IS NULL THEN
-            found_rate := baseline_rate;
-        END IF;
-
-        -- Compute custom rate and amount
-        NEW.custom_rate_per_kg := found_rate;
-        NEW.amount_to_pay := COALESCE(NEW.cargo_weight_kg, 1.00) * found_rate;
-        
-        -- Automatically log payment mode as 'Debt' for corporate clients
-        NEW.payment_mode := 'Debt';
-
-        -- Update the corporate client's accumulated monthly debt directly
-        UPDATE corporate_clients
-        SET accumulated_monthly_debt = accumulated_monthly_debt + NEW.amount_to_pay
-        WHERE id = NEW.corporate_client_id;
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- 5. Attach the trigger
-DROP TRIGGER IF EXISTS trigger_process_corporate_shipment_billing ON shipments;
-CREATE TRIGGER trigger_process_corporate_shipment_billing
-BEFORE INSERT ON shipments
-FOR EACH ROW
-EXECUTE FUNCTION process_corporate_shipment_billing();
+ALTER TABLE corporate_route_rates ADD COLUMN IF NOT EXISTS rate_per_kg NUMERIC(10, 2) NOT NULL DEFAULT 0;
+ALTER TABLE corporate_route_rates ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL;
 
 -- ==========================================
 -- SEED SAMPLE CORPORATE DATA FOR THE CLIENTS

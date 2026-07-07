@@ -71,13 +71,22 @@ export const PackageForm = ({
   const isValid = (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0)
     && parsedAmount > 0 && destination.trim().length > 0 && !!trackingRef;
 
-  const packageTxs = transactions.filter((t) => t.type === "package");
+  // "Today" here means the actual calendar day, not whatever the app-wide
+  // date-range picker (globalDateRange, defaults to a trailing 7 days) is
+  // currently set to -- transactions/expenses are fetched against that
+  // wider range, so without this filter every panel below silently sums
+  // up to a week of activity and End Day would record that week's total
+  // as a single day's close.
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = (createdAt?: string) => !!createdAt && createdAt.split('T')[0] === todayStr;
+
+  const packageTxs = transactions.filter((t) => t.type === "package" && isToday(t.created_at));
   const totalSales = packageTxs.reduce((sum, t) => sum + t.amount, 0);
   const cashSales = packageTxs.reduce((sum, t) => sum + (t.mode === "Cash" ? t.amount : 0), 0);
   const posSales = packageTxs.reduce((sum, t) => sum + (t.mode === "POS" ? t.amount : 0), 0);
   const transferSales = packageTxs.reduce((sum, t) => sum + (t.mode === "Transfer" ? t.amount : 0), 0);
   const debtSales = packageTxs.reduce((sum, t) => sum + (t.mode === "Debt" ? t.amount : 0), 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses = expenses.filter(e => isToday(e.created_at)).reduce((sum, e) => sum + e.amount, 0);
   const physicalCash = cashSales;
   const balanceCash = physicalCash - totalExpenses;
 
@@ -104,6 +113,7 @@ export const PackageForm = ({
       bank: (mode === "Transfer" || mode === "POS") ? bank : undefined,
       paymentNarration: (mode === "Transfer" || mode === "POS") ? narrationCode : undefined,
       time: tnow(),
+      created_at: new Date().toISOString(),
       type: "package",
       status: "Intake",
       destination,
@@ -594,7 +604,7 @@ export const PackageForm = ({
                     posSales,
                     transferSales,
                     debtSales,
-                    expenses,
+                    expenses: expenses.filter(e => isToday(e.created_at)),
                     totalExpenses,
                     balanceCash,
                   }));
