@@ -518,7 +518,7 @@ export const TransactionLedger = ({
             placeholder="Search entries, dates, amounts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-9 pr-3 ehi-card text-[12px] font-sans text-white focus:outline-none focus:border-[var(--color-accent-blue)]"
+            className="w-full h-10 pl-9 pr-3 ehi-card text-[12px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-blue)]"
           />
         </div>
 
@@ -529,14 +529,14 @@ export const TransactionLedger = ({
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
-                className="bg-transparent text-white border-none focus:outline-none h-full"
+                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full"
               />
               <span className="text-[var(--color-muted)]">to</span>
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
-                className="bg-transparent text-white border-none focus:outline-none h-full"
+                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full"
               />
             </div>
           )}
@@ -545,7 +545,7 @@ export const TransactionLedger = ({
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-transparent text-white border-none focus:outline-none cursor-pointer h-full"
+              className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
             >
               <option value="All">All Types</option>
               <option value="Cargo">Cargo</option>
@@ -559,7 +559,7 @@ export const TransactionLedger = ({
             <select
               value={modeFilter}
               onChange={(e) => setModeFilter(e.target.value)}
-              className="bg-transparent text-white border-none focus:outline-none cursor-pointer h-full px-2"
+              className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full px-2"
             >
               <option value="All">All Modes</option>
               <option value="Revenue">Revenue Only</option>
@@ -665,7 +665,7 @@ export const TransactionLedger = ({
                                   <input
                                     autoFocus
                                     type="text"
-                                    className="w-16 bg-[var(--color-surface-1)] border border-[var(--color-accent-amber)] rounded px-1 py-0.5 text-[9px] text-white outline-none"
+                                    className="w-16 bg-[var(--color-surface-1)] border border-[var(--color-accent-amber)] rounded px-1 py-0.5 text-[9px] text-[var(--color-foreground)] outline-none"
                                     placeholder="Code"
                                     value={posCodeInput.code}
                                     onChange={evt => setPosCodeInput({ id: e.id, code: evt.target.value })}
@@ -770,7 +770,7 @@ export const TransactionLedger = ({
                     </td>
                     {/* Chevron */}
                     <td className="py-2.5 px-3 text-center">
-                      <ChevronRight size={14} className="text-[var(--color-muted)] group-hover:text-white transition-colors ml-auto" />
+                      <ChevronRight size={14} className="text-[var(--color-muted)] group-hover:text-[var(--color-foreground)] transition-colors ml-auto" />
                     </td>
                   </tr>
                   );
@@ -827,7 +827,7 @@ export const TransactionLedger = ({
               </div>
               <button 
                 onClick={() => setViewingDetail(null)}
-                className="text-[var(--color-muted)] hover:text-white p-1 rounded-full bg-[var(--color-border)]"
+                className="text-[var(--color-muted)] hover:text-[var(--color-foreground)] p-1 rounded-full bg-[var(--color-border)]"
               >
                 <X size={16} />
               </button>
@@ -838,7 +838,7 @@ export const TransactionLedger = ({
               <section>
                 <h4 className="text-[10px] font-mono text-[var(--color-muted)] uppercase mb-2">Details</h4>
                 <div className="bg-[var(--color-surface-1)] rounded-lg p-3 border border-[var(--color-border)]">
-                  <div className={`font-sans font-bold text-lg mb-1 ${viewingDetail.source === 'expense' ? 'text-[var(--color-error)]' : 'text-white'}`}>
+                  <div className={`font-sans font-bold text-lg mb-1 ${viewingDetail.source === 'expense' ? 'text-[var(--color-error)]' : 'text-[var(--color-foreground)]'}`}>
                     {viewingDetail.name}
                   </div>
                   <div className="text-[12px] text-[var(--color-light-muted)] leading-relaxed">
@@ -878,19 +878,19 @@ export const TransactionLedger = ({
                   {viewingDetail.mode === 'Transfer' && viewingDetail.raw.bank && (
                     <div className="flex items-center justify-between">
                       <span className="text-[12px] text-[var(--color-muted)]">Bank</span>
-                      <span className="text-[12px] text-white font-medium">{viewingDetail.raw.bank}</span>
+                      <span className="text-[12px] text-[var(--color-foreground)] font-medium">{viewingDetail.raw.bank}</span>
                     </div>
                   )}
                   {viewingDetail.mode === 'Transfer' && viewingDetail.raw.paymentNarration && (
                     <div className="flex items-center justify-between">
                       <span className="text-[12px] text-[var(--color-muted)]">Narration Ref</span>
-                      <span className="text-[10px] font-mono bg-[var(--color-surface-2)] px-1.5 py-0.5 rounded text-white">{viewingDetail.raw.paymentNarration}</span>
+                      <span className="text-[10px] font-mono bg-[var(--color-surface-2)] px-1.5 py-0.5 rounded text-[var(--color-foreground)]">{viewingDetail.raw.paymentNarration}</span>
                     </div>
                   )}
                   {viewingDetail.mode === 'POS' && viewingDetail.posApprovalCode && (
                     <div className="flex items-center justify-between">
                       <span className="text-[12px] text-[var(--color-muted)]">Approval Code</span>
-                      <span className="text-[12px] font-mono font-bold text-white tracking-widest">{viewingDetail.posApprovalCode}</span>
+                      <span className="text-[12px] font-mono font-bold text-[var(--color-foreground)] tracking-widest">{viewingDetail.posApprovalCode}</span>
                     </div>
                   )}
 
@@ -933,7 +933,7 @@ export const TransactionLedger = ({
                         ["In-Transit", "Departure", "Dispatched"].includes(viewingDetail.status) ? "bg-blue-500" : 
                         viewingDetail.status === "Arrived" ? "bg-amber-500" : "bg-slate-400"
                       }`} />
-                      <span className="text-[13px] font-bold text-white">{viewingDetail.status}</span>
+                      <span className="text-[13px] font-bold text-[var(--color-foreground)]">{viewingDetail.status}</span>
                     </div>
                     {(viewingDetail.raw.hub || viewingDetail.raw.destination) && (
                       <div className="text-[11px] text-[var(--color-muted)] flex items-center gap-1.5 mt-1 font-sans">
@@ -962,7 +962,7 @@ export const TransactionLedger = ({
                   <div className="flex gap-2">
                     <button 
                       onClick={() => setViewingQrTx(viewingDetail)}
-                      className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
+                      className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
                     >
                       <QrCode size={14} /> Scan
                     </button>
@@ -977,7 +977,7 @@ export const TransactionLedger = ({
                     {isAccountantOrAdmin && (
                       <button
                         onClick={(evt) => handleEditClick(viewingDetail, evt)}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-white rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
+                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
                       >
                         <Edit2 size={14} /> Edit
                       </button>
