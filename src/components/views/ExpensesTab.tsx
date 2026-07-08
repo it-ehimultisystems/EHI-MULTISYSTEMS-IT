@@ -100,7 +100,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
       </div>
 
       {/* EXPENSE FORM */}
-      <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
+      <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
          <div className="text-[14px] font-sans font-semibold text-[var(--color-foreground)] mb-4">Log Expense</div>
          
          <div className="space-y-4">
@@ -126,12 +126,12 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                  value={amount}
                  onChange={e => setAmount(e.target.value)}
                  placeholder="0"
-                 className="w-full h-11 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 text-[var(--color-accent-amber)] font-mono text-[16px] font-bold focus:outline-none focus:border-[var(--color-accent-amber)] focus:ring-1 focus:ring-[var(--color-accent-amber)]"
+                 className="w-full h-11 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl px-3 text-[var(--color-accent-amber)] font-mono text-[16px] font-bold focus:outline-none focus:border-[var(--color-accent-amber)] focus:ring-1 focus:ring-[var(--color-accent-amber)]"
                />
              </div>
              <div className="flex-1">
                <label className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Payment Mode</label>
-               <div className="flex bg-[var(--color-surface-1)] rounded-xl p-1 border border-[rgba(255,255,255,0.07)] h-11">
+               <div className="flex bg-[var(--color-surface-1)] rounded-xl p-1 border border-[var(--color-border)] h-11">
                  <button onClick={() => setMode('Cash')} className={`flex-1 text-[12px] font-sans font-medium rounded-lg ${mode === 'Cash' ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)]'}`}>Cash</button>
                  <button onClick={() => setMode('Transfer')} className={`flex-1 text-[12px] font-sans font-medium rounded-lg ${mode === 'Transfer' ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)]'}`}>Transfer</button>
                </div>
@@ -146,7 +146,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                value={desc}
                onChange={e => setDesc(e.target.value)}
                placeholder="e.g. Fuel for bus, Toll gate..."
-               className="w-full h-11 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+               className="w-full h-11 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl px-3 text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none focus:border-[var(--color-accent-amber)]"
              />
            </div>
 
@@ -171,7 +171,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
       </div>
 
       {/* BUDGET VS ACTUAL */}
-      <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
+      <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
          <div className="text-[15px] font-sans font-bold text-[var(--color-foreground)] mb-4">Budget Tracker</div>
          <div className="space-y-4">
            {categories.map(c => {
@@ -242,7 +242,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
          ) : (
             <div className="space-y-2">
               {expenses.map((e, idx) => (
-                <div key={idx} className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-4 flex items-start space-x-3">
+                <div key={idx} className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4 flex items-start space-x-3">
                   <div className="w-8 h-8 rounded-full bg-[rgba(245,158,11,0.1)] text-[var(--color-accent-amber)] flex items-center justify-center mt-0.5">
                     {getIcon(e.type)}
                   </div>

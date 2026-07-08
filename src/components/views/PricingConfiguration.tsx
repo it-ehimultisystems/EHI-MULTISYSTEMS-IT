@@ -347,7 +347,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Standard Rates Panel */}
-        <div className="bg-[var(--color-surface-1)] p-5 rounded-xl border border-[rgba(255,255,255,0.07)]">
+        <div className="bg-[var(--color-surface-1)] p-5 rounded-xl border border-[var(--color-border)]">
           <h3 className="text-[14px] font-sans font-bold text-[var(--color-foreground)] mb-4">Standard Retail Rates</h3>
           <p className="text-[11px] text-[var(--color-muted)] mb-4 leading-relaxed">
             These rates auto-calculate for retail cargo entries based on weight and route.
@@ -372,7 +372,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
         </div>
 
         {/* B2B Clients Panel */}
-        <div className="bg-[var(--color-surface-1)] p-5 rounded-xl border border-[rgba(255,255,255,0.07)] flex flex-col">
+        <div className="bg-[var(--color-surface-1)] p-5 rounded-xl border border-[var(--color-border)] flex flex-col">
           <h3 className="text-[14px] font-sans font-bold text-[var(--color-foreground)] mb-4">B2B Clients & Negotiated Rates</h3>
           <div className="flex space-x-2 mb-6">
             <input 
@@ -394,12 +394,12 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
 
           <div className="flex flex-col md:flex-row gap-4 flex-1">
             {/* Client List */}
-            <div className="w-full md:w-1/2 space-y-2 overflow-y-auto max-h-[300px] border-r border-[rgba(255,255,255,0.07)] pr-2">
+            <div className="w-full md:w-1/2 space-y-2 overflow-y-auto max-h-[300px] border-r border-[var(--color-border)] pr-2">
               {corpClients.map(c => (
                 <div 
                   key={c.id}
                   onClick={() => setSelectedRateClient(c)}
-                  className={`p-3 rounded border cursor-pointer transition-colors ${selectedRateClient?.id === c.id ? 'bg-[rgba(251,191,36,0.1)] border-[var(--color-accent-amber)]' : 'bg-[var(--color-bg)] border-[rgba(255,255,255,0.07)] hover:border-[var(--color-muted)]'}`}
+                  className={`p-3 rounded border cursor-pointer transition-colors ${selectedRateClient?.id === c.id ? 'bg-[rgba(251,191,36,0.1)] border-[var(--color-accent-amber)]' : 'bg-[var(--color-bg)] border-[var(--color-border)] hover:border-[var(--color-muted)]'}`}
                 >
                   <div className="font-bold text-[12px] text-[var(--color-foreground)]">{c.company_name}</div>
                   <div className="text-[10px] text-[var(--color-muted)] font-mono mt-1">{corpRates.filter(r => r.corporate_client_id === c.id).length} routes configured</div>

@@ -589,7 +589,7 @@ export const MarketingWorkspace = ({
             </div>
           ) : (
             <div className="space-y-4 bg-[rgba(255,255,255,0.02)] p-4 md:mx-0 md:rounded-xl md:border border-y border-[var(--color-border)]">
-              <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+              <div className="border-b border-[var(--color-border)] pb-1 mb-2">
                 <span
                   style={{
                     fontFamily: "JetBrains Mono",
@@ -612,7 +612,7 @@ export const MarketingWorkspace = ({
                 <select
                   value={airline}
                   onChange={(e) => setAirline(e.target.value)}
-                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                 >
                   {availableAirlines.map(a => (
                     <option key={a} value={a}>{a}</option>
@@ -622,7 +622,7 @@ export const MarketingWorkspace = ({
                   placeholder="Customer Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                 />
                 <div className="relative">
                   <MessageSquare size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
@@ -631,7 +631,7 @@ export const MarketingWorkspace = ({
                     placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className={`w-full h-11 pl-9 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                    className={`w-full h-11 pl-9 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                   />
                 </div>
 
@@ -639,7 +639,7 @@ export const MarketingWorkspace = ({
                   <select
                     value={route}
                     onChange={(e) => setRoute(e.target.value)}
-                    className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans min-w-0 ${mktgFocusClasses}`}
+                    className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans min-w-0 ${mktgFocusClasses}`}
                   >
                     {Object.keys(pricingMatrix).map((r) => (
                       <option key={r} value={r}>
@@ -650,7 +650,7 @@ export const MarketingWorkspace = ({
                   <select
                     value={mode}
                     onChange={(e) => setMode(e.target.value)}
-                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans min-w-0 ${mktgFocusClasses}`}
+                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans min-w-0 ${mktgFocusClasses}`}
                   >
                     <option value="Cash">Cash</option>
                     <option value="Transfer">Transfer (Bank)</option>
@@ -670,7 +670,7 @@ export const MarketingWorkspace = ({
                     <select
                       value={bank}
                       onChange={(e) => setBank(e.target.value)}
-                      className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                      className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                     >
                       <option disabled value="">Bank / POS Terminal</option>
                       {BANKS.map((b) => (
@@ -690,7 +690,7 @@ export const MarketingWorkspace = ({
                       placeholder="Debtor Name / Company"
                       value={debtorName}
                       onChange={(e) => setDebtorName(e.target.value)}
-                      className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                      className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                     />
                   </div>
                 )}
@@ -704,7 +704,7 @@ export const MarketingWorkspace = ({
                   ].map((bag) => (
                     <div
                       key={bag.key}
-                      className="bg-[var(--color-surface-1)] rounded-xl border border-[rgba(255,255,255,0.07)] flex flex-col items-center py-3 gap-2"
+                      className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] flex flex-col items-center py-3 gap-2"
                     >
                       <span className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider">{bag.abbr}</span>
                       <span className="text-[22px] font-bold font-mono text-[var(--color-foreground)] leading-none w-10 text-center">{bag.val}</span>
@@ -728,7 +728,7 @@ export const MarketingWorkspace = ({
                   ))}
                 </div>
 
-                <div className="flex justify-between items-center py-2 bg-[var(--color-surface-1)] px-3 rounded border border-[rgba(255,255,255,0.07)]">
+                <div className="flex justify-between items-center py-2 bg-[var(--color-surface-1)] px-3 rounded border border-[var(--color-border)]">
                   <span className="text-[10px] font-mono text-[var(--color-light-muted)]">
                     TOTAL AMOUNT
                   </span>
@@ -773,8 +773,8 @@ export const MarketingWorkspace = ({
           )}
 
           {/* Expense Section */}
-          <div className="space-y-4 pt-4 border-t border-[rgba(255,255,255,0.07)] md:border-none md:pt-0">
-            <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+          <div className="space-y-4 pt-4 border-t border-[var(--color-border)] md:border-none md:pt-0">
+            <div className="border-b border-[var(--color-border)] pb-1 mb-2">
               <span
                 style={{
                   fontFamily: "JetBrains Mono",
@@ -792,7 +792,7 @@ export const MarketingWorkspace = ({
               <select
                 value={expType}
                 onChange={(e) => setExpType(e.target.value)}
-                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
               >
                 {EXPENSE_CATEGORIES.map((e) => (
                   <option key={e} value={e}>
@@ -805,7 +805,7 @@ export const MarketingWorkspace = ({
                 placeholder="Amount"
                 value={expAmount}
                 onChange={(e) => setExpAmount(e.target.value)}
-                className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
               />
             </div>
             <div className="flex space-x-2">
@@ -813,7 +813,7 @@ export const MarketingWorkspace = ({
                 placeholder="Description (optional)"
                 value={expDesc}
                 onChange={(e) => setExpDesc(e.target.value)}
-                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
+                className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
               />
               <button
                 onClick={handleAddExpense}
@@ -826,7 +826,7 @@ export const MarketingWorkspace = ({
 
             {/* Expense log today */}
             {expenses.length > 0 && (
-              <div className="bg-[var(--color-surface-1)] rounded-xl border border-[rgba(255,255,255,0.07)] divide-y divide-[rgba(255,255,255,0.04)] mt-2">
+              <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] divide-y divide-[rgba(255,255,255,0.04)] mt-2">
                 {expenses.map((e, i) => (
                   <div key={i} className="flex justify-between px-3 py-2 text-[11px] font-mono">
                     <span className="text-[var(--color-muted)]">{e.type}{e.description ? ` — ${e.description}` : ''}</span>
@@ -846,8 +846,8 @@ export const MarketingWorkspace = ({
         <aside className="space-y-4">
           <div className="sticky top-4 space-y-4">
             {/* Sales Analysis Card */}
-            <div className="bg-[var(--color-surface-1)] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.07)]">
+            <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <span className="text-[10px] font-mono text-[var(--color-success)] uppercase tracking-widest font-bold">▸ SALES ANALYSIS</span>
                 <span className="text-[10px] font-mono text-[var(--color-muted)]">{marketingTxs.length} customers</span>
               </div>
@@ -878,7 +878,7 @@ export const MarketingWorkspace = ({
                 )}
 
                 {/* Less Transfer adjustment */}
-                <div className="border-t border-[rgba(255,255,255,0.07)] pt-2 space-y-1">
+                <div className="border-t border-[var(--color-border)] pt-2 space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[var(--color-muted)] shrink-0">Less Transfer</span>
                     <div className="flex gap-1 items-center">
@@ -890,7 +890,7 @@ export const MarketingWorkspace = ({
                           setLessTransferInput(e.target.value);
                           setLessTransfer(parseFloat(e.target.value) || 0);
                         }}
-                        className="w-24 h-7 text-right text-[11px] font-mono bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded px-2 text-red-400 focus:outline-none"
+                        className="w-24 h-7 text-right text-[11px] font-mono bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded px-2 text-red-400 focus:outline-none"
                         style={{ fontFamily: 'JetBrains Mono' }}
                       />
                     </div>
@@ -901,12 +901,12 @@ export const MarketingWorkspace = ({
                       placeholder="Who? (e.g. Govt/Honda/Zion)"
                       value={lessTransferLabel}
                       onChange={e => setLessTransferLabel(e.target.value)}
-                      className="w-full h-7 text-[10px] font-mono bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded px-2 text-[var(--color-muted)] focus:outline-none"
+                      className="w-full h-7 text-[10px] font-mono bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded px-2 text-[var(--color-muted)] focus:outline-none"
                     />
                   )}
                 </div>
 
-                <div className="border-t border-[rgba(255,255,255,0.07)] pt-2 flex justify-between font-bold">
+                <div className="border-t border-[var(--color-border)] pt-2 flex justify-between font-bold">
                   <span className="text-[var(--color-foreground)]">Total Sales (Net)</span>
                   <span className="text-[var(--color-success)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(totalSales - lessTransfer)}</span>
                 </div>
@@ -931,8 +931,8 @@ export const MarketingWorkspace = ({
 
             {/* Route Counts */}
             {Object.keys(routeCounts).length > 0 && (
-              <div className="bg-[var(--color-surface-1)] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-[rgba(255,255,255,0.07)]">
+              <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border)]">
                   <BarChart2 size={12} className="text-[var(--color-success)]" />
                   <span className="text-[10px] font-mono text-[var(--color-success)] uppercase tracking-widest font-bold">ROUTES TODAY</span>
                 </div>
@@ -943,7 +943,7 @@ export const MarketingWorkspace = ({
                       <span className="font-bold text-[var(--color-foreground)] shrink-0">{cnt} pkg{cnt !== 1 ? 's' : ''}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between items-center text-[12px] font-mono border-t border-[rgba(255,255,255,0.07)] pt-1.5 mt-1">
+                  <div className="flex justify-between items-center text-[12px] font-mono border-t border-[var(--color-border)] pt-1.5 mt-1">
                     <span className="text-[var(--color-muted)]">Total</span>
                     <span className="font-bold text-[var(--color-success)]">{marketingTxs.length}</span>
                   </div>
@@ -952,8 +952,8 @@ export const MarketingWorkspace = ({
             )}
 
             {/* Entries Today */}
-            <div className="bg-[var(--color-surface-1)] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.07)]">
+            <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--color-border)]">
                 <span className="text-[10px] font-mono text-[var(--color-success)] uppercase tracking-widest font-bold">▸ ENTRIES TODAY</span>
               </div>
               {marketingTxs.length === 0 ? (

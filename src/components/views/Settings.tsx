@@ -288,7 +288,7 @@ export const Settings = ({
                     value={supabaseUrl}
                     onChange={e => setSupabaseUrl(e.target.value)}
                     placeholder="https://your-project.supabase.co"
-                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
 
@@ -304,7 +304,7 @@ export const Settings = ({
                       value={supabaseAnonKey}
                       onChange={e => setSupabaseAnonKey(e.target.value)}
                       placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                      className="w-full h-10 px-3 pr-10 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                      className="w-full h-10 px-3 pr-10 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
                     />
                     <button
                       onClick={() => setShowAnonKey(!showAnonKey)}
@@ -366,7 +366,7 @@ export const Settings = ({
                     value={paystackPublicKey}
                     onChange={e => setPaystackPublicKey(e.target.value)}
                     placeholder="pk_live_..."
-                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <button
@@ -396,7 +396,7 @@ export const Settings = ({
                     value={adminPhone}
                     onChange={e => setAdminPhone(e.target.value)}
                     placeholder="+2348012345678"
-                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <div>
@@ -409,7 +409,7 @@ export const Settings = ({
                     value={adminEmail}
                     onChange={e => setAdminEmail(e.target.value)}
                     placeholder="admin@ehimultisystems.com"
-                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <p className="text-[9px] text-[var(--color-muted)] font-mono leading-relaxed">
@@ -437,7 +437,7 @@ export const Settings = ({
                     id="settings-company-name"
                     value={companyName}
                     onChange={e => setCompanyName(e.target.value)}
-                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <div>
@@ -450,7 +450,7 @@ export const Settings = ({
                     value={companyPhone}
                     onChange={e => setCompanyPhone(e.target.value)}
                     placeholder="+234 1 234 5678"
-                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <div>
@@ -463,7 +463,7 @@ export const Settings = ({
                     onChange={e => setCompanyAddress(e.target.value)}
                     rows={2}
                     placeholder="MMA2, Ikeja, Lagos"
-                    className="w-full px-3 py-2 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] resize-none"
+                    className="w-full px-3 py-2 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] resize-none"
                   />
                 </div>
                 <button

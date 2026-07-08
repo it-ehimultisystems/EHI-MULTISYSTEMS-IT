@@ -397,7 +397,7 @@ export const MyTrips = ({ user }: { user: User }) => {
   return (
     <div className="p-4 pb-20 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.07)] pb-2">
+      <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
         <div>
           <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.12em] uppercase">
             ▸ DRIVER CONSOLE
@@ -436,14 +436,14 @@ export const MyTrips = ({ user }: { user: User }) => {
             placeholder="Vehicle Plate Number (e.g. LSD 456 AA)"
             value={vehiclePlate}
             onChange={e => setVehiclePlate(e.target.value)}
-            className="w-full h-11 px-3 text-[13px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] uppercase"
+            className="w-full h-11 px-3 text-[13px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] uppercase"
           />
 
           <div className="flex gap-3">
             <select
               value={origin}
               onChange={e => setOrigin(e.target.value)}
-              className="flex-1 h-11 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none"
+              className="flex-1 h-11 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none"
             >
               {NIGERIAN_HUBS.map(h => (
                 <option key={h} value={h}>{h}</option>
@@ -453,7 +453,7 @@ export const MyTrips = ({ user }: { user: User }) => {
             <select
               value={destination}
               onChange={e => setDestination(e.target.value)}
-              className="flex-1 h-11 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none"
+              className="flex-1 h-11 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none"
             >
               {NIGERIAN_HUBS.map(h => (
                 <option key={h} value={h}>{h}</option>
@@ -466,14 +466,14 @@ export const MyTrips = ({ user }: { user: User }) => {
             value={cargoRefsInput}
             onChange={e => setCargoRefsInput(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none resize-none"
+            className="w-full px-3 py-2 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none resize-none"
           />
 
           <input
             placeholder="Notes (optional)"
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            className="w-full h-10 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none"
+            className="w-full h-10 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none"
           />
 
           <div className="flex items-start gap-2 bg-[rgba(255,255,255,0.02)] p-3 rounded">
@@ -536,7 +536,7 @@ export const MyTrips = ({ user }: { user: User }) => {
             Completed
           </div>
         </div>
-        <div className="flex-1 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-lg p-3 text-center">
+        <div className="flex-1 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-3 text-center">
           <div className="text-[22px] font-bold font-mono text-[var(--color-foreground)]">
             {trips.reduce((sum, t) => sum + t.cargoRefs.length, 0)}
           </div>
@@ -588,7 +588,7 @@ export const MyTrips = ({ user }: { user: User }) => {
       {trips.length === 0 && !showNewTripForm && (
         <div
           className="flex flex-col items-center justify-center py-16 rounded-xl border-2 border-dashed"
-          style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+          style={{ borderColor: 'var(--color-border)' }}
         >
           <Truck size={36} color="var(--color-muted)" strokeWidth={1.5} />
           <div className="text-[12px] font-mono text-[var(--color-muted)] mt-3">

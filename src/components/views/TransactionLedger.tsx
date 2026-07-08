@@ -1051,7 +1051,7 @@ export const TransactionLedger = ({
                       amount: parseFloat(e.target.value) || 0,
                     })
                   }
-                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                 />
               </div>
 
@@ -1064,7 +1064,7 @@ export const TransactionLedger = ({
                   onChange={(e) =>
                     setEditingTx({ ...editingTx, mode: e.target.value as any })
                   }
-                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                 >
                   <option value="Cash">Cash</option>
                   <option value="Transfer">Bank Transfer</option>
@@ -1083,7 +1083,7 @@ export const TransactionLedger = ({
                     onChange={(e) =>
                       setEditingTx({ ...editingTx, bank: e.target.value })
                     }
-                    className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   >
                     <option value="">Select Bank</option>
                     <option value="GTBank">GTBank</option>
@@ -1107,7 +1107,7 @@ export const TransactionLedger = ({
                       status: e.target.value as any,
                     })
                   }
-                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                  className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                 >
                   <option value="Intake">Intake</option>
                   <option value="Dispatched">Dispatched</option>

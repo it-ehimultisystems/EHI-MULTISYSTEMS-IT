@@ -353,7 +353,7 @@ export const PackageForm = ({
             </div>
           ) : (
             <div className="space-y-4 bg-[rgba(255,255,255,0.02)] p-4 md:mx-0 md:rounded-xl md:border border-y border-[var(--color-border)]">
-              <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+              <div className="border-b border-[var(--color-border)] pb-1 mb-2">
                 <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, color: "#3B82F6", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                   ▸ NEW PACKAGE / PARCEL ENTRY
                 </span>
@@ -371,7 +371,7 @@ export const PackageForm = ({
                       placeholder="Customer Name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
+                      className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                     />
                     <div className="relative">
                       <MessageSquare size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
@@ -380,7 +380,7 @@ export const PackageForm = ({
                         placeholder="Phone (optional, for WhatsApp receipt)"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className={`w-full h-11 pl-9 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
+                        className={`w-full h-11 pl-9 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                       />
                     </div>
                   </>
@@ -390,14 +390,14 @@ export const PackageForm = ({
                   <select
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans min-w-0 ${focusClasses}`}
+                    className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans min-w-0 ${focusClasses}`}
                   >
                     {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
                   </select>
                   <select
                     value={contentType}
                     onChange={(e) => setContentType(e.target.value as 'Package' | 'Parcel')}
-                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans min-w-0 ${focusClasses}`}
+                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans min-w-0 ${focusClasses}`}
                   >
                     <option value="Package">Package</option>
                     <option value="Parcel">Parcel</option>
@@ -407,7 +407,7 @@ export const PackageForm = ({
                 <select
                   value={mode}
                   onChange={(e) => setMode(e.target.value)}
-                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                 >
                   <option value="Cash">Cash</option>
                   <option value="POS">POS</option>
@@ -419,7 +419,7 @@ export const PackageForm = ({
                   <select
                     value={bank}
                     onChange={(e) => setBank(e.target.value)}
-                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
+                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                   >
                     {BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
@@ -431,11 +431,11 @@ export const PackageForm = ({
                     placeholder="Debtor Name"
                     value={debtorName}
                     onChange={(e) => setDebtorName(e.target.value)}
-                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
+                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                   />
                 )}
 
-                <div className="flex justify-between items-center py-2 bg-[var(--color-surface-1)] px-3 rounded border border-[rgba(255,255,255,0.07)]">
+                <div className="flex justify-between items-center py-2 bg-[var(--color-surface-1)] px-3 rounded border border-[var(--color-border)]">
                   <span className="text-[10px] font-mono text-[var(--color-light-muted)]">AMOUNT</span>
                   <div className="flex items-center">
                     <span className="text-[14px] font-bold font-mono text-[var(--color-muted)] mr-1">₦</span>
@@ -466,20 +466,20 @@ export const PackageForm = ({
           )}
 
           {/* Expense Section */}
-          <div className="space-y-4 pt-4 border-t border-[rgba(255,255,255,0.07)] md:border-none md:pt-0">
-            <div className="border-b border-[rgba(255,255,255,0.07)] pb-1 mb-2">
+          <div className="space-y-4 pt-4 border-t border-[var(--color-border)] md:border-none md:pt-0">
+            <div className="border-b border-[var(--color-border)] pb-1 mb-2">
               <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, color: "#3B82F6", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                 ▸ LOG EXPENSE
               </span>
             </div>
             <div className="flex space-x-2">
-              <select value={expType} onChange={(e) => setExpType(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${focusClasses}`}>
+              <select value={expType} onChange={(e) => setExpType(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}>
                 {EXPENSE_CATEGORIES.map((e) => <option key={e} value={e}>{e}</option>)}
               </select>
-              <input type="number" placeholder="Amount" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
+              <input type="number" placeholder="Amount" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
             </div>
             <div className="flex space-x-2">
-              <input placeholder="Description (optional)" value={expDesc} onChange={(e) => setExpDesc(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
+              <input placeholder="Description (optional)" value={expDesc} onChange={(e) => setExpDesc(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
               <button onClick={handleAddExpense} disabled={!expAmount} className="h-11 px-4 bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors">
                 LOG
               </button>
@@ -515,8 +515,8 @@ export const PackageForm = ({
         {/* Right Column — Sales Analysis */}
         <aside className="space-y-4">
           <div className="sticky top-4 space-y-4">
-            <div className="bg-[var(--color-surface-1)] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.07)]">
+            <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] uppercase tracking-widest font-bold">▸ SALES ANALYSIS</span>
                 <span className="text-[10px] font-mono text-[var(--color-muted)]">{packageTxs.length} entries</span>
               </div>
@@ -539,8 +539,8 @@ export const PackageForm = ({
             </div>
 
             {Object.keys(destinationCounts).length > 0 && (
-              <div className="bg-[var(--color-surface-1)] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-[rgba(255,255,255,0.07)]">
+              <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border)]">
                   <BarChart2 size={12} className="text-[var(--color-accent-cobalt)]" />
                   <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] uppercase tracking-widest font-bold">DESTINATIONS TODAY</span>
                 </div>
@@ -555,8 +555,8 @@ export const PackageForm = ({
               </div>
             )}
 
-            <div className="bg-[var(--color-surface-1)] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.07)]">
+            <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--color-border)]">
                 <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] uppercase tracking-widest font-bold">▸ ENTRIES TODAY</span>
               </div>
               {packageTxs.length === 0 ? (

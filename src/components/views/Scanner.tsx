@@ -1182,7 +1182,7 @@ export const Scanner = ({
     <div className="p-4 space-y-4" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
 
       {/* Section header */}
-      <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.12em] uppercase border-b border-[rgba(255,255,255,0.07)] pb-2">
+      <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.12em] uppercase border-b border-[var(--color-border)] pb-2">
         ▸ QR SCAN & TRACKING
       </div>
 

@@ -217,7 +217,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
       </div>
 
       {user?.role === 'super_admin' && (
-        <button className="w-full py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[14px] font-sans font-medium rounded-xl border border-[rgba(255,255,255,0.07)] transition-colors focus:outline-none flex items-center justify-center space-x-2">
+        <button className="w-full py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[14px] font-sans font-medium rounded-xl border border-[var(--color-border)] transition-colors focus:outline-none flex items-center justify-center space-x-2">
           <Plus size={16} />
           <span>Log Manual Credit Sale</span>
         </button>
@@ -240,7 +240,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
         <select 
           value={sort}
           onChange={e => setSort(e.target.value as any)}
-          className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 py-2 text-[12px] font-sans text-[var(--color-foreground)] focus:outline-none min-w-[150px]"
+          className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl px-3 py-2 text-[12px] font-sans text-[var(--color-foreground)] focus:outline-none min-w-[150px]"
         >
           <option value="Highest Amount">Highest Amount</option>
           <option value="Oldest First">Oldest First</option>
@@ -268,7 +268,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                 <motion.div 
                   key={d.id}
                   layout="position"
-                  className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden"
+                  className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] overflow-hidden"
                 >
                   {/* COLLAPSED ROW */}
                   <div 
@@ -288,7 +288,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                       </div>
                     </div>
                     
-                    <div className="pl-4 border-l border-[rgba(255,255,255,0.07)] flex flex-col items-end justify-center">
+                    <div className="pl-4 border-l border-[var(--color-border)] flex flex-col items-end justify-center">
                        <span className="text-[16px] font-mono font-bold text-[var(--color-error)] mb-1">{fmt(d.balance)}</span>
                        <div className="text-[var(--color-muted)]">
                          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -303,7 +303,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="border-t border-[rgba(255,255,255,0.07)] bg-[rgba(0,0,0,0.2)]"
+                        className="border-t border-[var(--color-border)] bg-[rgba(0,0,0,0.2)]"
                       >
                         <div className="p-4 space-y-4">
                            {/* Details */}
@@ -323,7 +323,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                              <div className="text-[11px] font-sans text-[var(--color-muted)] mb-1">Notes</div>
                              <textarea 
                                placeholder="Add notes about this debt..."
-                               className="w-full h-20 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl p-3 text-[13px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-cobalt)] transition-colors resize-none"
+                               className="w-full h-20 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3 text-[13px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-cobalt)] transition-colors resize-none"
                              />
                            </div>
 
@@ -363,7 +363,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                                          value={paymentAmount}
                                          onChange={e => setPaymentAmount(e.target.value)}
                                          placeholder={d.balance.toString()}
-                                         className="w-full h-10 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 text-[var(--color-foreground)] font-mono text-[14px] focus:outline-none focus:border-[var(--color-success)] focus:ring-1 focus:ring-[var(--color-success)]"
+                                         className="w-full h-10 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg px-3 text-[var(--color-foreground)] font-mono text-[14px] focus:outline-none focus:border-[var(--color-success)] focus:ring-1 focus:ring-[var(--color-success)]"
                                        />
                                      </div>
                                      <div className="flex-1">
@@ -372,7 +372,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                                          id={`payment-mode-${d.id}`}
                                          value={paymentMode}
                                          onChange={e => setPaymentMode(e.target.value as any)}
-                                         className="w-full h-10 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none"
+                                         className="w-full h-10 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg px-3 text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none"
                                        >
                                          <option value="Cash">Cash</option>
                                          <option value="Transfer">Transfer</option>

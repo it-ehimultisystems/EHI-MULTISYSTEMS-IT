@@ -244,7 +244,7 @@ export const ValueJetForm = ({
               <span className="text-[10px] font-mono text-[var(--color-muted)]">Free Allowance</span>
               <span className="text-[12px] font-mono text-[var(--color-success)]">– {vjFreeAllowance} kg</span>
             </div>
-            <div className="flex justify-between items-center pb-2 border-b border-[rgba(255,255,255,0.07)]">
+            <div className="flex justify-between items-center pb-2 border-b border-[var(--color-border)]">
               <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)]">Excess Baggage</span>
               <span className="text-[12px] font-bold font-mono text-[var(--color-accent-cobalt)]">{s.exc} kg</span>
             </div>

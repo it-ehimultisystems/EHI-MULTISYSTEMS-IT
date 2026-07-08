@@ -300,7 +300,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                 <div className="text-[12px] font-sans text-[var(--color-light-muted)] ml-2 mb-3">{cargoTx.length} Entries</div>
              </div>
 
-             <div className="min-w-[200px] flex-1 bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-4 relative overflow-hidden snap-start">
+             <div className="min-w-[200px] flex-1 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4 relative overflow-hidden snap-start">
                 <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[var(--color-accent-cobalt)]" />
                 <div className="flex items-center space-x-2 mb-2 ml-2">
                   <Plane size={16} className="text-[var(--color-accent-cobalt)]" />
@@ -310,7 +310,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                 <div className="text-[12px] font-sans text-[var(--color-light-muted)] ml-2 mb-3">{vjTx.length} Passengers</div>
              </div>
 
-             <div className="min-w-[200px] flex-1 bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-4 relative overflow-hidden snap-start">
+             <div className="min-w-[200px] flex-1 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4 relative overflow-hidden snap-start">
                 <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[var(--color-success)]" />
                 <div className="flex items-center space-x-2 mb-2 ml-2">
                   <TrendingUp size={16} className="text-[var(--color-success)]" />
@@ -322,7 +322,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
           </div>
 
           {/* NET REVENUE BLOCK */}
-          <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
+          <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
             <div className="flex justify-between items-center mb-3">
               <span className="text-[13px] font-sans text-[var(--color-muted)]">Grand Revenue</span>
               <span className="text-[15px] font-mono text-[var(--color-foreground)]">{fmt(grandRevenue)}</span>
@@ -346,7 +346,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
 
           {/* COLLECTION MIX & EFFICIENCY */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
+             <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
                <div className="text-[13px] font-sans font-medium text-[var(--color-muted)] mb-4">Collection Breakdown</div>
                <div className="w-full h-4 flex rounded-full overflow-hidden mb-4">
                  {cashPct > 0 && <div style={{width: `${cashPct}%`}} className="bg-[var(--color-success)]" title={`Cash: ${fmt(cashTotal)}`} />}
@@ -362,7 +362,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                </div>
              </div>
 
-             <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5 flex flex-col justify-between relative overflow-hidden">
+             <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5 flex flex-col justify-between relative overflow-hidden">
                 <div className="text-[13px] font-sans font-medium text-[var(--color-muted)]">Collection Rate</div>
                 <div className="mt-4 flex items-center justify-between">
                    <div className="flex flex-col">
@@ -392,7 +392,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       {activeTab === 'Cash Register' && (
         <div className="space-y-6 pb-24">
            {showOpeningModal && (
-             <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5 animate-in fade-in zoom-in-95">
+             <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5 animate-in fade-in zoom-in-95">
                <h3 className="text-[16px] font-sans font-bold text-[var(--color-foreground)] mb-2">Set Opening Balance</h3>
                <p className="text-[13px] font-sans text-[var(--color-muted)] mb-4">Enter the cash carried over from yesterday's closing count.</p>
                <input 
@@ -400,7 +400,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                  placeholder="e.g. 15000"
                  value={openingInput}
                  onChange={e => setOpeningInput(e.target.value)}
-                 className="w-full h-12 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-4 text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-1 focus:ring-[var(--color-accent-cobalt)] transition-all mb-4"
+                 className="w-full h-12 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl px-4 text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-1 focus:ring-[var(--color-accent-cobalt)] transition-all mb-4"
                />
                <button 
                  onClick={handleSetOpening}
@@ -413,7 +413,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
 
            {!showOpeningModal && (
              <>
-               <div className="flex items-center justify-between bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-2 px-3">
+               <div className="flex items-center justify-between bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-2 px-3">
                  <input 
                    type="date" 
                    value={regDate}
@@ -425,7 +425,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                  </div>
                </div>
 
-               <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5 space-y-4">
+               <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5 space-y-4">
                  <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
                    <div className="text-[13px] font-sans text-[var(--color-muted)]">Opening Balance</div>
                    <div className="text-[15px] font-mono text-[var(--color-foreground)]">{fmt(openingBalance || 0)}</div>
@@ -445,7 +445,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                </div>
 
                {(!isLocked || physicalCount !== null) && (
-                 <div className="bg-[var(--color-surface-card)] rounded-xl border border-[rgba(255,255,255,0.07)] p-5">
+                 <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
                    {isLocked ? (
                      <div className="space-y-4">
                        <div className="flex justify-between items-center">
@@ -473,7 +473,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                            placeholder="Enter actual cash in till"
                            value={physicalInput}
                            onChange={e => setPhysicalInput(e.target.value)}
-                           className="w-full h-12 bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-xl px-4 text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-1 focus:ring-[var(--color-accent-cobalt)] transition-all"
+                           className="w-full h-12 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl px-4 text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-cobalt)] focus:ring-1 focus:ring-[var(--color-accent-cobalt)] transition-all"
                          />
                        </div>
                        {physicalInput && (

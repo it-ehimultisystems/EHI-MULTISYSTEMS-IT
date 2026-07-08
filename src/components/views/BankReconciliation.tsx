@@ -340,9 +340,9 @@ export const BankReconciliation = ({
       </div>
 
       {!fileImported ? (
-        <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl p-5 space-y-4">
+        <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
           <div className="flex justify-between items-center mb-2">
-            <div className="flex bg-[var(--color-surface-1)] rounded-lg p-1 border border-[rgba(255,255,255,0.07)]">
+            <div className="flex bg-[var(--color-surface-1)] rounded-lg p-1 border border-[var(--color-border)]">
                <button onClick={() => setMethod('CSV')} className={`px-4 py-1.5 text-[12px] font-sans font-medium rounded-md ${method === 'CSV' ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)]'}`}>CSV</button>
                <button onClick={() => setMethod('PDF')} className={`px-4 py-1.5 text-[12px] font-sans font-medium rounded-md ${method === 'PDF' ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)]'}`}>PDF Parser</button>
             </div>
@@ -350,7 +350,7 @@ export const BankReconciliation = ({
               <select 
                 value={bankType} 
                 onChange={(e) => setBankType(e.target.value as any)}
-                className="bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 py-1.5 text-[12px] font-sans focus:outline-none focus:border-[var(--color-accent-cobalt)]"
+                className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] font-sans focus:outline-none focus:border-[var(--color-accent-cobalt)]"
               >
                 <option value="UBA">UBA Statement</option>
                 <option value="GTBank">GTBank Statement</option>
@@ -404,7 +404,7 @@ export const BankReconciliation = ({
       ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] p-4 rounded-xl">
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] p-4 rounded-xl">
               <span className="text-[12px] font-sans font-medium text-[var(--color-muted)] block">Statement Credits</span>
               <span className="text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1 block">{fmt(totalCredits)}</span>
               <span className="text-[11px] font-sans text-slate-500 block mt-1">{bankTxList.length} transactions</span>
@@ -427,7 +427,7 @@ export const BankReconciliation = ({
             </div>
           </div>
 
-          <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-lg bg-[rgba(59,130,246,0.1)] flex items-center justify-center text-[var(--color-accent-cobalt)]">
                 <FileSpreadsheet size={20} />
@@ -450,7 +450,7 @@ export const BankReconciliation = ({
               
               <button 
                 onClick={() => setFileImported(false)}
-                className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] font-sans text-[13px] font-medium px-4 py-2.5 rounded-lg cursor-pointer transition-colors"
+                className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans text-[13px] font-medium px-4 py-2.5 rounded-lg cursor-pointer transition-colors"
               >
                 Reset Sheet
               </button>
@@ -464,8 +464,8 @@ export const BankReconciliation = ({
             </div>
           )}
 
-          <div className="bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-xl overflow-hidden">
-            <div className="p-4 border-b border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.01)] flex justify-between items-center">
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+            <div className="p-4 border-b border-[var(--color-border)] bg-[rgba(255,255,255,0.01)] flex justify-between items-center">
               <span className="text-[12px] font-sans font-bold text-[var(--color-muted)] uppercase tracking-wider">Statement Ledger vs. System Log</span>
             </div>
 
@@ -553,7 +553,7 @@ export const BankReconciliation = ({
               })}
             </div>
 
-            <div className="p-5 border-t border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.01)] flex justify-between items-center flex-col sm:flex-row gap-4">
+            <div className="p-5 border-t border-[var(--color-border)] bg-[rgba(255,255,255,0.01)] flex justify-between items-center flex-col sm:flex-row gap-4">
               <div className="flex items-center space-x-2">
                 <AlertCircle size={16} className="text-[var(--color-muted)]" />
                 <span className="text-[12px] font-sans text-[var(--color-muted)]">Reconciliation locks automated ledger accounting updates.</span>
