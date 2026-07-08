@@ -42,6 +42,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
           setLoadedReal(true);
           localStorage.setItem('ehi_airline_commissions', JSON.stringify(parsed));
         } else {
+          setUsingFallback(true);
           const cached = localStorage.getItem('ehi_airline_commissions');
           if (cached) {
             const parsed = JSON.parse(cached);
