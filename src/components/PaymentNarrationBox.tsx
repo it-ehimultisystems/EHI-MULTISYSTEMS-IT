@@ -30,8 +30,8 @@ export const PaymentNarrationBox: React.FC<PaymentNarrationBoxProps> = ({ narrat
         >
           {copied ? (
             <>
-              <Check size={14} className="text-green-500" />
-              <span className="text-green-500">Copied ✓</span>
+              <Check size={14} className="text-[var(--color-success)]" />
+              <span className="text-[var(--color-success)]">Copied ✓</span>
             </>
           ) : (
             <>

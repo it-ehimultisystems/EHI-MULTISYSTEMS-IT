@@ -98,7 +98,7 @@ export const AuditLog = ({ onBack, user }: { onBack: () => void; user?: User }) 
       case 'UPDATE': return 'text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.1)]';
       case 'DELETE': return 'text-[var(--color-error)] bg-[rgba(239,68,68,0.1)]';
       case 'LOGIN': return 'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.1)]';
-      case 'EOD_LOCK': return 'text-purple-400 bg-[rgba(168,85,247,0.1)]';
+      case 'EOD_LOCK': return 'text-[var(--color-purple)] bg-[rgba(168,85,247,0.1)]';
       default: return 'text-[var(--color-muted)] bg-[var(--color-surface-2)]';
     }
   };
@@ -110,7 +110,7 @@ export const AuditLog = ({ onBack, user }: { onBack: () => void; user?: User }) 
         <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
           <ArrowLeft size={16} /><span className="text-[11px] font-mono">Back</span>
         </button>
-        <span className="text-[10px] font-mono text-purple-400 tracking-widest font-bold">● AUDIT TRAIL</span>
+        <span className="text-[10px] font-mono text-[var(--color-purple)] tracking-widest font-bold">● AUDIT TRAIL</span>
       </div>
 
       <div className="flex justify-between items-center mb-4">
