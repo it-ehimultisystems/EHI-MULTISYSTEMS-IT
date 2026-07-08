@@ -1735,7 +1735,7 @@ export const CargoForm = ({
                 </div>
 
                 {successMessage && (
-                  <div className="p-3 mb-4 text-[12px] font-sans font-bold text-[#fafafa] bg-emerald-950 border border-emerald-500 rounded flex items-center gap-2">
+                  <div className="p-3 mb-4 text-[12px] font-sans font-bold text-[var(--color-success)] bg-[rgba(16,185,129,0.1)] border border-[var(--color-success)] rounded flex items-center gap-2">
                     <CheckCircle size={14} /> {successMessage}
                   </div>
                 )}
@@ -1894,7 +1894,7 @@ export const CargoForm = ({
                             </div>
                             <div className="text-[var(--color-light-muted)] mt-0.5">
                               {pi.airline} · {pi.awb} · {pi.pieces} pcs ·{" "}
-                              <span className="text-amber-500 font-semibold">
+                              <span className="text-[var(--color-accent-amber)] font-semibold">
                                 {pi.route}
                               </span>
                             </div>
@@ -1979,7 +1979,7 @@ export const CargoForm = ({
                           className={`p-3.5 rounded-md border text-[13px] transition-colors cursor-pointer flex items-center justify-between ${
                             isSelected
                               ? "bg-[rgba(245,158,11,0.05)] border-[var(--color-accent-amber)] shadow-lg"
-                              : "bg-[var(--color-input-bg)] border-[var(--color-border)] hover:border-gray-600"
+                              : "bg-[var(--color-input-bg)] border-[var(--color-border)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
                           <div className="space-y-1">
@@ -1998,7 +1998,7 @@ export const CargoForm = ({
                             <div className="text-[12px] text-[var(--color-light-muted)] space-x-2">
                               <span>
                                 Waybill:{" "}
-                                <strong className="text-amber-500 font-mono">
+                                <strong className="text-[var(--color-accent-amber)] font-mono">
                                   {pi.awb}
                                 </strong>
                               </span>
@@ -2030,7 +2030,7 @@ export const CargoForm = ({
                               className={
                                 isSelected
                                   ? "text-[var(--color-accent-amber)]"
-                                  : "text-gray-600"
+                                  : "text-[var(--color-muted)]"
                               }
                             />
                           </div>
@@ -2044,7 +2044,7 @@ export const CargoForm = ({
               {/* INTEGRATED SCALE WEIGHT & CALCULATION WORKSPACE */}
               <div>
                 {selectedIntake ? (
-                  <div className="bg-[var(--color-surface-card)] border border-[var(--color-border-strong)] p-6 rounded-[var(--radius-md)] text-zinc-300 flex flex-col h-auto">
+                  <div className="bg-[var(--color-surface-card)] border border-[var(--color-border-strong)] p-6 rounded-[var(--radius-md)] text-[var(--color-foreground)] flex flex-col h-auto">
                     <div className="flex items-center justify-between mb-6 pb-2 border-b border-[var(--color-border)]">
                       <div className="text-[13px] font-bold text-[var(--color-accent-amber)] uppercase tracking-wider">
                         SCALE WEIGHING CONSOLE
@@ -2196,7 +2196,7 @@ export const CargoForm = ({
                         </div>
                       </div>
 
-                      <div className="text-[11px] text-[#ef4444] bg-[rgba(239,68,68,0.03)] p-2 rounded border border-[rgba(239,68,68,0.1)] leading-snug flex items-start gap-1.5">
+                      <div className="text-[11px] text-[var(--color-error)] bg-[rgba(239,68,68,0.03)] p-2 rounded border border-[rgba(239,68,68,0.1)] leading-snug flex items-start gap-1.5">
                         <Zap size={14} className="shrink-0 mt-0.5" /> 
                         <span>
                           PL/pgSQL database trigger will automatically book
@@ -2235,7 +2235,7 @@ export const CargoForm = ({
 
                 <div className="bg-[var(--color-surface-2)] p-4 rounded border border-[var(--color-border)] mt-4">
                   <h5 className="text-[12px] font-bold text-[var(--color-foreground)] mb-2 flex items-center gap-1">
-                    <ShieldAlert size={14} className="text-yellow-600" />
+                    <ShieldAlert size={14} className="text-[var(--color-accent-amber)]" />
                     B2B Scaling Rules
                   </h5>
                   <p className="text-[11px] text-[var(--color-light-muted)] leading-relaxed">
