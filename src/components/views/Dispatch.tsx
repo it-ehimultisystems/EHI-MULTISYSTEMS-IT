@@ -83,10 +83,10 @@ export const Dispatch = ({ onBack }: { onBack: () => void }) => {
         ) : (
           activeTrips.map(trip => {
             const timeAgo = trip.pings?.length ? Math.floor((Date.now() - new Date(trip.pings[trip.pings.length-1]?.timestamp || Date.now()).getTime()) / 60000) : null;
-            let batteryColor = '#10B981'; // Green
+            let batteryColor = 'var(--color-success)'; // Green
             if (timeAgo !== null) {
-              if (timeAgo > 5) batteryColor = '#F59E0B'; // Amber - 5+ mins
-              if (timeAgo > 15) batteryColor = '#EF4444'; // Red - 15+ mins
+              if (timeAgo > 5) batteryColor = 'var(--color-accent-amber)'; // Amber - 5+ mins
+              if (timeAgo > 15) batteryColor = 'var(--color-error)'; // Red - 15+ mins
             }
 
             return (

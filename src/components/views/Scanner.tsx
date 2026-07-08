@@ -830,7 +830,7 @@ export const Scanner = ({
                 flex: 1, padding: '8px 4px',
                 background: wrongDestTab === tab ? 'var(--color-surface-1)' : 'transparent',
                 borderRadius: 8, border: 'none', cursor: 'pointer',
-                color: wrongDestTab === tab ? 'var(--color-error)' : '#64748B',
+                color: wrongDestTab === tab ? 'var(--color-error)' : 'var(--color-muted)',
               }}
               className="font-mono text-[11px] font-bold uppercase tracking-wide"
             >
@@ -887,7 +887,7 @@ export const Scanner = ({
     const statusColor = (type: string) =>
       type === 'ARRIVE' ? 'var(--color-success)' :
       type === 'DEPART' ? 'var(--color-accent-cobalt)' :
-      type === 'DELIVER' ? '#a855f7' :
+      type === 'DELIVER' ? 'var(--color-purple)' :
       'var(--color-error)';
     const statusLabel = (type: string) =>
       type === 'ARRIVE' ? '▼ ARRIVED' :
@@ -1096,7 +1096,7 @@ export const Scanner = ({
                   <div key={i} className="flex items-center gap-3 bg-[var(--color-surface-1)] p-3.5 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-all">
                     <div style={{
                       width: 8, height: 8, borderRadius: '50%',
-                      background: isArrive ? '#10B981' : '#3B82F6',
+                      background: isArrive ? 'var(--color-success)' : 'var(--color-accent-cobalt)',
                       flexShrink: 0,
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -1157,7 +1157,7 @@ export const Scanner = ({
               <div key={i} className="flex items-center gap-3 bg-[var(--color-surface-1)] p-3 rounded border border-[rgba(255,255,255,0.06)]">
                 <div style={{
                   width: 8, height: 8, borderRadius: '50%',
-                  background: isSuccess ? (item.result === 'SUCCESS_ARRIVE' ? '#10B981' : '#3B82F6') : '#EF4444',
+                  background: isSuccess ? (item.result === 'SUCCESS_ARRIVE' ? 'var(--color-success)' : 'var(--color-accent-cobalt)') : 'var(--color-error)',
                   flexShrink: 0,
                 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1165,7 +1165,7 @@ export const Scanner = ({
                   <div className="text-[10px] font-mono text-[var(--color-muted)]">{item.ref}</div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-[10px] font-mono" style={{ color: isSuccess ? color : '#EF4444' }}>
+                  <div className="text-[10px] font-mono" style={{ color: isSuccess ? color : 'var(--color-error)' }}>
                     {item.result.replace('SUCCESS_', '').replace('_', ' ')}
                   </div>
                   <div className="text-[9px] text-[var(--color-muted)] font-mono">{item.time}</div>
@@ -1228,7 +1228,7 @@ export const Scanner = ({
       <div className="flex bg-[var(--color-surface-2)] p-1 rounded-lg mb-6 shadow-inner" style={{ width: '100%' }}>
         {(['DEPART', 'ARRIVE', 'DELIVER'] as ScanMode[]).map((m) => {
           const active = mode === m;
-          const activeColor = m === 'ARRIVE' ? 'var(--color-success)' : m === 'DEPART' ? 'var(--color-accent-cobalt)' : '#a855f7';
+          const activeColor = m === 'ARRIVE' ? 'var(--color-success)' : m === 'DEPART' ? 'var(--color-accent-cobalt)' : 'var(--color-purple)';
           const activeBg = 'var(--color-surface-1)';
           const Icon = m === 'ARRIVE' ? ArrowDown : m === 'DEPART' ? ArrowUp : CheckCircle;
           return (
@@ -1240,7 +1240,7 @@ export const Scanner = ({
                 background: active ? activeBg : 'transparent',
                 borderRadius: '8px',
                 border: 'none',
-                color: active ? activeColor : '#64748B',
+                color: active ? activeColor : 'var(--color-muted)',
                 boxShadow: active ? '0 2px 8px rgba(0,0,0,0.2)' : 'none',
                 cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -1297,7 +1297,7 @@ export const Scanner = ({
                 background: active ? 'var(--color-surface-1)' : 'transparent',
                 borderRadius: '8px',
                 border: 'none',
-                color: active ? 'var(--color-accent-amber)' : '#64748B',
+                color: active ? 'var(--color-accent-amber)' : 'var(--color-muted)',
                 boxShadow: active ? '0 1px 4px rgba(0,0,0,0.15)' : 'none',
                 cursor: 'pointer',
                 display: 'flex', flexDirection: 'column',
@@ -1370,7 +1370,7 @@ export const Scanner = ({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 12,
             }}>
-              <RefreshCw size={28} color="#F59E0B" style={{ animation: 'spin 1s linear infinite' }} />
+              <RefreshCw size={28} color="var(--color-accent-amber)" style={{ animation: 'spin 1s linear infinite' }} />
             </div>
           )}
           <button
@@ -1480,7 +1480,7 @@ export const Scanner = ({
               const isArrive = item.result === 'SUCCESS_ARRIVE';
               const isDeliver = item.result === 'SUCCESS_DELIVER';
               const badgeBg = isArrive ? 'rgba(16,185,129,0.1)' : isDeliver ? 'rgba(168,85,247,0.1)' : 'rgba(37,99,235,0.1)';
-              const badgeText = isArrive ? 'var(--color-success)' : isDeliver ? '#a855f7' : 'var(--color-accent-cobalt)';
+              const badgeText = isArrive ? 'var(--color-success)' : isDeliver ? 'var(--color-purple)' : 'var(--color-accent-cobalt)';
               const label = isArrive ? 'ARRIVE' : isDeliver ? 'DELIVER' : 'DEPART';
 
               return (
@@ -1528,7 +1528,7 @@ export const Scanner = ({
           <div className="bg-[var(--color-surface-card)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 w-full max-w-[320px] shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="flex flex-col items-center mb-5">
               <div className="w-12 h-12 bg-[rgba(168,85,247,0.1)] rounded-full flex items-center justify-center mb-3">
-                <CheckCircle size={24} color="#a855f7" />
+                <CheckCircle size={24} color="var(--color-purple)" />
               </div>
               <h2 className="text-[16px] font-sans font-bold text-[var(--color-foreground)] tracking-tight">Delivery Verification</h2>
               <p className="text-[11px] font-mono text-[var(--color-muted)] text-center mt-1">
@@ -1560,7 +1560,7 @@ export const Scanner = ({
               <button
                 onClick={handleCommitDelivery}
                 disabled={!pinInput.trim()}
-                className="flex-1 py-3 bg-[#a855f7] text-white text-[12px] font-mono font-bold rounded-[var(--radius-md)] cursor-pointer hover:bg-opacity-90 transition-colors disabled:opacity-50"
+                className="flex-1 py-3 bg-[var(--color-purple)] text-white text-[12px] font-mono font-bold rounded-[var(--radius-md)] cursor-pointer hover:bg-opacity-90 transition-colors disabled:opacity-50"
               >
                 CONFIRM
               </button>
