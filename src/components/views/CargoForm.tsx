@@ -756,14 +756,14 @@ export const CargoForm = ({
     // per-hub uniqueness.
     const hubCode = getHubCode(user.hub_code || user.hub);
     const { data: awbSeq, error: awbError } = await supabase.rpc('next_awb_number', {
-      p_hub_code: hubCode,
+      p_hub_code: `${hubCode}-CG`,
     });
     if (awbError) {
       showToast({ message: `Failed to generate AWB number: ${awbError.message}. Please try again.`, type: "error" });
       setSubmitting(false);
       return;
     }
-    const resolvedAwb = `EHI-${hubCode}-${String(awbSeq).padStart(6, '0')}`;
+    const resolvedAwb = `EHI-${hubCode}-CG-${String(awbSeq).padStart(6, '0')}`;
 
     // Block reusing a tag whose previous consignment already completed
     // delivery -- a duplicated physical tag makes two shipments share one

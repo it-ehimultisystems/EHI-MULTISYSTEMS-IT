@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { PaymentMode, Transaction, User } from '../../lib/types';
-import { fmt, uid, tnow } from '../../lib/helpers';
+import { fmt, tnow, getHubCode } from '../../lib/helpers';
 import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer } from 'lucide-react';
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
 import { CARGO_ROUTES, BANKS } from '../../lib/constants';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/ToastContext';
 
 export const ValueJetForm = ({
   onAddTx,
@@ -94,13 +95,24 @@ export const ValueJetForm = ({
 
   const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0 && (amountOverride === "" || parsedOverride >= minAmount);
 
-  const handleSubmit = () => {
+  const { showToast } = useToast();
+
+  const handleSubmit = async () => {
     if (!isValid || submitting) return;
 
     setSubmitting(true);
 
+    const hubCode = getHubCode(user.hub_code || user.hub);
+    const { data: seq, error: tagError } = await supabase.rpc('next_awb_number', { p_hub_code: `${hubCode}-VJ` });
+    if (tagError || !seq) {
+      showToast({ message: `Failed to generate tag number: ${tagError?.message || 'unknown error'}. Please try again.`, type: 'error' });
+      setSubmitting(false);
+      return;
+    }
+    const resolvedTag = `EHI-${hubCode}-VJ-${String(seq).padStart(6, '0')}`;
+
     const tx: Transaction = {
-      id: uid('VJ'),
+      id: resolvedTag,
       name: name.trim(),
       detail: `${flightCode} · ${dest} · ${pcsVal}pcs · +${excessKg}kg excess`,
       amount: totalAmount,

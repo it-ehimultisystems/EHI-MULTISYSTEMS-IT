@@ -63,22 +63,24 @@ export const MarketingWorkspace = ({
 
   // Marketing entries aren't airway bills -- this is just a printable tag
   // reference, distinct from the entry's own system ref (successTx.id).
-  // It used to be a client-random 6-digit number (no server uniqueness
-  // guarantee, no hub identity), the same gap cargo's AWB had before
-  // next_awb_number() was introduced. Reuses that same atomic per-key
-  // counter here, keyed with a "-MK" suffix so marketing tags run on
-  // their own independent sequence per hub instead of interleaving with
-  // that hub's cargo AWB numbers.
+  // Uses the same atomic per-key counter as cargo's AWB (next_awb_number),
+  // keyed with a "-MK" suffix so marketing tags run on their own
+  // independent sequence per hub instead of interleaving with that hub's
+  // cargo AWB numbers. On failure, awb stays empty and submission is
+  // blocked below -- no silent random fallback, since a non-atomic tag
+  // could collide with a real one.
   const [awb, setAwb] = useState('');
+  const [awbError, setAwbError] = useState(false);
   const fetchNextTag = async () => {
+    setAwbError(false);
     const hubCode = getHubCode(user.hub_code || user.hub);
     const { data: seq, error } = await supabase.rpc('next_awb_number', { p_hub_code: `${hubCode}-MK` });
     if (!error && seq) {
-      setAwb(`TAG-${hubCode}-MK-${String(seq).padStart(6, '0')}`);
+      setAwb(`EHI-${hubCode}-MK-${String(seq).padStart(6, '0')}`);
     } else {
-      // Offline / RPC failure fallback -- still usable, just not
-      // server-guaranteed unique.
-      setAwb(`TAG-${hubCode}-MK-${Math.floor(100000 + Math.random() * 900000)}`);
+      setAwb('');
+      setAwbError(true);
+      showToast({ message: 'Failed to generate tag number. Please try again.', type: 'error' });
     }
   };
   useEffect(() => { fetchNextTag(); }, []);

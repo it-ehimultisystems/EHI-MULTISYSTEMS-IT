@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { User, Transaction, Expense } from "../../lib/types";
 import { BANKS, EXPENSE_CATEGORIES } from "../../lib/constants";
-import { fmt, uid, tnow, generatePaymentNarration } from "../../lib/helpers";
+import { fmt, uid, tnow, generatePaymentNarration, getHubCode } from "../../lib/helpers";
 import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { sendReceiptWhatsApp, buildPackageWhatsApp } from "../../lib/notifications";
@@ -53,12 +53,18 @@ export const PackageForm = ({
 
   const [trackingRef, setTrackingRef] = useState<string>('');
   useEffect(() => {
-    // Tracking numbers are allocated atomically server-side so two agents
-    // can never be issued the same one, unlike the old client-random AWB
-    // fallback that caused a real collision risk under concurrent entry.
+    // Tracking numbers are allocated atomically server-side, keyed per hub
+    // with a "-PKG" suffix on the same next_awb_number counter cargo and
+    // marketing use, so two agents can never be issued the same one.
     const allocate = async () => {
-      const { data, error } = await supabase.rpc('allocate_package_tracking');
-      if (!error && data) setTrackingRef(data);
+      const hubCode = getHubCode(user.hub_code || user.hub);
+      const { data: seq, error } = await supabase.rpc('next_awb_number', { p_hub_code: `${hubCode}-PKG` });
+      if (!error && seq) {
+        setTrackingRef(`EHI-${hubCode}-PKG-${String(seq).padStart(6, '0')}`);
+      } else {
+        setTrackingRef('');
+        showToast({ message: 'Failed to allocate tracking number. Please try again.', type: 'error' });
+      }
     };
     allocate();
   }, []);
@@ -172,8 +178,14 @@ export const PackageForm = ({
     setMode("Cash");
     setNarrationCode("");
     setSuccessTx(null);
-    supabase.rpc('allocate_package_tracking').then(({ data, error }) => {
-      if (!error && data) setTrackingRef(data);
+    const hubCodeReset = getHubCode(user.hub_code || user.hub);
+    supabase.rpc('next_awb_number', { p_hub_code: `${hubCodeReset}-PKG` }).then(({ data: seq, error }) => {
+      if (!error && seq) {
+        setTrackingRef(`EHI-${hubCodeReset}-PKG-${String(seq).padStart(6, '0')}`);
+      } else {
+        setTrackingRef('');
+        showToast({ message: 'Failed to allocate tracking number. Please try again.', type: 'error' });
+      }
     });
   };
 
