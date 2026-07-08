@@ -198,6 +198,7 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
       <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)] shrink-0">
         <button
           onClick={onBack}
+          aria-label="Back"
           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group shrink-0"
         >
           <ArrowLeft
@@ -218,6 +219,7 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
           onClick={() => loadEntries(selectedAirline)}
           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group shrink-0"
           title="Refresh"
+          aria-label="Refresh"
         >
           <RefreshCw
             size={14}
@@ -331,6 +333,7 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
           {formOpen && (
             <div className="md:hidden border-b border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 py-4 shrink-0">
               <EntryForm
+                idPrefix="mobile-entry"
                 entryDate={entryDate}
                 entryType={entryType}
                 amount={amount}
@@ -469,6 +472,7 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
           </div>
           <div className="px-4 pb-4">
             <EntryForm
+              idPrefix="desktop-entry"
               entryDate={entryDate}
               entryType={entryType}
               amount={amount}
@@ -490,6 +494,7 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
 };
 
 interface EntryFormProps {
+  idPrefix: string;
   entryDate: string;
   entryType: EntryType;
   amount: string;
@@ -517,6 +522,7 @@ const typeInactive =
   'bg-transparent border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-foreground)] hover:text-[var(--color-foreground)]';
 
 function EntryForm({
+  idPrefix,
   entryDate,
   entryType,
   amount,
@@ -535,8 +541,9 @@ function EntryForm({
   return (
     <div className="flex flex-col gap-3 pt-2">
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-sans text-[var(--color-muted)]">Date</label>
+        <label htmlFor={`${idPrefix}-date`} className="text-[10px] font-sans text-[var(--color-muted)]">Date</label>
         <input
+          id={`${idPrefix}-date`}
           type="date"
           value={entryDate}
           onChange={(e) => onDateChange(e.target.value)}
@@ -562,12 +569,13 @@ function EntryForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-sans text-[var(--color-muted)]">Amount</label>
+        <label htmlFor={`${idPrefix}-amount`} className="text-[10px] font-sans text-[var(--color-muted)]">Amount</label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] text-[12px] font-mono pointer-events-none">
             ₦
           </span>
           <input
+            id={`${idPrefix}-amount`}
             type="number"
             min="0"
             step="0.01"
@@ -580,8 +588,9 @@ function EntryForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-sans text-[var(--color-muted)]">Description</label>
+        <label htmlFor={`${idPrefix}-description`} className="text-[10px] font-sans text-[var(--color-muted)]">Description</label>
         <input
+          id={`${idPrefix}-description`}
           type="text"
           placeholder="e.g. Commission payment"
           value={description}
@@ -591,10 +600,11 @@ function EntryForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-sans text-[var(--color-muted)]">
+        <label htmlFor={`${idPrefix}-reference`} className="text-[10px] font-sans text-[var(--color-muted)]">
           Reference <span className="text-[9px]">(optional)</span>
         </label>
         <input
+          id={`${idPrefix}-reference`}
           type="text"
           placeholder="e.g. CHQ-0042"
           value={reference}

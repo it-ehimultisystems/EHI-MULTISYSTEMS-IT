@@ -95,7 +95,7 @@ export const AuditLog = ({ onBack, user }: { onBack: () => void; user?: User }) 
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] overflow-y-auto pb-24">
+    <div className="flex flex-col min-h-full bg-[var(--color-obsidian)]">
       <div className="ehi-page-body px-4 pt-4 text-[var(--color-foreground)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
         <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
@@ -167,7 +167,7 @@ export const AuditLog = ({ onBack, user }: { onBack: () => void; user?: User }) 
           <div className="ehi-card max-w-sm w-full">
             <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center">
               <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded font-mono ${actionColor(selectedEntry.action)}`}>{selectedEntry.action}</span>
-              <button onClick={() => setSelectedEntry(null)} className="text-[var(--color-muted)] font-mono">✕</button>
+              <button onClick={() => setSelectedEntry(null)} aria-label="Close" className="text-[var(--color-muted)] font-mono">✕</button>
             </div>
             <div className="p-4 space-y-3 text-[12px]">
               <div className="grid grid-cols-2 gap-2">

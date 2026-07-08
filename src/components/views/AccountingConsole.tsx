@@ -463,8 +463,9 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                    ) : (
                      <div className="space-y-4">
                        <div>
-                         <label className="text-[13px] font-sans text-[var(--color-muted)] block mb-2">EOD Physical Cash Count</label>
-                         <input 
+                         <label htmlFor="eod-physical-cash-count" className="text-[13px] font-sans text-[var(--color-muted)] block mb-2">EOD Physical Cash Count</label>
+                         <input
+                           id="eod-physical-cash-count"
                            type="number"
                            placeholder="Enter actual cash in till"
                            value={physicalInput}

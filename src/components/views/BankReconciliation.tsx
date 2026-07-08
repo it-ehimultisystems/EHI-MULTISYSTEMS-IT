@@ -326,7 +326,7 @@ export const BankReconciliation = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] overflow-y-auto pb-[80px]">
+    <div className="flex flex-col min-h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4 mb-4">
         <button onClick={onBack} className="flex items-center space-x-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
           <ArrowLeft size={18} />

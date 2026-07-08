@@ -5,7 +5,7 @@ import { useTheme } from '../lib/useTheme';
 import { Header as HeaderRaw } from './Header';
 import { BottomNav as BottomNavRaw } from './BottomNav';
 import { SideNav as SideNavRaw } from './SideNav';
-import { Toast, ToastProps } from './Toast';
+import { useToast } from '../lib/ToastContext';
 import { supabase, writeAuditLog } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { Dashboard as DashboardRaw } from './views/Dashboard';
@@ -65,9 +65,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   const [initError, setInitError] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
-  const [toast, setToast] = useState<ToastProps | null>(null);
-  
+
   const { theme, toggle } = useTheme();
+  const { showToast } = useToast();
 
   const pendingTxRef = useRef<Transaction[]>([]);
   const pendingExpenseRef = useRef<Expense[]>([]);
@@ -76,10 +76,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
   // Keep a ref mirror of transactions for synchronous dedup checks in realtime handlers
   useEffect(() => { transactionsRef.current = transactions; }, [transactions]);
-
-  const showToast = useCallback((props: Omit<ToastProps, 'onClose'>) => {
-    setToast({ ...props, onClose: () => setToast(null) });
-  }, []);
 
   useEffect(() => {
     cleanupOldQueue();
@@ -972,8 +968,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           />
         </div>
       )}
-
-      {toast && <Toast {...toast} />}
     </div>
   );
 };

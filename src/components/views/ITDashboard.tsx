@@ -366,7 +366,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
   const totalActive = bugs.filter(b => b.status !== 'Resolved').length;
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] p-4 md:p-6 overflow-y-auto pb-[90px] select-none">
+    <div className="flex flex-col min-h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] p-4 md:p-6 select-none">
       
       {onBack && (
         <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] text-[11px] font-mono mb-4 w-fit transition-colors">
@@ -571,8 +571,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Bug Title</label>
-                    <input 
+                    <label htmlFor="itdash-bug-title" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Bug Title</label>
+                    <input
+                      id="itdash-bug-title"
                       type="text"
                       className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       placeholder="e.g. Printer driver socket hand-shake error"
@@ -582,8 +583,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                     />
                   </div>
                   <div>
-                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Impacted Subsystem</label>
-                    <select 
+                    <label htmlFor="itdash-bug-component" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Impacted Subsystem</label>
+                    <select
+                      id="itdash-bug-component"
                       className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       value={newComponent}
                       onChange={e => setNewComponent(e.target.value as any)}
@@ -626,8 +628,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                   </div>
                   
                   <div>
-                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Root Cause / Diagnostic Log</label>
+                    <label htmlFor="itdash-bug-log" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Root Cause / Diagnostic Log</label>
                     <textarea
+                      id="itdash-bug-log"
                       rows={2}
                       className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       placeholder="Enter detailed error description, variables, state trace..."
@@ -697,6 +700,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                           onClick={() => deleteBug(b.id)}
                           className="bg-red-950/20 hover:bg-red-900/30 text-red-400 border border-red-900/30 p-1.5 rounded transition-colors"
                           title="Wipe record"
+                          aria-label="Wipe record"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -980,8 +984,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Feature Title</label>
-                    <input 
+                    <label htmlFor="itdash-feature-title" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Feature Title</label>
+                    <input
+                      id="itdash-feature-title"
                       type="text"
                       className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       placeholder="e.g. Implement dynamic zip compression for image attachments"
@@ -991,8 +996,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                     />
                   </div>
                   <div>
-                    <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Development Priority</label>
-                    <select 
+                    <label htmlFor="itdash-feature-priority" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Development Priority</label>
+                    <select
+                      id="itdash-feature-priority"
                       className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       value={impPriority}
                       onChange={e => setImpPriority(e.target.value as any)}
@@ -1005,8 +1011,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Refinement Description / Value Add</label>
+                  <label htmlFor="itdash-feature-desc" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Refinement Description / Value Add</label>
                   <textarea
+                    id="itdash-feature-desc"
                     rows={2.5}
                     className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                     placeholder="Provide a breakdown of the problem, proposed implementation approach, and user outcome..."

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Expense, User } from '../../lib/types';
 import { fmt, uid, tnow } from '../../lib/helpers';
 import { Car, Truck, Bus, Box, Briefcase, Download, Plus, AlertCircle, Edit2, CheckCircle, XCircle } from 'lucide-react';
+import { EmptyState } from './EmptyState';
 
 export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpense, onUpdateExpense }: { expenses?: Expense[], user?: User, period?: string, onAddExpense?: (e: Expense) => void, onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void }) => {
   
@@ -118,8 +119,9 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
            
            <div className="flex gap-3">
              <div className="flex-1">
-               <label className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Amount ₦</label>
-               <input 
+               <label htmlFor="expense-amount" className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Amount ₦</label>
+               <input
+                 id="expense-amount"
                  type="number"
                  value={amount}
                  onChange={e => setAmount(e.target.value)}
@@ -137,8 +139,9 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
            </div>
 
            <div>
-             <label className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Description</label>
-             <input 
+             <label htmlFor="expense-description" className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Description</label>
+             <input
+               id="expense-description"
                type="text"
                value={desc}
                onChange={e => setDesc(e.target.value)}
@@ -207,7 +210,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
                      ) : (
                        <div className="flex items-center space-x-1 group">
                          <span className="font-mono text-[var(--color-foreground)]">{fmt(budget)}</span>
-                         <button onClick={() => { setEditingBudget(c); setBudgetInput(budget.toString()); }} className="opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-opacity focus:outline-none">
+                         <button onClick={() => { setEditingBudget(c); setBudgetInput(budget.toString()); }} aria-label={`Edit ${c} budget`} className="opacity-0 group-hover:opacity-100 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-opacity focus:outline-none">
                            <Edit2 size={12} />
                          </button>
                        </div>
@@ -235,10 +238,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
          </div>
 
          {expenses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-6 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[var(--color-surface-2)]">
-               <Briefcase size={24} className="text-[#64748B] mb-2" />
-               <div className="text-[13px] font-medium text-[var(--color-foreground)] font-sans">No expenses logged yet.</div>
-            </div>
+            <EmptyState icon={<Briefcase size={36} strokeWidth={1.5} />} message="No expenses logged yet." />
          ) : (
             <div className="space-y-2">
               {expenses.map((e, idx) => (

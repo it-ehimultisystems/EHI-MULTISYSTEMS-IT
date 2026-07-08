@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Transaction, ParsedBankAlert, PaymentMatch, User } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { AlertCircle, CheckCircle, Mail, Clock, Search, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
+import { useToast } from '../../lib/ToastContext';
 
 interface PaymentValidationProps {
   transactions: Transaction[];
@@ -16,6 +17,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
   const [matchResult, setMatchResult] = useState<PaymentMatch | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [showAutoForward, setShowAutoForward] = useState(false);
+  const { showToast } = useToast();
 
   // SECTION A: Unconfirmed Transfers
   const unconfirmedTransfers = useMemo(() => {
@@ -149,7 +151,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
     // one who confirms its payment landed -- otherwise one person can
     // unilaterally push money in and out with no independent check.
     if (user?.name && tx.enteredByName && tx.enteredByName === user.name) {
-      alert(`${user.name} logged this transaction and cannot also confirm its payment. Ask another staff member to confirm it.`);
+      showToast({ message: `${user.name} logged this transaction and cannot also confirm its payment. Ask another staff member to confirm it.`, type: 'warning' });
       return;
     }
     const updatedTx = { ...tx, paymentConfirmed: true, confirmedAt: new Date().toISOString(), confirmedBy: user?.name };
@@ -162,7 +164,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
     setMatchResult(null);
     setParsedResult(null);
     setEmailText('');
-    alert('Payment Confirmed!');
+    showToast({ message: 'Payment confirmed', type: 'success' });
   };
 
   const getBankColor = (bank: string) => {
@@ -176,7 +178,7 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
   };
 
   return (
-    <div className="flex flex-col p-4 space-y-6 pb-20 select-none animate-in fade-in duration-300">
+    <div className="flex flex-col p-4 space-y-6 select-none animate-in fade-in duration-300">
       <div className="flex justify-between items-center border-b border-[var(--color-border)] pb-2">
         <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] tracking-[0.15em] uppercase font-bold">▸ PAYMENT VALIDATION</span>
       </div>

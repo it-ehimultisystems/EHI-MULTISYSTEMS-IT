@@ -11,6 +11,9 @@ import {
   buildMarketingWhatsApp,
 } from "../../lib/notifications";
 import { PaymentNarrationBox } from "../PaymentNarrationBox";
+import { useToast } from "../../lib/ToastContext";
+import { useConfirm } from "../../lib/ConfirmContext";
+import { EmptyState } from "./EmptyState";
 
 export const MarketingWorkspace = ({
   user,
@@ -27,6 +30,8 @@ export const MarketingWorkspace = ({
   onAddExpense: (exp: Expense) => void;
   onShowHistory?: () => void;
 }) => {
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   // New Entry State
   const [pricingMatrix, setPricingMatrix] = useState(() => {
     const saved = localStorage.getItem('ehi_setting_pricing');
@@ -212,7 +217,13 @@ export const MarketingWorkspace = ({
   };
 
   const handleCloseDay = async () => {
-    if (!window.confirm('Close today\'s marketing session? This cannot be undone.')) return;
+    const ok = await confirm({
+      title: 'Close marketing session?',
+      message: "Close today's marketing session? This cannot be undone.",
+      confirmLabel: 'Close Day',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       setShowCloseModal(false);
       const today = new Date().toISOString().slice(0, 10);
@@ -235,9 +246,9 @@ export const MarketingWorkspace = ({
         closed_at: new Date().toISOString()
       }, { onConflict: 'hub_id,date' });
       if (error) throw error;
-      alert('Day closed successfully');
+      showToast({ message: 'Day closed successfully', type: 'success' });
     } catch (err: any) {
-      alert('Failed to close day: ' + err.message);
+      showToast({ message: 'Failed to close day: ' + err.message, type: 'error' });
     }
   };
 
@@ -554,7 +565,7 @@ export const MarketingWorkspace = ({
                       onClick={() => {
                         import('../../lib/escposTagPrinting').then(async (m) => {
                           await m.printMarketingTags(successTx!, bb, mb, sb, '80mm');
-                        }).catch(() => alert('Bluetooth printer not connected'));
+                        }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
                       }}
                       className="py-2.5 bg-[rgba(16,185,129,0.12)] border border-[rgba(16,185,129,0.3)] text-[var(--color-success)] text-[11px] font-bold font-mono rounded-lg cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-[rgba(16,185,129,0.2)] transition-colors"
                     >
@@ -565,7 +576,7 @@ export const MarketingWorkspace = ({
                       onClick={() => {
                         import('../../lib/escposTagPrinting').then(async (m) => {
                           await m.printMarketingTags(successTx!, bb, mb, sb, '58mm');
-                        }).catch(() => alert('Bluetooth printer not connected'));
+                        }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
                       }}
                       className="py-2.5 bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)] text-[var(--color-success)] text-[11px] font-bold font-mono rounded-lg cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-[rgba(16,185,129,0.15)] transition-colors"
                     >
@@ -946,9 +957,7 @@ export const MarketingWorkspace = ({
                 <span className="text-[10px] font-mono text-[#10B981] uppercase tracking-widest font-bold">▸ ENTRIES TODAY</span>
               </div>
               {marketingTxs.length === 0 ? (
-                <div className="text-[11px] text-[var(--color-muted)] font-mono py-6 text-center">
-                  No entries yet
-                </div>
+                <EmptyState icon={<ClipboardList size={36} strokeWidth={1.5} />} message="No entries yet" />
               ) : (
                 <div className="divide-y divide-[rgba(255,255,255,0.04)] max-h-[340px] overflow-y-auto">
                   {[...marketingTxs].reverse().map((t) => (
@@ -1006,6 +1015,7 @@ export const MarketingWorkspace = ({
           >
             <button
               onClick={() => setShowCloseModal(false)}
+              aria-label="Close"
               style={{
                 position: "absolute",
                 top: 16,

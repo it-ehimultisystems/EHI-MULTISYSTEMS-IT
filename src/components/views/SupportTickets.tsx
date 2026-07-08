@@ -191,8 +191,8 @@ export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => voi
           <div className="ehi-page-body px-4 py-4 space-y-4">
             <div className="text-[12px] font-bold text-[var(--color-foreground)] font-sans">New Support Ticket</div>
             <div className="space-y-1.5">
-              <label className="ehi-label">Subject</label>
-              <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Brief description of the issue" className="ehi-input" />
+              <label htmlFor="ticket-subject" className="ehi-label">Subject</label>
+              <input id="ticket-subject" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Brief description of the issue" className="ehi-input" />
             </div>
             <div className="space-y-1.5">
               <label className="ehi-label">Priority</label>
@@ -215,8 +215,9 @@ export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => voi
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="ehi-label">Description</label>
+              <label htmlFor="ticket-description" className="ehi-label">Description</label>
               <textarea
+                id="ticket-description"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 rows={5}

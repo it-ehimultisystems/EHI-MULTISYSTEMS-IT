@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Percent, Save, Building2, Plus, Trash2, Loader, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/ToastContext';
+import { useConfirm } from '../../lib/ConfirmContext';
 
 const DEFAULT_COMMISSIONS: Record<string, string> = {
   'Arik Air':              '7',
@@ -20,6 +22,8 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
   // silently overwrite every hub's real configured rates with those
   // defaults. Block Save until we know what we're saving is real.
   const [loadedReal, setLoadedReal] = useState(false);
+  const { showToast } = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     const fetchCommissions = async () => {
@@ -81,10 +85,12 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
     if (latest?.config_value) {
       const serverKeys = JSON.stringify(Object.keys(latest.config_value as object).sort());
       const localKeysAtLoad = JSON.stringify(Object.keys(data).sort());
-      if (serverKeys !== localKeysAtLoad && !window.confirm(
-        'Commission rates were changed on another device since this screen loaded ' +
-        '(the airline list differs). Saving now will overwrite those changes with what you see here. Continue?'
-      )) {
+      if (serverKeys !== localKeysAtLoad && !(await confirm({
+        title: 'Overwrite newer changes?',
+        message: 'Commission rates were changed on another device since this screen loaded (the airline list differs). Saving now will overwrite those changes with what you see here. Continue?',
+        confirmLabel: 'Overwrite',
+        tone: 'danger',
+      }))) {
         return 'cancelled';
       }
     }
@@ -120,7 +126,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
 
   const handleSave = async () => {
     if (!loadedReal) {
-      alert('Commission rates failed to load from the server, so what\'s shown here may just be built-in defaults, not your real configured rates. Saving now could overwrite real data. Please close and reopen this screen to retry loading before saving.');
+      showToast({ message: 'Rates failed to load from the server -- close and reopen this screen to retry before saving, to avoid overwriting real data with defaults.', type: 'error' });
       return;
     }
     setSaving(true);
@@ -128,7 +134,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
     setSaving(false);
     if (errorMsg === 'cancelled') return;
     if (errorMsg) {
-      alert(`Failed to save commission rates: ${errorMsg}. Not saved to other devices -- try again.`);
+      showToast({ message: `Failed to save commission rates: ${errorMsg}`, type: 'error' });
       return;
     }
     setSaved(true);
@@ -139,7 +145,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
     <main className="flex flex-col h-full bg-[var(--color-obsidian)] overflow-y-auto">
       {/* Header */}
       <div className="ehi-view-header">
-        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group">
+        <button onClick={onBack} aria-label="Back" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group">
           <ArrowLeft size={16} strokeWidth={1.5} className="text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] transition-colors" />
         </button>
         <div className="text-center">
@@ -194,6 +200,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
                 <button
                   onClick={handleAddAirline}
                   disabled={!newAirline.trim()}
+                  aria-label="Add airline"
                   className="px-3 h-10 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] rounded-lg font-bold disabled:opacity-40 hover:opacity-90 transition-opacity"
                 >
                   <Plus size={15} />
@@ -207,6 +214,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
                 <div key={airline} className="ehi-card p-3.5 flex items-center gap-3">
                   <button
                     onClick={() => handleDeleteAirline(airline)}
+                    aria-label={`Delete ${airline} commission rate`}
                     className="p-1.5 bg-[rgba(239,68,68,0.08)] hover:bg-[rgba(239,68,68,0.18)] rounded-lg text-[var(--color-error)] transition-colors shrink-0"
                   >
                     <Trash2 size={13} strokeWidth={1.5} />

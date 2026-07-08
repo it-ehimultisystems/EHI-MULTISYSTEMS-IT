@@ -4,6 +4,7 @@ import { QrCode, RefreshCw, Package, Plane, ArrowDown, ArrowUp, List, CheckCircl
 import { User, ScanMode, ScanValidationResult, BatchScanItem, ScanResultType, ProofOfDelivery, TrackingEvent } from '../../lib/types';
 import { validateScan, logScanEvent, fetchCargoByRef, fetchWrongDestinationAlerts, resolveWrongDestinationAlert } from '../../lib/scanLogic';
 import { supabase } from '../../lib/supabase';
+import { useConfirm } from '../../lib/ConfirmContext';
 
 import { ArrivalsView } from './ArrivalsView';
 import { IncomingToHub } from './IncomingToHub';
@@ -227,6 +228,7 @@ export const Scanner = ({
   transactions: any[];
   showToast?: (opts: any) => void;
 }) => {
+  const confirm = useConfirm();
   const [mode, setMode] = useState<ScanMode>('DEPART');
   const [isScanning, setIsScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -1046,8 +1048,14 @@ export const Scanner = ({
             {/* Batch Action Buttons */}
             <div className="grid grid-cols-2 gap-3 pb-2">
               <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to clear all items in the batch queue?')) {
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Clear batch queue?',
+                    message: 'Are you sure you want to clear all items in the batch queue?',
+                    confirmLabel: 'Clear Queue',
+                    tone: 'danger',
+                  });
+                  if (ok) {
                     setBatchQueue([]);
                     setShowQueueSummary(false);
                     if (showToast) showToast({ message: 'Batch queue cleared', type: 'info' });

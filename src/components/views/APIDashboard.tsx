@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Key, Plus, Trash2, Shield, Eye, HelpCircle, Layout } from 'lucide-react';
+import { useConfirm } from '../../lib/ConfirmContext';
 
 interface ApiKey {
   id: string;
@@ -27,6 +28,7 @@ export const APIDashboard = ({
   const [newLabel, setNewLabel] = useState('');
   const [newPermissions, setNewPermissions] = useState<'read' | 'write' | 'all'>('read');
   const [newLimit, setNewLimit] = useState('60');
+  const confirm = useConfirm();
 
   const [generatedKeyResult, setGeneratedKeyResult] = useState<string | null>(null);
 
@@ -56,14 +58,20 @@ export const APIDashboard = ({
     setGeneratedKeyResult(generatedRawKey);
   };
 
-  const handleDeleteKey = (id: string) => {
-    if (confirm('Deactivate and revoke this credentials key? Partner services utilizing it will immediately receive 401 Unauthorized.')) {
+  const handleDeleteKey = async (id: string) => {
+    const ok = await confirm({
+      title: 'Revoke API key?',
+      message: 'Deactivate and revoke this credentials key? Partner services utilizing it will immediately receive 401 Unauthorized.',
+      confirmLabel: 'Revoke',
+      tone: 'danger',
+    });
+    if (ok) {
       setKeys(prev => prev.filter(k => k.id !== id));
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] overflow-y-auto pb-[80px] font-sans">
+    <div className="flex flex-col min-h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)] font-sans">
       {/* Header back navigation */}
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
         <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
@@ -138,8 +146,9 @@ export const APIDashboard = ({
                       <span className="text-[10px] text-slate-400 block font-mono">Last Used</span>
                       <span className="text-[11px] text-[var(--color-foreground)] block font-mono">{k.lastUsed}</span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => handleDeleteKey(k.id)}
+                      aria-label={`Revoke ${k.label} key`}
                       className="text-[var(--color-error)] opacity-60 hover:opacity-100 p-1.5 rounded hover:bg-red-500/10 cursor-pointer"
                     >
                       <Trash2 size={13} />
@@ -216,7 +225,7 @@ export const APIDashboard = ({
           <div className="ehi-card max-w-sm w-full overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-[rgba(255,255,255,0.07)] flex justify-between items-center bg-black/40">
               <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] uppercase font-bold tracking-wider">GENERATE API CREDENTIALS</span>
-              <button onClick={() => setShowAddKeyModal(false)} className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
+              <button onClick={() => setShowAddKeyModal(false)} aria-label="Close" className="text-slate-400 hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
             </div>
 
             <form onSubmit={handleGenerateKey} className="p-4 space-y-4 font-mono text-xs">
@@ -250,9 +259,10 @@ export const APIDashboard = ({
               ) : (
                 <>
                   <div className="space-y-1">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase">Gateway Alias / Label</label>
-                    <input 
-                      type="text" 
+                    <label htmlFor="api-key-label" className="text-[8px] font-bold text-slate-500 uppercase">Gateway Alias / Label</label>
+                    <input
+                      id="api-key-label"
+                      type="text"
                       placeholder="e.g. Aramex Gateway"
                       required
                       value={newLabel}
@@ -263,9 +273,10 @@ export const APIDashboard = ({
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase">Permissions scope</label>
-                      <select 
-                        value={newPermissions} 
+                      <label htmlFor="api-key-permissions" className="text-[8px] font-bold text-slate-500 uppercase">Permissions scope</label>
+                      <select
+                        id="api-key-permissions"
+                        value={newPermissions}
                         onChange={(e: any) => setNewPermissions(e.target.value)}
                         className="w-full bg-[var(--color-obsidian)] border border-[rgba(255,255,255,0.12)] p-2 rounded text-xs text-[var(--color-foreground)]"
                       >
@@ -276,9 +287,10 @@ export const APIDashboard = ({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase">Rate (req/min)</label>
-                      <input 
-                        type="number" 
+                      <label htmlFor="api-key-limit" className="text-[8px] font-bold text-slate-500 uppercase">Rate (req/min)</label>
+                      <input
+                        id="api-key-limit"
+                        type="number"
                         required
                         value={newLimit}
                         onChange={(e) => setNewLimit(e.target.value)}

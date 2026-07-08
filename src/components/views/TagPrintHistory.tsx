@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { User } from '../../lib/types';
 import { RefreshCw, Search, Printer, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { EmptyState } from './EmptyState';
 
 interface PrintLog {
   id: string;
@@ -104,6 +105,7 @@ export default function TagPrintHistory({ user }: { user: User }) {
             onClick={fetchLogs}
             className="p-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-md transition-colors"
             title="Refresh logs"
+            aria-label="Refresh logs"
           >
             <RefreshCw size={16} className={`text-[var(--color-foreground)] ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -133,8 +135,8 @@ export default function TagPrintHistory({ user }: { user: User }) {
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-[13px] font-sans text-[var(--color-muted)]">
-                    No print logs found
+                  <td colSpan={7}>
+                    <EmptyState icon={<Printer size={36} strokeWidth={1.5} />} message="No print logs found" />
                   </td>
                 </tr>
               ) : (

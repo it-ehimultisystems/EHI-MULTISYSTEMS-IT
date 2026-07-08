@@ -60,11 +60,11 @@ export const Dispatch = ({ onBack }: { onBack: () => void }) => {
   }, []);
 
   return (
-    <div className="overflow-y-auto pb-24 animate-in fade-in flex flex-col">
+    <div className="animate-in fade-in flex flex-col">
       <div className="ehi-page-body px-4 pt-4 space-y-4 flex flex-col flex-1">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
         <div className="flex items-center gap-2">
-          <button onClick={onBack} className="p-1 rounded hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent">
+          <button onClick={onBack} aria-label="Back" className="p-1 rounded hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent">
             ←
           </button>
           <div>
@@ -153,8 +153,9 @@ export const Dispatch = ({ onBack }: { onBack: () => void }) => {
                 >
                   <Phone size={12} /> Call Driver
                 </a>
-                <button 
+                <button
                   onClick={() => setSelectedTrip(null)}
+                  aria-label="Close"
                   className="p-1.5 bg-[var(--color-surface-2)] rounded hover:bg-white/10 text-[var(--color-muted)] transition-colors border-none"
                 >
                   <X size={16} />

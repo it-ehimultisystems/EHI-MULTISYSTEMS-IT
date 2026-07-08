@@ -4,6 +4,7 @@ import { fmt, uid } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { normalizeAirlineName } from '../../lib/helpers';
 import { AnimatedNumber } from '../ui/AnimatedNumber';
+import { useToast } from '../../lib/ToastContext';
 import { 
   TrendingUp, 
   Package, 
@@ -49,6 +50,7 @@ export const Analytics = ({
 }) => {
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'quarter'>('today');
   const [selectedHub, setSelectedHub] = useState<string>('all');
+  const { showToast } = useToast();
   
   // AI Insights State
   const [insights, setInsights] = useState<GeminiInsight[]>([
@@ -393,17 +395,17 @@ export const Analytics = ({
   const handleDownloadPDF = async () => {
     try {
       if (!periodFilteredTxs || periodFilteredTxs.length === 0) {
-        alert("No transactions available to download for this period.");
+        showToast({ message: "No transactions available to download for this period.", type: "warning" });
         return;
       }
-      
+
       const { downloadAnalyticsPDF } = await import('./AnalyticsPDF');
       await downloadAnalyticsPDF({
         period,
         transactions: periodFilteredTxs,
       });
     } catch (err: any) {
-      alert("Error downloading PDF: " + err.message);
+      showToast({ message: "Error downloading PDF: " + err.message, type: "error" });
     }
   };
 
@@ -431,10 +433,11 @@ export const Analytics = ({
             <ChevronDown className="absolute right-1.5 top-1.5 text-[var(--color-muted)] pointer-events-none" size={10} />
           </div>
           
-          <button 
+          <button
             onClick={handleDownloadPDF}
             className="flex items-center justify-center bg-[var(--color-surface-1)] hover:bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[var(--color-border)] h-7 px-2 rounded transition-colors"
             title="Download PDF"
+            aria-label="Download PDF"
           >
             <Download size={14} className="text-[var(--color-accent-amber)]" />
           </button>
@@ -732,7 +735,7 @@ export const Analytics = ({
             <tbody>
               {marketingAgentsData.length > 0 ? marketingAgentsData.map((agent, i) => (
                 <tr key={i} className="border-b border-[var(--color-border)] text-[10px]">
-                  <td className="py-2 text-[var(--color-foreground)] font-bold">{agent.name}</td>
+                  <td className="py-2 text-[var(--color-foreground)] font-bold truncate max-w-[125px]">{agent.name}</td>
                   <td className="text-center py-2 text-[var(--color-light-muted)]">{agent.entries}</td>
                   <td className="text-right py-2 text-[var(--color-foreground)]">{fmt(agent.revenue)}</td>
                   <td className={`text-right py-2 font-bold ${agent.remit >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'}`}>

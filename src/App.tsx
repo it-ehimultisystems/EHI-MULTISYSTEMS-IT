@@ -6,6 +6,8 @@ import { UserProfile, getSession, signOut } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastProvider } from './lib/ToastContext';
+import { ConfirmProvider } from './lib/ConfirmContext';
 
 const PublicTrackingPage = () => {
   const { waybillId } = useParams<{ waybillId?: string }>();
@@ -420,13 +422,17 @@ const AuthenticatedApp = () => {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/track/:waybillId" element={<PublicTrackingPage />} />
-        <Route path="/track" element={<PublicTrackingPage />} />
-        <Route path="/*" element={<AuthenticatedApp />} />
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <ConfirmProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/track/:waybillId" element={<PublicTrackingPage />} />
+            <Route path="/track" element={<PublicTrackingPage />} />
+            <Route path="/*" element={<AuthenticatedApp />} />
+          </Routes>
+        </BrowserRouter>
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }
 

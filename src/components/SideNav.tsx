@@ -138,7 +138,7 @@ export const SideNav = ({
         background: "var(--color-nav-bg, var(--color-obsidian))",
         borderRight: "1px solid var(--color-nav-border, var(--color-border))",
         flexShrink: 0,
-        height: "100vh",
+        height: "var(--app-height)",
         overflowY: "auto",
         overflowX: "hidden",
         transition: "width 0.3s cubic-bezier(0.2, 0, 0, 1)",

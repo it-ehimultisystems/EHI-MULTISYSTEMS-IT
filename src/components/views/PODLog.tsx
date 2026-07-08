@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchProofOfDeliveryRecords } from '../../lib/sync';
 import { ProofOfDelivery, User } from '../../lib/types';
 import { ShieldCheck, MapPin, Search, Calendar, ChevronRight, RefreshCw, X, ArrowLeft } from 'lucide-react';
+import { EmptyState } from './EmptyState';
 
 export const PODLog = ({ user, onBack }: { user: User; onBack: () => void }) => {
   const [pods, setPods] = useState<ProofOfDelivery[]>([]);
@@ -34,11 +35,11 @@ export const PODLog = ({ user, onBack }: { user: User; onBack: () => void }) => 
   );
 
   return (
-    <div className="overflow-y-auto pb-24 animate-in fade-in">
+    <div className="animate-in fade-in">
       <div className="ehi-page-body px-4 pt-4 space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[var(--color-border)] pb-3">
-        <button onClick={onBack} className="p-1 rounded hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent">
+        <button onClick={onBack} aria-label="Back" className="p-1 rounded hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent">
           <ArrowLeft size={18} />
         </button>
         <div>
@@ -59,8 +60,9 @@ export const PODLog = ({ user, onBack }: { user: User; onBack: () => void }) => 
             className="w-full h-11 pl-9 pr-3 ehi-card text-[12px] font-mono text-[var(--color-input-text)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
           />
         </div>
-        <button 
-          onClick={fetchPods} 
+        <button
+          onClick={fetchPods}
+          aria-label="Refresh"
           className="h-11 px-4 ehi-card flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -75,9 +77,7 @@ export const PODLog = ({ user, onBack }: { user: User; onBack: () => void }) => 
             Loading records...
           </div>
         ) : filteredPods.length === 0 ? (
-          <div className="text-center py-12 text-[var(--color-muted)] font-mono text-[11px] bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)]">
-            No proof of delivery records found.
-          </div>
+          <EmptyState icon={<ShieldCheck size={36} strokeWidth={1.5} />} message="No proof of delivery records found." />
         ) : (
           filteredPods.map(pod => (
             <div 
@@ -115,8 +115,9 @@ export const PODLog = ({ user, onBack }: { user: User; onBack: () => void }) => 
                 <ShieldCheck size={18} className="text-[var(--color-success)]" />
                 <h3 className="text-[12px] font-bold text-[var(--color-foreground)] uppercase font-mono">Proof of Delivery</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedPod(null)}
+                aria-label="Close"
                 className="p-1.5 bg-[var(--color-surface-2)] rounded hover:bg-white/10 text-[var(--color-muted)] cursor-pointer transition-colors border-none"
               >
                 <X size={16} />

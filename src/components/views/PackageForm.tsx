@@ -5,6 +5,9 @@ import { fmt, uid, tnow, generatePaymentNarration } from "../../lib/helpers";
 import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { sendReceiptWhatsApp, buildPackageWhatsApp } from "../../lib/notifications";
+import { useToast } from "../../lib/ToastContext";
+import { useConfirm } from "../../lib/ConfirmContext";
+import { EmptyState } from "./EmptyState";
 
 export const PackageForm = ({
   user,
@@ -26,6 +29,8 @@ export const PackageForm = ({
   // each option is prefixed with its IATA-style hub code for consistency
   // with the Cargo/ValueJet route pickers. Cached to localStorage for an
   // instant first paint / offline fallback while the fetch is in flight.
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const HUB_DEST_CACHE_KEY = 'ehi_hub_destinations';
   const [destinations, setDestinations] = useState<string[]>(() => {
     try {
@@ -185,7 +190,13 @@ export const PackageForm = ({
   };
 
   const handleCloseDay = async () => {
-    if (!window.confirm("Close today's Package Desk session? This cannot be undone.")) return;
+    const ok = await confirm({
+      title: 'Close Package Desk session?',
+      message: "Close today's Package Desk session? This cannot be undone.",
+      confirmLabel: 'Close Day',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       setShowCloseModal(false);
       const today = new Date().toISOString().slice(0, 10);
@@ -206,16 +217,16 @@ export const PackageForm = ({
         closed_at: new Date().toISOString(),
       }, { onConflict: 'hub_id,date' });
       if (error) throw error;
-      alert('Day closed successfully');
+      showToast({ message: 'Day closed successfully', type: 'success' });
     } catch (err: any) {
-      alert('Failed to close day: ' + err.message);
+      showToast({ message: 'Failed to close day: ' + err.message, type: 'error' });
     }
   };
 
   const focusClasses = "focus:outline-none focus:ring-2 focus:ring-[rgba(59,130,246,0.5)] focus:border-[rgba(59,130,246,0.5)] transition-colors";
 
   return (
-    <div className="overflow-y-auto overflow-x-hidden pb-24 p-4 max-w-5xl mx-auto" style={{ width: "100%", boxSizing: "border-box", minHeight: 0, flex: 1 }}>
+    <div className="p-4 max-w-5xl mx-auto" style={{ width: "100%", boxSizing: "border-box", minHeight: 0, flex: 1 }}>
       <div className="flex justify-between items-center text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-widest border-b border-[var(--color-border)] pb-2 mb-6">
         <div>{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</div>
         <div className="flex items-center gap-3">
@@ -282,7 +293,7 @@ export const PackageForm = ({
                       const bytes = await m.compilePackageReceiptStream(printData, '80mm');
                       const { printViaBluetooth } = await import('../../lib/escpos');
                       await printViaBluetooth(bytes);
-                    }).catch(() => alert('Bluetooth printer not connected'));
+                    }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
                   }}
                   className="py-2.5 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
@@ -310,7 +321,7 @@ export const PackageForm = ({
                       const bytes = await m.compilePackageReceiptStream(printData, '58mm');
                       const { printViaBluetooth } = await import('../../lib/escpos');
                       await printViaBluetooth(bytes);
-                    }).catch(() => alert('Bluetooth printer not connected'));
+                    }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
                   }}
                   className="py-2.5 bg-[var(--color-accent-cobalt)] bg-opacity-80 text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
@@ -549,7 +560,7 @@ export const PackageForm = ({
                 <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] uppercase tracking-widest font-bold">▸ ENTRIES TODAY</span>
               </div>
               {packageTxs.length === 0 ? (
-                <div className="text-[11px] text-[var(--color-muted)] font-mono py-6 text-center">No entries yet</div>
+                <EmptyState icon={<ClipboardList size={36} strokeWidth={1.5} />} message="No entries yet" />
               ) : (
                 <div className="divide-y divide-[rgba(255,255,255,0.04)] max-h-[340px] overflow-y-auto">
                   {[...packageTxs].reverse().map((t) => (
@@ -578,7 +589,7 @@ export const PackageForm = ({
       {showCloseModal && (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 16 }}>
           <div style={{ background: "var(--color-obsidian)", width: "100%", maxWidth: 480, borderRadius: 16, border: "1px solid var(--color-surface-2)", padding: 24, position: "relative" }}>
-            <button onClick={() => setShowCloseModal(false)} style={{ position: "absolute", top: 16, right: 16, color: "var(--color-muted)" }}>×</button>
+            <button onClick={() => setShowCloseModal(false)} aria-label="Close" style={{ position: "absolute", top: 16, right: 16, color: "var(--color-muted)" }}>×</button>
             <div className="text-[10px] font-mono text-[var(--color-accent-cobalt)] tracking-widest font-bold mb-1">▸ PACKAGE DESK SALES ANALYSIS</div>
             <div className="text-[12px] text-[var(--color-muted)] mb-4">
               {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}

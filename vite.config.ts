@@ -18,8 +18,8 @@ export default defineConfig(() => {
           description: 'EHI Multisystems Logistics Intelligence Platform — cargo, ValueJet excess baggage, and marketing operations.',
           start_url: '/',
           display: 'standalone',
-          background_color: '#070b14',
-          theme_color: '#0B0F19',
+          background_color: '#0d1117',
+          theme_color: '#0d1117',
           icons: [
             { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
             { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },

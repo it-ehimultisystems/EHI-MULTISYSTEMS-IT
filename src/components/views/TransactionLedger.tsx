@@ -22,6 +22,7 @@ import {
 import { QRCode } from "../QRCode";
 import TagPrintHistory from "./TagPrintHistory";
 import { supabase } from "../../lib/supabase";
+import { useToast } from "../../lib/ToastContext";
 
 type Entry = {
   id: string;
@@ -69,6 +70,7 @@ export const TransactionLedger = ({
   const [posCodeInput, setPosCodeInput] = useState<{ id: string; code: string }>({ id: '', code: '' });
   const [vjFlightFilter, setVjFlightFilter] = useState("All");
   const [vjDestFilter, setVjDestFilter] = useState("All");
+  const { showToast } = useToast();
 
   const entries = useMemo(() => {
     const list: Entry[] = [
@@ -236,7 +238,7 @@ export const TransactionLedger = ({
       }
     } catch (error) {
       console.error('Error printing receipt:', error);
-      alert('Error connecting to Bluetooth printer. Ensure it is paired and on.');
+      showToast({ message: 'Error connecting to Bluetooth printer. Ensure it is paired and on.', type: 'error' });
     }
   };
 
@@ -280,7 +282,7 @@ export const TransactionLedger = ({
       }
     } catch (error) {
       console.error('Error printing tag:', error);
-      alert('Error connecting to Bluetooth printer. Ensure it is paired and on.');
+      showToast({ message: 'Error connecting to Bluetooth printer. Ensure it is paired and on.', type: 'error' });
     }
   };
 

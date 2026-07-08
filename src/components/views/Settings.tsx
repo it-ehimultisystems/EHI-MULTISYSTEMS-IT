@@ -13,6 +13,7 @@ import {
   Eye, EyeOff, Wifi, WifiOff, Phone, Mail, Building2, Key
 } from 'lucide-react';
 import { reinitSupabase, getConnectionMode, testSupabaseConnection, supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/ToastContext';
 
 export const Settings = ({ 
   user, 
@@ -25,6 +26,7 @@ export const Settings = ({
   const [configTab, setConfigTab] = useState<
     'CONNECTION' | 'PAYMENTS' | 'NOTIFICATIONS' | 'COMPANY'
   >('CONNECTION');
+  const { showToast } = useToast();
 
   // Connection tab
   const [supabaseUrl, setSupabaseUrl] = useState(
@@ -199,7 +201,7 @@ export const Settings = ({
       updated_at: new Date().toISOString(),
     }, { onConflict: 'route_name' });
     if (error) {
-      alert(`Failed to save ${row.route} rate to the server: ${error.message}. This change will not appear on other devices.`);
+      showToast({ message: `Failed to save ${row.route} rate: ${error.message}`, type: 'error' });
     }
   };
 
@@ -217,7 +219,7 @@ export const Settings = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] p-4 space-y-6 pb-[100px] overflow-y-auto select-none font-sans">
+    <div className="flex flex-col min-h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] p-4 space-y-6 select-none font-sans">
       
       {/* Header back navigation */}
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
@@ -277,10 +279,11 @@ export const Settings = ({
 
                 {/* URL input */}
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                  <label htmlFor="settings-supabase-url" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
                     Supabase Project URL
                   </label>
                   <input
+                    id="settings-supabase-url"
                     type="text"
                     value={supabaseUrl}
                     onChange={e => setSupabaseUrl(e.target.value)}
@@ -291,11 +294,12 @@ export const Settings = ({
 
                 {/* Anon key input with show/hide */}
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                  <label htmlFor="settings-supabase-anon-key" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
                     Supabase Anon Key
                   </label>
                   <div className="relative">
                     <input
+                      id="settings-supabase-anon-key"
                       type={showAnonKey ? 'text' : 'password'}
                       value={supabaseAnonKey}
                       onChange={e => setSupabaseAnonKey(e.target.value)}
@@ -304,6 +308,7 @@ export const Settings = ({
                     />
                     <button
                       onClick={() => setShowAnonKey(!showAnonKey)}
+                      aria-label={showAnonKey ? 'Hide anon key' : 'Show anon key'}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] cursor-pointer bg-transparent border-none"
                     >
                       {showAnonKey ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -352,10 +357,11 @@ export const Settings = ({
             {configTab === 'PAYMENTS' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                  <label htmlFor="settings-paystack-key" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
                     Paystack Public Key
                   </label>
                   <input
+                    id="settings-paystack-key"
                     type="text"
                     value={paystackPublicKey}
                     onChange={e => setPaystackPublicKey(e.target.value)}
@@ -381,10 +387,11 @@ export const Settings = ({
             {configTab === 'NOTIFICATIONS' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                  <label htmlFor="settings-admin-phone" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
                     Admin Phone (EOD SMS/WhatsApp)
                   </label>
                   <input
+                    id="settings-admin-phone"
                     type="tel"
                     value={adminPhone}
                     onChange={e => setAdminPhone(e.target.value)}
@@ -393,10 +400,11 @@ export const Settings = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                  <label htmlFor="settings-admin-email" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
                     Admin Email (EOD Reports)
                   </label>
                   <input
+                    id="settings-admin-email"
                     type="email"
                     value={adminEmail}
                     onChange={e => setAdminEmail(e.target.value)}
@@ -422,20 +430,22 @@ export const Settings = ({
             {configTab === 'COMPANY' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                  <label htmlFor="settings-company-name" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
                     Company Name
                   </label>
                   <input
+                    id="settings-company-name"
                     value={companyName}
                     onChange={e => setCompanyName(e.target.value)}
                     className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[rgba(255,255,255,0.07)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                  <label htmlFor="settings-company-phone" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
                     Company Phone
                   </label>
                   <input
+                    id="settings-company-phone"
                     type="tel"
                     value={companyPhone}
                     onChange={e => setCompanyPhone(e.target.value)}
@@ -444,10 +454,11 @@ export const Settings = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                  <label htmlFor="settings-company-address" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
                     Company Address
                   </label>
                   <textarea
+                    id="settings-company-address"
                     value={companyAddress}
                     onChange={e => setCompanyAddress(e.target.value)}
                     rows={2}
@@ -477,8 +488,11 @@ export const Settings = ({
             <span className="text-[12px] font-bold text-[var(--color-foreground)] block">WhatsApp Business Integrations</span>
             <span className="text-[9px] text-[var(--color-muted)] font-mono block">SMS auto triggers on customer creation / delivery</span>
           </div>
-          <button 
+          <button
             onClick={() => setNotifyWhatsApp(!notifyWhatsApp)}
+            role="switch"
+            aria-checked={notifyWhatsApp}
+            aria-label="WhatsApp Business Integrations"
             className="text-[var(--color-success)] ml-3 cursor-pointer"
           >
             {notifyWhatsApp ? <ToggleRight size={38} className="text-[var(--color-success)]" /> : <ToggleLeft size={38} className="text-gray-600" />}
@@ -508,8 +522,11 @@ export const Settings = ({
             <span className="text-[12px] font-bold text-[var(--color-foreground)] block">Google Drive EOD dispatch</span>
             <span className="text-[9px] text-[var(--color-muted)] font-mono block font-mono">Archive daily PDF reports to cloud folder automatically</span>
           </div>
-          <button 
+          <button
             onClick={() => setDriveSync(!driveSync)}
+            role="switch"
+            aria-checked={driveSync}
+            aria-label="Google Drive EOD dispatch"
             className="text-[var(--color-success)] ml-3 cursor-pointer"
           >
             {driveSync ? <ToggleRight size={38} className="text-[var(--color-success)]" /> : <ToggleLeft size={38} className="text-gray-600" />}

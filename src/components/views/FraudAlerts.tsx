@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ShieldAlert, CheckCircle, RefreshCcw, Eye, AlertOctagon, Loader } from 'lucide-react';
 import { fmt } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
+import { useConfirm } from '../../lib/ConfirmContext';
 
 interface FraudAlert {
   id: string;
@@ -25,6 +26,7 @@ export const FraudAlerts = ({
   const [resolutionText, setResolutionText] = useState('');
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<FraudAlert[]>([]);
+  const confirm = useConfirm();
 
   useEffect(() => {
     const runDetectionRules = async () => {
@@ -143,8 +145,14 @@ export const FraudAlerts = ({
     setResolutionText('');
   };
 
-  const handleDismissAll = () => {
-    if (confirm('Resolve all pending fraud alarms? This logs blank administrative overrides.')) {
+  const handleDismissAll = async () => {
+    const ok = await confirm({
+      title: 'Resolve all alerts?',
+      message: 'Resolve all pending fraud alarms? This logs blank administrative overrides.',
+      confirmLabel: 'Resolve All',
+      tone: 'danger',
+    });
+    if (ok) {
       setAlerts(prev => prev.map(a => ({ ...a, reviewed: true, resolution: 'Batch resolved by Super Administrator' })));
     }
   };
@@ -153,7 +161,7 @@ export const FraudAlerts = ({
   const reviewedAlerts = alerts.filter(a => a.reviewed);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] overflow-y-auto pb-24 font-sans">
+    <div className="flex flex-col min-h-full bg-[var(--color-obsidian)] font-sans">
       <div className="ehi-page-body px-4 pt-4 text-[var(--color-foreground)]">
       {/* Header back navigation */}
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
@@ -297,7 +305,7 @@ export const FraudAlerts = ({
           <div className="ehi-card max-w-sm w-full overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface-2)]">
               <span className="text-[9px] font-mono text-[var(--color-error)] uppercase font-bold tracking-wider">SECURE SECURITY ANOMALY EVALUATION</span>
-              <button onClick={() => setSelectedAlert(null)} className="text-[var(--color-muted)] hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
+              <button onClick={() => setSelectedAlert(null)} aria-label="Close" className="text-[var(--color-muted)] hover:text-[var(--color-foreground)] font-mono text-xs cursor-pointer">✕</button>
             </div>
 
             <form onSubmit={handleReviewAlert} className="p-4 space-y-4 font-mono text-xs">
@@ -307,8 +315,9 @@ export const FraudAlerts = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-[8px] font-bold text-[var(--color-muted)] uppercase tracking-widest block">RESOLUTION LOG DESCRIPTION</label>
-                <textarea 
+                <label htmlFor="fraud-resolution-text" className="text-[8px] font-bold text-[var(--color-muted)] uppercase tracking-widest block">RESOLUTION LOG DESCRIPTION</label>
+                <textarea
+                  id="fraud-resolution-text"
                   required
                   rows={3}
                   value={resolutionText}

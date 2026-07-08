@@ -332,10 +332,11 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       ) : (
         <div className="space-y-4">
           <div>
-            <label className="ehi-label">Physical Cash Counted</label>
+            <label htmlFor="eod-physical-cash" className="ehi-label">Physical Cash Counted</label>
             <div className="relative">
-              <input 
-                type="number" 
+              <input
+                id="eod-physical-cash"
+                type="number"
                 value={countedCash}
                 onChange={e => setCountedCash(e.target.value === '' ? '' : Number(e.target.value))}
                 className={inputClass}
@@ -350,9 +351,10 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
             </div>
           </div>
           <div>
-            <label className="ehi-label">Bank Transfer Verified</label>
-            <input 
-              type="number" 
+            <label htmlFor="eod-bank-transfer" className="ehi-label">Bank Transfer Verified</label>
+            <input
+              id="eod-bank-transfer"
+              type="number"
               value={countedTransfer}
               onChange={e => setCountedTransfer(e.target.value === '' ? '' : Number(e.target.value))}
               className={inputClass}
@@ -360,9 +362,10 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
             <div className="text-[10px] text-[var(--color-muted)] font-mono mt-1">Expected: {fmt(expectedTotals.transferTotal)}</div>
           </div>
           <div>
-            <label className="ehi-label">POS Z-Report Total</label>
-            <input 
-              type="number" 
+            <label htmlFor="eod-pos-total" className="ehi-label">POS Z-Report Total</label>
+            <input
+              id="eod-pos-total"
+              type="number"
               value={countedPOS}
               onChange={e => setCountedPOS(e.target.value === '' ? '' : Number(e.target.value))}
               className={inputClass}
@@ -423,10 +426,11 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
         
         {needsReason && (
           <div className="mt-4 pt-4 border-t border-[var(--color-surface-2)]">
-            <label className="block text-[11px] font-mono text-[var(--color-error)] mb-2 uppercase tracking-wider flex items-center">
+            <label htmlFor="eod-variance-reason" className="block text-[11px] font-mono text-[var(--color-error)] mb-2 uppercase tracking-wider flex items-center">
               <AlertTriangle size={14} className="mr-1" /> Reason for Variance Required
             </label>
-            <textarea 
+            <textarea
+              id="eod-variance-reason"
               value={varianceReason}
               onChange={e => setVarianceReason(e.target.value)}
               className="ehi-input"
@@ -462,9 +466,10 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       </div>
 
       <div>
-        <label className="ehi-label">Manager Receiving (Optional)</label>
-        <input 
-          type="text" 
+        <label htmlFor="eod-manager-name" className="ehi-label">Manager Receiving (Optional)</label>
+        <input
+          id="eod-manager-name"
+          type="text"
           value={managerName}
           onChange={e => setManagerName(e.target.value)}
           className={inputClass}

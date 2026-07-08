@@ -281,7 +281,7 @@ export const ArrivalsView = ({ user, onBack }: { user: User; onBack: () => void 
           <span className="text-[11px] font-mono">Back</span>
         </button>
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● ARRIVALS</span>
-        <button onClick={() => activeTab === 'LOG' ? fetchLog() : fetchCargo()} className="p-1.5 rounded hover:bg-[var(--color-surface-2)] transition-colors">
+        <button onClick={() => activeTab === 'LOG' ? fetchLog() : fetchCargo()} aria-label="Refresh" className="p-1.5 rounded hover:bg-[var(--color-surface-2)] transition-colors">
           <RefreshCw size={14} className={`text-[var(--color-muted)] ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>

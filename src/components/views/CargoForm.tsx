@@ -44,6 +44,7 @@ import {
   buildCargoWhatsApp,
 } from "../../lib/notifications";
 import { supabase } from "../../lib/supabase";
+import { useToast } from "../../lib/ToastContext";
 
 interface CorporateClient {
   id: string;
@@ -124,6 +125,7 @@ export const CargoForm = ({
   const [corpSubTab, setCorpSubTab] = useState<
     "intake" | "weighing" | "directory"
   >("intake");
+  const { showToast } = useToast();
 
   const generateAwb = () => `AWB-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -477,7 +479,7 @@ export const CargoForm = ({
   // --- ACTION: LOG FIELD INTAKE (Phase 1) ---
   const handleLogFieldIntake = () => {
     if (!intakeAwb.trim()) {
-      alert("Please provide the Air Waybill / Tag Number.");
+      showToast({ message: "Please provide the Air Waybill / Tag Number.", type: "warning" });
       return;
     }
 
@@ -514,7 +516,7 @@ export const CargoForm = ({
 
     const weightNum = Math.round(parseFloat(gateWeight)) || 0;
     if (weightNum <= 0) {
-      alert("Please enter a valid verified weight in KG.");
+      showToast({ message: "Please enter a valid verified weight in KG.", type: "warning" });
       setIsWeighingSubmitting(false);
       return;
     }
@@ -534,7 +536,7 @@ export const CargoForm = ({
     if (customRateOverwrite) {
       const overwriteNum = parseFloat(customRateOverwrite);
       if (isNaN(overwriteNum) || overwriteNum <= 0) {
-        alert("Custom rate must be a positive number greater than zero.");
+        showToast({ message: "Custom rate must be a positive number greater than zero.", type: "warning" });
         setIsWeighingSubmitting(false);
         return;
       }
@@ -671,9 +673,10 @@ export const CargoForm = ({
 
     updateLocalCorpRates(updatedRates);
     setRatePrice("");
-    alert(
-      `Custom negotiated contract rate updated: ${selectedRateClient.company_name} Route ${rateRoute} set to ₦${priceNum}/KG`,
-    );
+    showToast({
+      message: `Rate updated: ${selectedRateClient.company_name} Route ${rateRoute} set to ₦${priceNum}/KG`,
+      type: "success",
+    });
   };
 
   // --- RETAIL BILLING SUBMIT ---
@@ -756,7 +759,7 @@ export const CargoForm = ({
       p_hub_code: hubCode,
     });
     if (awbError) {
-      alert(`Failed to generate AWB number: ${awbError.message}. Please try again.`);
+      showToast({ message: `Failed to generate AWB number: ${awbError.message}. Please try again.`, type: "error" });
       setSubmitting(false);
       return;
     }
@@ -766,9 +769,10 @@ export const CargoForm = ({
     // delivery -- a duplicated physical tag makes two shipments share one
     // tracking history and is a common consign-fraud pattern.
     if (await isTagAlreadyDelivered(resolvedAwb)) {
-      alert(
-        `${resolvedAwb} was already delivered on a previous consignment. This tag cannot be reused -- generate a new one.`,
-      );
+      showToast({
+        message: `${resolvedAwb} was already delivered on a previous consignment. This tag cannot be reused -- generate a new one.`,
+        type: "error",
+      });
       setSubmitting(false);
       return;
     }
@@ -1053,6 +1057,7 @@ export const CargoForm = ({
                     }
                     className="text-[var(--color-accent-amber)] hover:text-[var(--color-foreground)] transition-colors"
                     title="Copy PIN"
+                    aria-label="Copy PIN"
                   >
                     <Copy size={14} />
                   </button>
@@ -2083,11 +2088,12 @@ export const CargoForm = ({
 
                     {/* SCALE SIMULATION FOR INTEGRATION LOOKS POPULAR */}
                     <div className="mb-6">
-                      <label className="text-[11px] font-medium text-[var(--color-muted)] block mb-1.5">
+                      <label htmlFor="cargo-gate-weight" className="text-[11px] font-medium text-[var(--color-muted)] block mb-1.5">
                         Commercial Scale Verified Weight (KG)
                       </label>
                       <div className="relative">
                         <input
+                          id="cargo-gate-weight"
                           type="number"
                           step="1"
                           min="1"
@@ -2137,10 +2143,11 @@ export const CargoForm = ({
                         {/* RBAC OVERWRITE PRICING LOCK */}
                         {isAuthorizedRole ? (
                           <div className="pt-2 border-t border-[var(--color-border)]">
-                            <label className="text-[10px] text-[var(--color-muted)] block mb-1.5">
+                            <label htmlFor="cargo-custom-rate-overwrite" className="text-[10px] text-[var(--color-muted)] block mb-1.5">
                               Admin Custom Rate Overwrite (₦/KG):
                             </label>
                             <input
+                              id="cargo-custom-rate-overwrite"
                               type="number"
                               placeholder="Leave empty for default"
                               value={customRateOverwrite}

@@ -3,6 +3,7 @@ import { CARGO_ROUTES } from '../../lib/constants';
 import { Save, Plus, ArrowLeft, Trash2, Edit3, Building, DollarSign, Plane } from 'lucide-react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/ToastContext';
 
 export interface CorporateClient {
   id: string;
@@ -28,6 +29,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   const [selectedRateClient, setSelectedRateClient] = useState<CorporateClient | null>(null);
   const [rateRoute, setRateRoute] = useState(CARGO_ROUTES[0]);
   const [ratePrice, setRatePrice] = useState('');
+  const { showToast } = useToast();
 
   // VJ settings and the BB/MB/SB pricing matrix used to be localStorage-only
   // -- a value set on one device was invisible everywhere else. Both now
@@ -66,7 +68,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
     }, { onConflict: 'config_key' });
     setVjSaving(false);
     if (error) {
-      alert(`Failed to save VJ settings: ${error.message}. Not saved to other devices -- try again.`);
+      showToast({ message: `Failed to save VJ settings: ${error.message}`, type: 'error' });
       return;
     }
     localStorage.setItem('ehi_vj_free_kg', vjFreeKg);
@@ -112,7 +114,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
       updated_at: new Date().toISOString(),
     }, { onConflict: 'route_name' });
     if (error) {
-      alert(`Failed to save ${row.route} rate to the server: ${error.message}. This change will not appear on other devices.`);
+      showToast({ message: `Failed to save ${row.route} rate: ${error.message}`, type: 'error' });
     }
   };
 
@@ -170,7 +172,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
       // rate that was never actually saved, and every other device keeps
       // using the real (unchanged) server value.
       setStandardRates(prev);
-      alert(`Failed to save ${route} rate: ${error.message}. Not saved to other devices -- try again.`);
+      showToast({ message: `Failed to save ${route} rate: ${error.message}`, type: 'error' });
     }
   };
 
@@ -193,7 +195,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
       // in this browser's memory (e.g. a duplicate company_name rejected
       // by the DB's unique constraint) would look real here but be
       // invisible on every other device.
-      alert(`Failed to create ${newClientName}: ${error.message}`);
+      showToast({ message: `Failed to create ${newClientName}: ${error.message}`, type: 'error' });
       return;
     }
 
@@ -224,7 +226,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
     }, { onConflict: 'corporate_client_id,route_name' }).select().single();
 
     if (error) {
-      alert(`Failed to save rate: ${error.message}. Not saved to other devices -- try again.`);
+      showToast({ message: `Failed to save rate: ${error.message}`, type: 'error' });
       return;
     }
 
@@ -244,7 +246,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4 mb-4">
-        <button onClick={onBack} className="p-2 hover:bg-[var(--color-surface-2)] rounded-full transition-colors text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
+        <button onClick={onBack} aria-label="Back" className="p-2 hover:bg-[var(--color-surface-2)] rounded-full transition-colors text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
           <ArrowLeft size={20} />
         </button>
         <div>
@@ -263,8 +265,9 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">VJ FREE ALLOWANCE (KG)</label>
-              <input 
+              <label htmlFor="vj-free-kg" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">VJ FREE ALLOWANCE (KG)</label>
+              <input
+                id="vj-free-kg"
                 type="number"
                 value={vjFreeKg}
                 onChange={(e) => setVjFreeKg(e.target.value)}
@@ -272,8 +275,9 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
               />
             </div>
             <div>
-              <label className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">VJ RATE ₦/KG</label>
-              <input 
+              <label htmlFor="vj-rate-per-kg" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">VJ RATE ₦/KG</label>
+              <input
+                id="vj-rate-per-kg"
                 type="number"
                 value={vjRatePerKg}
                 onChange={(e) => setVjRatePerKg(e.target.value)}
@@ -306,8 +310,9 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
               <span className="text-[11px] font-bold text-[var(--color-foreground)] uppercase tracking-wide block">{r.route}</span>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">BB BAG (₦)</label>
-                  <input 
+                  <label htmlFor={`bb-${r.id}`} className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">BB BAG (₦)</label>
+                  <input
+                    id={`bb-${r.id}`}
                     type="number"
                     value={r.bb}
                     onChange={(e) => handlePriceUpdate(r.id, 'bb', e.target.value)}
@@ -315,8 +320,9 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                   />
                 </div>
                 <div>
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">MB BAG (₦)</label>
-                  <input 
+                  <label htmlFor={`mb-${r.id}`} className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">MB BAG (₦)</label>
+                  <input
+                    id={`mb-${r.id}`}
                     type="number"
                     value={r.mb}
                     onChange={(e) => handlePriceUpdate(r.id, 'mb', e.target.value)}
@@ -324,8 +330,9 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                   />
                 </div>
                 <div>
-                  <label className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">SB BAG (₦)</label>
-                  <input 
+                  <label htmlFor={`sb-${r.id}`} className="text-[8px] font-mono text-[var(--color-muted)] block mb-1">SB BAG (₦)</label>
+                  <input
+                    id={`sb-${r.id}`}
                     type="number"
                     value={r.sb}
                     onChange={(e) => handlePriceUpdate(r.id, 'sb', e.target.value)}
@@ -412,8 +419,9 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                   <div className="bg-[var(--color-surface-2)] p-4 rounded-lg border border-[var(--color-border)] space-y-4">
                     <div className="flex flex-col space-y-3">
                       <div>
-                        <label className="text-[11px] font-medium text-[var(--color-muted)] block mb-1.5">Route</label>
+                        <label htmlFor="corp-route" className="text-[11px] font-medium text-[var(--color-muted)] block mb-1.5">Route</label>
                         <select
+                          id="corp-route"
                           value={rateRoute}
                           onChange={(e) => setRateRoute(e.target.value)}
                           className="w-full bg-[var(--color-bg)] border border-[var(--color-surface-2)] rounded-md px-3 py-2 text-[13px] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
@@ -422,8 +430,9 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                         </select>
                       </div>
                       <div>
-                        <label className="text-[11px] font-medium text-[var(--color-muted)] block mb-1.5">Tariff (₦/KG)</label>
-                        <input 
+                        <label htmlFor="corp-tariff" className="text-[11px] font-medium text-[var(--color-muted)] block mb-1.5">Tariff (₦/KG)</label>
+                        <input
+                          id="corp-tariff"
                           type="number"
                           value={ratePrice}
                           onChange={(e) => setRatePrice(e.target.value)}

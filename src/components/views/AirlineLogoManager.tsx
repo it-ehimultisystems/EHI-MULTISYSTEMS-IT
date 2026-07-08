@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { User } from '../../lib/types';
-import { ArrowLeft, Upload, Trash2, Plane, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Plane, Loader2 } from 'lucide-react';
 import { listAirlineLogos, uploadAirlineLogo, deleteAirlineLogo } from '../../lib/airlineLogos';
+import { useToast } from '../../lib/ToastContext';
+import { useConfirm } from '../../lib/ConfirmContext';
 
 export const AirlineLogoManager = ({ user, onBack }: { user: User; onBack: () => void }) => {
   const [logos, setLogos] = useState<Array<{ name: string; slug: string; url: string }>>([]);
@@ -9,38 +11,43 @@ export const AirlineLogoManager = ({ user, onBack }: { user: User; onBack: () =>
   const [uploading, setUploading] = useState(false);
   const [newAirlineName, setNewAirlineName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [toast, setToast] = useState('');
+  const { showToast } = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     listAirlineLogos().then(data => { setLogos(data); setLoading(false); });
   }, []);
-
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   const handleUpload = async () => {
     if (!newAirlineName.trim() || !selectedFile) return;
     setUploading(true);
     try {
       await uploadAirlineLogo(newAirlineName.trim(), selectedFile);
-      showToast(`Logo uploaded for ${newAirlineName.trim()}`);
+      showToast({ message: `Logo uploaded for ${newAirlineName.trim()}`, type: 'success' });
       setNewAirlineName('');
       setSelectedFile(null);
       const updated = await listAirlineLogos();
       setLogos(updated);
     } catch (e: any) {
-      showToast('Upload failed: ' + e.message);
+      showToast({ message: 'Upload failed: ' + e.message, type: 'error' });
     }
     setUploading(false);
   };
 
   const handleDelete = async (name: string) => {
-    if (!window.confirm(`Remove logo for ${name}?`)) return;
+    const ok = await confirm({
+      title: 'Remove logo?',
+      message: `Remove logo for ${name}?`,
+      confirmLabel: 'Remove',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await deleteAirlineLogo(name);
       setLogos(prev => prev.filter(l => l.name !== name));
-      showToast(`Logo removed for ${name}`);
+      showToast({ message: `Logo removed for ${name}`, type: 'success' });
     } catch (e: any) {
-      showToast('Delete failed: ' + e.message);
+      showToast({ message: 'Delete failed: ' + e.message, type: 'error' });
     }
   };
 
@@ -71,8 +78,9 @@ export const AirlineLogoManager = ({ user, onBack }: { user: User; onBack: () =>
             </div>
 
             <div className="space-y-1.5">
-              <label className="ehi-label">Airline Name (exactly as entered in Cargo Form)</label>
+              <label htmlFor="airline-logo-name" className="ehi-label">Airline Name (exactly as entered in Cargo Form)</label>
               <input
+                id="airline-logo-name"
                 value={newAirlineName}
                 onChange={e => setNewAirlineName(e.target.value)}
                 placeholder="e.g. Overland Airways"
@@ -81,8 +89,9 @@ export const AirlineLogoManager = ({ user, onBack }: { user: User; onBack: () =>
             </div>
 
             <div className="space-y-1.5">
-              <label className="ehi-label">Logo File (PNG recommended)</label>
+              <label htmlFor="airline-logo-file" className="ehi-label">Logo File (PNG recommended)</label>
               <input
+                id="airline-logo-file"
                 type="file"
                 accept="image/png,image/jpeg,image/gif"
                 onChange={e => setSelectedFile(e.target.files?.[0] || null)}
@@ -136,6 +145,7 @@ export const AirlineLogoManager = ({ user, onBack }: { user: User; onBack: () =>
                     </div>
                     <button
                       onClick={() => handleDelete(logo.name)}
+                      aria-label={`Remove logo for ${logo.name}`}
                       className="p-1.5 text-[var(--color-error)] hover:bg-[rgba(239,68,68,0.1)] rounded transition-colors"
                     >
                       <Trash2 size={14} />
@@ -162,12 +172,6 @@ export const AirlineLogoManager = ({ user, onBack }: { user: User; onBack: () =>
         </div>
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg px-4 py-2 text-[12px] font-mono text-[var(--color-foreground)] z-50 flex items-center gap-2">
-          <CheckCircle size={12} className="text-[var(--color-success)]" /> {toast}
-        </div>
-      )}
     </div>
   );
 };

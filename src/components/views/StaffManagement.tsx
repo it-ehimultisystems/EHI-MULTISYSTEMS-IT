@@ -212,13 +212,13 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       {error && (
         <div className="mx-4 mt-3 p-3 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-lg flex items-center gap-2 text-[12px] text-[var(--color-error)]">
           <AlertTriangle size={14} />{error}
-          <button onClick={() => setError('')} className="ml-auto font-mono">✕</button>
+          <button onClick={() => setError('')} aria-label="Dismiss" className="ml-auto font-mono">✕</button>
         </div>
       )}
       {success && (
         <div className="mx-4 mt-3 p-3 bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.3)] rounded-lg flex items-center gap-2 text-[12px] text-[var(--color-success)]">
           <Check size={14} />{success}
-          <button onClick={() => setSuccess('')} className="ml-auto font-mono">✕</button>
+          <button onClick={() => setSuccess('')} aria-label="Dismiss" className="ml-auto font-mono">✕</button>
         </div>
       )}
 
@@ -238,7 +238,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
             {hubs.map(h => <option key={h.id} value={h.id}>{h.code} — {h.name}</option>)}
           </select>
         )}
-        <button onClick={loadData} className="p-2 ehi-card border border-[var(--color-border)] rounded-lg hover:border-[var(--color-accent-amber)] transition-colors">
+        <button onClick={loadData} aria-label="Refresh" className="p-2 ehi-card border border-[var(--color-border)] rounded-lg hover:border-[var(--color-accent-amber)] transition-colors">
           <RefreshCw size={14} className="text-[var(--color-muted)]" />
         </button>
         {isAdmin && (
@@ -329,6 +329,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     onClick={() => setEditingStaff(member)}
                     className="p-1.5 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded hover:border-[var(--color-accent-amber)] transition-colors"
                     title="Edit role / hub"
+                    aria-label={`Edit ${member.name}`}
                   >
                     <Edit2 size={12} className="text-[var(--color-muted)]" />
                   </button>
@@ -340,6 +341,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                         ? 'bg-[rgba(239,68,68,0.08)] border-[rgba(239,68,68,0.2)] hover:border-[var(--color-error)]'
                         : 'bg-[rgba(16,185,129,0.08)] border-[rgba(16,185,129,0.2)] hover:border-[var(--color-success)]'}`}
                       title={member.active ? 'Deactivate account' : 'Reactivate account'}
+                      aria-label={member.active ? `Deactivate ${member.name}` : `Reactivate ${member.name}`}
                     >
                       {member.active
                         ? <UserX size={12} className="text-[var(--color-error)]" />
@@ -359,21 +361,22 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
           <div className="ehi-card w-full max-w-sm rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface-card)]">
               <span className="text-[12px] font-bold text-[var(--color-foreground)]">Create Staff Account</span>
-              <button onClick={() => setShowCreate(false)} className="text-[var(--color-muted)] font-mono text-lg leading-none">✕</button>
+              <button onClick={() => setShowCreate(false)} aria-label="Close" className="text-[var(--color-muted)] font-mono text-lg leading-none">✕</button>
             </div>
             <div className="p-4 space-y-3 overflow-y-auto max-h-[70vh]">
               <div>
-                <label className="ehi-label">Full Name *</label>
-                <input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} placeholder="e.g. Chukwudi Emmanuel" className="ehi-input" />
+                <label htmlFor="staff-create-name" className="ehi-label">Full Name *</label>
+                <input id="staff-create-name" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} placeholder="e.g. Chukwudi Emmanuel" className="ehi-input" />
               </div>
               <div>
-                <label className="ehi-label">Email Address *</label>
-                <input type="email" value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value.toLowerCase().trim()}))} placeholder="chukwudi@ehimultisystems.com" className="ehi-input" />
+                <label htmlFor="staff-create-email" className="ehi-label">Email Address *</label>
+                <input id="staff-create-email" type="email" value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value.toLowerCase().trim()}))} placeholder="chukwudi@ehimultisystems.com" className="ehi-input" />
               </div>
               <div>
-                <label className="ehi-label">Temporary Password *</label>
+                <label htmlFor="staff-create-password" className="ehi-label">Temporary Password *</label>
                 <div className="relative">
                   <input
+                    id="staff-create-password"
                     type={showPassword ? 'text' : 'password'}
                     value={form.password}
                     onChange={e => setForm(f => ({...f, password: e.target.value}))}
@@ -381,6 +384,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     className="ehi-input pr-10"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]">
                     {showPassword ? <EyeOff size={14}/> : <Eye size={14}/>}
                   </button>
@@ -388,16 +392,16 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                 <p className="text-[9px] text-[var(--color-muted)] mt-1">Staff must change this after first login.</p>
               </div>
               <div>
-                <label className="ehi-label">Role *</label>
-                <select value={form.role} onChange={e => setForm(f => ({...f, role: e.target.value}))} className="ehi-input">
+                <label htmlFor="staff-create-role" className="ehi-label">Role *</label>
+                <select id="staff-create-role" value={form.role} onChange={e => setForm(f => ({...f, role: e.target.value}))} className="ehi-input">
                   {ROLES.filter(r => isSuperAdmin || r.value !== 'super_admin').map(r => (
                     <option key={r.value} value={r.value}>{r.label} — {r.desc}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="ehi-label">Station / Hub *</label>
-                <select value={form.hub_id} onChange={e => setForm(f => ({...f, hub_id: e.target.value}))} className="ehi-input">
+                <label htmlFor="staff-create-hub" className="ehi-label">Station / Hub *</label>
+                <select id="staff-create-hub" value={form.hub_id} onChange={e => setForm(f => ({...f, hub_id: e.target.value}))} className="ehi-input">
                   <option value="">Select hub...</option>
                   {hubs
                     .filter(h => isSuperAdmin || h.id === user.hub_id)
@@ -406,8 +410,8 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                 </select>
               </div>
               <div>
-                <label className="ehi-label">Phone Number (optional)</label>
-                <input value={form.phone} onChange={e => setForm(f => ({...f, phone: e.target.value}))} placeholder="+234 800 000 0000" className="ehi-input" />
+                <label htmlFor="staff-create-phone" className="ehi-label">Phone Number (optional)</label>
+                <input id="staff-create-phone" value={form.phone} onChange={e => setForm(f => ({...f, phone: e.target.value}))} placeholder="+234 800 000 0000" className="ehi-input" />
               </div>
 
               {error && (
@@ -434,13 +438,14 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                 <span className="text-[12px] font-bold text-[var(--color-foreground)]">Edit Staff Profile</span>
                 <div className="text-[10px] text-[var(--color-muted)] font-mono">{editingStaff.email}</div>
               </div>
-              <button onClick={() => setEditingStaff(null)} className="text-[var(--color-muted)] font-mono text-lg leading-none">✕</button>
+              <button onClick={() => setEditingStaff(null)} aria-label="Close" className="text-[var(--color-muted)] font-mono text-lg leading-none">✕</button>
             </div>
             <div className="p-4 space-y-3 max-h-[75vh] overflow-y-auto">
               {/* Name */}
               <div>
-                <label className="ehi-label">Full Name</label>
+                <label htmlFor="staff-edit-name" className="ehi-label">Full Name</label>
                 <input
+                  id="staff-edit-name"
                   value={editingStaff.name}
                   onChange={e => setEditingStaff(s => s ? {...s, name: e.target.value} : null)}
                   className="ehi-input"
@@ -448,8 +453,9 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
               </div>
               {/* Phone */}
               <div>
-                <label className="ehi-label">Phone Number</label>
+                <label htmlFor="staff-edit-phone" className="ehi-label">Phone Number</label>
                 <input
+                  id="staff-edit-phone"
                   value={editingStaff.phone || ''}
                   onChange={e => setEditingStaff(s => s ? {...s, phone: e.target.value} : null)}
                   placeholder="+234 800 000 0000"
@@ -458,8 +464,9 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
               </div>
               {/* Role */}
               <div>
-                <label className="ehi-label">Role</label>
+                <label htmlFor="staff-edit-role" className="ehi-label">Role</label>
                 <select
+                  id="staff-edit-role"
                   value={editingStaff.role}
                   onChange={e => setEditingStaff(s => s ? {...s, role: e.target.value} : null)}
                   className="ehi-input"
@@ -472,8 +479,9 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
               {/* Hub (super_admin only) */}
               {isSuperAdmin && (
                 <div>
-                  <label className="ehi-label">Station / Hub</label>
+                  <label htmlFor="staff-edit-hub" className="ehi-label">Station / Hub</label>
                   <select
+                    id="staff-edit-hub"
                     value={editingStaff.hub_id}
                     onChange={e => setEditingStaff(s => s ? {...s, hub_id: e.target.value} : null)}
                     className="ehi-input"
@@ -498,6 +506,9 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     </div>
                     <button
                       onClick={() => setEditingStaff(s => s ? {...s, can_print_ledger: !s.can_print_ledger} : null)}
+                      role="switch"
+                      aria-checked={editingStaff.can_print_ledger}
+                      aria-label="Ledger edit permission"
                       className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors ml-3 ${
                         editingStaff.can_print_ledger
                           ? 'bg-[var(--color-accent-amber)] border-[var(--color-accent-amber)]'

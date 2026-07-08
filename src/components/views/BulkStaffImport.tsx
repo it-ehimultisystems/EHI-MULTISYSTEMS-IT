@@ -114,7 +114,7 @@ export const BulkStaffImport = ({ hubCodes, onClose, onImported }: Props) => {
       <div className="ehi-card w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg">
         <div className="flex items-center justify-between p-5 border-b border-[var(--color-border)]">
           <h2 className="text-[15px] font-sans font-bold text-[var(--color-foreground)]">Bulk Staff Import</h2>
-          <button onClick={onClose} className="text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
+          <button onClick={onClose} aria-label="Close" className="text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
             <X size={20} />
           </button>
         </div>

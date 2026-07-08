@@ -135,7 +135,7 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
   }[s] || 'text-[var(--color-muted)]');
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] overflow-y-auto pb-24">
+    <div className="flex flex-col min-h-full bg-[var(--color-obsidian)]">
       <div className="ehi-page-body px-4 pt-4 text-[var(--color-foreground)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
         <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
@@ -231,12 +231,12 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
           <div className="ehi-card max-w-sm w-full">
             <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center">
               <span className="text-[11px] font-mono font-bold">Register Vehicle</span>
-              <button onClick={() => setShowAddVehicle(false)} className="text-[var(--color-muted)] font-mono">✕</button>
+              <button onClick={() => setShowAddVehicle(false)} aria-label="Close" className="text-[var(--color-muted)] font-mono">✕</button>
             </div>
             <form onSubmit={handleAddVehicle} className="p-4 space-y-3">
               <div className="space-y-1">
-                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Vehicle Type</label>
-                <select value={type} onChange={e => setType(e.target.value)} className="w-full ehi-input text-[12px]">
+                <label htmlFor="fleet-vehicle-type" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Vehicle Type</label>
+                <select id="fleet-vehicle-type" value={type} onChange={e => setType(e.target.value)} className="w-full ehi-input text-[12px]">
                   <option value="Van">Van</option>
                   <option value="Truck">Truck</option>
                   <option value="Pickup">Pickup</option>
@@ -246,27 +246,27 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Plate No.</label>
-                  <input required type="text" value={plate} onChange={e => setPlate(e.target.value)} placeholder="LAG-404AA" className="w-full ehi-input text-[12px] uppercase" />
+                  <label htmlFor="fleet-vehicle-plate" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Plate No.</label>
+                  <input id="fleet-vehicle-plate" required type="text" value={plate} onChange={e => setPlate(e.target.value)} placeholder="LAG-404AA" className="w-full ehi-input text-[12px] uppercase" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Load Limit (kg)</label>
-                  <input type="number" value={capacity} onChange={e => setCapacity(e.target.value)} className="w-full ehi-input text-[12px]" />
+                  <label htmlFor="fleet-vehicle-capacity" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Load Limit (kg)</label>
+                  <input id="fleet-vehicle-capacity" type="number" value={capacity} onChange={e => setCapacity(e.target.value)} className="w-full ehi-input text-[12px]" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Make</label>
-                  <input required type="text" value={make} onChange={e => setMake(e.target.value)} placeholder="Toyota" className="w-full ehi-input text-[12px]" />
+                  <label htmlFor="fleet-vehicle-make" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Make</label>
+                  <input id="fleet-vehicle-make" required type="text" value={make} onChange={e => setMake(e.target.value)} placeholder="Toyota" className="w-full ehi-input text-[12px]" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Model</label>
-                  <input type="text" value={model} onChange={e => setModel(e.target.value)} placeholder="Hiace" className="w-full ehi-input text-[12px]" />
+                  <label htmlFor="fleet-vehicle-model" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Model</label>
+                  <input id="fleet-vehicle-model" type="text" value={model} onChange={e => setModel(e.target.value)} placeholder="Hiace" className="w-full ehi-input text-[12px]" />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Driver Name</label>
-                <input type="text" value={driver} onChange={e => setDriver(e.target.value)} placeholder="Driver Tunde" className="w-full ehi-input text-[12px]" />
+                <label htmlFor="fleet-vehicle-driver" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Driver Name</label>
+                <input id="fleet-vehicle-driver" type="text" value={driver} onChange={e => setDriver(e.target.value)} placeholder="Driver Tunde" className="w-full ehi-input text-[12px]" />
               </div>
               <div className="flex gap-2 pt-1">
                 <button type="submit" className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[11px] py-2.5 rounded">Add Vehicle</button>
@@ -283,12 +283,12 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
           <div className="ehi-card max-w-sm w-full">
             <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center">
               <span className="text-[11px] font-mono font-bold">Log Fuel</span>
-              <button onClick={() => setShowAddFuel(false)} className="text-[var(--color-muted)] font-mono">✕</button>
+              <button onClick={() => setShowAddFuel(false)} aria-label="Close" className="text-[var(--color-muted)] font-mono">✕</button>
             </div>
             <form onSubmit={handleAddFuel} className="p-4 space-y-3">
               <div className="space-y-1">
-                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Vehicle Plate</label>
-                <select value={fuelPlate} onChange={e => setFuelPlate(e.target.value)} required className="w-full ehi-input text-[12px]">
+                <label htmlFor="fleet-fuel-plate" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Vehicle Plate</label>
+                <select id="fleet-fuel-plate" value={fuelPlate} onChange={e => setFuelPlate(e.target.value)} required className="w-full ehi-input text-[12px]">
                   <option value="">Select vehicle...</option>
                   {vehicles.map(v => (
                     <option key={v.id} value={v.plate}>{v.plate} · {v.driver}</option>
@@ -297,17 +297,17 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Litres</label>
-                  <input required type="number" value={litres} onChange={e => setLitres(e.target.value)} placeholder="e.g. 45" className="w-full ehi-input text-[12px]" />
+                  <label htmlFor="fleet-fuel-litres" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Litres</label>
+                  <input id="fleet-fuel-litres" required type="number" value={litres} onChange={e => setLitres(e.target.value)} placeholder="e.g. 45" className="w-full ehi-input text-[12px]" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Rate/L (₦)</label>
-                  <input type="number" value={costPerLitre} onChange={e => setCostPerLitre(e.target.value)} className="w-full ehi-input text-[12px]" />
+                  <label htmlFor="fleet-fuel-rate" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Rate/L (₦)</label>
+                  <input id="fleet-fuel-rate" type="number" value={costPerLitre} onChange={e => setCostPerLitre(e.target.value)} className="w-full ehi-input text-[12px]" />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Station Name</label>
-                <input type="text" value={station} onChange={e => setStation(e.target.value)} placeholder="e.g. BOVAS Ikeja" className="w-full ehi-input text-[12px]" />
+                <label htmlFor="fleet-fuel-station" className="text-[9px] font-mono text-[var(--color-muted)] uppercase">Station Name</label>
+                <input id="fleet-fuel-station" type="text" value={station} onChange={e => setStation(e.target.value)} placeholder="e.g. BOVAS Ikeja" className="w-full ehi-input text-[12px]" />
               </div>
               <div className="flex gap-2 pt-1">
                 <button type="submit" className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[11px] py-2.5 rounded">Save Log</button>

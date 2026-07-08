@@ -356,8 +356,9 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                                  <div className="space-y-3">
                                    <div className="flex gap-3">
                                      <div className="flex-1">
-                                       <label className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Amount ₦</label>
-                                       <input 
+                                       <label htmlFor={`payment-amount-${d.id}`} className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Amount ₦</label>
+                                       <input
+                                         id={`payment-amount-${d.id}`}
                                          type="number"
                                          value={paymentAmount}
                                          onChange={e => setPaymentAmount(e.target.value)}
@@ -366,8 +367,9 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
                                        />
                                      </div>
                                      <div className="flex-1">
-                                       <label className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Mode</label>
-                                       <select 
+                                       <label htmlFor={`payment-mode-${d.id}`} className="text-[11px] font-sans text-[var(--color-muted)] block mb-1">Mode</label>
+                                       <select
+                                         id={`payment-mode-${d.id}`}
                                          value={paymentMode}
                                          onChange={e => setPaymentMode(e.target.value as any)}
                                          className="w-full h-10 bg-[var(--color-surface-card)] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 text-[var(--color-foreground)] font-sans text-[13px] focus:outline-none"
