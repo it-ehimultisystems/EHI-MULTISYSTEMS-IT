@@ -43,7 +43,6 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
 
   const tabs = getTabsForRole(user.role);
   const activeIndex = Math.max(0, tabs.findIndex(tab => tab.id === currentTab));
-  const bubbleLeftPercent = (activeIndex + 0.5) * (100 / tabs.length);
 
   return (
     <div
@@ -62,7 +61,7 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
         aria-current="page"
         className="absolute rounded-full flex items-center justify-center transition-[left] duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)]"
         style={{
-          left: `${bubbleLeftPercent}%`,
+          left: `calc(16px + (100% - 32px) * ${(activeIndex + 0.5) / tabs.length})`,
           transform: 'translateX(-50%)',
           bottom: 36,
           width: 46,
