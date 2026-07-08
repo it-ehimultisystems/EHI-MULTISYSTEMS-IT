@@ -181,7 +181,7 @@ export const FraudAlerts = ({
         {pendingAlerts.length > 0 && (
           <button 
             onClick={handleDismissAll}
-            className="bg-neutral-800 hover:bg-neutral-750 text-[var(--color-foreground)] font-mono text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-all cursor-pointer"
+            className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] font-mono text-[10px] uppercase font-bold px-3 py-1.5 rounded transition-all cursor-pointer"
           >
             Acknowledge All
           </button>
@@ -265,7 +265,7 @@ export const FraudAlerts = ({
                   <span className={`text-[8.5px] uppercase font-bold px-2 py-0.5 rounded-md ${
                     alert.severity === 'critical' ? 'bg-red-500/15 text-red-400' :
                     alert.severity === 'high' ? 'bg-amber-500/15 text-amber-400' :
-                    'bg-zinc-800 text-[var(--color-muted)]'
+                    'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
                   }`}>
                     {alert.severity} Risk
                   </span>

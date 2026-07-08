@@ -176,7 +176,7 @@ export const APIDashboard = ({
             <div className="p-3 bg-black/45 rounded-lg border border-solid border-[var(--color-border)] space-y-2">
               <span className="text-[10.5px] font-bold text-[var(--color-accent-cobalt)] uppercase block mb-1">Authenticates Request Header:</span>
               <p className="text-[11px] leading-relaxed text-slate-300">Include your private credentials token in the headers sequence of every JSON API payload:</p>
-              <pre className="p-2 bg-neutral-900 rounded font-bold text-slate-200">X-Api-Key: ehi_live_f7a2d8xxxxxxxxxxxxxxxx</pre>
+              <pre className="p-2 bg-[var(--color-surface-3)] rounded font-bold text-[var(--color-foreground)]">X-Api-Key: ehi_live_f7a2d8xxxxxxxxxxxxxxxx</pre>
             </div>
 
             {/* Endpoints specs */}
@@ -192,7 +192,7 @@ export const APIDashboard = ({
                 <p className="text-[11px] text-slate-400">Log a new Cargo entry automatically into EHI operations cockpit.</p>
                 
                 <span className="text-[9.5px] font-extrabold text-slate-500 block uppercase mt-1">Payload Body Parameters:</span>
-                <pre className="p-2.5 bg-neutral-950/40 rounded text-[10px] text-slate-400 whitespace-pre">
+                <pre className="p-2.5 bg-[var(--color-surface-3)] rounded text-[10px] text-[var(--color-muted)] whitespace-pre">
 {`{
   "consignee_name": "Aramex Ltd",
   "awb_tag_number": "AWB-88392",
@@ -309,7 +309,7 @@ export const APIDashboard = ({
                     <button 
                       type="button"
                       onClick={() => setShowAddKeyModal(false)}
-                      className="bg-neutral-800 text-slate-300 font-mono text-[10px] uppercase font-bold px-4 rounded hover:bg-neutral-700 cursor-pointer"
+                      className="bg-[var(--color-surface-2)] text-[var(--color-foreground)] font-mono text-[10px] uppercase font-bold px-4 rounded hover:bg-[var(--color-surface-3)] cursor-pointer"
                     >
                       Cancel
                     </button>

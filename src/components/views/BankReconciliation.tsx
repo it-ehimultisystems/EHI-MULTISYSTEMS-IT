@@ -314,7 +314,7 @@ export const BankReconciliation = ({
            {matchedBtxCount} of {bankTxList.length} transactions matched. Saved to accounting ledger.
          </p>
          <div className="flex space-x-3">
-           <button onClick={downloadReport} className="flex items-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-[var(--color-foreground)] font-sans text-[13px] font-medium px-5 py-2.5 rounded-lg transition-colors">
+           <button onClick={downloadReport} className="flex items-center space-x-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] font-sans text-[13px] font-medium px-5 py-2.5 rounded-lg transition-colors">
              <Download size={16} /> <span>Download Report</span>
            </button>
            <button onClick={onBack} className="flex items-center space-x-2 bg-[var(--color-accent-cobalt)] hover:bg-opacity-90 text-white font-sans text-[13px] font-bold px-5 py-2.5 rounded-lg transition-colors">

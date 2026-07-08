@@ -324,7 +324,7 @@ export const Forecasting = ({
                     <td className="py-3 px-2">
                       <span className={`px-2 py-1 rounded text-[9.5px] uppercase font-bold block text-center max-w-[50px] ${
                         heatmap.Mon === 'high' ? 'bg-amber-500/20 text-[var(--color-accent-amber)]' :
-                        heatmap.Mon === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-neutral-800 text-slate-500'
+                        heatmap.Mon === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
                       }`}>
                         {heatmap.Mon}
                       </span>
@@ -332,7 +332,7 @@ export const Forecasting = ({
                     <td className="py-3 px-2">
                       <span className={`px-2 py-1 rounded text-[9.5px] uppercase font-bold block text-center max-w-[50px] ${
                         heatmap.Tue === 'high' ? 'bg-amber-500/20 text-[var(--color-accent-amber)]' :
-                        heatmap.Tue === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-neutral-800 text-slate-500'
+                        heatmap.Tue === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
                       }`}>
                         {heatmap.Tue}
                       </span>
@@ -340,7 +340,7 @@ export const Forecasting = ({
                     <td className="py-3 px-2">
                       <span className={`px-2 py-1 rounded text-[9.5px] uppercase font-bold block text-center max-w-[50px] ${
                         heatmap.Wed === 'high' ? 'bg-amber-500/20 text-[var(--color-accent-amber)]' :
-                        heatmap.Wed === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-neutral-800 text-slate-500'
+                        heatmap.Wed === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
                       }`}>
                         {heatmap.Wed}
                       </span>
@@ -348,7 +348,7 @@ export const Forecasting = ({
                     <td className="py-3 px-2">
                       <span className={`px-2 py-1 rounded text-[9.5px] uppercase font-bold block text-center max-w-[50px] ${
                         heatmap.Thu === 'high' ? 'bg-amber-500/20 text-[var(--color-accent-amber)]' :
-                        heatmap.Thu === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-neutral-800 text-slate-500'
+                        heatmap.Thu === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
                       }`}>
                         {heatmap.Thu}
                       </span>
@@ -356,7 +356,7 @@ export const Forecasting = ({
                     <td className="py-3 px-2">
                       <span className={`px-2 py-1 rounded text-[9.5px] uppercase font-bold block text-center max-w-[50px] ${
                         heatmap.Fri === 'high' ? 'bg-amber-500/20 text-[var(--color-accent-amber)]' :
-                        heatmap.Fri === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-neutral-800 text-slate-500'
+                        heatmap.Fri === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
                       }`}>
                         {heatmap.Fri}
                       </span>
@@ -364,7 +364,7 @@ export const Forecasting = ({
                     <td className="py-3 px-2">
                       <span className={`px-2 py-1 rounded text-[9.5px] uppercase font-bold block text-center max-w-[50px] ${
                         heatmap.Sat === 'high' ? 'bg-amber-500/20 text-[var(--color-accent-amber)]' :
-                        heatmap.Sat === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-neutral-800 text-slate-500'
+                        heatmap.Sat === 'medium' ? 'bg-blue-500/10 text-blue-300' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
                       }`}>
                         {heatmap.Sat}
                       </span>

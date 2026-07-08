@@ -555,7 +555,7 @@ export const Settings = ({
                 onClick={() => handleToggleHub(hub.id)}
                 className={`text-[9px] font-mono px-2 py-0.5 rounded border border-solid font-bold uppercase cursor-pointer ${
                   hub.active ? 'bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] border-[rgba(16,185,129,0.3)]' :
-                  'bg-neutral-800 text-gray-400 border-none'
+                  'bg-[var(--color-surface-2)] text-[var(--color-muted)] border-none'
                 }`}
               >
                 {hub.active ? 'Active' : 'Offline'}
@@ -583,7 +583,7 @@ export const Settings = ({
                 onClick={() => handleToggleCarrier(c.code)}
                 className={`text-[9px] font-mono px-2 py-0.5 rounded border border-solid font-bold uppercase cursor-pointer ${
                   c.active ? 'bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)] border-[rgba(59,130,246,0.3)]' :
-                  'bg-neutral-800 text-gray-400 border-none'
+                  'bg-[var(--color-surface-2)] text-[var(--color-muted)] border-none'
                 }`}
               >
                 {c.active ? 'Active' : 'Muted'}

@@ -1991,7 +1991,7 @@ export const CargoForm = ({
                                 />{" "}
                                 {pi.consignee}
                               </span>
-                              <span className="text-[10px] font-mono font-bold px-1.5 bg-slate-800 text-[var(--color-light-muted)] rounded">
+                              <span className="text-[10px] font-mono font-bold px-1.5 bg-[var(--color-surface-2)] text-[var(--color-light-muted)] rounded">
                                 {pi.id}
                               </span>
                             </div>
