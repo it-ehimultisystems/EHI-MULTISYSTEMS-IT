@@ -61,6 +61,7 @@
   --color-surface-3: #21293b;
   --color-surface-card: #1a2232;
   --color-nav-bg: #0f141d;
+  --color-nav-glass: rgba(15, 20, 29, 0.72);
   --color-background: #0d1117;
   --color-input-bg: #1c2333;
   --color-input-text: #e6edf3;
@@ -71,6 +72,8 @@
   --color-error: #ef4444;
   --color-warning: #f59e0b;
   --color-purple: #8b5cf6;
+  --color-navy: #084985;
+  --color-navy-deep: #052c52;
 
   --glow-amber: rgba(245, 158, 11, 0.22);
   --glow-cobalt: rgba(59, 130, 246, 0.22);
@@ -128,6 +131,7 @@
   --color-surface-3: #e1e6ee;
   --color-surface-card: #fcfdfe;
   --color-nav-bg: #fbfcfe;
+  --color-nav-glass: rgba(251, 252, 254, 0.72);
   --color-background: #e7ebf1;
   --color-input-bg: #fdfdfe;
   --color-input-text: #111827;
@@ -138,6 +142,8 @@
   --color-error: #dc2626;
   --color-warning: #d97706;
   --color-purple: #7c3aed;
+  --color-navy: #084985;
+  --color-navy-deep: #052c52;
 
   --glow-amber: rgba(217, 119, 6, 0.18);
   --glow-cobalt: rgba(37, 99, 235, 0.18);

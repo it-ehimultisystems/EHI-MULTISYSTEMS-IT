@@ -136,6 +136,8 @@ const ScoreCard = ({ label, icon: Icon, color, bg, borderColor, total, sub1, sub
     borderRadius: "var(--radius-lg)",
     padding: 16, position: "relative", overflow: "hidden",
     boxShadow: "var(--shadow-card)",
+    backdropFilter: "blur(6px)",
+    WebkitBackdropFilter: "blur(6px)",
     display: "flex", flexDirection: "column", gap: 4,
   }}>
     <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${color} 0%, transparent 100%)` }} />
@@ -235,22 +237,68 @@ export const Dashboard = React.memo(
     return (
       <div className="flex flex-col p-4 space-y-4 h-full">
 
-        {/* Stats Header */}
-        <div className="flex items-center justify-between shrink-0">
-          <div>
-            <span className="text-[13px] font-sans font-semibold text-[var(--color-foreground)]">
-              {user.hub}
-            </span>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <Clock size={10} className="text-[var(--color-muted)]" />
-              <span className="text-[10px] font-mono text-[var(--color-muted)]">{todayLabel}</span>
+        {/* Stats Header — ambient glow backdrop + navy KPI hero for the North Star metric */}
+        <div className="relative shrink-0" style={{ borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+          {/* Ambient glow — same blurred radial-gradient technique as the login screen,
+              re-tuned to gold + navy instead of disappearing after sign-in */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute", top: -60, left: -40, width: 220, height: 220,
+              borderRadius: "50%", filter: "blur(70px)", pointerEvents: "none",
+              background: "radial-gradient(circle, rgba(240,178,48,0.25) 0%, transparent 70%)",
+            }}
+          />
+          <div
+            aria-hidden
+            style={{
+              position: "absolute", bottom: -70, right: -40, width: 220, height: 220,
+              borderRadius: "50%", filter: "blur(70px)", pointerEvents: "none",
+              background: "radial-gradient(circle, rgba(8,73,133,0.35) 0%, transparent 70%)",
+            }}
+          />
+
+          {showRevSummary && grossTotal > 0 ? (
+            <div
+              className="relative"
+              style={{
+                background: "linear-gradient(160deg, var(--color-navy) 0%, var(--color-navy-deep) 100%)",
+                border: "1px solid rgba(240,178,48,0.25)",
+                borderRadius: "var(--radius-lg)",
+                padding: "16px 18px",
+                boxShadow: "var(--shadow-card)",
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[13px] font-sans font-semibold" style={{ color: "#e8eef5" }}>
+                    {user.hub}
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Clock size={10} style={{ color: "rgba(232,238,245,0.6)" }} />
+                    <span className="text-[10px] font-mono" style={{ color: "rgba(232,238,245,0.6)" }}>{todayLabel}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-mono uppercase tracking-wide" style={{ color: "rgba(240,178,48,0.85)" }}>
+                    Gross Today
+                  </div>
+                  <div className="text-[28px] font-bold font-mono leading-tight" style={{ color: "var(--color-accent-amber)" }}>
+                    {fmt(grossTotal)}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          {showRevSummary && grossTotal > 0 && (
-            <div className="text-right">
-              <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wide">Gross Today</div>
-              <div className="text-[15px] font-bold font-mono text-[var(--color-success)]">
-                {fmt(grossTotal)}
+          ) : (
+            <div className="relative flex items-center justify-between px-1 py-1">
+              <div>
+                <span className="text-[13px] font-sans font-semibold text-[var(--color-foreground)]">
+                  {user.hub}
+                </span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Clock size={10} className="text-[var(--color-muted)]" />
+                  <span className="text-[10px] font-mono text-[var(--color-muted)]">{todayLabel}</span>
+                </div>
               </div>
             </div>
           )}

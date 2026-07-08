@@ -87,7 +87,7 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
         className="absolute left-4 right-4 bottom-0 flex items-center justify-around rounded-full"
         style={{
           height: 64,
-          background: 'color-mix(in srgb, var(--color-nav-bg) 68%, transparent)',
+          background: 'var(--color-nav-glass)',
           backdropFilter: 'blur(18px)',
           WebkitBackdropFilter: 'blur(18px)',
           border: '1px solid var(--color-border-strong)',
