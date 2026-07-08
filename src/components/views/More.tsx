@@ -6,7 +6,6 @@ import { Fleet } from './Fleet';
 import { Forecasting } from './Forecasting';
 import { FraudAlerts } from './FraudAlerts';
 import { AuditLog } from './AuditLog';
-import { APIDashboard } from './APIDashboard';
 import { TransactionLedger } from './TransactionLedger';
 import { PODLog } from './PODLog';
 import { Dispatch } from './Dispatch';
@@ -31,7 +30,6 @@ import {
   Truck,
   Brain,
   ShieldAlert,
-  Key,
   DollarSign,
   History,
   MapPin,
@@ -61,7 +59,6 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   const [forecastingView, setForecastingView] = useState(false);
   const [fraudAlertsView, setFraudAlertsView] = useState(false);
   const [auditLogView, setAuditLogView] = useState(false);
-  const [apiDashboardView, setApiDashboardView] = useState(false);
   const [ledgerView, setLedgerView] = useState(false);
   const [podLogView, setPodLogView] = useState(false);
   const [dispatchView, setDispatchView] = useState(false);
@@ -123,10 +120,6 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
   if (auditLogView) {
     return <AuditLog onBack={() => setAuditLogView(false)} />;
-  }
-
-  if (apiDashboardView) {
-    return <APIDashboard onBack={() => setApiDashboardView(false)} />;
   }
 
   if (podLogView) {
@@ -396,13 +389,6 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           title="IT Debug Console"
           subtitle="Live system logs, debugging and diagnostics"
           onClick={() => onChangeTab('IT Debug')}
-          disabled={!isSuperAdmin}
-        />
-        <MenuItem
-          icon={Key}
-          title="Partners API Keys & Webhooks"
-          subtitle="Key-hashes, scopes limit, and integration documentation"
-          onClick={() => { if (isSuperAdmin) setApiDashboardView(true); }}
           disabled={!isSuperAdmin}
         />
         <MenuItem
