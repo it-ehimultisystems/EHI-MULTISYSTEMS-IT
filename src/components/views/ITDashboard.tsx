@@ -396,7 +396,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
           </div>
           <button 
             onClick={downloadBugsReport}
-            className="bg-[var(--color-surface-2)] hover:bg-[var(--color-border)] transition-colors border border-[rgba(255,255,255,0.08)] text-[var(--color-light-muted)] hover:text-white px-3 py-1.5 rounded text-[10px] font-mono font-bold flex items-center space-x-1.5"
+            className="bg-[var(--color-surface-2)] hover:bg-[var(--color-border)] transition-colors border border-[rgba(255,255,255,0.08)] text-[var(--color-light-muted)] hover:text-[var(--color-foreground)] px-3 py-1.5 rounded text-[10px] font-mono font-bold flex items-center space-x-1.5"
           >
             <Download size={12} />
             <span>EXPORT BUGS</span>
@@ -450,25 +450,25 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
       <div className="flex border-b border-[var(--color-border)] mb-5 gap-1">
         <button 
           onClick={() => setActiveTab('bugs')}
-          className={`px-4 py-2 text-[11px] font-mono tracking-wider uppercase border-b-2 font-bold cursor-pointer transition-all ${activeTab === 'bugs' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.03)]' : 'border-transparent text-[var(--color-muted)] hover:text-white'}`}
+          className={`px-4 py-2 text-[11px] font-mono tracking-wider uppercase border-b-2 font-bold cursor-pointer transition-all ${activeTab === 'bugs' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.03)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
         >
           🐞 Active Bugs ({bugs.length})
         </button>
         <button 
           onClick={() => setActiveTab('logs')}
-          className={`px-4 py-2 text-[11px] font-mono tracking-wider uppercase border-b-2 font-bold cursor-pointer transition-all ${activeTab === 'logs' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.03)]' : 'border-transparent text-[var(--color-muted)] hover:text-white'}`}
+          className={`px-4 py-2 text-[11px] font-mono tracking-wider uppercase border-b-2 font-bold cursor-pointer transition-all ${activeTab === 'logs' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.03)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
         >
           ⌨ Terminal Live Logs
         </button>
         <button 
           onClick={() => setActiveTab('diagnostics')}
-          className={`px-4 py-2 text-[11px] font-mono tracking-wider uppercase border-b-2 font-bold cursor-pointer transition-all ${activeTab === 'diagnostics' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.03)]' : 'border-transparent text-[var(--color-muted)] hover:text-white'}`}
+          className={`px-4 py-2 text-[11px] font-mono tracking-wider uppercase border-b-2 font-bold cursor-pointer transition-all ${activeTab === 'diagnostics' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.03)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
         >
           ⚡ Self Diagnostics
         </button>
         <button 
           onClick={() => setActiveTab('proposals')}
-          className={`px-4 py-2 text-[11px] font-mono tracking-wider uppercase border-b-2 font-bold cursor-pointer transition-all ${activeTab === 'proposals' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.03)]' : 'border-transparent text-[var(--color-muted)] hover:text-white'}`}
+          className={`px-4 py-2 text-[11px] font-mono tracking-wider uppercase border-b-2 font-bold cursor-pointer transition-all ${activeTab === 'proposals' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.03)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
         >
           📈 Fix proposals ({proposals.length})
         </button>
@@ -486,7 +486,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 <button
                   key={st}
                   onClick={() => setBugFilter(st as any)}
-                  className={`px-2.5 py-1 rounded text-[10px] font-mono ${bugFilter === st ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold' : 'bg-[var(--color-surface-2)] text-[var(--color-light-muted)] hover:text-white'}`}
+                  className={`px-2.5 py-1 rounded text-[10px] font-mono ${bugFilter === st ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold' : 'bg-[var(--color-surface-2)] text-[var(--color-light-muted)] hover:text-[var(--color-foreground)]'}`}
                 >
                   {st.toUpperCase()}
                 </button>
@@ -497,7 +497,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 <button
                   key={sev}
                   onClick={() => setBugSeverity(sev as any)}
-                  className={`px-2.5 py-1 rounded text-[10px] font-mono ${bugSeverity === sev ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold' : 'bg-[var(--color-surface-2)] text-[var(--color-light-muted)] hover:text-white'}`}
+                  className={`px-2.5 py-1 rounded text-[10px] font-mono ${bugSeverity === sev ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold' : 'bg-[var(--color-surface-2)] text-[var(--color-light-muted)] hover:text-[var(--color-foreground)]'}`}
                 >
                   {sev.toUpperCase()}
                 </button>
@@ -507,7 +507,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
             <div className="flex items-center space-x-2 shrink-0">
               <button
                 onClick={() => setIsAddingBug(true)}
-                className="bg-white hover:bg-gray-100 transition-colors text-[var(--color-obsidian)] font-bold rounded px-3 py-1.5 text-[10px] font-mono flex items-center space-x-1"
+                className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] transition-colors text-[var(--color-foreground)] font-bold rounded px-3 py-1.5 text-[10px] font-mono flex items-center space-x-1"
               >
                 <Plus size={12} />
                 <span>LOG CUSTOM BUG</span>
@@ -559,11 +559,11 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
             >
               <form onSubmit={handleAddBug} className="space-y-3">
                 <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-2">
-                  <span className="text-[11px] font-mono font-bold text-white uppercase">ADD NEW CRITICAL BUG REPORT</span>
+                  <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)] uppercase">ADD NEW CRITICAL BUG REPORT</span>
                   <button 
                     type="button"
                     onClick={() => setIsAddingBug(false)} 
-                    className="text-[10px] font-mono text-[var(--color-muted)] hover:text-white"
+                    className="text-[10px] font-mono text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                   >
                     CANCEL
                   </button>
@@ -575,7 +575,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                     <input
                       id="itdash-bug-title"
                       type="text"
-                      className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
+                      className="w-full bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       placeholder="e.g. Printer driver socket hand-shake error"
                       required
                       value={newTitle}
@@ -586,7 +586,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                     <label htmlFor="itdash-bug-component" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Impacted Subsystem</label>
                     <select
                       id="itdash-bug-component"
-                      className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
+                      className="w-full bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       value={newComponent}
                       onChange={e => setNewComponent(e.target.value as any)}
                     >
@@ -618,7 +618,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                             type="button"
                             key={level}
                             onClick={() => setNewSeverity(level as any)}
-                            className={`flex-1 py-1 rounded text-[10px] font-mono text-center border transition-all ${isSelected ? colors[level] + ' border-2 font-black shadow-lg scale-102' : 'bg-[var(--color-surface-2)] border-transparent text-[var(--color-muted)] hover:text-white'}`}
+                            className={`flex-1 py-1 rounded text-[10px] font-mono text-center border transition-all ${isSelected ? colors[level] + ' border-2 font-black shadow-lg scale-102' : 'bg-[var(--color-surface-2)] border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
                           >
                             {level}
                           </button>
@@ -632,7 +632,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                     <textarea
                       id="itdash-bug-log"
                       rows={2}
-                      className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
+                      className="w-full bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       placeholder="Enter detailed error description, variables, state trace..."
                       required
                       value={newDesc}
@@ -655,7 +655,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
           {filteredBugs.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-[var(--color-border)] rounded">
               <CheckCircle className="mx-auto text-emerald-400 mb-2.5" size={32} />
-              <div className="text-sm font-bold text-white font-sans">Zero Bugs Detected Matching Filters</div>
+              <div className="text-sm font-bold text-[var(--color-foreground)] font-sans">Zero Bugs Detected Matching Filters</div>
               <div className="text-xs text-[var(--color-muted)] mt-1">EHI Multisystems Node is compiling and running flawlessly.</div>
             </div>
           ) : (
@@ -671,7 +671,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                   : 'text-green-500 border border-green-500/20 bg-green-500/5';
 
                 return (
-                  <div key={b.id} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] hover:border-gray-700 transition-colors rounded p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div key={b.id} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-colors rounded p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-1.5 flex-1 select-text">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[10px] font-mono text-[var(--color-muted)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[rgba(255,255,255,0.06)] font-bold">{b.id}</span>
@@ -680,7 +680,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                         <span className="text-[10px] font-mono text-cyan-400 font-bold ml-auto md:ml-0 bg-cyan-900/10 px-2 py-0.5 rounded border border-cyan-800/10">OCCURRED: {b.occurrences}x</span>
                       </div>
                       
-                      <h4 className="text-[13px] font-sans font-bold text-white tracking-wide">{b.title}</h4>
+                      <h4 className="text-[13px] font-sans font-bold text-[var(--color-foreground)] tracking-wide">{b.title}</h4>
                       <p className="text-[11px] text-[var(--color-muted)] font-mono leading-relaxed bg-[var(--color-surface-2)]/40 p-2.5 rounded border border-[rgba(255,255,255,0.02)]">{b.description}</p>
                       
                       <div className="text-[9.5px] font-mono text-[var(--color-light-muted)]">
@@ -805,7 +805,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
         <div className="space-y-4">
           <div className="ehi-card flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="text-sm font-bold font-sans text-white mb-1">EHI Multi-Systems Automated Integration Test</h3>
+              <h3 className="text-sm font-bold font-sans text-[var(--color-foreground)] mb-1">EHI Multi-Systems Automated Integration Test</h3>
               <p className="text-xs text-[var(--color-muted)] font-mono">
                 Initiates secure ping packets against local caches and master microservice gateways to locate hidden network drops.
               </p>
@@ -830,9 +830,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 {/* 1. Database IndexedDB */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2.5">
-                    <HardDrive size={16} className="text-gray-400" />
+                    <HardDrive size={16} className="text-[var(--color-muted)]" />
                     <div>
-                      <div className="text-[12px] font-semibold text-white font-sans">Local Dexie Store Schema Integrity</div>
+                      <div className="text-[12px] font-semibold text-[var(--color-foreground)] font-sans">Local Dexie Store Schema Integrity</div>
                       <div className="text-[9.5px] font-mono text-[var(--color-muted)]">Check transaction, manifests, and queue tables</div>
                     </div>
                   </div>
@@ -846,9 +846,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 {/* 2. Sync Offline Queue */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2.5">
-                    <Activity size={16} className="text-gray-400" />
+                    <Activity size={16} className="text-[var(--color-muted)]" />
                     <div>
-                      <div className="text-[12px] font-semibold text-white font-sans">Offline Queue State Sync Status</div>
+                      <div className="text-[12px] font-semibold text-[var(--color-foreground)] font-sans">Offline Queue State Sync Status</div>
                       <div className="text-[9.5px] font-mono text-[var(--color-muted)]">Verify synchronization pipeline registers correctly</div>
                     </div>
                   </div>
@@ -862,9 +862,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 {/* 3. API Connection */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2.5">
-                    <Wifi size={16} className="text-gray-400" />
+                    <Wifi size={16} className="text-[var(--color-muted)]" />
                     <div>
-                      <div className="text-[12px] font-semibold text-white font-sans">Supabase Gateway Connection</div>
+                      <div className="text-[12px] font-semibold text-[var(--color-foreground)] font-sans">Supabase Gateway Connection</div>
                       <div className="text-[9.5px] font-mono text-[var(--color-muted)]">Ping database cluster and verify security layers</div>
                     </div>
                   </div>
@@ -878,9 +878,9 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 {/* 4. Permissions check */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2.5">
-                    <CheckCircle size={16} className="text-gray-400" />
+                    <CheckCircle size={16} className="text-[var(--color-muted)]" />
                     <div>
-                      <div className="text-[12px] font-semibold text-white font-sans">Required Frame Permissions</div>
+                      <div className="text-[12px] font-semibold text-[var(--color-foreground)] font-sans">Required Frame Permissions</div>
                       <div className="text-[9.5px] font-mono text-[var(--color-muted)]">Verify camera, GPS location, and files parameters in metadata.json</div>
                     </div>
                   </div>
@@ -901,7 +901,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 <div className="space-y-3.5 pt-1.5">
                   <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[var(--color-border)]">
                     <span className="text-[11px] font-mono text-[var(--color-muted)]">Estimated API Latency</span>
-                    <span className="text-sm font-bold font-mono text-white">
+                    <span className="text-sm font-bold font-mono text-[var(--color-foreground)]">
                       {diagResults.speedCheck ? `${diagResults.speedCheck} ms` : 'Not Measured'}
                     </span>
                   </div>
@@ -915,7 +915,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
 
                   <div className="flex justify-between items-center bg-[var(--color-surface-2)]/60 px-3 py-2 rounded border border-[var(--color-border)]">
                     <span className="text-[11px] font-mono text-[var(--color-muted)]">Local Storage usage</span>
-                    <span className="text-sm font-bold font-mono text-white">
+                    <span className="text-sm font-bold font-mono text-[var(--color-foreground)]">
                       1.42 MB / Unlimited
                     </span>
                   </div>
@@ -949,13 +949,13 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
           
           <div className="flex items-center justify-between ehi-card p-3">
             <div>
-              <h3 className="text-sm font-bold font-sans text-white">IT Department Improvements & Refinement Roadmap</h3>
+              <h3 className="text-sm font-bold font-sans text-[var(--color-foreground)]">IT Department Improvements & Refinement Roadmap</h3>
               <p className="text-[10px] font-mono text-[var(--color-muted)] mt-0.5">Submit software refinement proposals to EHI core developers based on logged bug metrics.</p>
             </div>
             
             <button
               onClick={() => setIsAddingImp(true)}
-              className="bg-white hover:bg-gray-100 transition-colors text-[var(--color-obsidian)] font-bold rounded px-3 py-1.5 text-[10px] font-mono flex items-center space-x-1"
+              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] transition-colors text-[var(--color-foreground)] font-bold rounded px-3 py-1.5 text-[10px] font-mono flex items-center space-x-1"
             >
               <Plus size={12} />
               <span>SUBMIT PROPOSAL</span>
@@ -972,11 +972,11 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
             >
               <form onSubmit={handleAddProposal} className="space-y-3">
                 <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-2">
-                  <span className="text-[11px] font-mono font-bold text-white uppercase">SUBMIT REFINEMENT PROPOSAL</span>
+                  <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)] uppercase">SUBMIT REFINEMENT PROPOSAL</span>
                   <button 
                     type="button"
                     onClick={() => setIsAddingImp(false)} 
-                    className="text-[10px] font-mono text-[var(--color-muted)] hover:text-white"
+                    className="text-[10px] font-mono text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                   >
                     CANCEL
                   </button>
@@ -988,7 +988,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                     <input
                       id="itdash-feature-title"
                       type="text"
-                      className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
+                      className="w-full bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       placeholder="e.g. Implement dynamic zip compression for image attachments"
                       required
                       value={impTitle}
@@ -999,7 +999,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                     <label htmlFor="itdash-feature-priority" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase mb-1">Development Priority</label>
                     <select
                       id="itdash-feature-priority"
-                      className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
+                      className="w-full bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                       value={impPriority}
                       onChange={e => setImpPriority(e.target.value as any)}
                     >
@@ -1015,7 +1015,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                   <textarea
                     id="itdash-feature-desc"
                     rows={2.5}
-                    className="w-full bg-[var(--color-surface-2)] text-white text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
+                    className="w-full bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-xs border border-[var(--color-border)] rounded px-3 py-1.5 focus:border-[var(--color-accent-amber)] outline-none"
                     placeholder="Provide a breakdown of the problem, proposed implementation approach, and user outcome..."
                     required
                     value={impDesc}
@@ -1041,26 +1041,26 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 : 'text-green-400 bg-green-400/5 border-green-400/10';
 
               return (
-                <div key={p.id} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] hover:border-gray-700 transition-all rounded p-4 flex justify-between gap-4 items-center">
+                <div key={p.id} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-all rounded p-4 flex justify-between gap-4 items-center">
                   <div className="space-y-1 flex-1 select-text">
                     <div className="flex items-center space-x-2">
                       <span className="text-[10px] font-mono text-[var(--color-muted)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[rgba(255,255,255,0.06)] font-bold">{p.id}</span>
                       <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border rounded ${priorityColor}`}>{p.priority}</span>
                     </div>
 
-                    <h4 className="text-[13px] font-sans font-bold text-white tracking-wide">{p.title}</h4>
+                    <h4 className="text-[13px] font-sans font-bold text-[var(--color-foreground)] tracking-wide">{p.title}</h4>
                     <p className="text-[11px] text-[var(--color-muted)] font-mono leading-relaxed">{p.description}</p>
                   </div>
 
                   <div className="flex flex-col items-center shrink-0 w-[80px]">
                     <button
                       onClick={() => handleUpvote(p.id)}
-                      className={`p-2.5 rounded-full border transition-all cursor-pointer flex items-center justify-center ${p.voted ? 'bg-[var(--color-accent-amber)]/20 border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] scale-105' : 'bg-[var(--color-surface-2)] border-transparent text-gray-400 hover:text-white'}`}
+                      className={`p-2.5 rounded-full border transition-all cursor-pointer flex items-center justify-center ${p.voted ? 'bg-[var(--color-accent-amber)]/20 border-[var(--color-accent-amber)] text-[var(--color-accent-amber)] scale-105' : 'bg-[var(--color-surface-2)] border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
                       title={p.voted ? "Upvoted" : "Upvote Feature"}
                     >
                       <ThumbsUp size={16} className={p.voted ? 'fill-current' : ''} />
                     </button>
-                    <span className="text-[11px] font-mono font-bold text-white mt-1.5">{p.votes} UPVOTES</span>
+                    <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)] mt-1.5">{p.votes} UPVOTES</span>
                   </div>
                 </div>
               );
