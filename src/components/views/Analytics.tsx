@@ -273,10 +273,10 @@ export const Analytics = ({
     const pos = periodFilteredTxs.filter(t => t.mode === 'POS').reduce((s, t) => s + t.amount, 0);
     const debt = periodFilteredTxs.filter(t => t.mode === 'Debt').reduce((s, t) => s + t.amount, 0);
     return [
-      { name: 'Cash',     value: cash,     color: '#10B981' },
-      { name: 'Transfer', value: transfer,  color: '#3B82F6' },
-      { name: 'POS',      value: pos,       color: '#F59E0B' },
-      { name: 'Debt',     value: debt,      color: '#EF4444' },
+      { name: 'Cash',     value: cash,     color: 'var(--color-success)' },
+      { name: 'Transfer', value: transfer,  color: 'var(--color-accent-cobalt)' },
+      { name: 'POS',      value: pos,       color: 'var(--color-accent-amber)' },
+      { name: 'Debt',     value: debt,      color: 'var(--color-error)' },
     ].filter(d => d.value > 0);
   }, [periodFilteredTxs]);
 
@@ -497,9 +497,9 @@ export const Analytics = ({
 
         {/* Dynamic Top Route Card */}
         <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
-          <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-purple-500" />
+          <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-purple)]" />
           <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1 font-bold">Leading Location</div>
-          <div className="text-[13px] font-bold font-mono text-purple-300 pl-1 py-1 uppercase truncate">{stats.topRoute}</div>
+          <div className="text-[13px] font-bold font-mono text-[var(--color-purple)] pl-1 py-1 uppercase truncate">{stats.topRoute}</div>
           <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1">highest volume density</div>
         </div>
       </div>
@@ -543,15 +543,15 @@ export const Analytics = ({
         <div className="w-full text-[9px] font-mono">
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={revenueChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-              <XAxis dataKey="time" stroke="#64748B" strokeWidth={0.5} tickLine={false} />
-              <YAxis 
-                stroke="#64748B" 
-                strokeWidth={0.5} 
-                tickLine={false} 
-                tickFormatter={(val) => `₦${(val/1000)}k`} 
+              <XAxis dataKey="time" stroke="var(--color-muted)" strokeWidth={0.5} tickLine={false} />
+              <YAxis
+                stroke="var(--color-muted)"
+                strokeWidth={0.5}
+                tickLine={false}
+                tickFormatter={(val) => `₦${(val/1000)}k`}
               />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1E293B', borderColor: 'var(--color-surface-2)', color: '#fff', fontSize: '10px' }}
+              <Tooltip
+                contentStyle={{ backgroundColor: 'var(--color-surface-card)', borderColor: 'var(--color-surface-2)', color: 'var(--color-foreground)', fontSize: '10px' }}
                 formatter={(value: any) => [fmt(Number(value)), '']}
               />
               <Area type="monotone" dataKey="cargo" stroke="var(--color-accent-amber)" fill="rgba(245,158,11,0.05)" strokeWidth={1.5} />
@@ -581,7 +581,7 @@ export const Analytics = ({
         {/* Horizontal Top Routes Table */}
         <div className="ehi-card p-4 space-y-3">
           <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-2">
-            <Layers size={11} className="text-purple-400" />
+            <Layers size={11} className="text-[var(--color-purple)]" />
             <span>RANKED ROUTES BY REVENUE VOLUME</span>
           </div>
           <div className="space-y-2.5">
@@ -756,7 +756,7 @@ export const Analytics = ({
         {/* Multi-Hub Performance Matrix Section */}
         <div className="ehi-card p-4 space-y-3 h-full">
         <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-1.5 font-bold">
-          <MapPin size={11} className="text-purple-400" />
+          <MapPin size={11} className="text-[var(--color-purple)]" />
           <span>MULTI-HUB LOGISTICS DISTRIBUTION</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
