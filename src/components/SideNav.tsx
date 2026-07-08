@@ -110,7 +110,7 @@ export const SideNav = ({
       ],
     },
     {
-      id: "IncomingToHub",
+      id: "Incoming",
       icon: ArrowDownToLine,
       label: "Incoming To Hub",
       roles: ["super_admin", "admin", "cargo_agent", "vj_agent", "driver", "office_work"],
