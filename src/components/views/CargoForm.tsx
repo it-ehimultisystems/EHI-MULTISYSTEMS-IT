@@ -135,7 +135,25 @@ export const CargoForm = ({
   const [airline, setAirline] = useState("Arik Air");
   const [customAirline, setCustomAirline] = useState("");
   const [customConsignee, setCustomConsignee] = useState("");
-  const [awb, setAwb] = useState(generateAwb());
+
+  // This is a PREVIEW ONLY -- it shows the agent what the real atomic AWB
+  // will likely look like before they submit, without actually consuming
+  // a number from the hub's counter (peek_next_awb_number is read-only).
+  // The real number is only allocated by next_awb_number() at submit time
+  // in handleRetailSubmit, so an abandoned/reset form never wastes a
+  // sequence number -- it's just left available for whoever submits next.
+  const [awb, setAwb] = useState('');
+  const fetchAwbPreview = async () => {
+    const hubCode = getHubCode(user.hub_code || user.hub);
+    const { data: previewSeq, error } = await supabase.rpc('peek_next_awb_number', { p_hub_code: `${hubCode}-CG` });
+    if (!error && previewSeq) {
+      setAwb(`EHI-${hubCode}-CG-${String(previewSeq).padStart(6, '0')}`);
+    } else {
+      setAwb('');
+    }
+  };
+  useEffect(() => { fetchAwbPreview(); }, []);
+
   const [pcs, setPcs] = useState("1");
   const [kg, setKg] = useState("");
   const [route, setRoute] = useState(CARGO_ROUTES[0]);
@@ -700,11 +718,10 @@ export const CargoForm = ({
   const isRetailFormValid = useMemo(
     () =>
       actualConsignee.trim().length > 0 &&
-      awb.trim().length > 0 &&
       route.trim().length > 0 &&
       contentType.trim().length > 0 &&
       parsedAmount >= minAmount && parsedAmount > 0,
-    [actualConsignee, awb, route, contentType, parsedAmount, minAmount],
+    [actualConsignee, route, contentType, parsedAmount, minAmount],
   );
 
   const handleRetailSubmit = async () => {
@@ -837,7 +854,7 @@ export const CargoForm = ({
         message: buildCargoWhatsApp({
           ref: tx.id,
           consignee: actualConsignee,
-          awb,
+          awb: resolvedAwb,
           route,
           kg,
           pcs,
@@ -856,7 +873,7 @@ export const CargoForm = ({
     setCustomConsignee("");
     setAirline("Arik Air");
     setCustomAirline("");
-    setAwb(generateAwb());
+    fetchAwbPreview();
     setPcs("1");
     setKg("");
     setRoute(CARGO_ROUTES[0]);
@@ -1321,7 +1338,7 @@ export const CargoForm = ({
                 {renderLabel(Hash, "AWB / Tag No (Auto-generated)")}
                 <input
                   type="text"
-                  value={awb}
+                  value={awb || "Loading…"}
                   readOnly
                   className={`${formInputClass} font-mono bg-opacity-50 cursor-not-allowed`}
                   style={{ backgroundColor: 'var(--color-surface-3)', color: 'var(--color-muted)' }}
