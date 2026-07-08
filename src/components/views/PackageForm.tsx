@@ -562,7 +562,7 @@ export const PackageForm = ({
               {packageTxs.length === 0 ? (
                 <EmptyState icon={<ClipboardList size={36} strokeWidth={1.5} />} message="No entries yet" />
               ) : (
-                <div className="divide-y divide-[rgba(255,255,255,0.04)] max-h-[340px] overflow-y-auto">
+                <div className="divide-y divide-[var(--color-border)] max-h-[340px] overflow-y-auto">
                   {[...packageTxs].reverse().map((t) => (
                     <div key={t.id} className="flex justify-between items-center px-4 py-2.5">
                       <div className="flex-1 min-w-0 pr-3">

@@ -826,7 +826,7 @@ export const MarketingWorkspace = ({
 
             {/* Expense log today */}
             {expenses.length > 0 && (
-              <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] divide-y divide-[rgba(255,255,255,0.04)] mt-2">
+              <div className="bg-[var(--color-surface-1)] rounded-xl border border-[var(--color-border)] divide-y divide-[var(--color-border)] mt-2">
                 {expenses.map((e, i) => (
                   <div key={i} className="flex justify-between px-3 py-2 text-[11px] font-mono">
                     <span className="text-[var(--color-muted)]">{e.type}{e.description ? ` — ${e.description}` : ''}</span>
@@ -959,7 +959,7 @@ export const MarketingWorkspace = ({
               {marketingTxs.length === 0 ? (
                 <EmptyState icon={<ClipboardList size={36} strokeWidth={1.5} />} message="No entries yet" />
               ) : (
-                <div className="divide-y divide-[rgba(255,255,255,0.04)] max-h-[340px] overflow-y-auto">
+                <div className="divide-y divide-[var(--color-border)] max-h-[340px] overflow-y-auto">
                   {[...marketingTxs].reverse().map((t) => (
                     <div key={t.id} className="flex justify-between items-center px-4 py-2.5">
                       <div className="flex-1 min-w-0 pr-3">

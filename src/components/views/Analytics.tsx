@@ -776,7 +776,7 @@ export const Analytics = ({
                   <div className="text-[10px] font-sans font-bold text-[var(--color-foreground)] truncate">{hub.name}</div>
                   <div className="text-[8px] font-mono text-[var(--color-muted)] truncate">{hub.region}</div>
                 </div>
-                <div className="mt-2 flex justify-between items-end border-t border-[rgba(255,255,255,0.04)] pt-1.5">
+                <div className="mt-2 flex justify-between items-end border-t border-[var(--color-border)] pt-1.5">
                   <span className="text-[7.5px] font-mono text-[var(--color-success)] uppercase">● Active</span>
                   <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)]">{fmt(hubRevenue)}</span>
                 </div>

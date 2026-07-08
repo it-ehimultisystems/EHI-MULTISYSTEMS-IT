@@ -301,12 +301,12 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
             <DollarSign size={12} className="text-[var(--color-accent-amber)]" />
             <span>ROUTE PRICING MATRIX (STREAM 1)</span>
           </div>
-          <span className="text-[8px] font-mono text-[var(--color-muted)] bg-black/40 px-1.5 py-0.5 rounded uppercase">BB/MB/SB ONLY</span>
+          <span className="text-[8px] font-mono text-[var(--color-muted)] bg-[var(--color-surface-2)] px-1.5 py-0.5 rounded uppercase">BB/MB/SB ONLY</span>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           {pricing.map((r: any) => (
-            <div key={r.id} className="p-3 bg-black/30 rounded border border-[rgba(255,255,255,0.04)] space-y-2">
+            <div key={r.id} className="p-3 bg-[var(--color-surface-2)] rounded border border-[var(--color-border)] space-y-2">
               <span className="text-[11px] font-bold text-[var(--color-foreground)] uppercase tracking-wide block">{r.route}</span>
               <div className="grid grid-cols-3 gap-2">
                 <div>

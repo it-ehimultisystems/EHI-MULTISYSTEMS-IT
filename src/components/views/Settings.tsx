@@ -545,7 +545,7 @@ export const Settings = ({
 
         <div className="space-y-2">
           {hubs.map((hub: any) => (
-            <div key={hub.id} className="p-2.5 bg-black/40 rounded border border-[rgba(255,255,255,0.04)] flex justify-between items-center text-[11px]">
+            <div key={hub.id} className="p-2.5 bg-[var(--color-surface-2)] rounded border border-[var(--color-border)] flex justify-between items-center text-[11px]">
               <div>
                 <span className="font-bold text-[var(--color-foreground)] block">{hub.name}</span>
                 <span className="text-[8px] font-mono text-[var(--color-muted)] uppercase block">{hub.type} · ID: {hub.code}</span>
@@ -573,7 +573,7 @@ export const Settings = ({
 
         <div className="space-y-2">
           {carriers.map((c: any) => (
-            <div key={c.code} className="p-2.5 bg-black/40 rounded border border-[rgba(255,255,255,0.04)] flex justify-between items-center text-[11px]">
+            <div key={c.code} className="p-2.5 bg-[var(--color-surface-2)] rounded border border-[var(--color-border)] flex justify-between items-center text-[11px]">
               <div>
                 <span className="font-bold text-[var(--color-foreground)] block">{c.name}</span>
                 <span className="text-[8.5px] font-mono text-[var(--color-muted)] block">Carrier Code: {c.code}</span>

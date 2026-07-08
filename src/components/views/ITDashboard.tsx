@@ -542,7 +542,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                   saveBugs(PRE_BUGS);
                   setLogs([]);
                 }}
-                className="bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-[var(--color-border)] ml-auto px-2.5 py-1 rounded text-[9px] font-mono text-[var(--color-light-muted)]"
+                className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] ml-auto px-2.5 py-1 rounded text-[9px] font-mono text-[var(--color-light-muted)]"
               >
                 Reset Default Bugs
               </button>
@@ -676,7 +676,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[10px] font-mono text-[var(--color-muted)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[rgba(255,255,255,0.06)] font-bold">{b.id}</span>
                         <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeColor}`}>{b.severity}</span>
-                        <span className="text-[10px] font-mono text-[var(--color-muted)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[rgba(255,255,255,0.04)] font-bold uppercase">{b.component}</span>
+                        <span className="text-[10px] font-mono text-[var(--color-muted)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[var(--color-border)] font-bold uppercase">{b.component}</span>
                         <span className="text-[10px] font-mono text-cyan-400 font-bold ml-auto md:ml-0 bg-cyan-900/10 px-2 py-0.5 rounded border border-cyan-800/10">OCCURRED: {b.occurrences}x</span>
                       </div>
                       
@@ -711,7 +711,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                         {b.status !== 'Investigating' && b.status !== 'Resolved' && (
                           <button
                             onClick={() => updateBugStatus(b.id, 'Investigating')}
-                            className="bg-[var(--color-surface-2)] hover:bg-[var(--color-border)] transition-colors text-[9px] font-mono py-1 px-1.5 flex-1 rounded border border-[rgba(255,255,255,0.04)] text-amber-300"
+                            className="bg-[var(--color-surface-2)] hover:bg-[var(--color-border)] transition-colors text-[9px] font-mono py-1 px-1.5 flex-1 rounded border border-[var(--color-border)] text-amber-300"
                           >
                             INVESTIGATE
                           </button>
@@ -929,7 +929,7 @@ export const ITDashboard = ({ user, onBack }: { user: User, onBack?: () => void 
                 </div>
               </div>
 
-              <div className="text-[10px] font-mono text-[var(--color-muted)] border-t border-[rgba(255,255,255,0.04)] pt-3.5 mt-4">
+              <div className="text-[10px] font-mono text-[var(--color-muted)] border-t border-[var(--color-border)] pt-3.5 mt-4">
                 {diagRunning ? (
                   <span className="text-amber-400 animate-pulse">🤖 Transmitting payload fragments across network. Please keep tab open...</span>
                 ) : diagResults.speedCheck ? (

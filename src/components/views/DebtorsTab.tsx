@@ -225,7 +225,7 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
 
       {/* FILTER & SORT BAR */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex space-x-2 bg-[var(--color-surface-card)] p-1 rounded-xl border border-[rgba(255,255,255,0.04)] w-max">
+        <div className="flex space-x-2 bg-[var(--color-surface-card)] p-1 rounded-xl border border-[var(--color-border)] w-max">
            {['All', 'Corporate', 'Individual'].map(f => (
              <button
                key={f}
