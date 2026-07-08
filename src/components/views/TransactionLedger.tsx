@@ -507,41 +507,41 @@ export const TransactionLedger = ({
       </div>
 
       {/* Filters */}
-      <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-3 shrink-0">
+      <div className="p-2.5 md:p-3 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-2 shrink-0">
         <div className="flex-1 relative">
           <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+            size={12}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
           />
           <input
             type="text"
             placeholder="Search entries, dates, amounts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-9 pr-3 ehi-card text-[12px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-blue)]"
+            className="w-full h-8 pl-7 pr-3 ehi-card text-[11px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-blue)]"
           />
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {dateRange && onDateRangeChange && (
-            <div className="flex items-center gap-2 ehi-card overflow-hidden h-10 px-2 font-mono text-[11px]">
+            <div className="flex items-center gap-1 ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
               <input
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
-                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full"
+                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[126px]"
               />
               <span className="text-[var(--color-muted)]">to</span>
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
-                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full"
+                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[126px]"
               />
             </div>
           )}
-          <div className="flex items-center ehi-card overflow-hidden h-10 px-2 font-mono text-[11px]">
-            <Filter size={12} className="text-[var(--color-muted)] mx-2" />
+          <div className="flex items-center ehi-card overflow-hidden h-8 px-1 font-mono text-[10px]">
+            <Filter size={10} className="text-[var(--color-muted)] mx-1.5 shrink-0" />
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -555,11 +555,11 @@ export const TransactionLedger = ({
             </select>
           </div>
 
-          <div className="flex items-center ehi-card overflow-hidden h-10 px-2 font-mono text-[11px]">
+          <div className="flex items-center ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
             <select
               value={modeFilter}
               onChange={(e) => setModeFilter(e.target.value)}
-              className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full px-2"
+              className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
             >
               <option value="All">All Modes</option>
               <option value="Revenue">Revenue Only</option>
