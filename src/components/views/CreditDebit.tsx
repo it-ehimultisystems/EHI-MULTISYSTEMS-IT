@@ -156,7 +156,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
           <button
             onClick={() => setActiveTab('credits')}
             className={`flex-1 py-2.5 text-[11px] font-bold font-mono uppercase tracking-wider rounded transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'credits' ? 'bg-[var(--color-surface-2)] text-emerald-400 shadow-sm border border-[rgba(16,185,129,0.2)]' : 'text-[var(--color-muted)] hover:text-white'
+              activeTab === 'credits' ? 'bg-[var(--color-surface-2)] text-[var(--color-success)] shadow-sm border border-[rgba(16,185,129,0.2)]' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
             }`}
           >
             <ArrowUpRight size={14} strokeWidth={2} /> Payables
@@ -211,7 +211,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
                         <div className="p-2 bg-[var(--color-surface-2)] rounded flex items-center justify-center text-[var(--color-muted)]">
                           <UserSquare2 size={16} />
                         </div>
-                        <div className="font-sans font-bold text-[14px] text-white">{d.name}</div>
+                        <div className="font-sans font-bold text-[14px] text-[var(--color-foreground)]">{d.name}</div>
                       </div>
                       <div className="font-mono text-[14px] font-bold text-[var(--color-accent-amber)] tracking-tight">{fmt(d.amount)}</div>
                     </div>
@@ -223,7 +223,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
                   {debts.map((tx, i) => (
                     <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-surface-2)] transition-colors">
                       <div className="flex justify-between items-start mb-2">
-                        <span className="text-[14px] font-sans font-bold text-white">{tx.name}</span>
+                        <span className="text-[14px] font-sans font-bold text-[var(--color-foreground)]">{tx.name}</span>
                         <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(tx.amount)}</span>
                       </div>
                       <div className="text-[12px] font-sans text-[var(--color-muted)] mb-3">{tx.detail}</div>
@@ -240,13 +240,13 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
             {activeTab === 'credits' && (
           <>
             <div className="bg-[var(--color-surface-card)] border border-[rgba(16,185,129,0.2)] rounded-lg p-6 flex flex-col justify-center items-center shadow-[0_0_15px_rgba(16,185,129,0.05)] relative overflow-hidden">
-              <div className="absolute -top-6 -right-6 opacity-5 text-emerald-400">
+              <div className="absolute -top-6 -right-6 opacity-5 text-[var(--color-success)]">
                 <TrendingUp size={120} />
               </div>
               <div className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-2 relative z-10 flex items-center gap-2">
-                <ArrowUpRight size={14} className="text-emerald-400" /> Total Due to Airlines
+                <ArrowUpRight size={14} className="text-[var(--color-success)]" /> Total Due to Airlines
               </div>
-              <div className="text-[32px] font-sans font-bold text-emerald-400 relative z-10">{fmt(totalCredit)}</div>
+              <div className="text-[32px] font-sans font-bold text-[var(--color-success)] relative z-10">{fmt(totalCredit)}</div>
             </div>
 
             <div className="space-y-3">
@@ -258,9 +258,9 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
                     <div className="p-2 bg-[var(--color-surface-2)] rounded flex items-center justify-center text-[var(--color-muted)]">
                       <Building size={16} />
                     </div>
-                    <div className="font-sans font-bold text-[14px] text-white">{c.airline}</div>
+                    <div className="font-sans font-bold text-[14px] text-[var(--color-foreground)]">{c.airline}</div>
                   </div>
-                  <div className="font-mono text-[14px] font-bold text-emerald-400 tracking-tight">{fmt(c.amount)}</div>
+                  <div className="font-mono text-[14px] font-bold text-[var(--color-success)] tracking-tight">{fmt(c.amount)}</div>
                 </div>
               ))}
             </div>
@@ -274,8 +274,8 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
                 return (
                   <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-surface-2)] transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-[14px] font-sans font-bold text-white">{tx.airline} <span className="opacity-50 text-[11px] font-mono ml-1">({tx.id})</span></span>
-                      <span className="text-[13px] font-mono font-bold text-emerald-400">{fmt(weOwe)}</span>
+                      <span className="text-[14px] font-sans font-bold text-[var(--color-foreground)]">{tx.airline} <span className="opacity-50 text-[11px] font-mono ml-1">({tx.id})</span></span>
+                      <span className="text-[13px] font-mono font-bold text-[var(--color-success)]">{fmt(weOwe)}</span>
                     </div>
                     <div className="text-[11px] font-mono text-[var(--color-muted)] mb-3 bg-[var(--color-surface-2)] inline-block px-2 py-1 rounded">
                       Base: {fmt(tx.amount)} <span className="mx-1 opacity-50">&middot;</span> Comm: {commRate}% <span className="text-[var(--color-accent-amber)]">({fmt(tx.amount * commRate / 100)})</span>

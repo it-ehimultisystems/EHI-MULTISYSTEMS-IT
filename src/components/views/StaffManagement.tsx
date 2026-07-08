@@ -39,7 +39,7 @@ const roleColor = (role: string) => ({
   super_admin:     'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.12)]',
   admin:           'text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.12)]',
   cargo_agent:     'text-[var(--color-success)] bg-[rgba(16,185,129,0.12)]',
-  vj_agent:        'text-purple-400 bg-[rgba(168,85,247,0.12)]',
+  vj_agent:        'text-[var(--color-purple)] bg-[rgba(168,85,247,0.12)]',
   accountant:      'text-teal-400 bg-[rgba(20,184,166,0.12)]',
   auditor:         'text-orange-400 bg-[rgba(249,115,22,0.12)]',
   driver:          'text-[var(--color-muted)] bg-[rgba(100,116,139,0.12)]',

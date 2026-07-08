@@ -495,7 +495,7 @@ export const Settings = ({
             aria-label="WhatsApp Business Integrations"
             className="text-[var(--color-success)] ml-3 cursor-pointer"
           >
-            {notifyWhatsApp ? <ToggleRight size={38} className="text-[var(--color-success)]" /> : <ToggleLeft size={38} className="text-gray-600" />}
+            {notifyWhatsApp ? <ToggleRight size={38} className="text-[var(--color-success)]" /> : <ToggleLeft size={38} className="text-[var(--color-muted)]" />}
           </button>
         </div>
 
@@ -529,7 +529,7 @@ export const Settings = ({
             aria-label="Google Drive EOD dispatch"
             className="text-[var(--color-success)] ml-3 cursor-pointer"
           >
-            {driveSync ? <ToggleRight size={38} className="text-[var(--color-success)]" /> : <ToggleLeft size={38} className="text-gray-600" />}
+            {driveSync ? <ToggleRight size={38} className="text-[var(--color-success)]" /> : <ToggleLeft size={38} className="text-[var(--color-muted)]" />}
           </button>
         </div>
       </div>
@@ -539,7 +539,7 @@ export const Settings = ({
         {/* regional station hubs management */}
         <div className="ehi-card p-4 space-y-3">
         <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
-          <MapPin size={11} className="text-purple-400" />
+          <MapPin size={11} className="text-[var(--color-purple)]" />
           <span>MULTI-HUB OUTPOSTS</span>
         </div>
 

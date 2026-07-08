@@ -407,7 +407,7 @@ export const BankReconciliation = ({
             <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] p-4 rounded-xl">
               <span className="text-[12px] font-sans font-medium text-[var(--color-muted)] block">Statement Credits</span>
               <span className="text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1 block">{fmt(totalCredits)}</span>
-              <span className="text-[11px] font-sans text-slate-500 block mt-1">{bankTxList.length} transactions</span>
+              <span className="text-[11px] font-sans text-[var(--color-muted)] block mt-1">{bankTxList.length} transactions</span>
             </div>
             
             <div className="bg-[var(--color-surface-card)] border border-[rgba(16,185,129,0.2)] p-4 rounded-xl bg-[rgba(16,185,129,0.03)]">
@@ -489,7 +489,7 @@ export const BankReconciliation = ({
 
                     <div className="md:col-span-2 flex flex-col md:items-center">
                       <span className="text-[15px] font-bold font-mono text-[var(--color-success)]">{fmt(btx.credit)}</span>
-                      <span className="text-[10px] font-sans text-slate-500 mt-0.5">Deposit</span>
+                      <span className="text-[10px] font-sans text-[var(--color-muted)] mt-0.5">Deposit</span>
                     </div>
 
                     <div className="md:col-span-5 flex items-center justify-between md:justify-end space-x-3 rounded-xl p-3 md:p-0 bg-[rgba(0,0,0,0.2)] md:bg-transparent">
@@ -535,13 +535,13 @@ export const BankReconciliation = ({
                                 {btx.status === 'Auto-Matched' ? 'Auto Mapped' : 'Manually Paired'}
                               </span>
                             </div>
-                            <span className="text-[11px] text-slate-400 font-sans block truncate max-w-[200px]">
+                            <span className="text-[11px] text-[var(--color-muted)] font-sans block truncate max-w-[200px]">
                               Ledger: {correspondingSysPayment ? correspondingSysPayment.name : btx.matchedId || ''}
                             </span>
                           </div>
                           <button 
                             onClick={() => handleResetMatch(btx.id)}
-                            className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] text-slate-300 px-3 py-1.5 rounded-lg text-[11px] font-sans font-medium transition-colors cursor-pointer"
+                            className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)] text-[var(--color-muted)] px-3 py-1.5 rounded-lg text-[11px] font-sans font-medium transition-colors cursor-pointer"
                           >
                             Unlink
                           </button>

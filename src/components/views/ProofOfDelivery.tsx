@@ -272,7 +272,7 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
             onClick={handleConfirm} 
             disabled={!isFormValid}
             className={`flex-[2] h-12 font-bold uppercase tracking-widest rounded border-none transition-colors flex items-center justify-center gap-2 ${
-              isFormValid ? 'bg-[var(--color-success)] text-black cursor-pointer hover:bg-emerald-500' : 'bg-[var(--color-surface-2)] text-gray-500 cursor-not-allowed opacity-50'
+              isFormValid ? 'bg-[var(--color-success)] text-black cursor-pointer hover:bg-emerald-500' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)] cursor-not-allowed opacity-50'
             }`}
           >
             Confirm Delivery
