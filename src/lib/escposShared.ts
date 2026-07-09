@@ -15,6 +15,9 @@ export const BOLD_OFF = [0x1B, 0x45, 0x00];
 export const REVERSE_ON = [0x1D, 0x42, 0x01];
 export const REVERSE_OFF = [0x1D, 0x42, 0x00];
 export const FEED_AND_CUT = [0x1B, 0x64, 0x03, 0x1D, 0x56, 0x41, 0x00];
+// For gap/die-cut label printers with no cutting blade (e.g. the XP-402B)
+// -- feed enough for the label to clear the tear bar, no cut command.
+export const FEED_ONLY = [0x1B, 0x64, 0x05];
 
 export function concatChunks(chunks: Uint8Array[]): Uint8Array {
   const total = chunks.reduce((sum, c) => sum + c.length, 0);
@@ -173,9 +176,9 @@ export async function brandingHeader(logoWidthDots = 160): Promise<Uint8Array[]>
 // Falls back to brandingHeader() if the airline logo cannot be loaded.
 export async function brandingHeaderWithAirline(
   airline: string,
-  paperWidth: '58mm' | '80mm' = '80mm',
+  paperWidth: '58mm' | '80mm' | number = '80mm',
 ): Promise<Uint8Array[]> {
-  const widthDots = paperWidth === '58mm' ? 280 : 360;
+  const widthDots = typeof paperWidth === 'number' ? paperWidth : (paperWidth === '58mm' ? 280 : 360);
   if (!airline) return brandingHeader(widthDots);
 
   const { airlineLogoUrl } = await import('./airlineLogos');

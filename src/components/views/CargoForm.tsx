@@ -998,6 +998,42 @@ export const CargoForm = ({
     }
   };
 
+  const handlePrintTagPDF100mm = async () => {
+    if (successTx) {
+      const { printCargoTagPDF } = await import("./CargoTagPDF");
+      await printCargoTagPDF({
+        id: successTx.awb_tag_number || awb,
+        name: successTx.name,
+        route: successTx.detail.split(" · ")[4] || route,
+        pieceNo: `1 of ${successTx.pieces || parseInt(pcs) || 1}`,
+        weight: successTx.kg || Math.round(parseFloat(kg)),
+        airline:
+          airline === "Green Africa"
+            ? "Green Africa Airways"
+            : airline === "United Nigeria"
+              ? "United Nigeria Airlines"
+              : airline,
+        hubName: user?.hub || "EHI Cargo Station",
+        date: new Date().toLocaleDateString("en-GB"),
+      });
+
+      try {
+        await supabase.from('tag_print_log').insert({
+          cargo_ref: successTx.id,
+          awb_tag_number: successTx.awb_tag_number || awb,
+          printed_by: user.id,
+          printed_by_name: user.name,
+          hub_id: user.hub_id,
+          hub_name: user.hub || 'Unknown',
+          print_method: 'pdf',
+          pieces_printed: successTx.pieces || parseInt(pcs) || 1,
+        });
+      } catch (err) {
+        console.error('Failed to log tag print', err);
+      }
+    }
+  };
+
   const formInputClass =
     "w-full h-12 px-4 text-[16px] rounded-[var(--radius-sm)] bg-[var(--color-input-bg)] text-[var(--color-input-text)] border border-[var(--color-border)] font-sans focus:outline-none focus:border-[var(--color-accent-amber)] focus:ring-2 focus:ring-[var(--glow-amber)] transition-all";
 
@@ -1166,6 +1202,16 @@ export const CargoForm = ({
               className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
             >
               PDF Tag
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 mb-3">
+            <button
+              onClick={handlePrintTagPDF100mm}
+              className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
+              title="Fixed 100mm x 80mm label -- for the XP-402B and similar gap/die-cut label printers"
+            >
+              Tag PDF (100×80mm Label)
             </button>
           </div>
 
