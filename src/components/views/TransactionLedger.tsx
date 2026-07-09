@@ -272,15 +272,17 @@ export const TransactionLedger = ({
   };
 
   const handleReprintTag = async (width: '58mm' | '80mm') => {
+    // Change: use wired PDF tag printing (opens PDF in new tab / OS print dialog)
     if (!viewingDetail || !viewingDetail.raw) return;
     try {
-      const { printBluetoothTag } = await import('../../lib/escposTagPrinting');
+      const { printCargoTagPDF } = await import('./CargoTagPDF');
       const tx = { ...viewingDetail.raw };
-      
-      // Calculate pieces for marketing tags if necessary
+
+      // Calculate route and pieces for marketing tags if necessary
+      let route = tx.route || (tx.detail ? tx.detail.split(' · ')[0] : 'Unknown') || 'Unknown';
       if (tx.type === 'marketing') {
         const parts = tx.detail?.split(' · ') || [];
-        tx.route = parts[0] || 'Unknown';
+        route = parts[0] || route;
         if (parts[1]) {
           let big = 0, med = 0, small = 0;
           const bagMatch = parts[1].match(/(\d+) Big, (\d+) Med, (\d+) Sml/);
@@ -292,26 +294,37 @@ export const TransactionLedger = ({
           tx.pieces = big + med + small || 1;
         }
       }
-      
-      await printBluetoothTag(tx, width);
-      
+
+      const data = {
+        id: tx.awb_tag_number || tx.entryRef || tx.id,
+        name: tx.name,
+        route: route || 'Unknown',
+        pieceNo: `1 of ${tx.pieces || 1}`,
+        weight: tx.kg || 0,
+        airline: tx.airline,
+        hubName: user?.hub || 'EHI Cargo Station',
+        date: tx.time || new Date().toLocaleDateString('en-GB'),
+      };
+
+      await printCargoTagPDF(data);
+
       try {
         await supabase.from('tag_print_log').insert({
           cargo_ref: tx.id,
-          awb_tag_number: tx.awb_tag_number || tx.entryRef || tx.id,
+          awb_tag_number: data.id,
           printed_by: user.id,
           printed_by_name: user.name,
           hub_id: user.hub_id,
           hub_name: user.hub || 'Unknown',
-          print_method: 'pos_bluetooth',
+          print_method: 'pdf',
           pieces_printed: tx.pieces || 1,
         });
       } catch (err) {
         console.error('Failed to log tag print', err);
       }
     } catch (error) {
-      console.error('Error printing tag:', error);
-      showToast({ message: 'Error connecting to Bluetooth printer. Ensure it is paired and on.', type: 'error' });
+      console.error('Error opening tag PDF:', error);
+      showToast({ message: 'Failed to open tag PDF for printing', type: 'error' });
     }
   };
 
@@ -449,7 +462,7 @@ export const TransactionLedger = ({
   }, [entries, defaultTypeFilter]);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
+    <div className="flex flex-col h-full pb-24 bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shrink-0">
         <div className="flex items-center space-x-4">
