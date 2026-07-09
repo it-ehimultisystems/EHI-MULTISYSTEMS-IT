@@ -824,7 +824,7 @@ export const TransactionLedger = ({
       </>)}
       {viewingDetail && (
         <div 
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in"
+          className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in"
           onClick={() => setViewingDetail(null)}
         >
           <div 

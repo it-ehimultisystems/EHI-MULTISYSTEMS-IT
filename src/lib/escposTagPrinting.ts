@@ -1,6 +1,6 @@
 import {
   encoder, INIT, CENTER, LEFT, TEXT_NORMAL, TEXT_DOUBLE_HEIGHT,
-  BOLD_ON, BOLD_OFF, FEED_AND_CUT,
+  BOLD_ON, BOLD_OFF, FEED_AND_CUT, FEED_ONLY,
   concatChunks, brandingHeader, brandingHeaderWithAirline, fieldRow, divider, qrAsRaster
 } from './escposShared';
 import { printViaBluetooth } from './escpos';
@@ -50,7 +50,7 @@ export async function compileSingleTag(
     chunks.push(precomputed.qr);
   } else {
     const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.id)}`;
-    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 140 : 180));
+    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 220 : 280));
   }
   chunks.push(encoder.encode('\n\n'));
 
@@ -87,7 +87,7 @@ export async function compileCargoTagStream(tx: any, width: '58mm' | '80mm'): Pr
     header: await brandingHeaderWithAirline(tx.airline || '', width),
     qr: await qrAsRaster(
       `https://ehimultisystems.com/track?ref=${encodeURIComponent(sharedId)}`,
-      width === '58mm' ? 140 : 180
+      width === '58mm' ? 220 : 280
     ),
   };
 
@@ -159,7 +159,7 @@ async function compileSingleMarketingTag(
     chunks.push(precomputed.qr);
   } else {
     const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.awb)}`;
-    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 140 : 180));
+    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 220 : 280));
   }
   chunks.push(encoder.encode('\n\n'));
 
@@ -200,7 +200,7 @@ export async function compileMarketingTagStream(
     header: await brandingHeaderWithAirline(tx.airline || '', width),
     qr: await qrAsRaster(
       `https://ehimultisystems.com/track?ref=${encodeURIComponent(awb)}`,
-      width === '58mm' ? 140 : 180
+      width === '58mm' ? 220 : 280
     ),
   };
 
@@ -237,5 +237,76 @@ export async function printMarketingTags(
   width: '58mm' | '80mm',
 ): Promise<void> {
   const bytes = await compileMarketingTagStream(tx, bbCount, mbCount, sbCount, width);
+  await printViaBluetooth(bytes);
+}
+
+// 100mm x 80mm gap/die-cut label format for the XP-402B and similar label
+// printers -- a DISCRETE fixed-size label, not continuous roll paper like
+// the 58mm/80mm formats above. Two things are therefore different from
+// the continuous-roll tag functions: the width is a raw dot count (100mm
+// at 203dpi, rounded down to a multiple of 8) rather than one of the
+// '58mm'/'80mm' presets, and it ends with FEED_ONLY instead of
+// FEED_AND_CUT, since gap/die-cut label printers commonly have no cutting
+// blade at all -- they just feed to the next label's tear/perforation
+// point using their own gap-sensor.
+const GAP_LABEL_WIDTH_DOTS = 792; // 100mm at 203dpi, rounded to a multiple of 8
+
+export async function compileGapLabelTag(item: CargoTagData): Promise<Uint8Array> {
+  const chunks: Uint8Array[] = [
+    new Uint8Array(INIT),
+    ...(await brandingHeaderWithAirline(item.airline || '', GAP_LABEL_WIDTH_DOTS)),
+  ];
+
+  chunks.push(new Uint8Array(CENTER));
+  chunks.push(new Uint8Array(BOLD_ON));
+  chunks.push(encoder.encode("CARGO ROUTING TAG\n\n"));
+
+  if (item.route) {
+    chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT));
+    chunks.push(encoder.encode(`${item.route.toUpperCase()}\n`));
+    chunks.push(new Uint8Array(TEXT_NORMAL));
+  }
+
+  chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT));
+  chunks.push(encoder.encode(`AWB: ${item.id}\n`));
+  chunks.push(new Uint8Array(TEXT_NORMAL));
+  chunks.push(encoder.encode('\n'));
+
+  const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.id)}`;
+  chunks.push(await qrAsRaster(trackingUrl, 320));
+  chunks.push(encoder.encode('\n\n'));
+
+  chunks.push(new Uint8Array(LEFT));
+  chunks.push(encoder.encode(divider(64, '=')));
+  chunks.push(new Uint8Array(CENTER));
+  chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
+  chunks.push(encoder.encode(`PIECE ${item.pieceNo}\n`));
+  chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
+  chunks.push(encoder.encode(`WEIGHT: ${item.weight} KG\n`));
+  chunks.push(encoder.encode(divider(64, '=')));
+
+  chunks.push(new Uint8Array(LEFT));
+  if (item.name) chunks.push(encoder.encode(`CONSIGNEE: ${item.name}\n`));
+  if (item.airline) chunks.push(encoder.encode(`AIRLINE: ${item.airline}\n`));
+  if (item.hubName) chunks.push(encoder.encode(`HUB: ${item.hubName}\n`));
+  if (item.date) chunks.push(encoder.encode(`DATE: ${item.date}\n`));
+  chunks.push(encoder.encode(divider(64)));
+
+  chunks.push(new Uint8Array(FEED_ONLY));
+  return concatChunks(chunks);
+}
+
+export async function printGapLabelTag(tx: any): Promise<void> {
+  const tagData: CargoTagData = {
+    id: tx.awbTagNumber || tx.entryRef || tx.id,
+    name: tx.consignee || tx.name,
+    route: tx.route || '',
+    pieceNo: `1 of ${tx.pieces || 1}`,
+    weight: tx.kg || 0,
+    airline: tx.airline,
+    hubName: tx.hubName,
+    date: tx.date || new Date().toLocaleDateString('en-GB'),
+  };
+  const bytes = await compileGapLabelTag(tagData);
   await printViaBluetooth(bytes);
 }

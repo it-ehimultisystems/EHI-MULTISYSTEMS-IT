@@ -30,7 +30,7 @@ export async function compileMarketingReceiptStream(data: MarketingReceiptPrintD
   chunks.push(encoder.encode("MARKETING SALES RECEIPT\n\n"));
   chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
 
-  chunks.push(await qrAsRaster(data.trackingUrl, width === '58mm' ? 120 : 140));
+  chunks.push(await qrAsRaster(data.trackingUrl, width === '58mm' ? 220 : 280));
   chunks.push(encoder.encode('\n\n'));
 
   chunks.push(new Uint8Array(LEFT));
