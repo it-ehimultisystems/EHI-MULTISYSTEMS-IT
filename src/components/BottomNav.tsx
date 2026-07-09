@@ -59,7 +59,7 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
         onClick={() => onChangeTab(tabs[activeIndex].id)}
         aria-label={tabs[activeIndex]?.title}
         aria-current="page"
-        className="absolute rounded-full flex items-center justify-center transition-[left] duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)]"
+        className="absolute rounded-full flex items-center justify-center"
         style={{
           left: `calc(16px + (100% - 32px) * ${(activeIndex + 0.5) / tabs.length})`,
           transform: 'translateX(-50%)',
@@ -71,6 +71,7 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
           border: 'none',
           cursor: 'pointer',
           zIndex: 2,
+          transition: 'left 300ms cubic-bezier(0.34, 1.4, 0.64, 1), transform 0.1s ease, box-shadow 0.15s ease',
         }}
       >
         {(() => {
