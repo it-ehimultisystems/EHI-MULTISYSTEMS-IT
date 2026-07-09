@@ -111,13 +111,25 @@ export const printViaBluetooth = async (data: Uint8Array): Promise<void> => {
     // Android/printer combos, corrupting everything downstream in the
     // stream (this is why the logo image and the fields right after it
     // were the ones coming out garbled). Use the universally-safe chunk
-    // size with a short delay between writes so the printer's own buffer
-    // isn't overrun even when writeValue resolves before printing finishes.
+    // size, but prefer the modern explicit writeValueWithResponse() over
+    // the deprecated, ambiguous writeValue() when the characteristic
+    // supports it -- a "with response" write waits for the printer's own
+    // acknowledgment before resolving, which paces transmission at
+    // whatever rate the actual hardware can handle instead of guessing a
+    // fixed delay. That means no artificial setTimeout is needed on that
+    // path. Falls back to writeValueWithoutResponse() + the original
+    // conservative delay for printers that only support write-without-
+    // response, to avoid reintroducing the truncation/corruption bug.
+    const supportsResponse = !!writeCharacteristic.properties.write;
     const chunkSize = 20;
     for (let i = 0; i < data.length; i += chunkSize) {
       const chunk = data.slice(i, i + chunkSize);
-      await writeCharacteristic.writeValue(chunk);
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      if (supportsResponse) {
+        await writeCharacteristic.writeValueWithResponse(chunk);
+      } else {
+        await writeCharacteristic.writeValueWithoutResponse(chunk);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
     }
 
     // Give it a moment to finish printing before disconnecting
