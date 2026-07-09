@@ -16,12 +16,19 @@ export interface CargoTagData {
   date?: string;
 }
 
-export async function compileSingleTag(item: CargoTagData, width: '58mm' | '80mm'): Promise<Uint8Array> {
+export async function compileSingleTag(
+  item: CargoTagData,
+  width: '58mm' | '80mm',
+  precomputed?: { header: Uint8Array[]; qr: Uint8Array }
+): Promise<Uint8Array> {
   const maxChars = width === '58mm' ? 32 : 48;
-  // EHI + airline logos side-by-side in a single composite raster
+  // EHI + airline logos side-by-side in a single composite raster.
+  // Reuses a pre-computed header/QR when supplied (see
+  // compileCargoTagStream) rather than re-rasterizing the identical image
+  // for every piece in a multi-piece shipment.
   const chunks: Uint8Array[] = [
     new Uint8Array(INIT),
-    ...(await brandingHeaderWithAirline(item.airline || '', width)),
+    ...(precomputed?.header ?? await brandingHeaderWithAirline(item.airline || '', width)),
   ];
 
   chunks.push(new Uint8Array(CENTER));
@@ -39,9 +46,12 @@ export async function compileSingleTag(item: CargoTagData, width: '58mm' | '80mm
   chunks.push(new Uint8Array(TEXT_NORMAL));
   chunks.push(encoder.encode('\n'));
 
-  // Use qrAsRaster for the QR code
-  const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.id)}`;
-  chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 140 : 180));
+  if (precomputed?.qr) {
+    chunks.push(precomputed.qr);
+  } else {
+    const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.id)}`;
+    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 140 : 180));
+  }
   chunks.push(encoder.encode('\n\n'));
 
     chunks.push(new Uint8Array(LEFT));
@@ -67,10 +77,23 @@ export async function compileSingleTag(item: CargoTagData, width: '58mm' | '80mm
 export async function compileCargoTagStream(tx: any, width: '58mm' | '80mm'): Promise<Uint8Array> {
   const piecesCount = tx.pieces || 1;
   const tagChunks: Uint8Array[] = [];
-  
+  const sharedId = tx.awbTagNumber || tx.entryRef || tx.id;
+
+  // The logo header and QR code are identical for every piece in this
+  // shipment (same airline, same tracking reference) -- compute both once
+  // instead of re-rasterizing and re-transmitting the same bytes over
+  // Bluetooth for every single piece.
+  const precomputed = {
+    header: await brandingHeaderWithAirline(tx.airline || '', width),
+    qr: await qrAsRaster(
+      `https://ehimultisystems.com/track?ref=${encodeURIComponent(sharedId)}`,
+      width === '58mm' ? 140 : 180
+    ),
+  };
+
   for (let i = 1; i <= piecesCount; i++) {
     const tagData: CargoTagData = {
-      id: tx.awbTagNumber || tx.entryRef || tx.id,
+      id: sharedId,
       name: tx.consignee || tx.name,
       route: tx.route || '',
       pieceNo: `${i} of ${piecesCount}`,
@@ -79,9 +102,9 @@ export async function compileCargoTagStream(tx: any, width: '58mm' | '80mm'): Pr
       hubName: tx.hubName,
       date: tx.date || new Date().toLocaleDateString('en-GB'),
     };
-    tagChunks.push(await compileSingleTag(tagData, width));
+    tagChunks.push(await compileSingleTag(tagData, width, precomputed));
   }
-  
+
   return concatChunks(tagChunks);
 }
 
@@ -105,11 +128,15 @@ interface MarketingTagData {
   date?: string;
 }
 
-async function compileSingleMarketingTag(item: MarketingTagData, width: '58mm' | '80mm'): Promise<Uint8Array> {
+async function compileSingleMarketingTag(
+  item: MarketingTagData,
+  width: '58mm' | '80mm',
+  precomputed?: { header: Uint8Array[]; qr: Uint8Array }
+): Promise<Uint8Array> {
   const maxChars = width === '58mm' ? 32 : 48;
   const chunks: Uint8Array[] = [
     new Uint8Array(INIT),
-    ...(await brandingHeaderWithAirline(item.airline || '', width)),
+    ...(precomputed?.header ?? await brandingHeaderWithAirline(item.airline || '', width)),
   ];
 
   chunks.push(new Uint8Array(CENTER));
@@ -128,8 +155,12 @@ async function compileSingleMarketingTag(item: MarketingTagData, width: '58mm' |
   chunks.push(new Uint8Array(BOLD_OFF));
   chunks.push(encoder.encode('\n'));
 
-  const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.awb)}`;
-  chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 140 : 180));
+  if (precomputed?.qr) {
+    chunks.push(precomputed.qr);
+  } else {
+    const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.awb)}`;
+    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 140 : 180));
+  }
   chunks.push(encoder.encode('\n\n'));
 
   chunks.push(new Uint8Array(LEFT));
@@ -162,6 +193,17 @@ export async function compileMarketingTagStream(
   const date = new Date().toLocaleDateString('en-GB');
   const tagChunks: Uint8Array[] = [];
 
+  // Same reasoning as compileCargoTagStream -- every bag tag in this
+  // shipment shares the same airline logo and the same tracking reference,
+  // so compute both once instead of re-rasterizing per piece.
+  const precomputed = {
+    header: await brandingHeaderWithAirline(tx.airline || '', width),
+    qr: await qrAsRaster(
+      `https://ehimultisystems.com/track?ref=${encodeURIComponent(awb)}`,
+      width === '58mm' ? 140 : 180
+    ),
+  };
+
   const bags: Array<{ type: 'BB' | 'MB' | 'SB'; full: string; count: number }> = [
     { type: 'BB', full: 'BIG BAG',   count: bbCount },
     { type: 'MB', full: 'MED BAG',   count: mbCount },
@@ -180,7 +222,7 @@ export async function compileMarketingTagStream(
         airline: tx.airline,
         hubName: tx.hub,
         date,
-      }, width));
+      }, width, precomputed));
     }
   }
 
