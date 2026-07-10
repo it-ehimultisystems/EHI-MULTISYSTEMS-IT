@@ -302,28 +302,62 @@ export const TransactionLedger = ({
     // blocked.
     const preOpenedWindow = window.open('', '_blank');
     try {
-      const { printCargoTagPDF } = await import('./CargoTagPDF');
       const tx = { ...viewingDetail.raw };
 
-      // Calculate route and pieces for marketing tags if necessary
-      let route = tx.route || (tx.detail ? tx.detail.split(' · ')[0] : 'Unknown') || 'Unknown';
+      // Marketing entries print one bag-aware tag per bag (BB/MB/SB
+      // badges), matching what MarketingWorkspace's own "TAGS" buttons
+      // produce right after creating the entry. This used to route
+      // through the generic CargoTagPDF instead -- collapsing every bag
+      // into a single undifferentiated "PIECE 1 of N" tag with no bag-type
+      // info -- so a tag reprinted from the ledger looked like a
+      // completely different document than the one printed at creation
+      // time.
       if (tx.type === 'marketing') {
+        const { printMarketingTagPDF } = await import('./MarketingTagPDF');
         const parts = tx.detail?.split(' · ') || [];
-        route = parts[0] || route;
-        if (parts[1]) {
-          let big = 0, med = 0, small = 0;
-          // Same stored format as handleReprintReceipt above -- e.g. "2BB
-          // 1MB 3SB", not "2 Big, 1 Med, 3 Sml".
-          const bigMatch = parts[1].match(/(\d+)BB/);
-          const medMatch = parts[1].match(/(\d+)MB/);
-          const smallMatch = parts[1].match(/(\d+)SB/);
-          big = bigMatch ? parseInt(bigMatch[1]) : 0;
-          med = medMatch ? parseInt(medMatch[1]) : 0;
-          small = smallMatch ? parseInt(smallMatch[1]) : 0;
-          tx.pieces = big + med + small || 1;
+        const route = parts[0] || tx.route || 'Unknown';
+        // Same stored format as handleReprintReceipt above -- e.g. "2BB
+        // 1MB 3SB", not "2 Big, 1 Med, 3 Sml".
+        const bigMatch = parts[1]?.match(/(\d+)BB/);
+        const medMatch = parts[1]?.match(/(\d+)MB/);
+        const smallMatch = parts[1]?.match(/(\d+)SB/);
+        const big = bigMatch ? parseInt(bigMatch[1]) : 0;
+        const med = medMatch ? parseInt(medMatch[1]) : 0;
+        const small = smallMatch ? parseInt(smallMatch[1]) : 0;
+
+        const data = {
+          id: tx.awb_tag_number || tx.entryRef || tx.id,
+          name: tx.name,
+          route,
+          airline: tx.airline,
+          hubName: user?.hub || 'EHI Cargo Station',
+          date: tx.time || new Date().toLocaleDateString('en-GB'),
+          bigBags: big,
+          medBags: med,
+          smallBags: small,
+        };
+
+        await printMarketingTagPDF(data, preOpenedWindow);
+
+        try {
+          await supabase.from('tag_print_log').insert({
+            cargo_ref: tx.id,
+            awb_tag_number: data.id,
+            printed_by: user.id,
+            printed_by_name: user.name,
+            hub_id: user.hub_id,
+            hub_name: user.hub || 'Unknown',
+            print_method: 'pdf',
+            pieces_printed: big + med + small || 1,
+          });
+        } catch (err) {
+          console.error('Failed to log tag print', err);
         }
+        return;
       }
 
+      const { printCargoTagPDF } = await import('./CargoTagPDF');
+      const route = tx.route || (tx.detail ? tx.detail.split(' · ')[0] : 'Unknown') || 'Unknown';
       const data = {
         id: tx.awb_tag_number || tx.entryRef || tx.id,
         name: tx.name,
@@ -360,16 +394,61 @@ export const TransactionLedger = ({
 
   const handleReprintTagPDF = async () => {
     if (!viewingDetail || !viewingDetail.raw) return;
-    if (viewingDetail.raw.type !== 'cargo') {
-      showToast({ message: 'PDF Tag only available for cargo entries', type: 'info' });
+    if (viewingDetail.raw.type !== 'cargo' && viewingDetail.raw.type !== 'marketing') {
+      showToast({ message: 'PDF Tag only available for cargo and marketing entries', type: 'info' });
       return;
     }
     // Open the tab synchronously, in direct response to the click -- see
     // the note in handleReprintTag above.
     const preOpenedWindow = window.open('', '_blank');
     try {
-      const { printCargoTagPDF } = await import('./CargoTagPDF');
       const tx = { ...viewingDetail.raw };
+
+      // Same bag-aware format as handleReprintTag above -- see its comment
+      // for why marketing entries can't use the generic CargoTagPDF.
+      if (tx.type === 'marketing') {
+        const { printMarketingTagPDF } = await import('./MarketingTagPDF');
+        const parts = tx.detail?.split(' · ') || [];
+        const route = parts[0] || tx.route || 'Unknown';
+        const bigMatch = parts[1]?.match(/(\d+)BB/);
+        const medMatch = parts[1]?.match(/(\d+)MB/);
+        const smallMatch = parts[1]?.match(/(\d+)SB/);
+        const big = bigMatch ? parseInt(bigMatch[1]) : 0;
+        const med = medMatch ? parseInt(medMatch[1]) : 0;
+        const small = smallMatch ? parseInt(smallMatch[1]) : 0;
+
+        const data = {
+          id: tx.awb_tag_number || tx.entryRef || tx.id,
+          name: tx.name,
+          route,
+          airline: tx.airline,
+          hubName: user?.hub || 'EHI Cargo Station',
+          date: tx.time || new Date().toLocaleDateString('en-GB'),
+          bigBags: big,
+          medBags: med,
+          smallBags: small,
+        };
+
+        await printMarketingTagPDF(data, preOpenedWindow);
+
+        try {
+          await supabase.from('tag_print_log').insert({
+            cargo_ref: tx.id,
+            awb_tag_number: data.id,
+            printed_by: user.id,
+            printed_by_name: user.name,
+            hub_id: user.hub_id,
+            hub_name: user.hub || 'Unknown',
+            print_method: 'pdf',
+            pieces_printed: big + med + small || 1,
+          });
+        } catch (err) {
+          console.error('Failed to log tag print', err);
+        }
+        return;
+      }
+
+      const { printCargoTagPDF } = await import('./CargoTagPDF');
       const route = tx.route || (tx.detail ? tx.detail.split(' · ')[4] : 'Unknown') || 'Unknown';
       const data = {
         id: tx.awb_tag_number || tx.entryRef || tx.id,

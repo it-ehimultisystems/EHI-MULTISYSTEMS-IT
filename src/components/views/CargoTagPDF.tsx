@@ -181,7 +181,11 @@ const CargoTagPage = ({
 
         <View style={styles.awbBand}>
           <Text style={styles.awbLabel}>AWB / Tag</Text>
-          <Text style={styles.awbValue}>{data.id}</Text>
+          {/* Each physical piece gets its own sequential tag number
+              (base AWB + piece suffix) so two tags in the same shipment
+              are never visually identical -- the QR code/tracking
+              reference still points at the shared base AWB below. */}
+          <Text style={styles.awbValue}>{data.id}-{pieceIndex}</Text>
         </View>
 
         <View style={styles.pieceBadge}>

@@ -181,9 +181,11 @@ const styles = StyleSheet.create({
 const MarketingTagPage = ({
   data,
   bagPage,
+  pieceSeq,
 }: {
   data: MarketingTagPDFData;
   bagPage: BagPage;
+  pieceSeq: number;
 }) => (
   <Page size={[PAGE_WIDTH, PAGE_HEIGHT]} style={styles.page} wrap={false}>
     <View style={styles.headerRow}>
@@ -199,7 +201,11 @@ const MarketingTagPage = ({
 
         <View style={styles.refBand}>
           <Text style={styles.refLabel}>AWB / Tag</Text>
-          <Text style={styles.refValue}>{data.id}</Text>
+          {/* Each physical bag gets its own sequential tag number (base
+              AWB + running count across all bags) so two tags in the same
+              shipment are never visually identical -- the QR code/tracking
+              reference still points at the shared base AWB below. */}
+          <Text style={styles.refValue}>{data.id}-{pieceSeq}</Text>
         </View>
 
         <View style={styles.bagBadge}>
@@ -248,7 +254,7 @@ const MarketingTagOnlyPDF = ({ data }: { data: MarketingTagPDFData }) => {
   return (
     <Document>
       {pages.map((bagPage, i) => (
-        <MarketingTagPage key={i} data={data} bagPage={bagPage} />
+        <MarketingTagPage key={i} data={data} bagPage={bagPage} pieceSeq={i + 1} />
       ))}
     </Document>
   );
@@ -271,11 +277,14 @@ async function buildTagData(data: MarketingTagPDFData): Promise<MarketingTagPDFD
   return result;
 }
 
-export const printMarketingTagPDF = async (data: MarketingTagPDFData) => {
+// Callers should open `preOpenedWindow` themselves via
+// `window.open('', '_blank')` synchronously in their click handler, before
+// awaiting this function -- see the comment on openPdfOrDownload for why.
+export const printMarketingTagPDF = async (data: MarketingTagPDFData, preOpenedWindow?: Window | null) => {
   const withQr = await buildTagData(data);
   const blob = await pdf(<MarketingTagOnlyPDF data={withQr} />).toBlob();
   const url = URL.createObjectURL(blob);
-  openPdfOrDownload(url, `EHI-Tag-${data.id}.pdf`);
+  openPdfOrDownload(url, `EHI-Tag-${data.id}.pdf`, preOpenedWindow);
 };
 
 export const downloadMarketingTagPDF = async (data: MarketingTagPDFData) => {

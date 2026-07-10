@@ -209,10 +209,16 @@ export async function compileMarketingTagStream(
     { type: 'SB', full: 'SMALL BAG', count: sbCount },
   ];
 
+  // Running count across all bags (not per-type) so every physical bag in
+  // this shipment gets its own sequential tag number -- base AWB plus this
+  // suffix -- instead of every tag showing the identical AWB. The QR code
+  // above still points at the shared base AWB via `precomputed`.
+  let pieceSeq = 0;
   for (const bag of bags) {
     for (let i = 1; i <= bag.count; i++) {
+      pieceSeq++;
       tagChunks.push(await compileSingleMarketingTag({
-        awb,
+        awb: `${awb}-${pieceSeq}`,
         customerName: tx.name,
         route: tx.route || '',
         bagType: bag.type,
