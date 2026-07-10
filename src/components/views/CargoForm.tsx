@@ -2040,7 +2040,7 @@ export const CargoForm = ({
 
                       // Client custom rate lookup for preview badges
                       const matchingC = corpClients.find(
-                        (c) => c.company_name === pi.consignee,
+                        (c) => c.id === pi.corporate_client_id,
                       );
                       const clientRate = matchingC
                         ? corpRates.find(
@@ -2208,7 +2208,7 @@ export const CargoForm = ({
                             {(() => {
                               const matchC = corpClients.find(
                                 (c) =>
-                                  c.company_name === selectedIntake.consignee,
+                                  c.id === selectedIntake.corporate_client_id,
                               );
                               const matchR = matchC
                                 ? corpRates.find(
@@ -2258,7 +2258,7 @@ export const CargoForm = ({
                             {(() => {
                               const matchC = corpClients.find(
                                 (c) =>
-                                  c.company_name === selectedIntake.consignee,
+                                  c.id === selectedIntake.corporate_client_id,
                               );
                               const matchR = matchC
                                 ? corpRates.find(

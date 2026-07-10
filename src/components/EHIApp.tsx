@@ -596,6 +596,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         remark: (tx as any).remarks || null,
         pickup_pin: (tx as any).pickupPin || null,
         consignee_phone: (tx as any).consigneePhone || null,
+        corporate_client_id: (tx as any).corporate_client_id || null,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
         created_at: new Date().toISOString()
       };
