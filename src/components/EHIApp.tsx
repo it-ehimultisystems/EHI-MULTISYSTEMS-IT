@@ -619,8 +619,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         total_pcs: pcs,
         excess_kg: excessKg,
         total_kg: totalKg,
-        free_allowance_kg: 20,
-        rate_per_kg: 1000,
         amount: tx.amount,
         payment_mode: tx.mode,
         bank: tx.bank,
@@ -689,8 +687,17 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     const idCol      = table === 'manifests' ? 'transaction_id' : 'entry_ref';
     const modeCol    = table === 'cargo_entries' ? 'receipt_mode' : 'payment_mode';
 
+    // cargo_entries.receipt_mode / manifests.payment_mode / marketing_entries.payment_mode
+    // all have a CHECK constraint limited to the base payment methods --
+    // none of them allow 'Debt Paid'. DebtorsTab sets tx.mode to 'Debt Paid'
+    // as a client-side completion label when a debt is fully settled, which
+    // made every full debt payoff across all three entry types fail this
+    // update with a constraint-violation 400. The payoff itself is already
+    // captured by amountPaid below, so write the base 'Debt' mode to the DB
+    // column and keep 'Debt Paid' as the in-app label only.
+    const dbMode = tx.mode === 'Debt Paid' ? 'Debt' : tx.mode;
     const updatePayload: Record<string, any> = {
-      [modeCol]: tx.mode,
+      [modeCol]: dbMode,
       bank: tx.bank,
       status: tx.status,
     };

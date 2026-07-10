@@ -32,6 +32,25 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
+// Vite's dynamic-import runtime dispatches this event when a lazily-loaded
+// chunk 404s -- this hits any tab (especially an installed PWA, which stays
+// open for days) that was already loaded before a new deploy went out: the
+// hashed chunk filenames baked into the code already running in that tab
+// no longer exist on the server, so import() rejects and every button that
+// lazy-loads a print/report module (e.g. escposVJPrinting,
+// escposMarketingPrinting) fails with a "Failed to fetch dynamically
+// imported module" error that has nothing to do with the feature itself.
+// A reload re-fetches the current index.html and gets the right hashes.
+// Guarded with sessionStorage so a genuinely broken deploy (still 404ing
+// after the reload) surfaces its real error instead of reloading forever.
+window.addEventListener('vite:preloadError', () => {
+  const key = 'ehi_preload_error_reloaded';
+  if (!sessionStorage.getItem(key)) {
+    sessionStorage.setItem(key, '1');
+    window.location.reload();
+  }
+});
+
 // Run data retention policies
 cleanupOldPings();
 
