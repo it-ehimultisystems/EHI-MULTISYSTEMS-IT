@@ -995,6 +995,12 @@ export const CargoForm = ({
 
   const handlePrintWaybill = async () => {
     if (successTx) {
+      // Open the tab synchronously, in direct response to the click --
+      // window.open() called after the awaits below (dynamic import, QR
+      // generation, PDF rendering) loses the user-gesture context that
+      // mobile browsers and installed PWAs require, and gets silently
+      // blocked.
+      const preOpenedWindow = window.open('', '_blank');
       const { downloadCargoWaybill } = await import("./CargoReceipt");
       const printData = {
         entryRef: successTx.id,
@@ -1021,8 +1027,15 @@ export const CargoForm = ({
         remark: successTx.remarks || undefined,
         pickupPin: (successTx as any).pickupPin || undefined,
       };
-      downloadCargoWaybill(printData);
-      
+      try {
+        await downloadCargoWaybill(printData, preOpenedWindow);
+      } catch (err) {
+        console.error('Failed to open waybill PDF', err);
+        preOpenedWindow?.close();
+        showToast({ message: 'Failed to open tag PDF', type: 'error' });
+        return;
+      }
+
       try {
         await supabase.from('tag_print_log').insert({
           cargo_ref: successTx.id,
@@ -1042,22 +1055,32 @@ export const CargoForm = ({
 
   const handlePrintTagPDF100mm = async () => {
     if (successTx) {
-      const { printCargoTagPDF } = await import("./CargoTagPDF");
-      await printCargoTagPDF({
-        id: successTx.awb_tag_number || awb,
-        name: successTx.name,
-        route: successTx.detail.split(" · ")[4] || route,
-        pieces: successTx.pieces || parseInt(pcs) || 1,
-        weight: successTx.kg || Math.round(parseFloat(kg)),
-        airline:
-          airline === "Green Africa"
-            ? "Green Africa Airways"
-            : airline === "United Nigeria"
-              ? "United Nigeria Airlines"
-              : airline,
-        hubName: user?.hub || "EHI Cargo Station",
-        date: new Date().toLocaleDateString("en-GB"),
-      });
+      // Open the tab synchronously, in direct response to the click -- see
+      // the note in handlePrintWaybill above.
+      const preOpenedWindow = window.open('', '_blank');
+      try {
+        const { printCargoTagPDF } = await import("./CargoTagPDF");
+        await printCargoTagPDF({
+          id: successTx.awb_tag_number || awb,
+          name: successTx.name,
+          route: successTx.detail.split(" · ")[4] || route,
+          pieces: successTx.pieces || parseInt(pcs) || 1,
+          weight: successTx.kg || Math.round(parseFloat(kg)),
+          airline:
+            airline === "Green Africa"
+              ? "Green Africa Airways"
+              : airline === "United Nigeria"
+                ? "United Nigeria Airlines"
+                : airline,
+          hubName: user?.hub || "EHI Cargo Station",
+          date: new Date().toLocaleDateString("en-GB"),
+        }, preOpenedWindow);
+      } catch (err) {
+        console.error('Failed to open tag PDF', err);
+        preOpenedWindow?.close();
+        showToast({ message: 'Failed to open tag PDF', type: 'error' });
+        return;
+      }
 
       try {
         await supabase.from('tag_print_log').insert({
@@ -1269,7 +1292,10 @@ export const CargoForm = ({
                     };
                     return await m.compileCargoReceiptStream(thermalPrintData, '80mm');
                   });
-                }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
+                }).catch((err: any) => {
+                  console.error('Bluetooth print failed:', err);
+                  showToast({ message: err?.message || 'Bluetooth print failed. Ensure the printer is paired and powered on.', type: 'error' });
+                });
               }}
               className="py-2.5 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
             >
@@ -1287,7 +1313,10 @@ export const CargoForm = ({
                     };
                     return await m.compileCargoReceiptStream(thermalPrintData, '58mm');
                   });
-                }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
+                }).catch((err: any) => {
+                  console.error('Bluetooth print failed:', err);
+                  showToast({ message: err?.message || 'Bluetooth print failed. Ensure the printer is paired and powered on.', type: 'error' });
+                });
               }}
               className="py-2.5 bg-[var(--color-accent-amber)] hover:bg-opacity-85 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
             >

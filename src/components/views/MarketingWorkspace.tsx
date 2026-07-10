@@ -510,7 +510,10 @@ export const MarketingWorkspace = ({
                         };
                         return await m.compileMarketingReceiptStream(printData, '80mm');
                       });
-                    }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
+                    }).catch((err: any) => {
+                      console.error('Bluetooth print failed:', err);
+                      showToast({ message: err?.message || 'Bluetooth print failed. Ensure the printer is paired and powered on.', type: 'error' });
+                    });
                   }}
                   className="py-2.5 bg-[var(--color-success)] text-[#0D1117] text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
@@ -542,7 +545,10 @@ export const MarketingWorkspace = ({
                         };
                         return await m.compileMarketingReceiptStream(printData, '58mm');
                       });
-                    }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
+                    }).catch((err: any) => {
+                      console.error('Bluetooth print failed:', err);
+                      showToast({ message: err?.message || 'Bluetooth print failed. Ensure the printer is paired and powered on.', type: 'error' });
+                    });
                   }}
                   className="py-2.5 bg-[var(--color-success)] bg-opacity-80 text-[#0D1117] text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
@@ -569,7 +575,10 @@ export const MarketingWorkspace = ({
                       onClick={() => {
                         import('../../lib/escposTagPrinting').then(async (m) => {
                           await m.printMarketingTags(successTx!, bb, mb, sb, '80mm');
-                        }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
+                        }).catch((err: any) => {
+                          console.error('Bluetooth print failed:', err);
+                          showToast({ message: err?.message || 'Bluetooth print failed. Ensure the printer is paired and powered on.', type: 'error' });
+                        });
                       }}
                       className="py-2.5 bg-[rgba(16,185,129,0.12)] border border-[rgba(16,185,129,0.3)] text-[var(--color-success)] text-[11px] font-bold font-mono rounded-lg cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-[rgba(16,185,129,0.2)] transition-colors"
                     >
@@ -580,7 +589,10 @@ export const MarketingWorkspace = ({
                       onClick={() => {
                         import('../../lib/escposTagPrinting').then(async (m) => {
                           await m.printMarketingTags(successTx!, bb, mb, sb, '58mm');
-                        }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
+                        }).catch((err: any) => {
+                          console.error('Bluetooth print failed:', err);
+                          showToast({ message: err?.message || 'Bluetooth print failed. Ensure the printer is paired and powered on.', type: 'error' });
+                        });
                       }}
                       className="py-2.5 bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)] text-[var(--color-success)] text-[11px] font-bold font-mono rounded-lg cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-[rgba(16,185,129,0.15)] transition-colors"
                     >

@@ -256,11 +256,15 @@ async function buildTagData(data: CargoTagPDFData): Promise<CargoTagPDFData> {
 // the OS's own printer driver rather than raw Bluetooth GATT writes,
 // sidestepping the chunking/speed/corruption issues that come with
 // talking directly to a Bluetooth ESC/POS characteristic.
-export const printCargoTagPDF = async (data: CargoTagPDFData) => {
+//
+// Callers should open `preOpenedWindow` themselves via
+// `window.open('', '_blank')` synchronously in their click handler, before
+// awaiting this function -- see the comment on openPdfOrDownload for why.
+export const printCargoTagPDF = async (data: CargoTagPDFData, preOpenedWindow?: Window | null) => {
   const withQr = await buildTagData(data);
   const blob = await pdf(<CargoTagOnlyPDF data={withQr} />).toBlob();
   const url = URL.createObjectURL(blob);
-  openPdfOrDownload(url, `EHI-Tag-${data.id}.pdf`);
+  openPdfOrDownload(url, `EHI-Tag-${data.id}.pdf`, preOpenedWindow);
 };
 
 export const downloadCargoTagPDF = async (data: CargoTagPDFData) => {

@@ -270,15 +270,21 @@ export const TransactionLedger = ({
           }, width);
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error printing receipt:', error);
-      showToast({ message: 'Error connecting to Bluetooth printer. Ensure it is paired and on.', type: 'error' });
+      showToast({ message: error?.message || 'Error connecting to Bluetooth printer. Ensure it is paired and on.', type: 'error' });
     }
   };
 
   const handleReprintTag = async (width: '58mm' | '80mm') => {
     // Change: use wired PDF tag printing (opens PDF in new tab / OS print dialog)
     if (!viewingDetail || !viewingDetail.raw) return;
+    // Open the tab synchronously, in direct response to the click --
+    // window.open() called after the awaits below (dynamic import, QR
+    // generation, PDF rendering) loses the user-gesture context that
+    // mobile browsers and installed PWAs require, and gets silently
+    // blocked.
+    const preOpenedWindow = window.open('', '_blank');
     try {
       const { printCargoTagPDF } = await import('./CargoTagPDF');
       const tx = { ...viewingDetail.raw };
@@ -311,7 +317,7 @@ export const TransactionLedger = ({
         date: tx.time || new Date().toLocaleDateString('en-GB'),
       };
 
-      await printCargoTagPDF(data);
+      await printCargoTagPDF(data, preOpenedWindow);
 
       try {
         await supabase.from('tag_print_log').insert({
@@ -329,17 +335,21 @@ export const TransactionLedger = ({
       }
     } catch (error) {
       console.error('Error opening tag PDF:', error);
+      preOpenedWindow?.close();
       showToast({ message: 'Failed to open tag PDF for printing', type: 'error' });
     }
   };
 
   const handleReprintTagPDF = async () => {
     if (!viewingDetail || !viewingDetail.raw) return;
+    if (viewingDetail.raw.type !== 'cargo') {
+      showToast({ message: 'PDF Tag only available for cargo entries', type: 'info' });
+      return;
+    }
+    // Open the tab synchronously, in direct response to the click -- see
+    // the note in handleReprintTag above.
+    const preOpenedWindow = window.open('', '_blank');
     try {
-      if (viewingDetail.raw.type !== 'cargo') {
-        showToast({ message: 'PDF Tag only available for cargo entries', type: 'info' });
-        return;
-      }
       const { printCargoTagPDF } = await import('./CargoTagPDF');
       const tx = { ...viewingDetail.raw };
       const route = tx.route || (tx.detail ? tx.detail.split(' · ')[4] : 'Unknown') || 'Unknown';
@@ -354,7 +364,7 @@ export const TransactionLedger = ({
         date: tx.time || new Date().toLocaleDateString('en-GB'),
       };
 
-      await printCargoTagPDF(data);
+      await printCargoTagPDF(data, preOpenedWindow);
 
       try {
         await supabase.from('tag_print_log').insert({
@@ -372,6 +382,7 @@ export const TransactionLedger = ({
       }
     } catch (err) {
       console.error('Error printing tag PDF:', err);
+      preOpenedWindow?.close();
       showToast({ message: 'Failed to open tag PDF', type: 'error' });
     }
   };

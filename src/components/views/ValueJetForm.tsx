@@ -307,7 +307,10 @@ export const ValueJetForm = ({
                     };
                     return await m.compileVJReceiptStream(printData, '80mm');
                   });
-                }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
+                }).catch((err: any) => {
+                  console.error('Bluetooth print failed:', err);
+                  showToast({ message: err?.message || 'Bluetooth print failed. Ensure the printer is paired and powered on.', type: 'error' });
+                });
               }}
               className="py-2.5 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
             >
@@ -340,7 +343,10 @@ export const ValueJetForm = ({
                     };
                     return await m.compileVJReceiptStream(printData, '58mm');
                   });
-                }).catch(() => showToast({ message: 'Bluetooth printer not connected', type: 'error' }));
+                }).catch((err: any) => {
+                  console.error('Bluetooth print failed:', err);
+                  showToast({ message: err?.message || 'Bluetooth print failed. Ensure the printer is paired and powered on.', type: 'error' });
+                });
               }}
               className="py-2.5 bg-[var(--color-accent-cobalt)] bg-opacity-80 text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
             >

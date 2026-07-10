@@ -123,11 +123,25 @@ async function sendToBluetoothPrinter(writeCharacteristic: any, data: Uint8Array
   // path. Falls back to writeValueWithoutResponse() + the original
   // conservative delay for printers that only support write-without-
   // response, to avoid reintroducing the truncation/corruption bug.
+  //
+  // writeValueWithResponse()/writeValueWithoutResponse() were only added
+  // to the Web Bluetooth spec in 2020 and are absent on older Android
+  // WebView/Chrome builds -- still common on budget hub tablets. Calling
+  // an undefined method throws a TypeError on the very first chunk, which
+  // looks exactly like "the printer connected fine but then rejected the
+  // print." Feature-detect and fall back to the older, universally-
+  // supported writeValue() when the modern methods aren't there.
+  const hasModernWrite =
+    typeof writeCharacteristic.writeValueWithResponse === "function" &&
+    typeof writeCharacteristic.writeValueWithoutResponse === "function";
   const supportsResponse = !!writeCharacteristic.properties.write;
   const chunkSize = 20;
   for (let i = 0; i < data.length; i += chunkSize) {
     const chunk = data.slice(i, i + chunkSize);
-    if (supportsResponse) {
+    if (!hasModernWrite) {
+      await writeCharacteristic.writeValue(chunk);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    } else if (supportsResponse) {
       await writeCharacteristic.writeValueWithResponse(chunk);
     } else {
       await writeCharacteristic.writeValueWithoutResponse(chunk);

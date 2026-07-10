@@ -498,7 +498,15 @@ export const downloadCargoReceipt = async (data: CargoReceiptData) => {
   URL.revokeObjectURL(url);
 };
 
-export const downloadCargoWaybill = async (data: CargoReceiptData) => {
+// Callers should open `preOpenedWindow` themselves via
+// `window.open('', '_blank')` synchronously in their click handler, before
+// awaiting this function -- see the comment on openPdfOrDownload for why.
+// This used to force a plain <a download> click, but that anchor was never
+// attached to the DOM: a detached element's synthetic .click() is silently
+// dropped on mobile Safari and installed-PWA WKWebViews, which is why "PDF
+// Tag" appeared to do nothing there. Routing through openPdfOrDownload
+// opens/navigates a real tab instead, which every platform handles.
+export const downloadCargoWaybill = async (data: CargoReceiptData, preOpenedWindow?: Window | null) => {
   if (!data.qrCodeDataUrl) {
     try {
       data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
@@ -515,9 +523,5 @@ export const downloadCargoWaybill = async (data: CargoReceiptData) => {
   }
   const blob = await pdf(<CargoWaybillOnlyPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `Waybill_${data.entryRef}.pdf`;
-  a.click();
-  URL.revokeObjectURL(url);
+  openPdfOrDownload(url, `Waybill_${data.entryRef}.pdf`, preOpenedWindow);
 };

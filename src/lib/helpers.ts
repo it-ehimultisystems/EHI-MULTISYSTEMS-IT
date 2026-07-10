@@ -37,12 +37,34 @@ export function getCityName(routeStr: string | null | undefined): string {
 // null -- even though the identical call works fine in a normal browser
 // tab. Returns the opened window (if any) so callers that want to
 // auto-trigger print() can do so.
-export function openPdfOrDownload(url: string, filename: string): Window | null {
+//
+// Pass `preOpenedWindow` when the caller already called
+// `window.open('', '_blank')` synchronously inside the click handler,
+// before any await. That matters because every caller here builds the PDF
+// (dynamic import, QR generation, image loads, PDF rendering) before a
+// blob: URL exists to open -- by the time this function runs, several
+// async ticks have passed since the click, and mobile browsers/installed
+// PWAs treat window.open() at that point as an unrequested popup and
+// block it, even though the exact same call succeeds when it happens
+// synchronously inside the gesture. Navigating a window that was already
+// opened during the gesture sidesteps that entirely.
+export function openPdfOrDownload(url: string, filename: string, preOpenedWindow?: Window | null): Window | null {
   let win: Window | null = null;
-  try {
-    win = window.open(url, '_blank');
-  } catch {
-    win = null;
+  if (preOpenedWindow !== undefined) {
+    win = preOpenedWindow;
+    if (win) {
+      try {
+        win.location.href = url;
+      } catch {
+        win = null;
+      }
+    }
+  } else {
+    try {
+      win = window.open(url, '_blank');
+    } catch {
+      win = null;
+    }
   }
   if (!win) {
     const a = document.createElement('a');
