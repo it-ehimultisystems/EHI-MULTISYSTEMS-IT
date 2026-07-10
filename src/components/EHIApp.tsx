@@ -45,6 +45,12 @@ const MyTrips = memo(MyTripsRaw);
 const ITDashboard = memo(ITDashboardRaw);
 const CreditDebit = memo(CreditDebitRaw);
 
+// Keyed per user (not a flat key) so switching users on a shared device
+// never restores one person's last tab into another person's session --
+// each user's own nav clicks are already role-gated when they happen, so
+// replaying their own last tab back to them is always safe.
+const CURRENT_TAB_KEY = (userId: string) => `ehi_current_tab_${userId}`;
+
 export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const getDefaultTab = (role: string): TabView => {
     if (role === 'office_work') return 'Cargo';
@@ -53,7 +59,23 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     if (role === 'vj_agent') return 'VJ POS';
     return 'Tower';
   };
-  const [currentTab, setCurrentTab] = useState<TabView>(getDefaultTab(user.role));
+  // Restores the tab the user was last on instead of always landing back on
+  // the dashboard -- this matters a lot more now that the app auto-reloads
+  // on every new deploy (see main.tsx's controllerchange listener): without
+  // this, that silent reload would yank anyone mid-task back to Tower.
+  const [currentTab, setCurrentTab] = useState<TabView>(() => {
+    try {
+      const saved = localStorage.getItem(CURRENT_TAB_KEY(user.id));
+      if (saved) return saved as TabView;
+    } catch { /* ignore -- fall through to role default */ }
+    return getDefaultTab(user.role);
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CURRENT_TAB_KEY(user.id), currentTab);
+    } catch { /* ignore -- non-fatal, just won't restore next time */ }
+  }, [currentTab, user.id]);
   const [streamLedger, setStreamLedger] = useState<'cargo' | 'baggage' | 'marketing' | null>(null);
   const [globalDateRange, setGlobalDateRange] = useState({
     start: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
