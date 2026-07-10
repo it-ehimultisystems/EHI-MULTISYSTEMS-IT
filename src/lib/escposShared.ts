@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 
-import ehiLogoFile from '../assets/branding/ehi-logo.png';
+import ehiLogoFile from '../assets/branding/ehi-logo-bw.png';
 import { airlineLogoUrl } from './airlineLogos';
 
 export const encoder = new TextEncoder();
@@ -33,7 +33,13 @@ export function concatChunks(chunks: Uint8Array[]): Uint8Array {
 // one deployed printer doesn't properly support those commands, even
 // though basic text/reverse-print work fine on it.
 export async function qrAsRaster(url: string, sizeDots: number): Promise<Uint8Array> {
-  const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: sizeDots });
+  // errorCorrectionLevel 'L' (~7% redundancy) instead of the library's
+  // default 'M' (~15%) -- safe here because the content is always a
+  // fixed, known tracking URL, never arbitrary user input. Fewer required
+  // modules for the same data means each module is physically LARGER at a
+  // given print size: more reliably scannable, and fewer tiny black/white
+  // dot transitions for the thermal print head to resolve.
+  const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: sizeDots, errorCorrectionLevel: 'L' });
   return imageToEscPosRaster(dataUrl, sizeDots);
 }
 
@@ -152,14 +158,16 @@ export async function ehiSvgToRaster(widthDots: number): Promise<Uint8Array> {
 
 // Every document type calls this for its header -- change it once,
 // every receipt/tag updates together, instead of three drifting copies.
-// Uses the actual ehi-logo.png at threshold 200 so the amber MULTISYSTEMS
-// banner prints as a solid black rectangle with white text -- exactly the
-// "background" effect on thermal paper. The PNG already contains all text
-// (EHI, MULTISYSTEMS, NIGERIA LIMITED) so no separate text lines needed.
+// Uses ehi-logo-bw.png -- a dedicated, pre-made pure black-and-white
+// export of the logo, smaller and simpler to rasterize than running the
+// full-color logo through a threshold each time (which previously needed
+// threshold 200 specifically to force the amber MULTISYSTEMS banner to
+// convert to solid black -- that workaround is no longer needed since
+// this source has no color to threshold away in the first place).
 export async function brandingHeader(logoWidthDots = 160): Promise<Uint8Array[]> {
   const chunks: Uint8Array[] = [new Uint8Array(CENTER)];
   try {
-    const logoRaster = await imageToEscPosRaster(ehiLogoFile, logoWidthDots, 200);
+    const logoRaster = await imageToEscPosRaster(ehiLogoFile, logoWidthDots, 160);
     chunks.push(logoRaster);
     chunks.push(encoder.encode('\n\n'));
   } catch {
@@ -227,9 +235,11 @@ export async function brandingHeaderWithAirline(
     // Airline flush against the right margin, spanning from the split
     ctx.drawImage(airlineImg, widthDots - alW, Math.floor((logoH - Math.min(alH, logoH)) / 2), alW, Math.min(alH, logoH));
 
-    // Use threshold 200 so amber areas (MULTISYSTEMS banner in EHI logo) print as solid black
+    // Standard threshold -- the EHI portion is already pure black-and-
+    // white (ehi-logo-bw.png), and this matches the default threshold
+    // used for airline logos everywhere else in the app.
     const dataUrl = canvas.toDataURL('image/png');
-    const raster = await imageToEscPosRaster(dataUrl, widthDots, 200);
+    const raster = await imageToEscPosRaster(dataUrl, widthDots, 160);
     chunks.push(raster);
     chunks.push(encoder.encode('\n'));
 

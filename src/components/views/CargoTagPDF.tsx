@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   },
   goldDivider: {
     height: 2,
-    backgroundColor: "#C98E28",
+    backgroundColor: "#000000",
     marginBottom: 6,
   },
   body: {
@@ -73,11 +73,11 @@ const styles = StyleSheet.create({
   routeValue: {
     fontSize: 15,
     fontFamily: "Helvetica-Bold",
-    color: "#084985",
+    color: "#000000",
     marginBottom: 6,
   },
   awbBand: {
-    backgroundColor: "#084985",
+    backgroundColor: "#000000",
     paddingVertical: 4,
     paddingHorizontal: 6,
     marginBottom: 6,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   awbLabel: {
     fontSize: 6,
-    color: "#FFBD59",
+    color: "#FFFFFF",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -115,9 +115,9 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   pieceBadge: {
-    backgroundColor: "#FFF6E5",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#C98E28",
+    borderColor: "#000000",
     borderRadius: 3,
     paddingVertical: 3,
     paddingHorizontal: 6,
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   pieceBadgeText: {
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
-    color: "#C98E28",
+    color: "#000000",
   },
   qrImage: {
     width: 82,
@@ -216,7 +216,7 @@ async function buildTagData(data: CargoTagPDFData): Promise<CargoTagPDFData> {
   if (!result.qrCodeDataUrl) {
     const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(result.id)}`;
     try {
-      const qrCodeDataUrl = await QRCode.toDataURL(trackingUrl, { margin: 1, width: 240 });
+      const qrCodeDataUrl = await QRCode.toDataURL(trackingUrl, { margin: 1, width: 240, errorCorrectionLevel: 'L' });
       result = { ...result, qrCodeDataUrl };
     } catch (e) {
       console.warn("Failed to generate QR code for tag PDF", e);

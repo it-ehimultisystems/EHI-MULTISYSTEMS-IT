@@ -460,6 +460,7 @@ export const printCargoReceipt = async (data: CargoReceiptData) => {
       data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
         margin: 1,
         width: 200,
+        errorCorrectionLevel: 'L',
       });
     } catch (e) {
       console.warn("Failed to generate QR code", e);
@@ -482,6 +483,7 @@ export const downloadCargoReceipt = async (data: CargoReceiptData) => {
       data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
         margin: 1,
         width: 200,
+        errorCorrectionLevel: 'L',
       });
     } catch (e) {
       console.warn("Failed to generate QR code", e);
@@ -505,6 +507,7 @@ export const downloadCargoWaybill = async (data: CargoReceiptData) => {
       data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
         margin: 1,
         width: 200,
+        errorCorrectionLevel: 'L',
       });
     } catch (e) {
       console.warn("Failed to generate QR code", e);

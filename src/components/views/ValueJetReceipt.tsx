@@ -256,6 +256,7 @@ export const downloadVJReceipt = async (data: VJReceiptData) => {
       data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
         margin: 1,
         width: 200,
+        errorCorrectionLevel: 'L',
       });
     } catch (e) {
       console.warn("Failed to generate QR code", e);
@@ -279,6 +280,7 @@ export const printVJReceipt = async (data: VJReceiptData): Promise<void> => {
       data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
         margin: 1,
         width: 200,
+        errorCorrectionLevel: 'L',
       });
     } catch (e) {
       console.warn("Failed to generate QR code", e);

@@ -44,7 +44,7 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
   chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
   chunks.push(encoder.encode(`ValueJet Counter - ${data.originState}\n\n`));
 
-  chunks.push(await qrAsRaster(data.trackingUrl, width === '58mm' ? 220 : 280));
+  chunks.push(await qrAsRaster(data.trackingUrl, width === '58mm' ? 260 : 280));
   chunks.push(encoder.encode('\n\n'));
   chunks.push(new Uint8Array(LEFT));
   chunks.push(encoder.encode(divider(maxChars)));

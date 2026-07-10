@@ -50,7 +50,7 @@ export async function compileSingleTag(
     chunks.push(precomputed.qr);
   } else {
     const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.id)}`;
-    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 220 : 280));
+    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 260 : 280));
   }
   chunks.push(encoder.encode('\n\n'));
 
@@ -87,7 +87,7 @@ export async function compileCargoTagStream(tx: any, width: '58mm' | '80mm'): Pr
     header: await brandingHeaderWithAirline(tx.airline || '', width),
     qr: await qrAsRaster(
       `https://ehimultisystems.com/track?ref=${encodeURIComponent(sharedId)}`,
-      width === '58mm' ? 220 : 280
+      width === '58mm' ? 260 : 280
     ),
   };
 
@@ -159,7 +159,7 @@ async function compileSingleMarketingTag(
     chunks.push(precomputed.qr);
   } else {
     const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(item.awb)}`;
-    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 220 : 280));
+    chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 260 : 280));
   }
   chunks.push(encoder.encode('\n\n'));
 
@@ -200,7 +200,7 @@ export async function compileMarketingTagStream(
     header: await brandingHeaderWithAirline(tx.airline || '', width),
     qr: await qrAsRaster(
       `https://ehimultisystems.com/track?ref=${encodeURIComponent(awb)}`,
-      width === '58mm' ? 220 : 280
+      width === '58mm' ? 260 : 280
     ),
   };
 
