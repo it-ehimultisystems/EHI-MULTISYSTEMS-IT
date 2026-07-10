@@ -712,6 +712,8 @@ export const TransactionLedger = ({
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
           />
           <input
+            id="ledger-search"
+            name="search"
             type="text"
             placeholder="Search entries, dates, amounts..."
             value={searchQuery}
@@ -724,6 +726,8 @@ export const TransactionLedger = ({
           {dateRange && onDateRangeChange && (
             <div className="flex items-center gap-1 ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
               <input
+                id="ledger-date-start"
+                name="date-start"
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
@@ -731,6 +735,8 @@ export const TransactionLedger = ({
               />
               <span className="text-[var(--color-muted)]">to</span>
               <input
+                id="ledger-date-end"
+                name="date-end"
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
@@ -861,6 +867,8 @@ export const TransactionLedger = ({
                               posCodeInput.id === e.id ? (
                                 <div className="flex items-center gap-1">
                                   <input
+                                    id={`pos-code-${e.id}`}
+                                    name={`pos-code-${e.id}`}
                                     autoFocus
                                     type="text"
                                     className="w-16 bg-[var(--color-surface-1)] border border-[var(--color-accent-amber)] rounded px-1 py-0.5 text-[9px] text-[var(--color-foreground)] outline-none"
@@ -1256,6 +1264,8 @@ export const TransactionLedger = ({
                       Consignee Name
                     </label>
                     <input
+                      id="edit-tx-cargo-name"
+                      name="edit-tx-cargo-name"
                       type="text"
                       value={editingTx.name}
                       onChange={(e) => setEditingTx({ ...editingTx, name: e.target.value })}
@@ -1267,6 +1277,8 @@ export const TransactionLedger = ({
                       Airline
                     </label>
                     <input
+                      id="edit-tx-airline"
+                      name="edit-tx-airline"
                       type="text"
                       value={editingTx.airline || ''}
                       onChange={(e) => setEditingTx({ ...editingTx, airline: e.target.value })}
@@ -1279,6 +1291,8 @@ export const TransactionLedger = ({
                         Route
                       </label>
                       <input
+                        id="edit-tx-cargo-route"
+                        name="edit-tx-cargo-route"
                         type="text"
                         value={editingTx.route || ''}
                         onChange={(e) => setEditingTx({ ...editingTx, route: e.target.value })}
@@ -1290,6 +1304,8 @@ export const TransactionLedger = ({
                         Content Type
                       </label>
                       <input
+                        id="edit-tx-content-type"
+                        name="edit-tx-content-type"
                         type="text"
                         value={editingTx.contentType || ''}
                         onChange={(e) => setEditingTx({ ...editingTx, contentType: e.target.value })}
@@ -1343,6 +1359,8 @@ export const TransactionLedger = ({
                       Passenger Name
                     </label>
                     <input
+                      id="edit-tx-baggage-name"
+                      name="edit-tx-baggage-name"
                       type="text"
                       value={editingTx.name}
                       onChange={(e) => setEditingTx({ ...editingTx, name: e.target.value })}
@@ -1355,6 +1373,8 @@ export const TransactionLedger = ({
                         Flight
                       </label>
                       <input
+                        id="edit-tx-flight"
+                        name="edit-tx-flight"
                         type="text"
                         value={editingTx.flight || ''}
                         onChange={(e) => setEditingTx({ ...editingTx, flight: e.target.value })}
@@ -1366,6 +1386,8 @@ export const TransactionLedger = ({
                         Destination
                       </label>
                       <input
+                        id="edit-tx-destination"
+                        name="edit-tx-destination"
                         type="text"
                         value={editingTx.destination || ''}
                         onChange={(e) => setEditingTx({ ...editingTx, destination: e.target.value })}
@@ -1383,6 +1405,8 @@ export const TransactionLedger = ({
                       Customer Name
                     </label>
                     <input
+                      id="edit-tx-marketing-name"
+                      name="edit-tx-marketing-name"
                       type="text"
                       value={editingTx.name}
                       onChange={(e) => setEditingTx({ ...editingTx, name: e.target.value })}
@@ -1394,6 +1418,8 @@ export const TransactionLedger = ({
                       Route
                     </label>
                     <input
+                      id="edit-tx-marketing-route"
+                      name="edit-tx-marketing-route"
                       type="text"
                       value={editingTx.route || ''}
                       onChange={(e) => setEditingTx({ ...editingTx, route: e.target.value })}

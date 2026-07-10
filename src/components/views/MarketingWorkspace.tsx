@@ -359,7 +359,10 @@ export const MarketingWorkspace = ({
 
   const handleAddExpense = () => {
     const amt = parseFloat(expAmount);
-    if (!amt || amt <= 0) return;
+    if (!amt || amt <= 0) {
+      showToast({ message: 'Enter an expense amount greater than zero.', type: 'warning' });
+      return;
+    }
 
     onAddExpense({
       id: `EXP-${Date.now()}`,
@@ -654,6 +657,8 @@ export const MarketingWorkspace = ({
                   ))}
                 </select>
                 <input
+                  id="mkt-name"
+                  name="name"
                   placeholder="Customer Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -662,6 +667,8 @@ export const MarketingWorkspace = ({
                 <div className="relative">
                   <MessageSquare size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
                   <input
+                    id="mkt-phone"
+                    name="phone"
                     type="tel"
                     placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
                     value={phone}
@@ -721,6 +728,8 @@ export const MarketingWorkspace = ({
                 {mode === "Debt" && (
                   <div className="space-y-2">
                     <input
+                      id="mkt-debtor-name"
+                      name="debtor-name"
                       type="text"
                       placeholder="Debtor Name / Company"
                       value={debtorName}
@@ -770,7 +779,10 @@ export const MarketingWorkspace = ({
                   <div className="flex items-center">
                     <span className="text-[14px] font-bold font-mono text-[var(--color-muted)] mr-1">₦</span>
                     <input
+                      id="mkt-amount"
+                      name="amount"
                       type="number"
+                      min="0"
                       value={amountOverride !== "" ? amountOverride : (minAmount > 0 ? minAmount : "")}
                       onChange={(e) => setAmountOverride(e.target.value)}
                       onBlur={() => {
@@ -836,7 +848,10 @@ export const MarketingWorkspace = ({
                 ))}
               </select>
               <input
+                id="mkt-exp-amount"
+                name="exp-amount"
                 type="number"
+                min="0"
                 placeholder="Amount"
                 value={expAmount}
                 onChange={(e) => setExpAmount(e.target.value)}
@@ -845,6 +860,8 @@ export const MarketingWorkspace = ({
             </div>
             <div className="flex space-x-2">
               <input
+                id="mkt-exp-desc"
+                name="exp-desc"
                 placeholder="Description (optional)"
                 value={expDesc}
                 onChange={(e) => setExpDesc(e.target.value)}
@@ -852,7 +869,7 @@ export const MarketingWorkspace = ({
               />
               <button
                 onClick={handleAddExpense}
-                disabled={!expAmount}
+                disabled={!(parseFloat(expAmount) > 0)}
                 className="h-11 px-4 bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors"
               >
                 LOG
@@ -918,7 +935,10 @@ export const MarketingWorkspace = ({
                     <span className="text-[var(--color-muted)] shrink-0">Less Transfer</span>
                     <div className="flex gap-1 items-center">
                       <input
+                        id="mkt-less-transfer"
+                        name="less-transfer"
                         type="number"
+                        min="0"
                         placeholder="0"
                         value={lessTransferInput}
                         onChange={e => {
@@ -932,6 +952,8 @@ export const MarketingWorkspace = ({
                   </div>
                   {lessTransfer > 0 && (
                     <input
+                      id="mkt-less-transfer-label"
+                      name="less-transfer-label"
                       type="text"
                       placeholder="Who? (e.g. Govt/Honda/Zion)"
                       value={lessTransferLabel}

@@ -912,6 +912,8 @@ export const Scanner = ({
         {/* Search box */}
         <div className="flex gap-2">
           <input
+            id="scanner-track-ref"
+            name="track-ref"
             value={trackRef}
             onChange={e => setTrackRef(e.target.value.toUpperCase())}
             onKeyDown={e => e.key === 'Enter' && handleTrackLookup()}
@@ -1406,6 +1408,8 @@ export const Scanner = ({
       {/* Manual entry fallback */}
       <div className="flex gap-2">
         <input
+          id="scanner-manual-ref"
+          name="manual-ref"
           value={manualRef}
           onChange={e => setManualRef(e.target.value.toUpperCase())}
           onKeyDown={e => e.key === 'Enter' && handleManualLookup()}
@@ -1538,7 +1542,10 @@ export const Scanner = ({
             </div>
 
             <input
+              id="scanner-pin"
+              name="pin"
               type="text"
+              inputMode="numeric"
               autoFocus
               value={pinInput}
               onChange={e => setPinInput(e.target.value)}

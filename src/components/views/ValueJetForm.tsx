@@ -419,7 +419,9 @@ export const ValueJetForm = ({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Passenger Name</span>
-            <input 
+            <input
+              id="vj-name"
+              name="name"
               placeholder="Enter Passenger Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -430,6 +432,8 @@ export const ValueJetForm = ({
           <div className="space-y-1.5">
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">PNR / Booking Reference <span className="text-[10px] font-normal text-[var(--color-muted)]">(Optional)</span></span>
             <input
+              id="vj-pnr"
+              name="pnr"
               placeholder="e.g. ABC123"
               value={pnr}
               onChange={(e) => setPnr(e.target.value.toUpperCase())}
@@ -444,6 +448,8 @@ export const ValueJetForm = ({
               Passenger Phone — WhatsApp Receipt (Optional)
             </span>
             <input
+              id="vj-phone"
+              name="phone"
               type="tel"
               placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
               value={phone}
@@ -451,7 +457,7 @@ export const ValueJetForm = ({
               className={formInputClass}
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Flight Number</span>
@@ -460,6 +466,8 @@ export const ValueJetForm = ({
                   VK
                 </span>
                 <input
+                  id="vj-flight"
+                  name="flight"
                   placeholder="216"
                   inputMode="numeric"
                   value={flight}
@@ -488,7 +496,9 @@ export const ValueJetForm = ({
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Total Pieces</span>
-              <input 
+              <input
+                id="vj-pcs"
+                name="pcs"
                 type="number"
                 step="1"
                 min="1"
@@ -500,7 +510,9 @@ export const ValueJetForm = ({
             </div>
             <div className="space-y-1.5">
               <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Total Weight (KG)</span>
-              <input 
+              <input
+                id="vj-kg"
+                name="kg"
                 type="number"
                 step="1"
                 min="0"
@@ -529,7 +541,10 @@ export const ValueJetForm = ({
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Total Amount (₦)</span>
             <div className="relative">
               <input
+                id="vj-amount"
+                name="amount"
                 type="number"
+                min="0"
                 placeholder={minAmount > 0 ? minAmount.toString() : "0"}
                 value={amountOverride !== "" ? amountOverride : (minAmount > 0 ? minAmount : "")}
                 onChange={(e) => setAmountOverride(e.target.value)}

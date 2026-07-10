@@ -191,7 +191,10 @@ export const PackageForm = ({
 
   const handleAddExpense = () => {
     const amt = parseFloat(expAmount);
-    if (!amt || amt <= 0) return;
+    if (!amt || amt <= 0) {
+      showToast({ message: 'Enter an expense amount greater than zero.', type: 'warning' });
+      return;
+    }
     onAddExpense({ id: uid('EX' as any), type: expType, amount: amt, description: expDesc.trim(), time: tnow() });
     setExpAmount("");
     setExpDesc("");
@@ -405,6 +408,8 @@ export const PackageForm = ({
                 {mode !== "Debt" && (
                   <>
                     <input
+                      id="pkg-name"
+                      name="name"
                       placeholder="Customer Name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -413,6 +418,8 @@ export const PackageForm = ({
                     <div className="relative">
                       <MessageSquare size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
                       <input
+                        id="pkg-phone"
+                        name="phone"
                         type="tel"
                         placeholder="Phone (optional, for WhatsApp receipt)"
                         value={phone}
@@ -464,6 +471,8 @@ export const PackageForm = ({
 
                 {mode === "Debt" && (
                   <input
+                    id="pkg-debtor-name"
+                    name="debtor-name"
                     type="text"
                     placeholder="Debtor Name"
                     value={debtorName}
@@ -477,7 +486,10 @@ export const PackageForm = ({
                   <div className="flex items-center">
                     <span className="text-[14px] font-bold font-mono text-[var(--color-muted)] mr-1">₦</span>
                     <input
+                      id="pkg-amount"
+                      name="amount"
                       type="number"
+                      min="0"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0"
@@ -513,11 +525,11 @@ export const PackageForm = ({
               <select value={expType} onChange={(e) => setExpType(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}>
                 {EXPENSE_CATEGORIES.map((e) => <option key={e} value={e}>{e}</option>)}
               </select>
-              <input type="number" placeholder="Amount" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
+              <input id="pkg-exp-amount" name="exp-amount" type="number" min="0" placeholder="Amount" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
             </div>
             <div className="flex space-x-2">
-              <input placeholder="Description (optional)" value={expDesc} onChange={(e) => setExpDesc(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
-              <button onClick={handleAddExpense} disabled={!expAmount} className="h-11 px-4 bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors">
+              <input id="pkg-exp-desc" name="exp-desc" placeholder="Description (optional)" value={expDesc} onChange={(e) => setExpDesc(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
+              <button onClick={handleAddExpense} disabled={!(parseFloat(expAmount) > 0)} className="h-11 px-4 bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors">
                 LOG
               </button>
             </div>
