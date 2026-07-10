@@ -5,7 +5,8 @@ import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { EHIApp } from './components/EHIApp';
 import { UserProfile, getSession, signOut } from './lib/auth';
 import { supabase } from './lib/supabase';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PackageX } from 'lucide-react';
+import ehiLogoImg from './assets/branding/ehi-logo.png';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './lib/ToastContext';
 import { ConfirmProvider } from './lib/ConfirmContext';
@@ -39,7 +40,8 @@ const PublicTrackingPage = () => {
     setLoading(true);
     setSearched(true);
     setTimeline([]);
-    
+    setResult(null);
+
     // Check Cargo Entries
     // NOTE: explicit column list, not select('*') — this page is public and
     // unauthenticated, so only the fields actually shown below should ever
@@ -73,7 +75,7 @@ const PublicTrackingPage = () => {
       .select('entry_ref, customer_name, route, status')
       .eq('entry_ref', query)
       .limit(1);
-    
+
     if (marketing && marketing.length > 0) {
       const m = marketing[0];
       setResult({
@@ -118,59 +120,70 @@ const PublicTrackingPage = () => {
     searchTracking(waybillId.trim().toUpperCase());
   }, [waybillId]);
 
-  const statusColor = (status: string) => {
-    if (status === 'Delivered') return '#10B981';
-    if (status === 'In-Transit' || status === 'Departure') return '#3B82F6';
-    if (status === 'Arrived') return '#F59E0B';
-    return '#64748B';
+  // Every status string the rest of the app writes for these tables collapses
+  // into one of these 4 canonical stages. 'Dispatched' and 'Departure' are
+  // both used elsewhere (TransactionLedger.tsx, IncomingToHub.tsx) for the
+  // same in-transit state -- matching on a single exact string here caused
+  // the progress bar to silently fail to highlight for whichever variant
+  // wasn't in the list.
+  const STATUS_GROUPS: Record<string, number> = {
+    'Intake': 0,
+    'Dispatched': 1, 'Departure': 1, 'In-Transit': 1,
+    'Arrived': 2,
+    'Delivered': 3,
   };
+  const canonicalSteps = ['Intake', 'In Transit', 'Arrived', 'Delivered'];
+  const currentStepIndex = result ? (STATUS_GROUPS[result.status] ?? 0) : 0;
 
-  const statusSteps = ['Intake', 'Departure', 'In-Transit', 'Arrived', 'Delivered'];
+  const statusColor = (status: string) => {
+    const idx = STATUS_GROUPS[status] ?? 0;
+    if (idx === 3) return 'var(--color-success)';
+    if (idx === 1) return 'var(--color-warning)';
+    if (idx === 2) return 'var(--color-accent-cobalt)';
+    return 'var(--color-muted)';
+  };
 
   return (
     <div
       className="flex flex-col items-center justify-start py-10 px-4"
-      style={{ background: '#F0F4F8', minHeight: '100dvh' }}
+      style={{ background: 'var(--color-background)', minHeight: '100dvh' }}
     >
       {/* Header */}
       <div className="text-center mb-8">
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)' }}
-        >
-          <span style={{ fontSize: 22, fontWeight: 900, color: '#F59E0B', fontFamily: 'monospace' }}>
-            EHI
-          </span>
-        </div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', margin: 0 }}>
-          EHI Cargo Tracking
+        <img
+          src={ehiLogoImg}
+          alt="EHI Multisystems"
+          style={{ height: 96, margin: '0 auto 16px', display: 'block' }}
+        />
+        <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--color-foreground)', margin: 0 }}>
+          Track your shipment
         </h1>
-        <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
-          Track your shipment by waybill or AWB number
+        <p style={{ fontSize: 13, color: 'var(--color-muted)', marginTop: 4 }}>
+          Enter your waybill or AWB number
         </p>
       </div>
 
       {/* Search box */}
       <div
         className="w-full max-w-md p-6 rounded-2xl mb-6"
-        style={{ background: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}
+        style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-border)' }}
       >
         <div className="flex gap-3">
           <input
             value={ref}
-            onChange={e => setRef(e.target.value.toUpperCase().replace(/[\s-]/g, ''))}
+            onChange={e => setRef(e.target.value.toUpperCase())}
             onKeyDown={e => {
               if (e.key === 'Enter') {
                 if (!ref.trim()) return;
                 searchTracking(ref.trim().toUpperCase());
               }
             }}
-            placeholder="e.g. AC240619X9Y8 or 14153"
+            placeholder="EHI-MMA2-CGO-000482"
             style={{
               flex: 1, height: 44, padding: '0 12px',
               fontSize: 13, fontFamily: 'monospace',
-              border: '1px solid #E2E8F0', borderRadius: 10,
-              background: '#F8FAFC', color: '#0F172A',
+              border: '1px solid var(--color-border)', borderRadius: 10,
+              background: 'var(--color-input-bg)', color: 'var(--color-input-text)',
               outline: 'none',
             }}
           />
@@ -181,18 +194,24 @@ const PublicTrackingPage = () => {
             }}
             disabled={!ref.trim() || loading}
             style={{
-              height: 44, padding: '0 20px',
-              background: '#F59E0B', border: 'none',
-              borderRadius: 10, color: '#0B0F19',
-              fontWeight: 800, fontFamily: 'monospace',
-              fontSize: 12, cursor: 'pointer',
+              height: 44, padding: '0 22px',
+              background: 'var(--color-navy)', border: 'none',
+              borderRadius: 10, color: '#FFFFFF',
+              fontWeight: 500, fontSize: 13, cursor: 'pointer',
               opacity: loading ? 0.7 : 1,
             }}
           >
-            {loading ? '...' : 'TRACK'}
+            Track
           </button>
         </div>
       </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="w-full max-w-md flex justify-center py-8">
+          <Loader2 className="animate-spin" size={22} style={{ color: 'var(--color-accent-amber)' }} />
+        </div>
+      )}
 
       {/* Result */}
       {searched && !loading && (
@@ -200,12 +219,12 @@ const PublicTrackingPage = () => {
           {result ? (
             <div
               className="rounded-2xl overflow-hidden"
-              style={{ background: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}
+              style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-border)' }}
             >
               {/* Status banner */}
               <div style={{
-                background: statusColor(result.status) + '15',
-                borderBottom: `1px solid ${statusColor(result.status)}30`,
+                background: 'var(--color-surface-1)',
+                borderBottom: '1px solid var(--color-border)',
                 padding: '16px 20px',
                 display: 'flex', alignItems: 'center', gap: 10,
               }}>
@@ -214,14 +233,13 @@ const PublicTrackingPage = () => {
                   background: statusColor(result.status),
                 }} />
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-foreground)' }}>
                     {result.name}
                   </div>
                   <div style={{
-                    fontSize: 11, fontFamily: 'monospace',
-                    color: statusColor(result.status), fontWeight: 700,
+                    fontSize: 11, color: statusColor(result.status), fontWeight: 500,
                   }}>
-                    {result.status?.toUpperCase()}
+                    {result.status}
                   </div>
                 </div>
               </div>
@@ -241,10 +259,10 @@ const PublicTrackingPage = () => {
                     { label: 'Pieces', value: result.pieces || '—' },
                   ].map(({ label, value }) => (
                     <div key={label}>
-                      <div style={{ fontSize: 9, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: 9, color: 'var(--color-light-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                         {label}
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginTop: 2, fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-foreground)', marginTop: 2, fontFamily: 'monospace' }}>
                         {String(value)}
                       </div>
                     </div>
@@ -253,21 +271,18 @@ const PublicTrackingPage = () => {
 
                 {/* Progress steps */}
                 <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 9, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace', marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: 'var(--color-light-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
                     Journey
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-                    {statusSteps.map((step, i) => {
-                      const currentIdx = statusSteps.indexOf(result.status);
-                      const isReached = i <= currentIdx;
-                      const isCurrent = i === currentIdx;
+                    {canonicalSteps.map((step, i) => {
+                      const isReached = i <= currentStepIndex;
+                      const isCurrent = i === currentStepIndex;
                       return (
-                        <div key={step} style={{ display: 'flex', alignItems: 'center', flex: i < statusSteps.length - 1 ? 1 : 'none' }}>
+                        <div key={step} style={{ display: 'flex', alignItems: 'center', flex: i < canonicalSteps.length - 1 ? 1 : 'none' }}>
                           <div style={{
                             width: 20, height: 20, borderRadius: '50%',
-                            background: isReached
-                              ? statusColor(result.status)
-                              : '#E2E8F0',
+                            background: isReached ? statusColor(result.status) : 'var(--color-border-strong)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: isCurrent ? `2px solid ${statusColor(result.status)}` : 'none',
                             position: 'relative', flexShrink: 0,
@@ -279,10 +294,10 @@ const PublicTrackingPage = () => {
                               <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor(result.status) }} />
                             )}
                           </div>
-                          {i < statusSteps.length - 1 && (
+                          {i < canonicalSteps.length - 1 && (
                             <div style={{
                               flex: 1, height: 2,
-                              background: i < currentIdx ? statusColor(result.status) : '#E2E8F0',
+                              background: i < currentStepIndex ? statusColor(result.status) : 'var(--color-border-strong)',
                             }} />
                           )}
                         </div>
@@ -290,11 +305,11 @@ const PublicTrackingPage = () => {
                     })}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                    {statusSteps.map(step => (
+                    {canonicalSteps.map((step, i) => (
                       <div key={step} style={{
-                        fontSize: 8, fontFamily: 'monospace',
-                        color: step === result.status ? statusColor(result.status) : '#94A3B8',
-                        fontWeight: step === result.status ? 700 : 400,
+                        fontSize: 9,
+                        color: i === currentStepIndex ? statusColor(result.status) : 'var(--color-light-muted)',
+                        fontWeight: i === currentStepIndex ? 500 : 400,
                         textAlign: 'center', flex: 1,
                       }}>
                         {step}
@@ -305,8 +320,8 @@ const PublicTrackingPage = () => {
               </div>
 
               {timeline.length > 0 && (
-                <div style={{ padding: '16px 20px', borderTop: '1px solid #F1F5F9' }}>
-                  <div style={{ fontSize: 9, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace', marginBottom: 12 }}>
+                <div style={{ padding: '16px 20px', borderTop: '1px solid var(--color-border)' }}>
+                  <div style={{ fontSize: 9, color: 'var(--color-light-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
                     Shipment history
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -314,9 +329,9 @@ const PublicTrackingPage = () => {
                       const label = ev.event_type === 'DEPART' ? 'Departed'
                         : ev.event_type === 'ARRIVE' ? 'Arrived'
                         : 'Delivered';
-                      const dotColor = ev.event_type === 'DELIVER' ? '#10B981'
-                        : ev.event_type === 'ARRIVE' ? '#F59E0B'
-                        : '#3B82F6';
+                      const dotColor = ev.event_type === 'DELIVER' ? 'var(--color-success)'
+                        : ev.event_type === 'ARRIVE' ? 'var(--color-warning)'
+                        : 'var(--color-accent-cobalt)';
                       return (
                         <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                           <div style={{
@@ -324,10 +339,10 @@ const PublicTrackingPage = () => {
                             background: dotColor, marginTop: 4, flexShrink: 0,
                           }} />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A' }}>
+                            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-foreground)' }}>
                               {label} — {ev.hub_name}
                             </div>
-                            <div style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'monospace', marginTop: 1 }}>
+                            <div style={{ fontSize: 10, color: 'var(--color-light-muted)', marginTop: 1 }}>
                               {new Date(ev.created_at).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' })}
                             </div>
                           </div>
@@ -340,24 +355,23 @@ const PublicTrackingPage = () => {
 
               {/* Footer */}
               <div style={{
-                borderTop: '1px solid #F1F5F9',
+                borderTop: '1px solid var(--color-border)',
                 padding: '12px 20px',
-                fontSize: 10, color: '#94A3B8',
-                fontFamily: 'monospace', textAlign: 'center',
+                fontSize: 10, color: 'var(--color-light-muted)', textAlign: 'center',
               }}>
-                Powered by EHI Multisystems Logistics Platform
+                EHI Multisystems Logistics Platform
               </div>
             </div>
           ) : (
             <div
               className="rounded-2xl p-8 text-center"
-              style={{ background: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}
+              style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-border)' }}
             >
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📦</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+              <PackageX size={32} style={{ margin: '0 auto 12px', color: 'var(--color-light-muted)' }} />
+              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-foreground)' }}>
                 No shipment found
               </div>
-              <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 4 }}>
                 Check the reference number and try again.
                 Contact EHI if you believe this is an error.
               </div>
@@ -367,7 +381,7 @@ const PublicTrackingPage = () => {
       )}
 
       {/* Footer */}
-      <div style={{ marginTop: 32, fontSize: 11, color: '#94A3B8', textAlign: 'center' }}>
+      <div style={{ marginTop: 32, fontSize: 11, color: 'var(--color-muted)', textAlign: 'center' }}>
         EHI Multisystems Nigeria Limited · MMA2, Ikeja, Lagos
       </div>
     </div>
