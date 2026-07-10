@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { LoginScreen } from './components/LoginScreen';
+import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { EHIApp } from './components/EHIApp';
 import { UserProfile, getSession, signOut } from './lib/auth';
 import { supabase } from './lib/supabase';
@@ -376,6 +377,7 @@ const PublicTrackingPage = () => {
 const AuthenticatedApp = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     getSession().then((profile) => {
@@ -387,7 +389,16 @@ const AuthenticatedApp = () => {
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          // Supabase establishes a real (temporary) session here so the
+          // user CAN call updateUser({ password }) -- previously this
+          // event type was ignored entirely, so that session just sat
+          // there unused and the app fell through to the normal login
+          // screen with no way to actually complete the reset.
+          setPasswordRecovery(true);
+          return;
+        }
         if (!session) {
           setUser(null);
         }
@@ -401,6 +412,17 @@ const AuthenticatedApp = () => {
       <div className="bg-[var(--color-obsidian)] flex items-center justify-center" style={{ minHeight: '100dvh' }}>
         <Loader2 className="animate-spin text-[var(--color-accent-amber)]" size={48} />
       </div>
+    );
+  }
+
+  if (passwordRecovery) {
+    return (
+      <ResetPasswordScreen
+        onDone={() => {
+          setPasswordRecovery(false);
+          setUser(null); // force a normal sign-in with the new password
+        }}
+      />
     );
   }
 
