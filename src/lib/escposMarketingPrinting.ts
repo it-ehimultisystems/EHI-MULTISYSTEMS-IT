@@ -58,7 +58,7 @@ export async function compileMarketingReceiptStream(data: MarketingReceiptPrintD
 
   // Double-height highlight on amount to capture attention clearly
   chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
-  chunks.push(encoder.encode(fieldRow('AMOUNT DUE:', `NGN ${data.amount.toLocaleString('en-NG')}`, maxChars)));
+  chunks.push(encoder.encode(fieldRow('AMOUNT:', `NGN ${data.amount.toLocaleString('en-NG')}`, maxChars)));
   chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
   chunks.push(encoder.encode(fieldRow('PAYMENT MODE:', data.paymentMode, maxChars)));
   if (data.paymentMode === 'Transfer' && data.paymentNarration) {
