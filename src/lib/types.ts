@@ -167,6 +167,7 @@ export interface Transaction {
   // rewrite historical airline payables).
   commissionRate?: number;
   consignee?: string;
+  corporate_client_id?: string;
   pieces?: number;
   kg?: number;
   pickupPin?: string;

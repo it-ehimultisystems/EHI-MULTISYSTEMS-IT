@@ -63,6 +63,7 @@ interface CorporateRouteRate {
 interface PendingWeighingIntake {
   id: string;
   consignee: string;
+  corporate_client_id: string;
   pieces: number;
   route: string;
   contentType: string;
@@ -501,9 +502,16 @@ export const CargoForm = ({
       return;
     }
 
+    // Resolve the stable client ID NOW, while corpClients is guaranteed
+    // current -- storing company_name alone (a mutable, editable field)
+    // meant a client renamed between intake and finalize would silently
+    // fail to match later, and there was no durable link for reporting.
+    const matchedClient = corpClients.find((c) => c.company_name === intakeConsignee);
+
     const newIntake: PendingWeighingIntake = {
       id: `CG-INT-${Math.floor(100 + Math.random() * 900)}`,
       consignee: intakeConsignee,
+      corporate_client_id: matchedClient?.id || "",
       pieces: parseInt(intakePcs) || 1,
       route: intakeRoute,
       contentType: intakeContentType,
@@ -539,9 +547,13 @@ export const CargoForm = ({
       return;
     }
 
-    // Dynamic Look-up Contract Rates or Fallback baseline (₦500/KG)
+    // Dynamic Look-up Contract Rates or Fallback baseline (₦500/KG).
+    // Uses the stable client ID captured at intake time, not a re-match
+    // by company_name -- that name is editable, so a client renamed
+    // between intake and this finalize step would have silently broken
+    // the old name-based lookup.
     const matchingClientObj = corpClients.find(
-      (c) => c.company_name === selectedIntake.consignee,
+      (c) => c.id === selectedIntake.corporate_client_id,
     );
     const contractRateRecord = matchingClientObj
       ? corpRates.find(
@@ -595,6 +607,7 @@ export const CargoForm = ({
     const txEntry: Transaction = {
       id: gateResolvedId,
       name: selectedIntake.consignee,
+      corporate_client_id: selectedIntake.corporate_client_id || undefined,
       detail: finalTxDetail,
       amount: computedCost,
       mode: "Debt",
