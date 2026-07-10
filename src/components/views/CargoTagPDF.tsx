@@ -157,7 +157,7 @@ const CargoTagOnlyPDF = ({ data }: { data: CargoTagPDFData }) => (
   <Document>
     <Page size={[PAGE_WIDTH, PAGE_HEIGHT]} style={styles.page}>
       <View style={styles.headerRow}>
-        <EHILogoPDF width={70} />
+        <EHILogoPDF width={70} variant="cargo" />
         {data.airline ? <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={70} /> : null}
       </View>
       <View style={styles.goldDivider} />

@@ -28,7 +28,7 @@ export async function compileSingleTag(
   // for every piece in a multi-piece shipment.
   const chunks: Uint8Array[] = [
     new Uint8Array(INIT),
-    ...(precomputed?.header ?? await brandingHeaderWithAirline(item.airline || '', width)),
+    ...(precomputed?.header ?? await brandingHeaderWithAirline(item.airline || '', width, 'cargo')),
   ];
 
   chunks.push(new Uint8Array(CENTER));
@@ -84,7 +84,7 @@ export async function compileCargoTagStream(tx: any, width: '58mm' | '80mm'): Pr
   // instead of re-rasterizing and re-transmitting the same bytes over
   // Bluetooth for every single piece.
   const precomputed = {
-    header: await brandingHeaderWithAirline(tx.airline || '', width),
+    header: await brandingHeaderWithAirline(tx.airline || '', width, 'cargo'),
     qr: await qrAsRaster(
       `https://ehimultisystems.com/track?ref=${encodeURIComponent(sharedId)}`,
       width === '58mm' ? 260 : 280
@@ -136,7 +136,7 @@ async function compileSingleMarketingTag(
   const maxChars = width === '58mm' ? 32 : 48;
   const chunks: Uint8Array[] = [
     new Uint8Array(INIT),
-    ...(precomputed?.header ?? await brandingHeaderWithAirline(item.airline || '', width)),
+    ...(precomputed?.header ?? await brandingHeaderWithAirline(item.airline || '', width, 'cargo')),
   ];
 
   chunks.push(new Uint8Array(CENTER));
@@ -197,7 +197,7 @@ export async function compileMarketingTagStream(
   // shipment shares the same airline logo and the same tracking reference,
   // so compute both once instead of re-rasterizing per piece.
   const precomputed = {
-    header: await brandingHeaderWithAirline(tx.airline || '', width),
+    header: await brandingHeaderWithAirline(tx.airline || '', width, 'cargo'),
     qr: await qrAsRaster(
       `https://ehimultisystems.com/track?ref=${encodeURIComponent(awb)}`,
       width === '58mm' ? 260 : 280
@@ -254,7 +254,7 @@ const GAP_LABEL_WIDTH_DOTS = 792; // 100mm at 203dpi, rounded to a multiple of 8
 export async function compileGapLabelTag(item: CargoTagData): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [
     new Uint8Array(INIT),
-    ...(await brandingHeaderWithAirline(item.airline || '', GAP_LABEL_WIDTH_DOTS)),
+    ...(await brandingHeaderWithAirline(item.airline || '', GAP_LABEL_WIDTH_DOTS, 'cargo')),
   ];
 
   chunks.push(new Uint8Array(CENTER));

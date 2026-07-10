@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
 
 import ehiLogoFile from '../assets/branding/ehi-logo-bw.png';
+import ehiLogoCargoFile from '../assets/branding/ehi-logo-cargo.png';
 import { airlineLogoUrl } from './airlineLogos';
 
 export const encoder = new TextEncoder();
@@ -164,10 +165,14 @@ export async function ehiSvgToRaster(widthDots: number): Promise<Uint8Array> {
 // threshold 200 specifically to force the amber MULTISYSTEMS banner to
 // convert to solid black -- that workaround is no longer needed since
 // this source has no color to threshold away in the first place).
-export async function brandingHeader(logoWidthDots = 160): Promise<Uint8Array[]> {
+// logoVariant 'cargo' swaps in ehi-logo-cargo.png -- a distinct olive-green
+// variant used for tag printing specifically -- which thresholds cleanly
+// at the same standard level, so no separate threshold is needed per variant.
+export async function brandingHeader(logoWidthDots = 160, logoVariant: 'default' | 'cargo' = 'default'): Promise<Uint8Array[]> {
   const chunks: Uint8Array[] = [new Uint8Array(CENTER)];
+  const logoSrc = logoVariant === 'cargo' ? ehiLogoCargoFile : ehiLogoFile;
   try {
-    const logoRaster = await imageToEscPosRaster(ehiLogoFile, logoWidthDots, 160);
+    const logoRaster = await imageToEscPosRaster(logoSrc, logoWidthDots, 160);
     chunks.push(logoRaster);
     chunks.push(encoder.encode('\n\n'));
   } catch {
@@ -185,22 +190,24 @@ export async function brandingHeader(logoWidthDots = 160): Promise<Uint8Array[]>
 export async function brandingHeaderWithAirline(
   airline: string,
   paperWidth: '58mm' | '80mm' | number = '80mm',
+  logoVariant: 'default' | 'cargo' = 'default',
 ): Promise<Uint8Array[]> {
   const widthDots = typeof paperWidth === 'number' ? paperWidth : (paperWidth === '58mm' ? 280 : 360);
-  if (!airline) return brandingHeader(widthDots);
+  if (!airline) return brandingHeader(widthDots, logoVariant);
 
   const { airlineLogoUrl } = await import('./airlineLogos');
   const airlineUrl = airlineLogoUrl(airline);
-  if (!airlineUrl) return brandingHeader(widthDots);
+  if (!airlineUrl) return brandingHeader(widthDots, logoVariant);
 
   const chunks: Uint8Array[] = [new Uint8Array(CENTER)];
   const halfW = Math.floor(widthDots / 2);
   // Tiny gap either side of the divider line so neither logo overlaps it.
   const logoSlotW = halfW - 2;
+  const ehiLogoSrc = logoVariant === 'cargo' ? ehiLogoCargoFile : ehiLogoFile;
 
   try {
     const [ehiImg, airlineImg] = await Promise.all([
-      loadImageElement(ehiLogoFile),
+      loadImageElement(ehiLogoSrc),
       loadImageElement(airlineUrl),
     ]);
 
@@ -244,7 +251,7 @@ export async function brandingHeaderWithAirline(
     chunks.push(encoder.encode('\n'));
 
   } catch {
-    return brandingHeader(widthDots);
+    return brandingHeader(widthDots, logoVariant);
   }
 
   // The composite image contains the EHI logo scaled to the left half;
