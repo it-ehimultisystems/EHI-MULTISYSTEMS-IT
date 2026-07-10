@@ -11,6 +11,7 @@ import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
 import { getHubCode, getCityName } from "../../lib/helpers";
+import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 
 export interface CargoReceiptData {
   entryRef: string;
@@ -31,6 +32,7 @@ export interface CargoReceiptData {
   paymentNarration?: string;
   remark?: string;
   qrCodeDataUrl?: string;
+  airlineLogoUrl?: string | null;
   pickupPin?: string;
 }
 
@@ -269,7 +271,7 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
     <Page size={[226, h]} style={styles.page}>
       <View style={[styles.headerRow, styles.headerBorder]}>
         <EHILogoPDF width={105} />
-        <AirlineLogoPDF airline={data.airline} width={105} />
+        <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={105} />
       </View>
 
       <View style={styles.titleBar}>
@@ -394,7 +396,7 @@ const CargoWaybillTagPage = ({
       <View style={styles.tagContainer}>
         <View style={styles.headerRow}>
           <EHILogoPDF width={105} />
-          <AirlineLogoPDF airline={data.airline} width={105} />
+          <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={105} />
         </View>
 
         <View style={styles.tagBar}>
@@ -463,6 +465,9 @@ export const printCargoReceipt = async (data: CargoReceiptData) => {
       console.warn("Failed to generate QR code", e);
     }
   }
+  if (data.airlineLogoUrl === undefined) {
+    data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airline);
+  }
   const blob = await pdf(<CargoReceiptOnlyPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
   const printWindow = window.open(url);
@@ -481,6 +486,9 @@ export const downloadCargoReceipt = async (data: CargoReceiptData) => {
     } catch (e) {
       console.warn("Failed to generate QR code", e);
     }
+  }
+  if (data.airlineLogoUrl === undefined) {
+    data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airline);
   }
   const blob = await pdf(<CargoReceiptOnlyPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
@@ -501,6 +509,9 @@ export const downloadCargoWaybill = async (data: CargoReceiptData) => {
     } catch (e) {
       console.warn("Failed to generate QR code", e);
     }
+  }
+  if (data.airlineLogoUrl === undefined) {
+    data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airline);
   }
   const blob = await pdf(<CargoWaybillOnlyPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);

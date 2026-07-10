@@ -10,6 +10,7 @@ import {
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
+import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 
 export interface VJReceiptData {
   entryRef: string;
@@ -29,6 +30,7 @@ export interface VJReceiptData {
   paymentNarration?: string;
   bankName?: string;
   qrCodeDataUrl?: string;
+  airlineLogoUrl?: string | null;
 }
 
 function formatNaira(n: number | string): string {
@@ -135,7 +137,7 @@ const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => {
     <Page size={[226, h]} style={styles.page}>
       <View style={styles.headerRow}>
         <EHILogoPDF width={105} />
-        <AirlineLogoPDF airline="ValueJet" width={105} />
+        <AirlineLogoPDF airline="ValueJet" logoUrl={data.airlineLogoUrl} width={105} />
       </View>
       <Text style={styles.title}>EXCESS BAGGAGE RECEIPT</Text>
       <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6 }}>Origin: {data.hubName}</Text>
@@ -259,6 +261,9 @@ export const downloadVJReceipt = async (data: VJReceiptData) => {
       console.warn("Failed to generate QR code", e);
     }
   }
+  if (data.airlineLogoUrl === undefined) {
+    data.airlineLogoUrl = await resolveAirlineLogoUrl("ValueJet");
+  }
   const blob = await pdf(<VJReceiptPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -278,6 +283,9 @@ export const printVJReceipt = async (data: VJReceiptData): Promise<void> => {
     } catch (e) {
       console.warn("Failed to generate QR code", e);
     }
+  }
+  if (data.airlineLogoUrl === undefined) {
+    data.airlineLogoUrl = await resolveAirlineLogoUrl("ValueJet");
   }
   const blob = await pdf(<VJReceiptPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);

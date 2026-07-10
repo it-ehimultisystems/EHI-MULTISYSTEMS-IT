@@ -1,66 +1,36 @@
 import { View, Text, Image } from '@react-pdf/renderer';
-import aeroLogo from '../assets/airlines/aero-contractors.png';
-import valuejetLogo from '../assets/airlines/valuejet.png';
-import unitedNigeriaLogo from '../assets/airlines/united-nigeria.gif';
-import arikLogo from '../assets/airlines/arik-air.png';
-import greenAfricaLogo from '../assets/airlines/green-africa-airways.png';
 
-export const AirlineLogoPDF = ({ airline, width = 80 }: { airline: string; width?: number }) => {
-  const norm = airline.toLowerCase();
-
-  // Fixed box for every airline, regardless of that logo's own aspect
-  // ratio. Previously each branch computed its own height from its own
-  // ratio, so the slot's rendered height varied by airline and could
-  // shift surrounding layout. Now every airline gets the identical box;
-  // objectFit:'contain' fits each logo inside it without distorting it.
-  // A wide logo and a tall one will naturally fill different proportions
-  // of that same box -- that's correct, not a bug.
+// Previously this matched the airline name against a small hardcoded set
+// of locally-bundled logo files -- completely disconnected from the
+// dynamic Supabase-backed logo system (listAirlineLogos/airlineLogoUrl)
+// that the actual Bluetooth thermal printing already uses. An airline
+// added via Airline Logo Manager would print correctly on a receipt but
+// never show up in a PDF. Now takes a pre-resolved logoUrl (or null) from
+// the caller instead of guessing internally -- see resolveAirlineLogoUrl
+// in lib/airlineLogos.ts, which does a real existence check before the
+// PDF is built, so this component never depends on how react-pdf's
+// <Image> happens to handle a 404 source.
+export const AirlineLogoPDF = ({
+  airline,
+  logoUrl,
+  width = 80,
+}: {
+  airline: string;
+  logoUrl?: string | null;
+  width?: number;
+}) => {
   const boxHeight = width * 0.5;
   const boxStyle = { width, height: boxHeight, alignItems: 'center' as const, justifyContent: 'center' as const };
   const imgStyle = { width, height: boxHeight, objectFit: 'contain' as const };
 
-  if (norm.includes('aero')) {
+  if (logoUrl) {
     return (
       <View style={boxStyle}>
-        <Image src={aeroLogo} style={imgStyle} />
+        <Image src={logoUrl} style={imgStyle} />
       </View>
     );
   }
 
-  if (norm.includes('arik')) {
-    return (
-      <View style={boxStyle}>
-        <Image src={arikLogo} style={imgStyle} />
-      </View>
-    );
-  }
-
-  if (norm.includes('valuejet')) {
-    return (
-      <View style={boxStyle}>
-        <Image src={valuejetLogo} style={imgStyle} />
-      </View>
-    );
-  }
-
-  if (norm.includes('united') || norm.includes('un')) {
-    return (
-      <View style={boxStyle}>
-        <Image src={unitedNigeriaLogo} style={imgStyle} />
-      </View>
-    );
-  }
-
-  if (norm.includes('green africa') || norm.includes('greenafrica')) {
-    return (
-      <View style={boxStyle}>
-        <Image src={greenAfricaLogo} style={imgStyle} />
-      </View>
-    );
-  }
-
-  // Fallback for any airline without a logo file yet -- same fixed box,
-  // so an unmatched airline doesn't shift layout either.
   return (
     <View style={boxStyle}>
       <Text style={{ fontSize: width * 0.15, color: '#000000', fontWeight: 700, textAlign: 'center' }}>{airline.toUpperCase()}</Text>

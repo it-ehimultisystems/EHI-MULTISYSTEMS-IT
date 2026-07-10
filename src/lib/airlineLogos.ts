@@ -25,6 +25,25 @@ export function airlineLogoUrl(airlineName: string): string | null {
   return `${supabaseUrl}/storage/v1/object/public/airline-logos/${slug}.png`;
 }
 
+// Resolves an airline name to a logo URL, but only if that logo actually
+// exists in storage -- unlike airlineLogoUrl() above, this does a real
+// existence check (HEAD request) first. Use this for react-pdf documents:
+// PDF generation shouldn't depend on an unverified assumption about how
+// react-pdf's <Image> handles a 404 source, so callers pass the resolved
+// result (a real URL, or null) into AirlineLogoPDF instead of letting it
+// guess. Returns null on any failure (no upload, network error, no
+// Supabase URL configured) so callers can fall back to a text treatment.
+export async function resolveAirlineLogoUrl(airlineName: string): Promise<string | null> {
+  const url = airlineLogoUrl(airlineName);
+  if (!url) return null;
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    return res.ok ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 // Uploads a logo PNG for a given airline name to Supabase Storage.
 // Returns the public URL on success, throws on failure.
 export async function uploadAirlineLogo(airlineName: string, file: File): Promise<string> {

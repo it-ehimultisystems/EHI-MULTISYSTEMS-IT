@@ -10,6 +10,7 @@ import {
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
+import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 
 // Fixed 100mm x 80mm label -- this is a discrete, fixed-size tag (like the
 // XP-402B gap/die-cut label printer this was built for), not an
@@ -29,6 +30,7 @@ export interface CargoTagPDFData {
   hubName?: string;
   date?: string;
   qrCodeDataUrl?: string;
+  airlineLogoUrl?: string | null;
 }
 
 const styles = StyleSheet.create({
@@ -156,7 +158,7 @@ const CargoTagOnlyPDF = ({ data }: { data: CargoTagPDFData }) => (
     <Page size={[PAGE_WIDTH, PAGE_HEIGHT]} style={styles.page}>
       <View style={styles.headerRow}>
         <EHILogoPDF width={70} />
-        {data.airline ? <AirlineLogoPDF airline={data.airline} width={70} /> : null}
+        {data.airline ? <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={70} /> : null}
       </View>
       <View style={styles.goldDivider} />
 
@@ -210,15 +212,20 @@ const CargoTagOnlyPDF = ({ data }: { data: CargoTagPDFData }) => (
 );
 
 async function buildTagData(data: CargoTagPDFData): Promise<CargoTagPDFData> {
-  if (data.qrCodeDataUrl) return data;
-  const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(data.id)}`;
-  try {
-    const qrCodeDataUrl = await QRCode.toDataURL(trackingUrl, { margin: 1, width: 240 });
-    return { ...data, qrCodeDataUrl };
-  } catch (e) {
-    console.warn("Failed to generate QR code for tag PDF", e);
-    return data;
+  let result = data;
+  if (!result.qrCodeDataUrl) {
+    const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(result.id)}`;
+    try {
+      const qrCodeDataUrl = await QRCode.toDataURL(trackingUrl, { margin: 1, width: 240 });
+      result = { ...result, qrCodeDataUrl };
+    } catch (e) {
+      console.warn("Failed to generate QR code for tag PDF", e);
+    }
   }
+  if (result.airlineLogoUrl === undefined && result.airline) {
+    result = { ...result, airlineLogoUrl: await resolveAirlineLogoUrl(result.airline) };
+  }
+  return result;
 }
 
 // Opens the tag in a new tab for printing via the browser's native print

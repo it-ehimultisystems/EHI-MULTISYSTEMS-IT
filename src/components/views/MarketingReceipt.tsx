@@ -8,6 +8,7 @@ import {
 } from "@react-pdf/renderer";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
+import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 
 export interface MarketingReceiptData {
   entryRef: string;
@@ -26,6 +27,7 @@ export interface MarketingReceiptData {
   paymentNarration?: string;
   bankName?: string;
   qrCodeDataUrl?: string;
+  airlineLogoUrl?: string | null;
   remark?: string;
 }
 
@@ -201,7 +203,7 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => {
     <Page size={[226, h]} style={styles.page}>
       <View style={[styles.headerRow, styles.headerBorder]}>
         <EHILogoPDF width={105} />
-        {data.airline && <AirlineLogoPDF airline={data.airline} width={105} />}
+        {data.airline && <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={105} />}
       </View>
 
       <View style={styles.titleBar}>
@@ -309,6 +311,9 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => {
 };
 
 export const downloadMarketingReceipt = async (data: MarketingReceiptData) => {
+  if (data.airlineLogoUrl === undefined && data.airline) {
+    data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airline);
+  }
   const blob = await pdf(<MarketingReceiptPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
