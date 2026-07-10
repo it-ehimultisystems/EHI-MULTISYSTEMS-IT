@@ -431,7 +431,7 @@ export const CargoForm = ({
       try {
         const { data } = await supabase
           .from('corporate_clients')
-          .select('id, company_name, contact_phone')
+          .select('id, company_name, contact_phone, accumulated_monthly_debt')
           .eq('active', true)
           .order('company_name');
         if (active && data && data.length > 0) {
@@ -439,7 +439,7 @@ export const CargoForm = ({
             id: c.id,
             company_name: c.company_name,
             contact_phone: c.contact_phone || '',
-            accumulated_monthly_debt: 0,
+            accumulated_monthly_debt: c.accumulated_monthly_debt ?? 0,
           }));
           setCorpClients(mapped);
         }
@@ -604,6 +604,20 @@ export const CargoForm = ({
     }
     const gateResolvedId = `EHI-${gateHubCode}-CG-${String(gateSeq).padStart(6, '0')}`;
 
+    // Block reusing a physical AWB whose previous consignment already
+    // completed delivery -- the same check the retail flow already has.
+    // This was missing here entirely: a duplicated physical tag lets two
+    // shipments share one tracking history, a common consign-fraud
+    // pattern, and corporate gate-weighing had no protection against it.
+    if (await isTagAlreadyDelivered(selectedIntake.awb)) {
+      showToast({
+        message: `${selectedIntake.awb} was already delivered on a previous consignment. This tag cannot be reused -- verify the physical AWB before finalizing.`,
+        type: "error",
+      });
+      setIsWeighingSubmitting(false);
+      return;
+    }
+
     const txEntry: Transaction = {
       id: gateResolvedId,
       name: selectedIntake.consignee,
@@ -625,18 +639,33 @@ export const CargoForm = ({
     // 1. Add to central transactions grid
     onAddTx(txEntry);
 
-    // 2. Increment client's monthly accumulated debt balance (Supabase automation proxy)
+    // 2. Increment client's monthly accumulated debt balance
     if (matchingClientObj) {
+      const newDebtTotal = matchingClientObj.accumulated_monthly_debt + computedCost;
       const updatedClients = corpClients.map((c) => {
         if (c.id === matchingClientObj.id) {
           return {
             ...c,
-            accumulated_monthly_debt: c.accumulated_monthly_debt + computedCost,
+            accumulated_monthly_debt: newDebtTotal,
           };
         }
         return c;
       });
       updateLocalCorpClients(updatedClients);
+
+      // Persist to Supabase too -- previously this only ever updated the
+      // in-memory/localStorage copy, so the real debt total was lost
+      // every time the client list refreshed from Supabase (which always
+      // overwrote it back to 0). Billing balances need to survive a page
+      // reload, not just the current browser session.
+      try {
+        await supabase
+          .from('corporate_clients')
+          .update({ accumulated_monthly_debt: newDebtTotal })
+          .eq('id', matchingClientObj.id);
+      } catch (err) {
+        console.error('Failed to persist corporate client debt to Supabase', err);
+      }
     }
 
     // 3. Remove from pending intakes queue
