@@ -169,7 +169,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   // Fetch Initial Data
   useEffect(() => {
     if (isOffline) return;
-    
+    // globalDateRange changes on every filter click -- without this guard,
+    // quickly clicking through Today -> Yesterday -> 7 days can let an
+    // older, slower request resolve AFTER a newer one and overwrite the
+    // whole ledger with the wrong date range's data, with no visible error.
+    let active = true;
+
     const fetchInitial = async () => {
       setInitError(false);
       try {
@@ -197,6 +202,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           addHubFilter(supabase.from('expenses').select('*').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500))
         ]);
 
+        if (!active) return;
         if (cargoRes.error) console.error('Cargo fetch error:', cargoRes.error);
 
         const allTx: Transaction[] = [];
@@ -347,12 +353,14 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           return combined.slice(0, 1000);
         });
       } catch (err) {
+        if (!active) return;
         console.error("Failed to fetch initial tx:", err);
         setInitError(true);
       }
     };
-    
+
     fetchInitial();
+    return () => { active = false; };
   }, [isOffline, globalDateRange, user.role, user.hub_id, retryTrigger]);
 
   // Supabase real-time
