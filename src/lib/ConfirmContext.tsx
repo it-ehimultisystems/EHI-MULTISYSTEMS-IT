@@ -17,9 +17,16 @@ export const ConfirmProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const handleClose = (result: boolean) => {
-    setOptions(null);
-    resolveRef.current?.(result);
+    // A fast double-click can register as two separate click events before
+    // React re-renders the dialog out of the DOM -- resolveRef is cleared
+    // on the first call, so a second one (Confirm-then-Confirm, or
+    // Confirm-then-Cancel landing in the same frame) is a no-op instead of
+    // running whatever the caller does after the promise resolves twice.
+    if (!resolveRef.current) return;
+    const resolve = resolveRef.current;
     resolveRef.current = null;
+    setOptions(null);
+    resolve(result);
   };
 
   return (
