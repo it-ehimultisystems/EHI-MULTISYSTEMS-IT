@@ -38,6 +38,7 @@ import {
   AlertTriangle,
   Rocket,
   Zap,
+  Bluetooth,
 } from "lucide-react";
 import {
   sendReceiptWhatsApp,
@@ -1299,7 +1300,7 @@ export const CargoForm = ({
               }}
               className="py-2.5 bg-[var(--color-accent-amber)] hover:bg-opacity-95 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
             >
-              <span className="text-[14px] mb-0.5">🖨️</span>
+              <Bluetooth size={14} className="mb-0.5" />
               <span>POS Print (80mm)</span>
             </button>
             <button
@@ -1320,7 +1321,7 @@ export const CargoForm = ({
               }}
               className="py-2.5 bg-[var(--color-accent-amber)] hover:bg-opacity-85 text-[#0D1117] text-[12px] font-bold font-sans rounded-[var(--radius-sm)] shadow-[var(--shadow-button)] transition-opacity cursor-pointer focus:outline-none border-none flex flex-col items-center justify-center leading-tight"
             >
-              <span className="text-[14px] mb-0.5">🖨️</span>
+              <Bluetooth size={14} className="mb-0.5" />
               <span>POS Print (58mm)</span>
             </button>
           </div>

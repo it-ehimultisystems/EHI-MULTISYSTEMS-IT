@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Transaction, Expense } from "../../lib/types";
 import { BANKS, EXPENSE_CATEGORIES } from "../../lib/constants";
 import { fmt, uid, tnow, generatePaymentNarration, getHubCode } from "../../lib/helpers";
-import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare } from "lucide-react";
+import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare, Bluetooth } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { sendReceiptWhatsApp, buildPackageWhatsApp } from "../../lib/notifications";
 import { useToast } from "../../lib/ToastContext";
@@ -316,7 +316,7 @@ export const PackageForm = ({
                   }}
                   className="py-2.5 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
-                  <span className="text-[14px] mb-0.5">🖨️</span>
+                  <Bluetooth size={14} className="mb-0.5" />
                   <span>PRINT POS (80mm)</span>
                 </button>
 
@@ -348,7 +348,7 @@ export const PackageForm = ({
                   }}
                   className="py-2.5 bg-[var(--color-accent-cobalt)] bg-opacity-80 text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
-                  <span className="text-[14px] mb-0.5">🖨️</span>
+                  <Bluetooth size={14} className="mb-0.5" />
                   <span>PRINT POS (58mm)</span>
                 </button>
               </div>

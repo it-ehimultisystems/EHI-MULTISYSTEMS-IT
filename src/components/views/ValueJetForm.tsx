@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PaymentMode, Transaction, User } from '../../lib/types';
 import { fmt, tnow, getHubCode } from '../../lib/helpers';
-import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer } from 'lucide-react';
+import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer, Bluetooth } from 'lucide-react';
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
@@ -314,7 +314,7 @@ export const ValueJetForm = ({
               }}
               className="py-2.5 bg-[var(--color-accent-cobalt)] text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
             >
-              <span className="text-[14px] mb-0.5">🖨️</span>
+              <Bluetooth size={14} className="mb-0.5" />
               <span>PRINT POS (80mm)</span>
             </button>
             <button
@@ -350,7 +350,7 @@ export const ValueJetForm = ({
               }}
               className="py-2.5 bg-[var(--color-accent-cobalt)] bg-opacity-80 text-white text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
             >
-              <span className="text-[14px] mb-0.5">🖨️</span>
+              <Bluetooth size={14} className="mb-0.5" />
               <span>PRINT POS (58mm)</span>
             </button>
           </div>

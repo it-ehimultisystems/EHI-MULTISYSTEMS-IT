@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Transaction, Expense } from "../../lib/types";
 import { PRICING, BANKS, EXPENSE_CATEGORIES, AIRLINES } from "../../lib/constants";
 import { fmt, uid, tnow, getHubCode } from "../../lib/helpers";
-import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer, Minus, TrendingDown, BarChart2 } from "lucide-react";
+import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer, Minus, TrendingDown, BarChart2, Bluetooth } from "lucide-react";
 import { motion } from "motion/react";
 import { supabase } from "../../lib/supabase";
 
@@ -520,7 +520,7 @@ export const MarketingWorkspace = ({
                   }}
                   className="py-2.5 bg-[var(--color-success)] text-[#0D1117] text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
-                  <span className="text-[14px] mb-0.5">🖨️</span>
+                  <Bluetooth size={14} className="mb-0.5" />
                   <span>PRINT POS (80mm)</span>
                 </button>
 
@@ -555,7 +555,7 @@ export const MarketingWorkspace = ({
                   }}
                   className="py-2.5 bg-[var(--color-success)] bg-opacity-80 text-[#0D1117] text-[11px] font-bold font-mono rounded cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-opacity-95 border-none"
                 >
-                  <span className="text-[14px] mb-0.5">🖨️</span>
+                  <Bluetooth size={14} className="mb-0.5" />
                   <span>PRINT POS (58mm)</span>
                 </button>
               </div>
@@ -585,7 +585,7 @@ export const MarketingWorkspace = ({
                       }}
                       className="py-2.5 bg-[rgba(16,185,129,0.12)] border border-[rgba(16,185,129,0.3)] text-[var(--color-success)] text-[11px] font-bold font-mono rounded-lg cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-[rgba(16,185,129,0.2)] transition-colors"
                     >
-                      <span className="text-[14px] mb-0.5">🏷️</span>
+                      <Bluetooth size={14} className="mb-0.5" />
                       <span>TAGS (80mm)</span>
                     </button>
                     <button
@@ -599,7 +599,7 @@ export const MarketingWorkspace = ({
                       }}
                       className="py-2.5 bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)] text-[var(--color-success)] text-[11px] font-bold font-mono rounded-lg cursor-pointer flex flex-col justify-center items-center leading-none hover:bg-[rgba(16,185,129,0.15)] transition-colors"
                     >
-                      <span className="text-[14px] mb-0.5">🏷️</span>
+                      <Bluetooth size={14} className="mb-0.5" />
                       <span>TAGS (58mm)</span>
                     </button>
                   </div>
