@@ -4,6 +4,7 @@ import { fmt } from '../../lib/helpers';
 import { ArrowLeft, Check, AlertTriangle, Printer, Lock, ChevronRight } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 import { supabase, writeAuditLog } from '../../lib/supabase';
+import { useToast } from '../../lib/ToastContext';
 
 interface Props {
   user: User;
@@ -14,10 +15,11 @@ interface Props {
 }
 
 export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD }: Props) => {
+  const { showToast } = useToast();
   const [alreadyLocked, setAlreadyLocked] = useState<{ closed_by: string; created_at: string } | null>(null);
-  
-  useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const refreshLockBanner = () => {
     supabase
       .from('eod_locks')
       .select('closed_by, created_at')
@@ -25,6 +27,11 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       .gte('created_at', today + 'T00:00:00')
       .maybeSingle()
       .then(({ data }) => { if (data) setAlreadyLocked(data); });
+  };
+
+  useEffect(() => {
+    refreshLockBanner();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.hub_id]);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -171,7 +178,35 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
   const handleLockEOD = async () => {
     setIsGenerating(true);
     const date = new Date().toISOString().split('T')[0];
-    await supabase.from('eod_records').upsert({
+
+    // Claim the lock FIRST as a real atomic INSERT against eod_locks'
+    // UNIQUE(hub_id, date) constraint -- this is the actual concurrency
+    // guard, not just a display banner. eod_locks was read on mount to
+    // show the "already closed" warning above, but nothing ever wrote to
+    // it, so that check always passed and two devices closing the same
+    // hub+day near-simultaneously would silently overwrite eod_records
+    // with whichever write landed last, no error either time. Now
+    // whichever INSERT lands first wins the lock; the loser gets a real,
+    // caught unique-violation instead of silently clobbering the winner's
+    // totals moments later.
+    const { error: lockError } = await supabase.from('eod_locks').insert({
+      hub_id: user.hub_id || null,
+      hub: user.hub,
+      date,
+      closed_by: user.name,
+    });
+    if (lockError) {
+      setIsGenerating(false);
+      if (lockError.code === '23505') {
+        refreshLockBanner();
+        showToast({ message: `Today's EOD for ${user.hub} was already closed on another device. Refresh to see who closed it.`, type: 'error' });
+      } else {
+        showToast({ message: `Failed to lock EOD: ${lockError.message}`, type: 'error' });
+      }
+      return;
+    }
+
+    const { error: recordsError } = await supabase.from('eod_records').upsert({
       hub: user.hub,
       hub_id: user.hub_id || null,
       date,
@@ -189,6 +224,15 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       physical_count: Number(countedCash) || 0,
       status: 'locked'
     }, { onConflict: 'hub_id,date' });
+    if (recordsError) {
+      // The lock itself is already held at this point (eod_locks insert
+      // above succeeded) -- surfacing this loudly rather than silently
+      // continuing to onEOD() below, since the UI would otherwise claim
+      // success while the actual totals never made it to eod_records.
+      setIsGenerating(false);
+      showToast({ message: `EOD lock was claimed but saving totals failed: ${recordsError.message}. Contact support before retrying.`, type: 'error' });
+      return;
+    }
     // Write to audit trail
     writeAuditLog({
       user_id: user.id,
@@ -556,7 +600,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       {alreadyLocked && (
         <div className="mx-4 mt-4 p-3 bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.3)] rounded-lg text-[12px] font-mono text-[var(--color-accent-amber)] flex items-center gap-2">
           <span>⚠</span>
-          <span>Today's EOD was already closed by <strong>{alreadyLocked.closed_by}</strong>. Re-submitting will overwrite the existing record.</span>
+          <span>Today's EOD was already closed by <strong>{alreadyLocked.closed_by}</strong>. Locking again will be blocked -- contact them if these totals need correcting.</span>
         </div>
       )}
       {/* Sticky header */}

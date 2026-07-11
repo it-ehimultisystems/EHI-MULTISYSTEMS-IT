@@ -174,15 +174,22 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       showToast({ message: 'Enter a valid opening balance of 0 or more.', type: 'warning' });
       return;
     }
-    setOpeningBalance(val);
-    setShowOpeningModal(false);
-    await supabase.from('eod_records').upsert({
+    const { error } = await supabase.from('eod_records').upsert({
       hub_id: user.hub_id,
       hub: user.hub,
       date: regDate,
       opening_balance: val,
       status: 'open'
     }, { onConflict: 'hub_id,date' });
+    // Only reflect the new opening balance in the UI once the write is
+    // confirmed -- setting it beforehand meant a failed/offline upsert
+    // left the screen showing a balance that was never actually saved.
+    if (error) {
+      showToast({ message: `Failed to save opening balance: ${error.message}`, type: 'error' });
+      return;
+    }
+    setOpeningBalance(val);
+    setShowOpeningModal(false);
   };
 
   const handleLockRegister = async () => {
@@ -191,9 +198,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       showToast({ message: 'Enter a valid physical cash count of 0 or more.', type: 'warning' });
       return;
     }
-    setPhysicalCount(val);
-    setIsLocked(true);
-    await supabase.from('eod_records').upsert({
+    const { error } = await supabase.from('eod_records').upsert({
       hub_id: user.hub_id,
       hub: user.hub,
       date: regDate,
@@ -201,6 +206,14 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       physical_count: val,
       status: 'locked'
     }, { onConflict: 'hub_id,date' });
+    // Same reasoning as handleSetOpening -- don't claim "locked" in the UI
+    // until the DB write is confirmed to have actually happened.
+    if (error) {
+      showToast({ message: `Failed to lock register: ${error.message}`, type: 'error' });
+      return;
+    }
+    setPhysicalCount(val);
+    setIsLocked(true);
   };
 
   // Scoped to the register's own date (regDate), not the whole history --
