@@ -256,7 +256,7 @@ const CargoTagOnlyPDF = ({ data }: { data: CargoTagPDFData }) => {
 async function buildTagData(data: CargoTagPDFData): Promise<CargoTagPDFData> {
   let result = data;
   if (!result.qrCodeDataUrl) {
-    const trackingUrl = `https://app.ehimultisystems.com/track?ref=${encodeURIComponent(result.id)}`;
+    const trackingUrl = `https://app.ehimultisystems.com/track/${encodeURIComponent(result.id)}`;
     try {
       const qrCodeDataUrl = await QRCode.toDataURL(trackingUrl, { margin: 1, width: 240, errorCorrectionLevel: 'L' });
       result = { ...result, qrCodeDataUrl };

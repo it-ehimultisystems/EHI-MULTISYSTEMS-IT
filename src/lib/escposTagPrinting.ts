@@ -49,7 +49,7 @@ export async function compileSingleTag(
   if (precomputed?.qr) {
     chunks.push(precomputed.qr);
   } else {
-    const trackingUrl = `https://app.ehimultisystems.com/track?ref=${encodeURIComponent(item.id)}`;
+    const trackingUrl = `https://app.ehimultisystems.com/track/${encodeURIComponent(item.id)}`;
     chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 260 : 280));
   }
   chunks.push(encoder.encode('\n\n'));
@@ -95,7 +95,7 @@ export async function compileCargoTagStream(tx: any, width: '58mm' | '80mm'): Pr
   const precomputed = {
     header: await brandingHeaderWithAirline(tx.airline || '', width, 'cargo'),
     qr: await qrAsRaster(
-      `https://app.ehimultisystems.com/track?ref=${encodeURIComponent(sharedId)}`,
+      `https://app.ehimultisystems.com/track/${encodeURIComponent(sharedId)}`,
       width === '58mm' ? 260 : 280
     ),
   };
@@ -166,7 +166,7 @@ async function compileSingleMarketingTag(
   if (precomputed?.qr) {
     chunks.push(precomputed.qr);
   } else {
-    const trackingUrl = `https://app.ehimultisystems.com/track?ref=${encodeURIComponent(item.awb)}`;
+    const trackingUrl = `https://app.ehimultisystems.com/track/${encodeURIComponent(item.awb)}`;
     chunks.push(await qrAsRaster(trackingUrl, width === '58mm' ? 260 : 280));
   }
   chunks.push(encoder.encode('\n\n'));
@@ -207,7 +207,7 @@ export async function compileMarketingTagStream(
   const precomputed = {
     header: await brandingHeaderWithAirline(tx.airline || '', width, 'cargo'),
     qr: await qrAsRaster(
-      `https://app.ehimultisystems.com/track?ref=${encodeURIComponent(awb)}`,
+      `https://app.ehimultisystems.com/track/${encodeURIComponent(awb)}`,
       width === '58mm' ? 260 : 280
     ),
   };
@@ -290,7 +290,7 @@ export async function compileGapLabelTag(item: CargoTagData): Promise<Uint8Array
   chunks.push(new Uint8Array(TEXT_NORMAL));
   chunks.push(encoder.encode('\n'));
 
-  const trackingUrl = `https://app.ehimultisystems.com/track?ref=${encodeURIComponent(item.id)}`;
+  const trackingUrl = `https://app.ehimultisystems.com/track/${encodeURIComponent(item.id)}`;
   chunks.push(await qrAsRaster(trackingUrl, 320));
   chunks.push(encoder.encode('\n'));
 
