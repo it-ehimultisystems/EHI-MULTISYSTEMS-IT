@@ -338,8 +338,15 @@ export async function validateScan(
     const arriveEvent = await getLastEventAtHub(ref, currentHub);
     const lastAny = await getLastEventAnywhere(ref);
 
-    // If it's the very first event, just let it deliver for demo purposes (or fail appropriately)
-    if (lastAny && (!arriveEvent || arriveEvent.event_type !== 'ARRIVE')) {
+    // DELIVER always requires a same-hub ARRIVE record first. Unlike
+    // ARRIVE/DEPART (which legitimately have no prior history on an
+    // origin-hub first scan), there's no valid "first-ever scan is
+    // DELIVER" case -- it's the terminal state, and skipping straight to
+    // it with zero custody history defeats the point of scan tracking.
+    // This previously only blocked when *some* history existed
+    // (`lastAny &&`), so a cargo_ref with no tracking_events row at all
+    // could be marked Delivered on its very first scan.
+    if (!arriveEvent || arriveEvent.event_type !== 'ARRIVE') {
       return {
         type: 'NOT_LOGGED_IN',
         cargo: cargoInfo,
