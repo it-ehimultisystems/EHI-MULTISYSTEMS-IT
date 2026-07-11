@@ -36,6 +36,7 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
   const [fetchError, setFetchError] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [showAddFuel, setShowAddFuel] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Vehicle form
   const [plate, setPlate] = useState('');
@@ -95,7 +96,8 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
 
   const handleAddVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!plate || !make) return;
+    if (!plate || !make || submitting) return;
+    setSubmitting(true);
     const payload = {
       plate: plate.toUpperCase(), make, model, vehicle_type: type,
       driver_name: driver || 'Unassigned', capacity_kg: Number(capacity) || 1000,
@@ -111,13 +113,15 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
         status: 'Available', lastService: data.last_service, nextService: data.next_service
       }, ...prev]);
     }
+    setSubmitting(false);
     setShowAddVehicle(false);
     setPlate(''); setMake(''); setModel(''); setDriver('');
   };
 
   const handleAddFuel = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fuelPlate || !(Number(litres) > 0) || !(Number(costPerLitre) > 0)) return;
+    if (!fuelPlate || !(Number(litres) > 0) || !(Number(costPerLitre) > 0) || submitting) return;
+    setSubmitting(true);
     const payload = {
       vehicle_plate: fuelPlate, litres: Number(litres),
       cost_per_litre: Number(costPerLitre), station,
@@ -132,6 +136,7 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
         station: data.station || '', date: data.log_date
       }, ...prev]);
     }
+    setSubmitting(false);
     setShowAddFuel(false);
     setFuelPlate(''); setLitres(''); setStation('');
   };
@@ -285,8 +290,8 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
                 <input id="fleet-vehicle-driver" type="text" value={driver} onChange={e => setDriver(e.target.value)} placeholder="Driver Tunde" className="w-full ehi-input text-[12px]" />
               </div>
               <div className="flex gap-2 pt-1">
-                <button type="submit" className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[11px] py-2.5 rounded">Add Vehicle</button>
-                <button type="button" onClick={() => setShowAddVehicle(false)} className="px-4 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[11px] rounded">Cancel</button>
+                <button type="submit" disabled={submitting} className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[11px] py-2.5 rounded disabled:opacity-50">{submitting ? 'Adding…' : 'Add Vehicle'}</button>
+                <button type="button" onClick={() => setShowAddVehicle(false)} disabled={submitting} className="px-4 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[11px] rounded disabled:opacity-50">Cancel</button>
               </div>
             </form>
           </div>
@@ -326,8 +331,8 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
                 <input id="fleet-fuel-station" type="text" value={station} onChange={e => setStation(e.target.value)} placeholder="e.g. BOVAS Ikeja" className="w-full ehi-input text-[12px]" />
               </div>
               <div className="flex gap-2 pt-1">
-                <button type="submit" className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[11px] py-2.5 rounded">Save Log</button>
-                <button type="button" onClick={() => setShowAddFuel(false)} className="px-4 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[11px] rounded">Cancel</button>
+                <button type="submit" disabled={submitting} className="flex-1 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] font-bold text-[11px] py-2.5 rounded disabled:opacity-50">{submitting ? 'Saving…' : 'Save Log'}</button>
+                <button type="button" onClick={() => setShowAddFuel(false)} disabled={submitting} className="px-4 bg-[var(--color-surface-2)] text-[var(--color-muted)] text-[11px] rounded disabled:opacity-50">Cancel</button>
               </div>
             </form>
           </div>
