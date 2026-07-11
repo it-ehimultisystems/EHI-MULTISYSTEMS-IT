@@ -449,6 +449,44 @@ export const CargoForm = ({
     return () => { active = false; };
   }, []);
 
+  // Load pending Phase 1 gate intakes from Supabase -- this table used to be
+  // localStorage-only despite the italic notice below telling staff it
+  // "syncs dynamically with our centralized database architecture." It
+  // didn't: a shipment received at the gate had zero server record until
+  // Phase 2 finished on that same device, so a cleared browser or a
+  // different staff member finishing Phase 2 could never see it. Supabase
+  // (hub-scoped by RLS) is now the source of truth; localStorage is just
+  // the instant-paint / offline fallback while this fetch is in flight.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('pending_corporate_intakes')
+          .select('id, consignee, corporate_client_id, pieces, route, content_type, airline, awb, sender_phone, created_at')
+          .order('created_at', { ascending: false });
+        if (active && data) {
+          const mapped: PendingWeighingIntake[] = data.map((r: any) => ({
+            id: r.id,
+            consignee: r.consignee,
+            corporate_client_id: r.corporate_client_id || "",
+            pieces: r.pieces,
+            route: r.route || "",
+            contentType: r.content_type || "",
+            airline: r.airline || "",
+            awb: r.awb,
+            created_at: r.created_at,
+            sender_phone: r.sender_phone || undefined,
+            time: new Date(r.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          }));
+          setPendingIntakes(mapped);
+          localStorage.setItem("ehi_pending_intakes_v2", JSON.stringify(mapped));
+        }
+      } catch { /* keep local cache if offline */ }
+    })();
+    return () => { active = false; };
+  }, []);
+
   const [intakeAwb, setIntakeAwb] = useState(generateAwb());
   const [intakePcs, setIntakePcs] = useState("1");
   const [intakeRoute, setIntakeRoute] = useState(CARGO_ROUTES[0]);
@@ -497,7 +535,7 @@ export const CargoForm = ({
   };
 
   // --- ACTION: LOG FIELD INTAKE (Phase 1) ---
-  const handleLogFieldIntake = () => {
+  const handleLogFieldIntake = async () => {
     if (!intakeAwb.trim()) {
       showToast({ message: "Please provide the Air Waybill / Tag Number.", type: "warning" });
       return;
@@ -525,6 +563,34 @@ export const CargoForm = ({
 
     const updated = [newIntake, ...pendingIntakes];
     updateLocalPendingIntakes(updated);
+
+    // Write through to Supabase so this record survives a cleared browser
+    // and is visible to whoever finishes Phase 2, even on a different
+    // device -- see the fetch effect above for the full history here.
+    // Best-effort: the local write above already gives this device an
+    // instant, working copy, so a failed/offline insert doesn't block the
+    // gate agent, it just means this specific record won't show up
+    // elsewhere until it's retried.
+    try {
+      const { error } = await supabase.from('pending_corporate_intakes').insert({
+        id: newIntake.id,
+        consignee: newIntake.consignee,
+        corporate_client_id: newIntake.corporate_client_id || null,
+        pieces: newIntake.pieces,
+        route: newIntake.route,
+        content_type: newIntake.contentType,
+        airline: newIntake.airline,
+        awb: newIntake.awb,
+        sender_phone: newIntake.sender_phone || null,
+        hub_id: user.hub_id || null,
+        hub: user.hub,
+        entered_by: user.name,
+        created_at: newIntake.created_at,
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to sync Phase 1 intake to Supabase (kept locally, will not appear on other devices until retried):', err);
+    }
 
     // Clear and Toast
     setIntakeAwb(generateAwb());
@@ -674,6 +740,11 @@ export const CargoForm = ({
       (pi) => pi.id !== selectedIntake.id,
     );
     updateLocalPendingIntakes(filteredPending);
+    try {
+      await supabase.from('pending_corporate_intakes').delete().eq('id', selectedIntake.id);
+    } catch (err) {
+      console.error('Failed to remove finalized intake from Supabase (still cleared locally):', err);
+    }
 
     // 4. Trigger printer receipt model & clear states
     setSuccessTx(txEntry);
@@ -2074,10 +2145,10 @@ export const CargoForm = ({
                 </div>
 
                 <div className="p-4 rounded-md border border-[var(--color-border)] bg-[var(--color-obsidian)] text-[11px] font-serif text-[var(--color-light-muted)] italic leading-relaxed">
-                  "Every pickup record entered here syncs dynamically with our
-                  centralized database architecture. Scale weighing operates in
-                  strict sequence at the major gateyard commercial weighing
-                  scales."
+                  "Every pickup record entered here is saved to the
+                  centralized database and visible to any staff member at
+                  this hub. Scale weighing operates in strict sequence at
+                  the major gateyard commercial weighing scales."
                 </div>
               </div>
             </div>
