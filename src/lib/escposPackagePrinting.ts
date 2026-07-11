@@ -63,7 +63,7 @@ export async function compilePackageReceiptStream(data: PackageReceiptPrintData,
 
   chunks.push(new Uint8Array(CENTER));
   chunks.push(encoder.encode(`\n${data.entryRef}\n`));
-  chunks.push(encoder.encode("Track your package: ehimultisystems.com\n"));
+  chunks.push(encoder.encode("Track your package: app.ehimultisystems.com\n"));
 
   chunks.push(new Uint8Array(FEED_AND_CUT));
   return concatChunks(chunks);

@@ -226,7 +226,7 @@ export const TransactionLedger = ({
             paymentMode: tx.mode,
             bankName: tx.bank,
             pickupPin: tx.pickupPin,
-            trackingUrl: `https://ehimultisystems.com/track/${tx.id}`,
+            trackingUrl: `https://app.ehimultisystems.com/track/${tx.id}`,
           }, width);
         } else if (tx.type === 'baggage') {
           const { compileVJReceiptStream } = await import('../../lib/escposVJPrinting');
@@ -245,7 +245,7 @@ export const TransactionLedger = ({
             ratePerKg: (tx.excessKg || 0) > 0 ? Math.round(tx.amount / tx.excessKg!) : 0,
             amount: tx.amount,
             paymentMode: tx.mode,
-            trackingUrl: `https://ehimultisystems.com/track/${tx.id}`,
+            trackingUrl: `https://app.ehimultisystems.com/track/${tx.id}`,
           }, width);
         } else {
           // tx.type === 'marketing' -- guaranteed by the early return above
@@ -282,7 +282,7 @@ export const TransactionLedger = ({
             paymentMode: tx.mode,
             paymentNarration: tx.paymentNarration,
             bankName: tx.bank,
-            trackingUrl: `https://ehimultisystems.com/track/${tx.id}`,
+            trackingUrl: `https://app.ehimultisystems.com/track/${tx.id}`,
           }, width);
         }
       });

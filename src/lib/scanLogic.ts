@@ -129,7 +129,7 @@ export async function validateScan(
 
   let ref = rawRef.trim();
 
-  // Extract reference ID if scanned as a full URL (e.g. https://ehimultisystems.com/track/MK-260704-3Y0RQF)
+  // Extract reference ID if scanned as a full URL (e.g. https://app.ehimultisystems.com/track/MK-260704-3Y0RQF)
   if (ref.startsWith('http://') || ref.startsWith('https://')) {
     try {
       const url = new URL(ref);

@@ -509,7 +509,7 @@ export const MarketingWorkspace = ({
                           paymentNarration: successTx.paymentNarration,
                           bankName: bank || undefined,
                           airline: successTx.airline,
-                          trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                          trackingUrl: `https://app.ehimultisystems.com/track/${successTx.id}`,
                         };
                         return await m.compileMarketingReceiptStream(printData, '80mm');
                       });
@@ -544,7 +544,7 @@ export const MarketingWorkspace = ({
                           paymentNarration: successTx.paymentNarration,
                           bankName: bank || undefined,
                           airline: successTx.airline,
-                          trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                          trackingUrl: `https://app.ehimultisystems.com/track/${successTx.id}`,
                         };
                         return await m.compileMarketingReceiptStream(printData, '58mm');
                       });

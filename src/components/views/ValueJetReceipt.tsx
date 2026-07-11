@@ -241,7 +241,7 @@ const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => {
         <Text style={styles.footerText}>EHI Multisystems Nigeria Limited</Text>
       </View>
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>Track your cargo: ehimultisystems.com</Text>
+        <Text style={styles.footerText}>Track your cargo: app.ehimultisystems.com</Text>
       </View>
       <View style={styles.footerRow}>
         <Text style={styles.footerText}>{data.entryRef} • {data.date}</Text>

@@ -368,7 +368,7 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
 
       <View style={[styles.divider, { marginTop: 6 }]} />
 
-      <Text style={styles.footerText}>ehimultisystems.com</Text>
+      <Text style={styles.footerText}>app.ehimultisystems.com</Text>
       <Text style={styles.footerText}>{data.entryRef} • {data.date}</Text>
     </Page>
   </Document>

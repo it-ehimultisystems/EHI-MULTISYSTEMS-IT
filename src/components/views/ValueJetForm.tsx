@@ -301,7 +301,7 @@ export const ValueJetForm = ({
                       ratePerKg: vjRatePerKg,
                       amount: s.tx.amount,
                       paymentMode: s.tx.mode,
-                      trackingUrl: `https://ehimultisystems.com/track/${s.tx.id}`,
+                      trackingUrl: `https://app.ehimultisystems.com/track/${s.tx.id}`,
                       paymentNarration: s.tx.paymentNarration,
                       bankName: s.tx.bank,
                     };
@@ -337,7 +337,7 @@ export const ValueJetForm = ({
                       ratePerKg: vjRatePerKg,
                       amount: s.tx.amount,
                       paymentMode: s.tx.mode,
-                      trackingUrl: `https://ehimultisystems.com/track/${s.tx.id}`,
+                      trackingUrl: `https://app.ehimultisystems.com/track/${s.tx.id}`,
                       paymentNarration: s.tx.paymentNarration,
                       bankName: s.tx.bank,
                     };

@@ -1289,7 +1289,7 @@ export const CargoForm = ({
                     const m = await import('../../lib/escposCargoReceiptPrinting');
                     const thermalPrintData = {
                       ...printData,
-                      trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                      trackingUrl: `https://app.ehimultisystems.com/track/${successTx.id}`,
                     };
                     return await m.compileCargoReceiptStream(thermalPrintData, '80mm');
                   });
@@ -1310,7 +1310,7 @@ export const CargoForm = ({
                     const m = await import('../../lib/escposCargoReceiptPrinting');
                     const thermalPrintData = {
                       ...printData,
-                      trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                      trackingUrl: `https://app.ehimultisystems.com/track/${successTx.id}`,
                     };
                     return await m.compileCargoReceiptStream(thermalPrintData, '58mm');
                   });

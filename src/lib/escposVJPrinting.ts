@@ -104,7 +104,7 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
 
   chunks.push(new Uint8Array(CENTER));
   chunks.push(encoder.encode(`\n${data.entryRef}\n`));
-  chunks.push(encoder.encode("Track your cargo: ehimultisystems.com\n"));
+  chunks.push(encoder.encode("Track your cargo: app.ehimultisystems.com\n"));
 
   chunks.push(new Uint8Array(FEED_AND_CUT));
   return concatChunks(chunks);

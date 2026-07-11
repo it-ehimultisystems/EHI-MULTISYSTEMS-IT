@@ -205,7 +205,7 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
 
 async function buildTagData(data: PackageTagPDFData): Promise<PackageTagPDFData> {
   if (data.qrCodeDataUrl) return data;
-  const trackingUrl = `https://ehimultisystems.com/track?ref=${encodeURIComponent(data.id)}`;
+  const trackingUrl = `https://app.ehimultisystems.com/track?ref=${encodeURIComponent(data.id)}`;
   try {
     const qrCodeDataUrl = await QRCode.toDataURL(trackingUrl, { margin: 1, width: 240, errorCorrectionLevel: 'L' });
     return { ...data, qrCodeDataUrl };

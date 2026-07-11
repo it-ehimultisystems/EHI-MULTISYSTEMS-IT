@@ -305,7 +305,7 @@ export const PackageForm = ({
                           paymentMode: successTx.mode,
                           paymentNarration: successTx.paymentNarration,
                           bankName: bank || undefined,
-                          trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                          trackingUrl: `https://app.ehimultisystems.com/track/${successTx.id}`,
                         };
                         return await m.compilePackageReceiptStream(printData, '80mm');
                       });
@@ -337,7 +337,7 @@ export const PackageForm = ({
                           paymentMode: successTx.mode,
                           paymentNarration: successTx.paymentNarration,
                           bankName: bank || undefined,
-                          trackingUrl: `https://ehimultisystems.com/track/${successTx.id}`,
+                          trackingUrl: `https://app.ehimultisystems.com/track/${successTx.id}`,
                         };
                         return await m.compilePackageReceiptStream(printData, '58mm');
                       });
