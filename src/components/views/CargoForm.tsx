@@ -124,9 +124,17 @@ export const CargoForm = ({
   const [activePortal, setActivePortal] = useState<"retail" | "corporate">(
     "retail",
   );
-  const [corpSubTab, setCorpSubTab] = useState<
-    "intake" | "weighing" | "directory"
-  >("intake");
+  // "directory" was a third value here with a full handler pair
+  // (handleCreateCorpAccount/handleSaveRouteRate) that wrote ONLY to
+  // localStorage -- but no button anywhere ever called setCorpSubTab
+  // ("directory"), so that whole path was unreachable dead code, and
+  // creating a corporate client or setting a contract rate through the
+  // UI already happens correctly (synced to Supabase) via
+  // PricingConfiguration.tsx. Removed rather than wired up, since wiring
+  // it up would have exposed a second, localStorage-only path for the
+  // same actions -- the exact "looks saved but isn't" bug already fixed
+  // elsewhere this session for Phase 1 intakes.
+  const [corpSubTab, setCorpSubTab] = useState<"intake" | "weighing">("intake");
   const { showToast } = useToast();
 
   const generateAwb = () => `AWB-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -174,7 +182,13 @@ export const CargoForm = ({
   useEffect(() => {
     if (mode === "Transfer" && !narrationCode) {
       import("../../lib/helpers").then(({ generatePaymentNarration }) => {
-        setNarrationCode(generatePaymentNarration(user.hub_code || user.hub, serialNumber));
+        // serialNumber is a device-local daily counter (localStorage,
+        // resets independently per browser) -- two devices at the same hub
+        // both processing their own transaction #5 of the day would
+        // generate the IDENTICAL narration code, a guaranteed collision,
+        // not just a probabilistic one. Matches the random-serial approach
+        // PackageForm/MarketingWorkspace/ValueJetForm already use.
+        setNarrationCode(generatePaymentNarration(user.hub_code || user.hub, Math.floor(Math.random() * 9000) + 1000));
       });
     }
     // Only regenerate when mode switches TO Transfer — not on every narrationCode change
@@ -528,14 +542,6 @@ export const CargoForm = ({
   const [customRateOverwrite, setCustomRateOverwrite] = useState("");
   const [isWeighingSubmitting, setIsWeighingSubmitting] = useState(false);
 
-  // --- RATE MANAGEMENT STATES ---
-  const [newClientName, setNewClientName] = useState("");
-  const [newClientPhone, setNewClientPhone] = useState("");
-  const [selectedRateClient, setSelectedRateClient] =
-    useState<CorporateClient | null>(null);
-  const [rateRoute, setRateRoute] = useState(CARGO_ROUTES[0]);
-  const [ratePrice, setRatePrice] = useState("");
-
   // --- SYSTEM HELPERS ---
   const isAuthorizedRole =
     user &&
@@ -544,14 +550,6 @@ export const CargoForm = ({
   const updateLocalCorpClients = (updated: CorporateClient[]) => {
     setCorpClients(updated);
     localStorage.setItem("ehi_corporate_clients_v2", JSON.stringify(updated));
-  };
-
-  const updateLocalCorpRates = (updated: CorporateRouteRate[]) => {
-    setCorpRates(updated);
-    localStorage.setItem(
-      "ehi_corporate_route_rates_v2",
-      JSON.stringify(updated),
-    );
   };
 
   const updateLocalPendingIntakes = (updated: PendingWeighingIntake[]) => {
@@ -565,6 +563,16 @@ export const CargoForm = ({
       showToast({ message: "Please provide the Air Waybill / Tag Number.", type: "warning" });
       return;
     }
+    // parseInt(intakePcs) || 1 at the point of use only catches "0" and
+    // non-numeric input (both fall back to 1) -- a negative string like
+    // "-5" is truthy and parses to -5, flowing straight into the ledger
+    // and the per-piece tag-numbering logic without ever being re-checked
+    // at Phase 2 finalize.
+    const intakePiecesNum = parseInt(intakePcs);
+    if (!Number.isInteger(intakePiecesNum) || intakePiecesNum <= 0) {
+      showToast({ message: "Enter a valid piece count of 1 or more.", type: "warning" });
+      return;
+    }
 
     // Resolve the stable client ID NOW, while corpClients is guaranteed
     // current -- storing company_name alone (a mutable, editable field)
@@ -576,7 +584,7 @@ export const CargoForm = ({
       id: `CG-INT-${Math.floor(100 + Math.random() * 900)}`,
       consignee: intakeConsignee,
       corporate_client_id: matchedClient?.id || "",
-      pieces: parseInt(intakePcs) || 1,
+      pieces: intakePiecesNum,
       route: intakeRoute,
       contentType: intakeContentType,
       airline: intakeAirline,
@@ -733,37 +741,25 @@ export const CargoForm = ({
 
     // 2. Increment client's monthly accumulated debt balance
     if (matchingClientObj) {
-      const newDebtTotal = matchingClientObj.accumulated_monthly_debt + computedCost;
-      const updatedClients = corpClients.map((c) => {
-        if (c.id === matchingClientObj.id) {
-          return {
-            ...c,
-            accumulated_monthly_debt: newDebtTotal,
-          };
-        }
-        return c;
-      });
-      updateLocalCorpClients(updatedClients);
-
-      // Persist to Supabase too -- previously this only ever updated the
-      // in-memory/localStorage copy, so the real debt total was lost
-      // every time the client list refreshed from Supabase (which always
-      // overwrote it back to 0). Billing balances need to survive a page
-      // reload, not just the current browser session.
-      // The try/catch alone only caught thrown exceptions (network
-      // failures) -- Supabase returns a DB-level error (RLS rejection,
-      // etc.) as a normal {error} value without throwing, so that class of
-      // failure was silently swallowed and the client's real debt total
-      // would quietly drift from what's shown here. The transaction itself
-      // (onAddTx above) already succeeded either way, so this only warns
-      // rather than blocking -- but staff need to know to reconcile
-      // accumulated_monthly_debt manually if it fails.
+      // Atomic server-side increment (increment_corporate_debt RPC) instead
+      // of reading accumulated_monthly_debt from the client-side cache,
+      // adding in JS, and writing back the absolute total -- that
+      // read-modify-write let two staff finalizing different shipments for
+      // the SAME corporate client near-simultaneously both read the same
+      // stale balance, and whichever write landed second silently
+      // overwrote the first's increment. The transaction itself (onAddTx
+      // above) already succeeded either way, so a failure here only warns
+      // rather than blocking.
       try {
-        const { error: debtUpdateError } = await supabase
-          .from('corporate_clients')
-          .update({ accumulated_monthly_debt: newDebtTotal })
-          .eq('id', matchingClientObj.id);
+        const { data: newDebtTotal, error: debtUpdateError } = await supabase.rpc(
+          'increment_corporate_debt',
+          { p_client_id: matchingClientObj.id, p_amount: computedCost },
+        );
         if (debtUpdateError) throw debtUpdateError;
+        const updatedClients = corpClients.map((c) =>
+          c.id === matchingClientObj.id ? { ...c, accumulated_monthly_debt: newDebtTotal } : c,
+        );
+        updateLocalCorpClients(updatedClients);
       } catch (err: any) {
         console.error('Failed to persist corporate client debt to Supabase', err);
         showToast({ message: `Transaction saved, but ${matchingClientObj.company_name}'s debt balance failed to update on the server: ${err.message || 'unknown error'}. Reconcile manually.`, type: 'error' });
@@ -808,53 +804,6 @@ export const CargoForm = ({
     setIsWeighingSubmitting(false);
   };
 
-  // --- ACTION: ADD NEW CORPORATE B2B ACCOUNT ---
-  const handleCreateCorpAccount = () => {
-    if (!newClientName.trim()) return;
-    const newClient: CorporateClient = {
-      id: "corp_" + Math.random().toString(36).substr(2, 9),
-      company_name: newClientName.trim(),
-      contact_phone: newClientPhone.trim() || "N/A",
-      accumulated_monthly_debt: 0,
-    };
-    updateLocalCorpClients([...corpClients, newClient]);
-    setNewClientName("");
-    setNewClientPhone("");
-  };
-
-  // --- ACTION: SET CUSTOM ROUTE RATE ---
-  const handleSaveRouteRate = () => {
-    if (!selectedRateClient || !ratePrice) return;
-    const priceNum = parseFloat(ratePrice) || 0;
-    if (priceNum <= 0) return;
-
-    // Check if route rate already exists
-    const existingIndex = corpRates.findIndex(
-      (r) =>
-        r.corporate_client_id === selectedRateClient.id &&
-        r.route_name === rateRoute,
-    );
-
-    let updatedRates = [...corpRates];
-    if (existingIndex > -1) {
-      updatedRates[existingIndex].rate_per_kg = priceNum;
-    } else {
-      updatedRates.push({
-        id: "rate_" + Math.random().toString(36).substr(2, 9),
-        corporate_client_id: selectedRateClient.id,
-        route_name: rateRoute,
-        rate_per_kg: priceNum,
-      });
-    }
-
-    updateLocalCorpRates(updatedRates);
-    setRatePrice("");
-    showToast({
-      message: `Rate updated: ${selectedRateClient.company_name} Route ${rateRoute} set to ₦${priceNum}/KG`,
-      type: "success",
-    });
-  };
-
   // --- RETAIL BILLING SUBMIT ---
   const actualConsignee = consignee === "Other" ? customConsignee : consignee;
   const w = Math.round(parseFloat(kg)) || 0;
@@ -864,13 +813,22 @@ export const CargoForm = ({
   const effectiveAmount = amount || autoAmount;
   const parsedAmount = parseFloat(effectiveAmount) || 0;
 
+  // w>0 and a positive integer pieces count are both required -- previously
+  // neither was checked directly: an empty/zero kg just made minAmount
+  // compute to 0, so any manually-typed amount>0 alone passed, and pieces
+  // had no validation at all (parseInt(pcs)||1 at submit only catches "0",
+  // not a negative string like "-5", which is truthy and would flow
+  // straight into the ledger and the per-piece tag-numbering logic).
+  const piecesNum = parseInt(pcs);
   const isRetailFormValid = useMemo(
     () =>
       actualConsignee.trim().length > 0 &&
       route.trim().length > 0 &&
       contentType.trim().length > 0 &&
+      w > 0 &&
+      Number.isInteger(piecesNum) && piecesNum > 0 &&
       parsedAmount >= minAmount && parsedAmount > 0,
-    [actualConsignee, route, contentType, parsedAmount, minAmount],
+    [actualConsignee, route, contentType, w, piecesNum, parsedAmount, minAmount],
   );
 
   const handleRetailSubmit = async () => {
