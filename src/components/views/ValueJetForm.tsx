@@ -519,7 +519,14 @@ export const ValueJetForm = ({
                 placeholder="0"
                 value={kg}
                 onChange={(e) => {
-                  const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                  // Previously stripped ALL non-digit characters, including
+                  // the decimal point itself -- typing a realistic scale
+                  // reading like "22.6" produced the digit string "226",
+                  // inflating the excess-kg billing ~10x. kgVal already
+                  // does Math.round(parseFloat(kg)) below, so this only
+                  // needs to let a real decimal value through (and drop any
+                  // second decimal point from something like "22..6").
+                  const cleanVal = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
                   setKg(cleanVal);
                 }}
                 className={formInputClass}
