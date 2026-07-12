@@ -21,7 +21,7 @@
 
     <!-- Theme color for Safari toolbar -->
     <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#F0F4F8" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#e7ebf1" media="(prefers-color-scheme: light)">
 
     <title>EHI Multisystems</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,28 +39,49 @@
   </head>
   <body>
     <div id="root">
-      <!-- Branded splash screen — replaced by React when app mounts -->
-      <div id="splash" style="
-        min-height: 100dvh;
-        background: #0d1117;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 20px;
-      ">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="64" height="64" rx="14" fill="rgba(245,158,11,0.12)" />
-          <text x="32" y="42" text-anchor="middle" fill="#f59e0b" font-size="28" font-weight="800" font-family="monospace">E</text>
-        </svg>
-        <div style="
+      <!-- Branded splash screen — replaced by React when app mounts. Themed
+           via html.dark/html.light (set synchronously by the inline script
+           above, before this paints) instead of a hardcoded color, so it
+           never flashes the wrong theme against whatever LoginScreen/the
+           app renders next -- default is light (this app's default theme),
+           dark only when html.dark is present. -->
+      <style>
+        #splash {
+          min-height: 100dvh;
+          width: 100%;
+          background: #e7ebf1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 20px;
+          box-sizing: border-box;
+          padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        html.dark #splash { background: #0d1117; }
+        #splash .ehi-splash-mark-bg { fill: rgba(201,142,40,0.14); }
+        #splash .ehi-splash-mark-text { fill: #C98E28; }
+        html.dark #splash .ehi-splash-mark-bg { fill: rgba(240,178,48,0.12); }
+        html.dark #splash .ehi-splash-mark-text { fill: #F0B230; }
+        #splash .ehi-splash-ring {
           width: 32px; height: 32px;
-          border: 3px solid rgba(245,158,11,0.2);
-          border-top-color: #f59e0b;
+          border: 3px solid rgba(201,142,40,0.22);
+          border-top-color: #C98E28;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
-        "></div>
-        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+        }
+        html.dark #splash .ehi-splash-ring {
+          border-color: rgba(240,178,48,0.2);
+          border-top-color: #F0B230;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+      <div id="splash">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" rx="14" class="ehi-splash-mark-bg" />
+          <text x="32" y="42" text-anchor="middle" class="ehi-splash-mark-text" font-size="28" font-weight="800" font-family="monospace">E</text>
+        </svg>
+        <div class="ehi-splash-ring"></div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

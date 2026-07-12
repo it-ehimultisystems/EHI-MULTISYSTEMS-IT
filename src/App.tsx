@@ -7,6 +7,7 @@ import { UserProfile, getSession, signOut } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { Loader2, PackageX } from 'lucide-react';
 import ehiLogoImg from './assets/branding/ehi-logo.png';
+import { SplashScreen } from './components/SplashScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './lib/ToastContext';
 import { ConfirmProvider } from './lib/ConfirmContext';
@@ -454,11 +455,7 @@ const AuthenticatedApp = () => {
   }, []);
 
   if (authLoading) {
-    return (
-      <div className="bg-[var(--color-obsidian)] flex items-center justify-center" style={{ minHeight: '100dvh' }}>
-        <Loader2 className="animate-spin text-[var(--color-accent-amber)]" size={48} />
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   if (passwordRecovery) {

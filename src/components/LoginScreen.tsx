@@ -99,7 +99,26 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
   const status = statusConfig[connStatus];
 
   return (
-    <div className="bg-[var(--color-obsidian)] relative flex flex-col items-center justify-center p-8 overflow-hidden" style={{ minHeight: '100dvh' }}>
+    <div
+      className="bg-[var(--color-obsidian)] relative flex flex-col items-center justify-center overflow-y-auto overflow-x-hidden"
+      style={{
+        // html/body are `position: fixed; overflow: hidden` globally (see
+        // src/index.css) so the whole app never rubber-band scrolls as one
+        // page -- every full-screen view is expected to own its own
+        // scrolling instead. A `minHeight` here would grow this div past
+        // the viewport on a short screen (small phone, or the on-screen
+        // keyboard shrinking the visible area) with nowhere for the extra
+        // height to go: body's overflow:hidden would just silently clip it,
+        // and this div's own overflow-y-auto never engages because the div
+        // itself was never actually constrained. A fixed `height` caps it
+        // at the viewport so overflow-y-auto has something to scroll.
+        height: '100dvh',
+        paddingTop: 'calc(env(safe-area-inset-top) + 2rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)',
+        paddingLeft: 'calc(env(safe-area-inset-left) + 2rem)',
+        paddingRight: 'calc(env(safe-area-inset-right) + 2rem)',
+      }}
+    >
       {/* Background glows */}
       <div className="absolute w-[500px] h-[500px] rounded-full pointer-events-none filter blur-[100px]" style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 65%)', top: '-10%', left: '-10%' }} />
       <div className="absolute w-[500px] h-[500px] rounded-full pointer-events-none filter blur-[100px]" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.09) 0%, transparent 65%)', bottom: '-10%', right: '-10%' }} />
@@ -248,7 +267,13 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
           </div>
         )}
 
-        <div className="absolute bottom-6 left-0 right-0 text-center text-[11px] font-sans text-[var(--color-muted)]">
+        {/* Normal flow, not absolutely positioned -- on a short viewport
+            (small phone, or the on-screen keyboard shrinking the visible
+            area) an absolutely-positioned footer here would sit at a fixed
+            distance from the bottom of the whole screen regardless of how
+            tall the form above it actually is, and could overlap the
+            "Forgot password?" button instead of just pushing below it. */}
+        <div className="text-center text-[11px] font-sans text-[var(--color-muted)] mt-8">
           EHI Multisystems Nigeria Ltd · MMA2, Ikeja, Lagos
         </div>
       </div>

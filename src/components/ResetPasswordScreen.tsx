@@ -45,7 +45,21 @@ export const ResetPasswordScreen = ({ onDone }: { onDone: () => void }) => {
   };
 
   return (
-    <div className="bg-[var(--color-obsidian)] relative flex flex-col items-center justify-center p-8 overflow-hidden" style={{ minHeight: '100dvh' }}>
+    <div
+      className="bg-[var(--color-obsidian)] relative flex flex-col items-center justify-center overflow-y-auto overflow-x-hidden"
+      style={{
+        // See LoginScreen.tsx for why this is a fixed `height`, not
+        // `minHeight` -- html/body are `position: fixed; overflow: hidden`
+        // globally, so a min-height div that grows past the viewport (short
+        // phone, keyboard open) has nowhere for the overflow to go except
+        // silently clipped by body, with no scrollbar ever appearing.
+        height: '100dvh',
+        paddingTop: 'calc(env(safe-area-inset-top) + 2rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)',
+        paddingLeft: 'calc(env(safe-area-inset-left) + 2rem)',
+        paddingRight: 'calc(env(safe-area-inset-right) + 2rem)',
+      }}
+    >
       <div className="absolute w-[500px] h-[500px] rounded-full pointer-events-none filter blur-[100px]" style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 65%)', top: '-10%', left: '-10%' }} />
       <div className="absolute w-[500px] h-[500px] rounded-full pointer-events-none filter blur-[100px]" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.09) 0%, transparent 65%)', bottom: '-10%', right: '-10%' }} />
 
