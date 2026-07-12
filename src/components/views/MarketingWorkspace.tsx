@@ -151,7 +151,13 @@ export const MarketingWorkspace = ({
   const parsedOverride = parseFloat(amountOverride) || 0;
   const totalAmount = amountOverride !== "" ? parsedOverride : minAmount;
 
-  const isValid = !!awb && name.trim().length > 0 && totalAmount > 0 && (amountOverride === "" || parsedOverride >= minAmount);
+  // Debt mode records debtorName as the transaction's name (see handleAddEntry
+  // below: `mode === "Debt" ? debtorName.trim() : name.trim()`), but this
+  // check validated `name` unconditionally -- the always-visible "Customer
+  // Name" field could be filled while the Debt-only "Debtor Name" field was
+  // left empty, producing an untraceable debt record with name: "". Matches
+  // the branch PackageForm.tsx already uses correctly for the same fields.
+  const isValid = !!awb && (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0) && totalAmount > 0 && (amountOverride === "" || parsedOverride >= minAmount);
 
   // "Less Transfer" — daily adjustment for 3rd-party/corporate transfers (Govt/Honda/Zion)
   // that belong to other accounts and should be excluded from the day's cash tally
