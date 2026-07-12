@@ -1058,7 +1058,7 @@ export const CargoForm = ({
     }
   };
 
-  const handlePrintWaybill = async () => {
+  const handlePrintTagPDF100mm = async () => {
     if (successTx) {
       // Open the tab synchronously, in direct response to the click --
       // window.open() called after the awaits below (dynamic import, QR
@@ -1066,63 +1066,11 @@ export const CargoForm = ({
       // mobile browsers and installed PWAs require, and gets silently
       // blocked.
       const preOpenedWindow = window.open('', '_blank');
-      const { downloadCargoWaybill } = await import("./CargoReceipt");
-      const printData = {
-        entryRef: successTx.id,
-        serialNumber: serialNumber - 1,
-        date: new Date().toLocaleDateString("en-GB"),
-        hubName: user?.hub || "EHI Cargo Station",
-        agentName: user?.name || "EHI Agent",
-        airline:
-          airline === "Green Africa"
-            ? "Green Africa Airways"
-            : airline === "United Nigeria"
-              ? "United Nigeria Airlines"
-              : airline,
-        consignee: successTx.name,
-        awbTagNumber: successTx.awb_tag_number || awb,
-        pieces: successTx.pieces || parseInt(pcs),
-        kg: successTx.kg || Math.round(parseFloat(kg)),
-        route: successTx.detail.split(" · ")[4] || route,
-        contentType: successTx.detail.split(" · ")[5] || contentType,
-        amount: successTx.amount,
-        paymentMode: successTx.mode,
-        paymentNarration: successTx.paymentNarration,
-        bankName: successTx.bank || undefined,
-        remark: successTx.remarks || undefined,
-        pickupPin: (successTx as any).pickupPin || undefined,
-      };
-      try {
-        await downloadCargoWaybill(printData, preOpenedWindow);
-      } catch (err) {
-        console.error('Failed to open waybill PDF', err);
-        preOpenedWindow?.close();
-        showToast({ message: 'Failed to open tag PDF', type: 'error' });
-        return;
-      }
-
-      try {
-        await supabase.from('tag_print_log').insert({
-          cargo_ref: successTx.id,
-          awb_tag_number: successTx.awb_tag_number || awb,
-          printed_by: user.id,
-          printed_by_name: user.name,
-          hub_id: user.hub_id,
-          hub_name: user.hub || 'Unknown',
-          print_method: 'pdf',
-          pieces_printed: successTx.pieces || parseInt(pcs) || 1,
-        });
-      } catch (err) {
-        console.error('Failed to log tag print', err);
-      }
-    }
-  };
-
-  const handlePrintTagPDF100mm = async () => {
-    if (successTx) {
-      // Open the tab synchronously, in direct response to the click -- see
-      // the note in handlePrintWaybill above.
-      const preOpenedWindow = window.open('', '_blank');
+      // The tab above opens blank and only gets filled in once the PDF
+      // finishes generating below, so there's otherwise no visible sign
+      // anything is happening in the meantime -- unlike handlePrintReceipt,
+      // which opens the tab already pointed at the finished blob.
+      showToast({ message: 'Generating tag PDF…', type: 'info' });
       try {
         const { printCargoTagPDF } = await import("./CargoTagPDF");
         await printCargoTagPDF({
@@ -1320,22 +1268,13 @@ export const CargoForm = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-1 gap-3 mb-3">
             <button
               onClick={handlePrintReceipt}
               className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
             >
               PDF Receipt
             </button>
-            <button
-              onClick={handlePrintWaybill}
-              className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
-            >
-              PDF Tag
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 mb-3">
             <button
               onClick={handlePrintTagPDF100mm}
               className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"

@@ -10,7 +10,7 @@ import {
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
-import { getHubCode, getCityName, openPdfOrDownload } from "../../lib/helpers";
+import { openPdfOrDownload } from "../../lib/helpers";
 import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 import { notifySilentError } from "../../lib/ToastContext";
 
@@ -169,92 +169,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 1,
   },
-  tagContainer: { marginTop: 0, paddingTop: 0 },
-  tagBar: {
-    backgroundColor: "#000000",
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    marginBottom: 4,
-  },
-  tagBarText: {
-    fontSize: 9,
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontWeight: "bold",
-    fontFamily: "Helvetica-Bold",
-    textTransform: "uppercase",
-  },
-  tagRoute: {
-    fontSize: 20,
-    fontWeight: "bold",
-    fontFamily: "Helvetica-Bold",
-    textAlign: "center",
-    marginVertical: 6,
-  },
-  tagAwb: {
-    fontSize: 11,
-    fontWeight: "bold",
-    fontFamily: "Courier-Bold",
-    textAlign: "center",
-    borderWidth: 1,
-    borderColor: "#000000",
-    padding: 4,
-    marginVertical: 4,
-  },
-  tagRef: {
-    fontSize: 7,
-    fontFamily: "Courier",
-    textAlign: "center",
-    color: "#666666",
-  },
-  tagDetailsRow: {
-    flexDirection: "row",
-    marginVertical: 4,
-  },
-  tagDetailBox: {
-    alignItems: "center",
-    padding: 4,
-    borderWidth: 2,
-    borderColor: "#000000",
-    flex: 1,
-    margin: 2,
-  },
-  tagDetailLabel: {
-    fontSize: 7,
-    textTransform: "uppercase",
-    color: "#777777",
-  },
-  tagDetailValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: "Helvetica-Bold",
-  },
-  tagInfoRow: {
-    flexDirection: "row",
-    marginBottom: 3,
-  },
-  tagInfoLabel: {
-    fontSize: 8,
-    fontWeight: "bold",
-    fontFamily: "Helvetica-Bold",
-    width: 55,
-  },
-  tagInfoValue: {
-    fontSize: 8,
-    fontFamily: "Helvetica",
-    flex: 1,
-  },
-  tagBottomBar: {
-    backgroundColor: "#000000",
-    paddingVertical: 4,
-    marginTop: 6,
-  },
-  tagBottomBarText: {
-    fontSize: 7,
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontFamily: "Helvetica",
-  },
 });
 
 const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
@@ -376,85 +290,6 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
   );
 };
 
-const CargoWaybillTagPage = ({
-  data,
-  pieceIndex,
-  totalPieces,
-}: {
-  data: CargoReceiptData;
-  pieceIndex: number;
-  totalPieces: number;
-}) => {
-  const originCode = getHubCode(data.hubName);
-  const destName = getCityName(data.route);
-
-  // +45 to accommodate the larger header logos (see note above).
-  let h = 275;
-  if (data.qrCodeDataUrl) h += 80;
-
-  return (
-    <Page size={[226, h]} style={styles.page}>
-      <View style={styles.tagContainer}>
-        <View style={styles.headerRow}>
-          <EHILogoPDF width={105} />
-          <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={105} />
-        </View>
-
-        <View style={styles.tagBar}>
-          <Text style={styles.tagBarText}>CARGO ROUTING TAG</Text>
-        </View>
-
-        <Text style={styles.tagRoute}>{originCode} → {destName}</Text>
-
-        <Text style={styles.tagAwb}>{data.awbTagNumber}</Text>
-
-        {data.qrCodeDataUrl ? (
-          <View style={styles.qrContainer}>
-            <Image src={data.qrCodeDataUrl} style={{ width: 70, height: 70 }} />
-          </View>
-        ) : null}
-
-        <Text style={styles.tagRef}>REF: {data.entryRef}</Text>
-
-        <View style={styles.tagDetailsRow}>
-          <View style={styles.tagDetailBox}>
-            <Text style={styles.tagDetailLabel}>PIECE</Text>
-            <Text style={styles.tagDetailValue}>{pieceIndex}/{totalPieces}</Text>
-          </View>
-          <View style={styles.tagDetailBox}>
-            <Text style={styles.tagDetailLabel}>WEIGHT (KG)</Text>
-            <Text style={styles.tagDetailValue}>{Math.round(data.kg)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.tagInfoRow}>
-          <Text style={styles.tagInfoLabel}>Consignee:</Text>
-          <Text style={styles.tagInfoValue}>{data.consignee}</Text>
-        </View>
-        <View style={styles.tagInfoRow}>
-          <Text style={styles.tagInfoLabel}>Date:</Text>
-          <Text style={styles.tagInfoValue}>{data.date}</Text>
-        </View>
-
-        <View style={styles.tagBottomBar}>
-          <Text style={styles.tagBottomBarText}>EHI MULTISYSTEMS NIGERIA LIMITED</Text>
-        </View>
-      </View>
-    </Page>
-  );
-};
-
-const CargoWaybillOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
-  const totalPieces = Math.max(1, Number(data.pieces) || 1);
-  return (
-    <Document>
-      {Array.from({ length: totalPieces }, (_, i) => (
-        <CargoWaybillTagPage key={i} data={data} pieceIndex={i + 1} totalPieces={totalPieces} />
-      ))}
-    </Document>
-  );
-};
-
 export const printCargoReceipt = async (data: CargoReceiptData) => {
   if (!data.qrCodeDataUrl) {
     try {
@@ -499,33 +334,4 @@ export const downloadCargoReceipt = async (data: CargoReceiptData) => {
   a.download = `Receipt_${data.entryRef}.pdf`;
   a.click();
   URL.revokeObjectURL(url);
-};
-
-// Callers should open `preOpenedWindow` themselves via
-// `window.open('', '_blank')` synchronously in their click handler, before
-// awaiting this function -- see the comment on openPdfOrDownload for why.
-// This used to force a plain <a download> click, but that anchor was never
-// attached to the DOM: a detached element's synthetic .click() is silently
-// dropped on mobile Safari and installed-PWA WKWebViews, which is why "PDF
-// Tag" appeared to do nothing there. Routing through openPdfOrDownload
-// opens/navigates a real tab instead, which every platform handles.
-export const downloadCargoWaybill = async (data: CargoReceiptData, preOpenedWindow?: Window | null) => {
-  if (!data.qrCodeDataUrl) {
-    try {
-      data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
-        margin: 1,
-        width: 200,
-        errorCorrectionLevel: 'L',
-      });
-    } catch (e) {
-      console.warn("Failed to generate QR code", e);
-      notifySilentError('This receipt printed without a scannable tracking QR code.');
-    }
-  }
-  if (data.airlineLogoUrl === undefined) {
-    data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airline);
-  }
-  const blob = await pdf(<CargoWaybillOnlyPDF data={data} />).toBlob();
-  const url = URL.createObjectURL(blob);
-  openPdfOrDownload(url, `Waybill_${data.entryRef}.pdf`, preOpenedWindow);
 };
