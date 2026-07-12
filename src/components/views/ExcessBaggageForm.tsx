@@ -336,22 +336,38 @@ export const ExcessBaggageForm = ({
               <span>PRINT POS (58mm)</span>
             </button>
           </div>
-          <button
-            onClick={handleDownloadReceipt}
-            style={{
-              width: '100%', padding: '11px',
-              background: 'transparent',
-              border: '1px solid rgba(59,130,246,0.3)',
-              borderRadius: 8, cursor: 'pointer',
-              fontSize: 11, fontFamily: 'monospace',
-              fontWeight: 700, color: 'var(--color-accent-cobalt)',
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: 6,
-              marginTop: 8,
-            }}
-          >
-            ↓ PDF RECEIPT
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8, width: '100%' }}>
+            <button
+              onClick={handlePrintReceipt}
+              style={{
+                padding: '11px',
+                background: 'transparent',
+                border: '1px solid rgba(59,130,246,0.3)',
+                borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, fontFamily: 'monospace',
+                fontWeight: 700, color: 'var(--color-accent-cobalt)',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: 6,
+              }}
+            >
+              PRINT PDF
+            </button>
+            <button
+              onClick={handleDownloadReceipt}
+              style={{
+                padding: '11px',
+                background: 'transparent',
+                border: '1px solid rgba(59,130,246,0.3)',
+                borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, fontFamily: 'monospace',
+                fontWeight: 700, color: 'var(--color-accent-cobalt)',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: 6,
+              }}
+            >
+              ↓ DOWNLOAD PDF
+            </button>
+          </div>
         </div>
       </div>
     );

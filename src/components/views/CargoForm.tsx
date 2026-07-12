@@ -38,6 +38,7 @@ import {
   Rocket,
   Zap,
   Bluetooth,
+  Download,
 } from "lucide-react";
 import {
   sendReceiptWhatsApp,
@@ -1294,13 +1295,22 @@ export const CargoForm = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 mb-3">
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <button
               onClick={handlePrintReceipt}
-              className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"
+              className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none flex items-center justify-center gap-1.5"
             >
               PDF Receipt
             </button>
+            <button
+              onClick={handleDownloadReceipt}
+              className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none flex items-center justify-center gap-1.5"
+            >
+              <Download size={14} /> Download PDF
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 mb-3">
             <button
               onClick={handlePrintTagPDF100mm}
               className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none"

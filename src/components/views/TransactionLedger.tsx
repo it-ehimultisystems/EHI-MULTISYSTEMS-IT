@@ -309,6 +309,66 @@ export const TransactionLedger = ({
     }
   };
 
+  // Opens the same PDF receipt already used by CargoForm/ExcessBaggageForm's
+  // point-of-sale success screens, rebuilt from the historical Transaction --
+  // unlike handleReprintReceipt above, this needs no Bluetooth printer, just
+  // a normal browser tab (to view, save, print on any printer, or email).
+  const handleReprintReceiptPDF = async () => {
+    if (!viewingDetail || !viewingDetail.raw) return;
+    const tx = viewingDetail.raw;
+    if (tx.type !== 'cargo' && tx.type !== 'baggage') return;
+
+    try {
+      if (tx.type === 'cargo') {
+        const { printCargoReceipt } = await import('./CargoReceipt');
+        await printCargoReceipt({
+          entryRef: tx.id,
+          serialNumber: 0,
+          date: tx.time,
+          hubName: tx.hub || user.hub,
+          agentName: tx.enteredByName || user.name,
+          airline: tx.airline || 'Unknown',
+          consignee: tx.consignee || tx.name,
+          awbTagNumber: tx.awb_tag_number || 'N/A',
+          pieces: tx.pieces || 1,
+          kg: tx.kg || 1,
+          route: tx.route || 'Unknown',
+          contentType: tx.detail?.split(' · ')[5] || 'General Goods',
+          amount: tx.amount,
+          paymentMode: tx.mode,
+          bankName: tx.bank,
+          paymentNarration: tx.paymentNarration,
+          remark: tx.remarks,
+          pickupPin: tx.pickupPin,
+        });
+      } else {
+        const { printBaggageReceipt } = await import('./ExcessBaggageReceipt');
+        await printBaggageReceipt({
+          airlineName: tx.airline || 'ValueJet',
+          entryRef: tx.id,
+          date: tx.time,
+          hubName: tx.hub || user.hub,
+          agentName: tx.enteredByName || user.name,
+          passengerName: tx.name,
+          flightNumber: tx.flight || 'Unknown',
+          destination: tx.destination || 'Unknown',
+          totalPieces: tx.pieces || 1,
+          totalBaggage: tx.totalKg || tx.kg || 0,
+          freeAllowance: (tx.totalKg || 0) - (tx.excessKg || 0),
+          excessKg: tx.excessKg || 0,
+          ratePerKg: (tx.excessKg || 0) > 0 ? Math.round(tx.amount / tx.excessKg!) : 0,
+          amount: tx.amount,
+          paymentMode: tx.mode,
+          paymentNarration: tx.paymentNarration,
+          bankName: tx.bank,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error generating PDF receipt:', error);
+      showToast({ message: error?.message || 'Failed to generate PDF receipt.', type: 'error' });
+    }
+  };
+
   const handleReprintTag = async (width: '58mm' | '80mm') => {
     // Change: use wired PDF tag printing (opens PDF in new tab / OS print dialog)
     if (!viewingDetail || !viewingDetail.raw) return;
@@ -1253,6 +1313,17 @@ export const TransactionLedger = ({
                           </button>
                         </>
                       )}
+                    </div>
+                  )}
+                  {(user.can_print_ledger || user.role === 'super_admin') && (viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'baggage') && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => handleReprintReceiptPDF()}
+                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
+                        title="Open PDF receipt (for regular printers, or to save/email)"
+                      >
+                        <Printer size={14} /> PDF Receipt
+                      </button>
                     </div>
                   )}
                 </>
