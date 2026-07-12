@@ -205,7 +205,7 @@ export const Forecasting = ({
                 <AreaChart data={historicalData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="day" stroke="#64748B" strokeWidth={1} tickLine={false} />
                   <YAxis stroke="#64748B" strokeWidth={0} tickLine={false} tickFormatter={(v) => `₦${v/1000}k`} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1E293B', borderColor: 'var(--color-surface-2)', borderRadius: '8px' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface-2)', borderColor: 'var(--color-surface-2)', borderRadius: '8px' }} />
                   <defs>
                     <linearGradient id="cargoGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2}/>
@@ -235,7 +235,7 @@ export const Forecasting = ({
                 <BarChart data={forecastData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="day" stroke="#64748B" strokeWidth={1} tickLine={false} />
                   <YAxis stroke="#64748B" strokeWidth={0} tickLine={false} tickFormatter={(v) => `₦${v/1000}k`} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1E293B', borderColor: 'var(--color-surface-2)' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface-2)', borderColor: 'var(--color-surface-2)' }} />
                   <Legend iconSize={8} />
                   <Bar dataKey="predictedCargo" name="Cargo (₦)" fill="#F59E0B" stackId="stack" />
                   <Bar dataKey="predictedMarketing" name="Mktg (₦)" fill="#10B981" stackId="stack" />

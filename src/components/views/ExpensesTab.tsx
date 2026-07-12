@@ -96,7 +96,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
       {/* PERIOD SUMMARY */}
       <div className="bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-5">
          <div className="text-[13px] font-sans font-medium text-[var(--color-muted)] mb-1">Total Expenses ({period})</div>
-         <div className="text-[28px] font-mono font-bold text-[#F59E0B] mb-2">{fmt(totalExpenses)}</div>
+         <div className="text-[28px] font-mono font-bold text-[var(--color-warning)] mb-2">{fmt(totalExpenses)}</div>
       </div>
 
       {/* EXPENSE FORM */}

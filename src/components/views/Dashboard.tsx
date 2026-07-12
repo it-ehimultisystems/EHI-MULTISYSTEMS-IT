@@ -402,7 +402,7 @@ export const Dashboard = React.memo(
         <div ref={parentRef} className="flex-1 overflow-y-auto w-full no-scrollbar">
           {allVisibleTx.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 py-12 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[var(--color-surface-2)] mt-2">
-              <Package2 size={36} className="text-[#64748B] mb-3" strokeWidth={1.5} />
+              <Package2 size={36} className="text-[var(--color-muted)] mb-3" strokeWidth={1.5} />
               <div className="text-[14px] font-semibold text-[var(--color-foreground)] font-sans">
                 No activity yet today
               </div>
