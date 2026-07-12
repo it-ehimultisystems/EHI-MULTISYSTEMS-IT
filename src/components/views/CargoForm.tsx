@@ -449,6 +449,31 @@ export const CargoForm = ({
     return () => { active = false; };
   }, []);
 
+  // Load real corporate contract rates from Supabase — this table was
+  // NEVER fetched here at all: corpRates only ever came from localStorage
+  // or the hardcoded placeholder seed above, whose corporate_client_id
+  // values ("corp_1".."corp_3") can never match a real client's Postgres
+  // UUID (corpClients above IS fetched correctly). The contractRateRecord
+  // lookup in handleFinalizeWeighing therefore never matched for any real
+  // corporate account, and every corporate shipment silently billed at the
+  // ₦500/kg fallback instead of its negotiated rate -- with no error
+  // anywhere, since falling through to the fallback is the normal,
+  // expected behavior for a client with no override on file.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('corporate_route_rates')
+          .select('id, corporate_client_id, route_name, rate_per_kg');
+        if (active && data && data.length > 0) {
+          setCorpRates(data as CorporateRouteRate[]);
+        }
+      } catch { /* keep local seed if offline */ }
+    })();
+    return () => { active = false; };
+  }, []);
+
   // Load pending Phase 1 gate intakes from Supabase -- this table used to be
   // localStorage-only despite the italic notice below telling staff it
   // "syncs dynamically with our centralized database architecture." It
