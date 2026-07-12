@@ -4,6 +4,7 @@ import { Camera, RefreshCw, X, ShieldCheck } from 'lucide-react';
 import { db } from '../../lib/db';
 import { syncProofOfDelivery } from '../../lib/sync';
 import { User, ProofOfDelivery } from '../../lib/types';
+import { useToast } from '../../lib/ToastContext';
 
 interface PODProps {
   awbNumber: string;
@@ -21,7 +22,8 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
   const [notes, setNotes] = useState('');
   const [isPhotoActive, setIsPhotoActive] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  
+  const { showToast } = useToast();
+
   const signatureRef = useRef<SignatureCanvas>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -37,6 +39,7 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
         .catch(err => {
           console.error("Camera error:", err);
           setIsPhotoActive(false);
+          showToast({ message: 'Could not access the camera. Check camera permissions and try again.', type: 'error' });
         });
     }
 

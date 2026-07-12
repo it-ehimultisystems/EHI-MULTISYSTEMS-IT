@@ -488,6 +488,14 @@ button:active:not(:disabled) {
     transform: rotate(360deg);
   }
 }
+@keyframes ehi-toast-shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
 @keyframes customPulse {
   0%,
   100% {

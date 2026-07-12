@@ -12,6 +12,7 @@ import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
 import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 import { openPdfOrDownload } from "../../lib/helpers";
+import { notifySilentError } from "../../lib/ToastContext";
 
 // Fixed 100mm x 80mm label -- this is a discrete, fixed-size tag (like the
 // XP-402B gap/die-cut label printer this was built for), not an
@@ -262,6 +263,7 @@ async function buildTagData(data: CargoTagPDFData): Promise<CargoTagPDFData> {
       result = { ...result, qrCodeDataUrl };
     } catch (e) {
       console.warn("Failed to generate QR code for tag PDF", e);
+      notifySilentError('This tag printed without a scannable QR code -- hub scanning for it will need the AWB typed in manually.');
     }
   }
   if (result.airlineLogoUrl === undefined && result.airline) {

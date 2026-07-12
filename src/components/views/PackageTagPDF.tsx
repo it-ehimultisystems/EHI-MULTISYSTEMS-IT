@@ -10,6 +10,7 @@ import {
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { openPdfOrDownload } from "../../lib/helpers";
+import { notifySilentError } from "../../lib/ToastContext";
 
 // Fixed 100mm x 80mm label -- same discrete, fixed-size tag format as
 // CargoTagPDF, for the XP-402B and similar gap/die-cut label printers.
@@ -211,6 +212,7 @@ async function buildTagData(data: PackageTagPDFData): Promise<PackageTagPDFData>
     return { ...data, qrCodeDataUrl };
   } catch (e) {
     console.warn("Failed to generate QR code for package tag PDF", e);
+    notifySilentError('This tag printed without a scannable QR code -- hub scanning for it will need the tracking ref typed in manually.');
     return data;
   }
 }

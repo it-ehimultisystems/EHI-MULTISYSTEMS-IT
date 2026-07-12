@@ -366,6 +366,7 @@ export const Scanner = ({
       setTrackEvents(eventsRes.data || []);
     } catch (err) {
       console.error('Track lookup error:', err);
+      if (showToast) showToast({ message: 'Track lookup failed -- check your connection and try again.', type: 'error' });
     } finally {
       setTrackLoading(false);
     }

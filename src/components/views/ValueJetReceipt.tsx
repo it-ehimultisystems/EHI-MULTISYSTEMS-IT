@@ -12,6 +12,7 @@ import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
 import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 import { openPdfOrDownload } from "../../lib/helpers";
+import { notifySilentError } from "../../lib/ToastContext";
 
 export interface VJReceiptData {
   entryRef: string;
@@ -261,6 +262,7 @@ export const downloadVJReceipt = async (data: VJReceiptData) => {
       });
     } catch (e) {
       console.warn("Failed to generate QR code", e);
+      notifySilentError('This receipt printed without a scannable tracking QR code.');
     }
   }
   if (data.airlineLogoUrl === undefined) {
@@ -285,6 +287,7 @@ export const printVJReceipt = async (data: VJReceiptData): Promise<void> => {
       });
     } catch (e) {
       console.warn("Failed to generate QR code", e);
+      notifySilentError('This receipt printed without a scannable tracking QR code.');
     }
   }
   if (data.airlineLogoUrl === undefined) {

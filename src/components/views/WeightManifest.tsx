@@ -70,10 +70,14 @@ export const WeightManifest = ({ user, onBack }: { user: User; onBack: () => voi
         .eq('manifest_date', selectedDate)
         .eq('hub_id', user.hub_id)
         .order('created_at', { ascending: true });
-      if (!error && data) setEntries(data as WeightManifestEntry[]);
-    } catch {}
+      if (error) throw error;
+      setEntries((data || []) as WeightManifestEntry[]);
+    } catch (err) {
+      console.error('Failed to load weight manifests:', err);
+      showToast({ message: 'Failed to load weight manifests. Please try again.', type: 'error' });
+    }
     setLoading(false);
-  }, [selectedDate, user.hub_id]);
+  }, [selectedDate, user.hub_id, showToast]);
 
   useEffect(() => { fetchEntries(); }, [fetchEntries]);
 

@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { writeAuditLog } from './supabase';
 import { UserRole, HubType } from './types';
+import { notifySilentError } from './ToastContext';
 
 export interface UserProfile {
   id: string;
@@ -90,6 +91,12 @@ export async function signOut() {
     if (error) throw error;
   } catch(e) {
     console.warn("Sign out err", e);
+    // auth.ts is a plain module, not a component, so it can't call
+    // useToast() directly -- see the notifySilentError comment in
+    // ToastContext.tsx. The app still logs the user out locally regardless
+    // (App.tsx's handleLogout always clears the user after this call), so
+    // this is a heads-up, not a blocker.
+    notifySilentError('Signed out locally, but the server session may not have closed. This is usually harmless.');
   }
 }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { User } from '../../lib/types';
+import { useToast } from '../../lib/ToastContext';
 import { RefreshCw, Search, Printer, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 
@@ -20,6 +21,7 @@ export default function TagPrintHistory({ user }: { user: User }) {
   const [logs, setLogs] = useState<PrintLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const { showToast } = useToast();
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -62,6 +64,7 @@ export default function TagPrintHistory({ user }: { user: User }) {
       setLogs(printLogs.map(log => ({ ...log, departed: departedRefs.has(log.cargo_ref) })));
     } catch (err) {
       console.error('Error fetching print logs:', err);
+      showToast({ message: 'Failed to load tag print history. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }

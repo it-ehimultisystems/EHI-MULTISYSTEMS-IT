@@ -154,9 +154,10 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     try {
       const { printEODReport } = await import('./EODReport');
       await printEODReport(generateEODData());
-      setIsGenerating(false);
     } catch (err) {
       console.error(err);
+      showToast({ message: 'Failed to print EOD report. Please try again.', type: 'error' });
+    } finally {
       setIsGenerating(false);
     }
   };
@@ -166,9 +167,10 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     try {
       const { downloadEODReport } = await import('./EODReport');
       await downloadEODReport(generateEODData());
-      setIsGenerating(false);
     } catch (err) {
       console.error(err);
+      showToast({ message: 'Failed to download EOD report. Please try again.', type: 'error' });
+    } finally {
       setIsGenerating(false);
     }
   };

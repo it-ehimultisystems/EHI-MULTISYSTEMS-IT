@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../lib/ToastContext';
 import { ArrowLeft, Truck, RefreshCw, Loader, Package } from 'lucide-react';
 
 function timeSince(dateStr: string): string {
@@ -17,6 +18,7 @@ function timeSince(dateStr: string): string {
 export const IncomingToHub = ({ user, onBack }: { user: User; onBack: () => void }) => {
   const [cargoList, setCargoList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   const fetchIncoming = async () => {
     setLoading(true);
@@ -46,7 +48,11 @@ export const IncomingToHub = ({ user, onBack }: { user: User; onBack: () => void
 
       const { data, error } = await q.order('created_at', { ascending: false }).limit(200);
 
-      if (error) { console.error('Incoming fetch error:', error); return; }
+      if (error) {
+        console.error('Incoming fetch error:', error);
+        showToast({ message: 'Failed to load incoming cargo. Please try again.', type: 'error' });
+        return;
+      }
 
       // Belt-and-suspenders: keep the client-side match as a final check too,
       // since ilike is a broader net than the exact substring check below,
@@ -61,6 +67,7 @@ export const IncomingToHub = ({ user, onBack }: { user: User; onBack: () => void
       setCargoList(filtered);
     } catch (err) {
       console.error('Incoming fetch error:', err);
+      showToast({ message: 'Failed to load incoming cargo. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
