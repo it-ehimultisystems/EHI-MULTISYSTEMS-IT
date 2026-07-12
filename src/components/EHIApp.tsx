@@ -711,6 +711,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
     const table = tx.type === 'cargo' ? 'cargo_entries'
                 : tx.type === 'baggage' ? 'manifests'
+                : tx.type === 'package' ? 'package_entries'
                 : 'marketing_entries';
 
     // Each table uses different column names — cargo_entries uses receipt_mode,
@@ -782,6 +783,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       if (bb !== undefined) updatePayload.qty_big_bag = bb;
       if (mb !== undefined) updatePayload.qty_med_bag = mb;
       if (sb !== undefined) updatePayload.qty_small_bag = sb;
+    } else if (tx.type === 'package') {
+      updatePayload.customer_name = tx.name;
+      updatePayload.destination = tx.destination;
+      updatePayload.content_type = tx.contentType;
     }
 
     const { error } = await supabase.from(table).update(updatePayload).eq(idCol, tx.id);
