@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
-import { PaymentMode, Transaction, User } from '../../lib/types';
-import { fmt, tnow, getHubCode } from '../../lib/helpers';
+import { PaymentMode, Transaction, User, ExcessBaggageAirline } from '../../lib/types';
+import { fmt, roundMoney, tnow, getHubCode } from '../../lib/helpers';
 import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer, Bluetooth } from 'lucide-react';
 import { QRCode } from '../QRCode';
-import { sendReceiptWhatsApp, buildValueJetWhatsApp } from '../../lib/notifications';
+import { sendReceiptWhatsApp, buildExcessBaggageWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
 import { CARGO_ROUTES, BANKS } from '../../lib/constants';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
 
-export const ValueJetForm = ({
+export const ExcessBaggageForm = ({
+  airline,
   onAddTx,
   user,
   onShowHistory,
   transactions = [],
 }: {
+  airline: ExcessBaggageAirline;
   onAddTx: (tx: Transaction) => void;
   user: User;
   onShowHistory?: () => void;
@@ -22,11 +24,11 @@ export const ValueJetForm = ({
 }) => {
   const [name, setName] = useState('');
   const [pnr, setPnr]   = useState('');
-  // ValueJet's IATA code is fixed (VK) -- staff only ever key in the flight
-  // number itself, never the airline prefix, so store just the digits and
-  // compose the real flight code from that everywhere it's needed.
+  // The airline's flight prefix (e.g. "VK") is fixed per airline -- staff
+  // only ever key in the flight number itself, so store just the digits
+  // and compose the real flight code from that everywhere it's needed.
   const [flight, setFlight] = useState('');
-  const flightCode = flight ? `VK${flight}` : '';
+  const flightCode = flight ? `${airline.flight_prefix}${flight}` : '';
   const [dest, setDest] = useState(CARGO_ROUTES[0]);
   const [kg, setKg] = useState('');
   const [pcs, setPcs] = useState('');
@@ -51,45 +53,22 @@ export const ValueJetForm = ({
   useEffect(() => {
     if (mode === 'Transfer' && !narrationCode) {
       import('../../lib/helpers').then(({ generatePaymentNarration }) => {
-        // use a random serial for VJ if none exists since we don't track VJ serials the same way
+        // use a random serial since excess-baggage tickets aren't tracked by serial the same way cargo is
         setNarrationCode(generatePaymentNarration(user.hub_code || user.hub, Math.floor(Math.random() * 9000) + 1000));
       });
     }
   }, [mode, narrationCode, user.hub]);
 
-  // Was reading localStorage directly on every render -- a value set in
-  // Pricing Configuration on another device would never reach this screen
-  // at all. Now loads from the same Supabase-backed config, with the
-  // localStorage read as an instant first-paint value while that fetch
-  // is in flight (and as an offline fallback).
-  const [vjFreeAllowance, setVjFreeAllowance] = useState(() =>
-    parseFloat(localStorage.getItem('ehi_vj_free_kg') || '23')
-  );
-  const [vjRatePerKg, setVjRatePerKg] = useState(() =>
-    parseFloat(localStorage.getItem('ehi_vj_rate_per_kg') || '1000')
-  );
-
-  useEffect(() => {
-    supabase.from('pricing_config').select('config_value').eq('config_key', 'vj_settings').single()
-      .then(({ data, error }) => {
-        if (data?.config_value && !error) {
-          const cfg = data.config_value as { freeKg?: string | number; ratePerKg?: string | number };
-          if (cfg.freeKg !== undefined) {
-            setVjFreeAllowance(parseFloat(String(cfg.freeKg)));
-            localStorage.setItem('ehi_vj_free_kg', String(cfg.freeKg));
-          }
-          if (cfg.ratePerKg !== undefined) {
-            setVjRatePerKg(parseFloat(String(cfg.ratePerKg)));
-            localStorage.setItem('ehi_vj_rate_per_kg', String(cfg.ratePerKg));
-          }
-        }
-      });
-  }, []);
+  // Free allowance / rate come straight from the airline config passed down
+  // by EHIApp (itself fetched from excess_baggage_airlines and cached for
+  // offline use) -- no per-airline fetch needed here.
+  const freeAllowance = airline.free_allowance_kg;
+  const ratePerKg = airline.rate_per_kg;
 
   const kgVal = Math.round(parseFloat(kg)) || 0;
   const pcsVal = Math.max(1, parseInt(pcs) || 1);
-  const excessKg = Math.max(0, kgVal - vjFreeAllowance);
-  const minAmount = excessKg * vjRatePerKg;
+  const excessKg = Math.max(0, kgVal - freeAllowance);
+  const minAmount = roundMoney(excessKg * ratePerKg);
   const parsedOverride = parseFloat(amountOverride) || 0;
   const totalAmount = amountOverride !== "" ? parsedOverride : minAmount;
 
@@ -103,13 +82,13 @@ export const ValueJetForm = ({
     setSubmitting(true);
 
     const hubCode = getHubCode(user.hub_code || user.hub);
-    const { data: seq, error: tagError } = await supabase.rpc('next_awb_number', { p_hub_code: `${hubCode}-VJ` });
+    const { data: seq, error: tagError } = await supabase.rpc('next_awb_number', { p_hub_code: `${hubCode}-${airline.tag_code}` });
     if (tagError || !seq) {
       showToast({ message: `Failed to generate tag number: ${tagError?.message || 'unknown error'}. Please try again.`, type: 'error' });
       setSubmitting(false);
       return;
     }
-    const resolvedTag = `EHI-${hubCode}-VJ-${String(seq).padStart(6, '0')}`;
+    const resolvedTag = `EHI-${hubCode}-${airline.tag_code}-${String(seq).padStart(6, '0')}`;
 
     const tx: Transaction = {
       id: resolvedTag,
@@ -119,7 +98,7 @@ export const ValueJetForm = ({
       mode,
       bank: mode === 'Transfer' || mode === 'POS' ? bank : undefined,
       paymentNarration: mode === 'Transfer' ? narrationCode : undefined,
-      airline: 'ValueJet',
+      airline: airline.name,
       time: tnow(),
       type: 'baggage',
       status: 'Delivered',
@@ -144,7 +123,7 @@ export const ValueJetForm = ({
       sendReceiptWhatsApp({
         phone: phone.trim(),
         ref: tx.id,
-        message: buildValueJetWhatsApp({
+        message: buildExcessBaggageWhatsApp(airline.name, {
           ref: tx.id,
           passenger: name.trim(),
           flight: flightCode,
@@ -153,7 +132,7 @@ export const ValueJetForm = ({
           excessKg,
           amount: totalAmount,
           mode,
-        }, vjFreeAllowance, vjRatePerKg),
+        }, freeAllowance, ratePerKg),
       });
     }
   };
@@ -172,45 +151,47 @@ export const ValueJetForm = ({
 
   const handleDownloadReceipt = async () => {
     if (successTx) {
-      const { downloadVJReceipt } = await import('./ValueJetReceipt');
+      const { downloadBaggageReceipt } = await import('./ExcessBaggageReceipt');
       const data = {
+        airlineName: airline.name,
         entryRef: successTx.tx.id,
         date: new Date().toLocaleDateString('en-GB'),
-        hubName: 'ValueJet Counter',
-        agentName: 'VJ Agent',
+        hubName: `${airline.name} Counter`,
+        agentName: user.name || 'Agent',
         passengerName: successTx.tx.name,
         flightNumber: flightCode,
         destination: dest || 'Unknown',
         totalPieces: successTx.pcs,
         totalBaggage: successTx.kgs,
-        freeAllowance: vjFreeAllowance,
+        freeAllowance,
         excessKg: successTx.exc,
-        ratePerKg: vjRatePerKg,
+        ratePerKg,
         amount: successTx.tx.amount,
         paymentMode: successTx.tx.mode,
         paymentNarration: successTx.tx.paymentNarration,
         bankName: successTx.tx.bank,
       };
-      downloadVJReceipt(data);
+      downloadBaggageReceipt(data);
     }
   };
 
   const handlePrintReceipt = async () => {
     if (!successTx) return;
-    const { printVJReceipt } = await import('./ValueJetReceipt');
-    await printVJReceipt({
+    const { printBaggageReceipt } = await import('./ExcessBaggageReceipt');
+    await printBaggageReceipt({
+      airlineName: airline.name,
       entryRef: successTx.tx.id,
       date: new Date().toLocaleDateString('en-GB'),
-      hubName: 'ValueJet Counter',
-      agentName: 'VJ Agent',
+      hubName: `${airline.name} Counter`,
+      agentName: user.name || 'Agent',
       passengerName: successTx.tx.name,
       flightNumber: flightCode,
       destination: dest || 'Unknown',
       totalPieces: successTx.pcs,
       totalBaggage: successTx.kgs,
-      freeAllowance: vjFreeAllowance,
+      freeAllowance,
       excessKg: successTx.exc,
-      ratePerKg: vjRatePerKg,
+      ratePerKg,
       amount: successTx.tx.amount,
       paymentMode: successTx.tx.mode,
       paymentNarration: successTx.tx.paymentNarration,
@@ -230,7 +211,7 @@ export const ValueJetForm = ({
           </span>
         </div>
 
-        <div 
+        <div
           className="bg-[rgba(59,130,246,0.1)] border border-[var(--color-accent-cobalt)] rounded text-center p-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200"
         >
           <div className="flex justify-center animate-pulse">
@@ -240,13 +221,13 @@ export const ValueJetForm = ({
           <div className="text-[14px] font-bold font-mono text-[var(--color-accent-cobalt)] mb-4 uppercase" style={{ fontFamily: 'JetBrains Mono' }}>
             REF: {s.tx.id}
           </div>
-          
+
           <div className="bg-white p-2 rounded max-w-max mb-4 shadow-md">
             <QRCode id={s.tx.id} size={150} />
           </div>
 
           <div className="text-[12px] font-sans text-[var(--color-light-muted)] mb-3">{s.tx.name}</div>
-          
+
           <div className="w-full bg-[var(--color-obsidian)] rounded p-3 mb-4 text-left border border-[var(--color-border)]">
             <div className="flex justify-between items-center mb-2">
               <span className="text-[10px] font-mono text-[var(--color-muted)]">Total Weight</span>
@@ -254,13 +235,13 @@ export const ValueJetForm = ({
             </div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-[10px] font-mono text-[var(--color-muted)]">Free Allowance</span>
-              <span className="text-[12px] font-mono text-[var(--color-success)]">– {vjFreeAllowance} kg</span>
+              <span className="text-[12px] font-mono text-[var(--color-success)]">– {freeAllowance} kg</span>
             </div>
             <div className="flex justify-between items-center pb-2 border-b border-[var(--color-border)]">
               <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)]">Excess Baggage</span>
               <span className="text-[12px] font-bold font-mono text-[var(--color-accent-cobalt)]">{s.exc} kg</span>
             </div>
-            
+
             <div className="flex justify-between items-end mt-3">
               <div>
                 <div className="text-[20px] font-bold font-mono text-[var(--color-accent-cobalt)]" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(s.tx.amount)}</div>
@@ -284,28 +265,28 @@ export const ValueJetForm = ({
               onClick={() => {
                 import('../../lib/escpos').then(async ({ printViaBluetooth }) => {
                   await printViaBluetooth(async () => {
-                    const m = await import('../../lib/escposVJPrinting');
-                    // Build the VJReceiptPrintData object
+                    const m = await import('../../lib/escposBaggagePrinting');
                     const printData = {
+                      airlineName: airline.name,
                       entryRef: s.tx.id,
                       date: new Date().toLocaleDateString('en-GB'),
                       originState: user.hub || 'Lagos',
-                      agentName: user.name || 'VJ Agent',
+                      agentName: user.name || 'Agent',
                       passengerName: s.tx.name,
                       flight: flightCode,
                       destination: dest || 'Unknown',
                       totalPieces: s.pcs,
                       totalWeightKg: s.kgs,
-                      freeAllowanceKg: vjFreeAllowance,
+                      freeAllowanceKg: freeAllowance,
                       excessChargeKg: s.exc,
-                      ratePerKg: vjRatePerKg,
+                      ratePerKg,
                       amount: s.tx.amount,
                       paymentMode: s.tx.mode,
                       trackingUrl: `https://app.ehimultisystems.com/track/${s.tx.id}`,
                       paymentNarration: s.tx.paymentNarration,
                       bankName: s.tx.bank,
                     };
-                    return await m.compileVJReceiptStream(printData, '80mm');
+                    return await m.compileBaggageReceiptStream(printData, '80mm');
                   });
                 }).catch((err: any) => {
                   console.error('Bluetooth print failed:', err);
@@ -321,27 +302,28 @@ export const ValueJetForm = ({
               onClick={() => {
                 import('../../lib/escpos').then(async ({ printViaBluetooth }) => {
                   await printViaBluetooth(async () => {
-                    const m = await import('../../lib/escposVJPrinting');
+                    const m = await import('../../lib/escposBaggagePrinting');
                     const printData = {
+                      airlineName: airline.name,
                       entryRef: s.tx.id,
                       date: new Date().toLocaleDateString('en-GB'),
                       originState: user.hub || 'Lagos',
-                      agentName: user.name || 'VJ Agent',
+                      agentName: user.name || 'Agent',
                       passengerName: s.tx.name,
                       flight: flightCode,
                       destination: dest || 'Unknown',
                       totalPieces: s.pcs,
                       totalWeightKg: s.kgs,
-                      freeAllowanceKg: vjFreeAllowance,
+                      freeAllowanceKg: freeAllowance,
                       excessChargeKg: s.exc,
-                      ratePerKg: vjRatePerKg,
+                      ratePerKg,
                       amount: s.tx.amount,
                       paymentMode: s.tx.mode,
                       trackingUrl: `https://app.ehimultisystems.com/track/${s.tx.id}`,
                       paymentNarration: s.tx.paymentNarration,
                       bankName: s.tx.bank,
                     };
-                    return await m.compileVJReceiptStream(printData, '58mm');
+                    return await m.compileBaggageReceiptStream(printData, '58mm');
                   });
                 }).catch((err: any) => {
                   console.error('Bluetooth print failed:', err);
@@ -379,22 +361,24 @@ export const ValueJetForm = ({
     <div className="p-4 pb-24 h-full" style={{ width: '100%', boxSizing: 'border-box' }}>
       <div className="border-b border-[var(--color-border)] pb-2 mb-4 flex items-center justify-between">
         <span style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 700, color: 'var(--color-accent-cobalt)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-          ▸ VALUEJET EXCESS BAGGAGE TICKETING
+          ▸ {airline.name.toUpperCase()} EXCESS BAGGAGE TICKETING
         </span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              import('./ValueJetLedgerPDF').then(({ downloadVJLedgerPDF }) => {
+              import('./ExcessBaggageLedgerPDF').then(({ downloadBaggageLedgerPDF }) => {
                 const todayStr = new Date().toISOString().split('T')[0];
-                const vjToday = transactions.filter(t => 
-                  (t.type === 'baggage' || (t as any).stream === 'baggage') && 
+                const baggageToday = transactions.filter(t =>
+                  (t.type === 'baggage' || (t as any).stream === 'baggage') &&
+                  (t.airline || 'ValueJet') === airline.name &&
                   t.created_at?.startsWith(todayStr)
                 );
-                vjToday.sort((a, b) => (a.flight || '').localeCompare(b.flight || ''));
-                downloadVJLedgerPDF({
+                baggageToday.sort((a, b) => (a.flight || '').localeCompare(b.flight || ''));
+                downloadBaggageLedgerPDF({
+                  airlineName: airline.name,
                   date: new Date().toLocaleDateString('en-GB'),
                   hubName: user.hub || 'EHI Hub',
-                  transactions: vjToday,
+                  transactions: baggageToday,
                   filters: { flight: '', destination: '' }
                 });
               });
@@ -420,7 +404,7 @@ export const ValueJetForm = ({
           <div className="space-y-1.5">
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Passenger Name</span>
             <input
-              id="vj-name"
+              id="baggage-name"
               name="name"
               placeholder="Enter Passenger Name"
               value={name}
@@ -432,7 +416,7 @@ export const ValueJetForm = ({
           <div className="space-y-1.5">
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">PNR / Booking Reference <span className="text-[10px] font-normal text-[var(--color-muted)]">(Optional)</span></span>
             <input
-              id="vj-pnr"
+              id="baggage-pnr"
               name="pnr"
               placeholder="e.g. ABC123"
               value={pnr}
@@ -448,7 +432,7 @@ export const ValueJetForm = ({
               Passenger Phone — WhatsApp Receipt (Optional)
             </span>
             <input
-              id="vj-phone"
+              id="baggage-phone"
               name="phone"
               type="tel"
               placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
@@ -463,10 +447,10 @@ export const ValueJetForm = ({
               <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Flight Number</span>
               <div className="flex items-stretch">
                 <span className="flex items-center px-3 h-12 rounded-l-[var(--radius-sm)] border border-r-0 border-[var(--color-border)] bg-[var(--color-surface-2)] text-[15px] font-bold text-[var(--color-light-muted)]">
-                  VK
+                  {airline.flight_prefix}
                 </span>
                 <input
-                  id="vj-flight"
+                  id="baggage-flight"
                   name="flight"
                   placeholder="216"
                   inputMode="numeric"
@@ -497,7 +481,7 @@ export const ValueJetForm = ({
             <div className="space-y-1.5">
               <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Total Pieces</span>
               <input
-                id="vj-pcs"
+                id="baggage-pcs"
                 name="pcs"
                 type="number"
                 step="1"
@@ -511,7 +495,7 @@ export const ValueJetForm = ({
             <div className="space-y-1.5">
               <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Total Weight (KG)</span>
               <input
-                id="vj-kg"
+                id="baggage-kg"
                 name="kg"
                 type="number"
                 step="1"
@@ -519,13 +503,9 @@ export const ValueJetForm = ({
                 placeholder="0"
                 value={kg}
                 onChange={(e) => {
-                  // Previously stripped ALL non-digit characters, including
-                  // the decimal point itself -- typing a realistic scale
-                  // reading like "22.6" produced the digit string "226",
-                  // inflating the excess-kg billing ~10x. kgVal already
-                  // does Math.round(parseFloat(kg)) below, so this only
-                  // needs to let a real decimal value through (and drop any
-                  // second decimal point from something like "22..6").
+                  // Only strip characters that aren't digits or the decimal
+                  // point itself (and drop a second decimal point) -- kgVal
+                  // already does Math.round(parseFloat(kg)) below.
                   const cleanVal = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
                   setKg(cleanVal);
                 }}
@@ -538,17 +518,17 @@ export const ValueJetForm = ({
                 className="h-12 px-4 flex items-center justify-between rounded-[var(--radius-sm)] bg-[var(--color-surface-3)] border border-[var(--color-border-strong)]"
               >
                 <span className="text-[12px] font-bold font-mono text-[var(--color-accent-cobalt)]">
-                  ₦{vjRatePerKg.toLocaleString('en-NG')}<span className="text-[10px] font-normal text-[var(--color-muted)]">/kg</span>
+                  ₦{ratePerKg.toLocaleString('en-NG')}<span className="text-[10px] font-normal text-[var(--color-muted)]">/kg</span>
                 </span>
               </div>
             </div>
           </div>
-          
+
           <div className="space-y-1.5">
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Total Amount (₦)</span>
             <div className="relative">
               <input
-                id="vj-amount"
+                id="baggage-amount"
                 name="amount"
                 type="number"
                 min="0"
@@ -569,7 +549,7 @@ export const ValueJetForm = ({
               )}
             </div>
           </div>
-          
+
           <div className="space-y-1.5">
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Payment Mode</span>
             <div className="flex bg-[var(--color-surface-3)] rounded-[var(--radius-sm)] p-1 border border-[var(--color-border)]">
@@ -612,7 +592,7 @@ export const ValueJetForm = ({
               <PaymentNarrationBox narrationCode={narrationCode} />
             )}
           </div>
-          
+
           {/* Submit button states */}
           <div className="pt-4">
             <button
@@ -653,7 +633,7 @@ export const ValueJetForm = ({
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>PNR</span><span className="font-mono text-[11px] font-bold text-[var(--color-accent-cobalt)]">{pnr || '—'}</span></div>
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Flight</span><span className="font-bold text-[var(--color-accent-cobalt)]">{flightCode || '—'}</span></div>
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Total Weight</span><span className="font-semibold text-[var(--color-foreground)]">{kgVal} kg</span></div>
-                <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Free Limit</span><span className="font-semibold text-[var(--color-success)]">– {vjFreeAllowance} kg</span></div>
+                <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1"><span style={{ color: 'var(--color-muted)' }}>Free Limit</span><span className="font-semibold text-[var(--color-success)]">– {freeAllowance} kg</span></div>
                 <div className="flex justify-between"><span style={{ color: 'var(--color-muted)' }}>Excess KG</span><span className={`font-bold ${excessKg > 0 ? 'text-[var(--color-accent-cobalt)]' : 'text-[var(--color-muted)]'}`}>{excessKg} kg</span></div>
               </div>
 
@@ -672,16 +652,14 @@ export const ValueJetForm = ({
                     ? 'var(--color-accent-cobalt)'
                     : 'var(--color-muted)',
                 }}>
-                  {totalAmount > 0
-                    ? '₦' + totalAmount.toLocaleString('en-NG')
-                    : '₦0'}
+                  {fmt(totalAmount)}
                 </div>
                 {excessKg > 0 && (
                   <div style={{
                     fontSize: 10, fontFamily: 'monospace',
                     color: 'var(--color-muted)', marginTop: 6,
                   }}>
-                    {excessKg} kg × ₦{vjRatePerKg.toLocaleString('en-NG')}/kg
+                    {excessKg} kg × ₦{ratePerKg.toLocaleString('en-NG')}/kg
                   </div>
                 )}
               </div>

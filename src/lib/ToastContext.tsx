@@ -12,7 +12,7 @@ const ToastContext = createContext<ShowToast | null>(null);
 const MAX_TOASTS = 4;
 
 // Plain (non-component) builder functions -- PDF/receipt generators like
-// CargoTagPDF/CargoReceipt/ValueJetReceipt -- can't call useToast() since
+// CargoTagPDF/CargoReceipt/ExcessBaggageReceipt -- can't call useToast() since
 // they aren't inside the React tree and are called from many different
 // screens. Rather than threading a return value or callback through every
 // one of those call sites, they dispatch this window event instead; the

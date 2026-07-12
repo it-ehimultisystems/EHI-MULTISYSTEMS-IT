@@ -18,6 +18,7 @@ interface StaffMember {
   active: boolean;
   phone?: string;
   can_print_ledger?: boolean;
+  assigned_airline?: string | null;
   hub?: { name: string; code: string };
 }
 
@@ -25,7 +26,7 @@ interface Hub { id: string; name: string; code: string; state: string; }
 
 const ROLES = [
   { value: 'cargo_agent',      label: 'Cargo Agent',      desc: 'Log cargo entries, view own hub' },
-  { value: 'vj_agent',         label: 'ValueJet POS',     desc: 'Excess baggage at terminal counter' },
+  { value: 'baggage_agent',    label: 'Baggage POS',      desc: 'Excess baggage at terminal counter' },
   { value: 'marketing_agent',  label: 'Marketing Agent',  desc: 'Field marketing entries' },
   { value: 'office_work',      label: 'Office Work',      desc: 'Only cargo and marketing view' },
   { value: 'driver',           label: 'Driver',           desc: 'Trip tracking and delivery logs' },
@@ -39,7 +40,7 @@ const roleColor = (role: string) => ({
   super_admin:     'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.12)]',
   admin:           'text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.12)]',
   cargo_agent:     'text-[var(--color-success)] bg-[rgba(16,185,129,0.12)]',
-  vj_agent:        'text-[var(--color-purple)] bg-[rgba(168,85,247,0.12)]',
+  baggage_agent:   'text-[var(--color-purple)] bg-[rgba(168,85,247,0.12)]',
   accountant:      'text-teal-400 bg-[rgba(20,184,166,0.12)]',
   auditor:         'text-orange-400 bg-[rgba(249,115,22,0.12)]',
   driver:          'text-[var(--color-muted)] bg-[rgba(100,116,139,0.12)]',
@@ -62,10 +63,16 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', role: 'cargo_agent',
-    hub_id: '', hub_type: 'Cargo Station', phone: '',
+    hub_id: '', hub_type: 'Cargo Station', phone: '', assigned_airline: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [airlines, setAirlines] = useState<{ name: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from('excess_baggage_airlines').select('name').eq('active', true).order('created_at', { ascending: true })
+      .then(({ data, error }) => { if (data && !error) setAirlines(data); });
+  }, []);
 
   const isSuperAdmin = user.role === 'super_admin';
   const isAdmin      = user.role === 'admin' || isSuperAdmin;
@@ -78,7 +85,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       if (hubData) setHubs(hubData as Hub[]);
 
       let q = supabase.from('user_profiles')
-        .select('id, email, name, role, hub_id, hub_type, active, phone, can_print_ledger, hubs(name, code)')
+        .select('id, email, name, role, hub_id, hub_type, active, phone, can_print_ledger, assigned_airline, hubs(name, code)')
         .order('name');
 
       if (!isSuperAdmin && user.hub_id) {
@@ -121,12 +128,15 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters.'); setSaving(false); return;
     }
+    if (form.role === 'baggage_agent' && !form.assigned_airline) {
+      setError('Select which airline this Baggage POS agent is assigned to.'); setSaving(false); return;
+    }
     try {
       const tempPassword = form.password;
       await createStaffAccount(form);
       setCredModal({ email: form.email, password: tempPassword });
       setSuccess('Account created successfully for ' + form.name);
-      setForm({ name:'', email:'', password:'', role:'cargo_agent', hub_id: user.hub_id||'', hub_type:'Cargo Station', phone:'' });
+      setForm({ name:'', email:'', password:'', role:'cargo_agent', hub_id: user.hub_id||'', hub_type:'Cargo Station', phone:'', assigned_airline:'' });
       setShowCreate(false);
       await loadData();
     } catch (err: any) {
@@ -399,6 +409,15 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                   ))}
                 </select>
               </div>
+              {form.role === 'baggage_agent' && (
+                <div>
+                  <label htmlFor="staff-create-airline" className="ehi-label">Assigned Airline *</label>
+                  <select id="staff-create-airline" value={form.assigned_airline} onChange={e => setForm(f => ({...f, assigned_airline: e.target.value}))} className="ehi-input">
+                    <option value="">Select airline...</option>
+                    {airlines.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label htmlFor="staff-create-hub" className="ehi-label">Station / Hub *</label>
                 <select id="staff-create-hub" value={form.hub_id} onChange={e => setForm(f => ({...f, hub_id: e.target.value}))} className="ehi-input">
@@ -478,6 +497,21 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                   ))}
                 </select>
               </div>
+              {/* Assigned Airline (baggage_agent only) */}
+              {editingStaff.role === 'baggage_agent' && (
+                <div>
+                  <label htmlFor="staff-edit-airline" className="ehi-label">Assigned Airline</label>
+                  <select
+                    id="staff-edit-airline"
+                    value={editingStaff.assigned_airline || ''}
+                    onChange={e => setEditingStaff(s => s ? {...s, assigned_airline: e.target.value} : null)}
+                    className="ehi-input"
+                  >
+                    <option value="">Select airline...</option>
+                    {airlines.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
               {/* Hub (super_admin only) */}
               {isSuperAdmin && (
                 <div>
@@ -540,6 +574,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     role: editingStaff.role,
                     hub_id: editingStaff.hub_id,
                     can_print_ledger: editingStaff.can_print_ledger,
+                    assigned_airline: editingStaff.role === 'baggage_agent' ? (editingStaff.assigned_airline || null) : null,
                   })}
                   disabled={saving}
                   className="flex-1 h-11 bg-[var(--color-accent-cobalt)] text-white rounded-lg text-[12px] font-bold disabled:opacity-60"

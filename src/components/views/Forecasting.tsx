@@ -9,7 +9,7 @@ interface ForecastDay {
   day: string;
   predictedCargo: number;
   predictedMarketing: number;
-  predictedVJ: number;
+  predictedBaggage: number;
   confidence: 'High' | 'Medium' | 'Low';
 }
 
@@ -26,13 +26,13 @@ export const Forecasting = ({
 
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const [historicalData, setHistoricalData] = useState([
-    { day: 'Mon', Cargo: 320000, Marketing: 140000, ValueJet: 95000 },
-    { day: 'Tue', Cargo: 480000, Marketing: 185000, ValueJet: 110000 },
-    { day: 'Wed', Cargo: 720000, Marketing: 340000, ValueJet: 325000 },
-    { day: 'Thu', Cargo: 540000, Marketing: 210000, ValueJet: 165000 },
-    { day: 'Fri', Cargo: 680000, Marketing: 290000, ValueJet: 240000 },
-    { day: 'Sat', Cargo: 390000, Marketing: 125000, ValueJet: 85000 },
-    { day: 'Sun', Cargo: 150000, Marketing: 80000, ValueJet: 45000 }
+    { day: 'Mon', Cargo: 320000, Marketing: 140000, ExcessBaggage: 95000 },
+    { day: 'Tue', Cargo: 480000, Marketing: 185000, ExcessBaggage: 110000 },
+    { day: 'Wed', Cargo: 720000, Marketing: 340000, ExcessBaggage: 325000 },
+    { day: 'Thu', Cargo: 540000, Marketing: 210000, ExcessBaggage: 165000 },
+    { day: 'Fri', Cargo: 680000, Marketing: 290000, ExcessBaggage: 240000 },
+    { day: 'Sat', Cargo: 390000, Marketing: 125000, ExcessBaggage: 85000 },
+    { day: 'Sun', Cargo: 150000, Marketing: 80000, ExcessBaggage: 45000 }
   ]);
 
   useEffect(() => {
@@ -45,8 +45,8 @@ export const Forecasting = ({
           supabase.from('marketing_entries').select('created_at, amount_paid').gte('created_at', sevenDaysAgo)
         ]);
 
-        const dayMap: Record<string, { Cargo: number; Marketing: number; ValueJet: number }> = {};
-        DAYS.forEach(d => { dayMap[d] = { Cargo: 0, Marketing: 0, ValueJet: 0 }; });
+        const dayMap: Record<string, { Cargo: number; Marketing: number; ExcessBaggage: number }> = {};
+        DAYS.forEach(d => { dayMap[d] = { Cargo: 0, Marketing: 0, ExcessBaggage: 0 }; });
 
         const jsToEhi = (jsDay: number) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][jsDay];
 
@@ -59,7 +59,7 @@ export const Forecasting = ({
         if (vjRes.data) {
           vjRes.data.forEach((e: any) => {
             const d = jsToEhi(new Date(e.created_at).getDay());
-            if (dayMap[d]) dayMap[d].ValueJet += Number(e.amount) || 0;
+            if (dayMap[d]) dayMap[d].ExcessBaggage += Number(e.amount) || 0;
           });
         }
         if (mktRes.data) {
@@ -69,7 +69,7 @@ export const Forecasting = ({
           });
         }
 
-        const total = Object.values(dayMap).reduce((s, d) => s + d.Cargo + d.Marketing + d.ValueJet, 0);
+        const total = Object.values(dayMap).reduce((s, d) => s + d.Cargo + d.Marketing + d.ExcessBaggage, 0);
         if (total > 0) {
           setHistoricalData(DAYS.map(day => ({ day, ...dayMap[day] })));
         }
@@ -93,7 +93,7 @@ export const Forecasting = ({
         day: dayName,
         predictedCargo: isWeekend ? 200000 : 450000,
         predictedMarketing: isWeekend ? 80000 : 180000,
-        predictedVJ: isWeekend ? 60000 : 130000,
+        predictedBaggage: isWeekend ? 60000 : 130000,
         confidence: i < 3 ? 'High' : i < 5 ? 'Medium' : 'Low',
       };
     });
@@ -137,7 +137,7 @@ export const Forecasting = ({
         setPeakDay('Wednesday (EOD Surge)');
       } else {
         // Fallback default AI response
-        setStaffingRecommendation('Demand peaks heavily on Wednesday. Recommended action: Allocate three extra drivers to standard heavy-duty van trips and shift ValueJet excess checklists starting 07:00 AM.');
+        setStaffingRecommendation('Demand peaks heavily on Wednesday. Recommended action: Allocate three extra drivers to standard heavy-duty van trips and shift excess-baggage checklists starting 07:00 AM.');
         setRiskNote('High operational bottleneck risk detected on Abuja route paths due to pre-holiday supply shipments.');
         setPeakDay('Wednesday');
       }
@@ -214,7 +214,7 @@ export const Forecasting = ({
                   </defs>
                   <Area type="monotone" dataKey="Cargo" stroke="#F59E0B" fillOpacity={1} fill="url(#cargoGrad)" strokeWidth={2} />
                   <Area type="monotone" dataKey="Marketing" stroke="#10B981" fillOpacity={0} strokeWidth={1.5} />
-                  <Area type="monotone" dataKey="ValueJet" stroke="#3B82F6" fillOpacity={0} strokeWidth={1.5} />
+                  <Area type="monotone" dataKey="ExcessBaggage" stroke="#3B82F6" fillOpacity={0} strokeWidth={1.5} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -239,7 +239,7 @@ export const Forecasting = ({
                   <Legend iconSize={8} />
                   <Bar dataKey="predictedCargo" name="Cargo (₦)" fill="#F59E0B" stackId="stack" />
                   <Bar dataKey="predictedMarketing" name="Mktg (₦)" fill="#10B981" stackId="stack" />
-                  <Bar dataKey="predictedVJ" name="ValueJet (₦)" fill="#3B82F6" stackId="stack" />
+                  <Bar dataKey="predictedBaggage" name="Excess Baggage (₦)" fill="#3B82F6" stackId="stack" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

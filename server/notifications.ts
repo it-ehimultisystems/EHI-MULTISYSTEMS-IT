@@ -116,7 +116,7 @@ router.post('/eod-summary', async (req, res) => {
     `Date: *${date}*\n` +
     `Locked by: ${lockedBy}\n\n` +
     `📦 Cargo Revenue:    ${fmt(cargoTotal)}\n` +
-    `✈️ ValueJet Revenue: ${fmt(vjTotal)}\n` +
+    `✈️ Excess Baggage Revenue: ${fmt(vjTotal)}\n` +
     `🛍️ Marketing Revenue: ${fmt(mktTotal)}\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `💰 *GROSS TOTAL: ${fmt(grossTotal)}*\n\n` +

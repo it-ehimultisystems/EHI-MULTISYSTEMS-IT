@@ -12,6 +12,9 @@ export interface PackageReceiptPrintData {
   phone?: string;
   destination: string;
   contentType: string;
+  pieces?: number;
+  kg?: number;
+  contents?: string;
   amount: number;
   paymentMode: string;
   paymentNarration?: string;
@@ -50,6 +53,9 @@ export async function compilePackageReceiptStream(data: PackageReceiptPrintData,
   if (data.phone) chunks.push(encoder.encode(fieldRow('PHONE:', data.phone, maxChars)));
   chunks.push(encoder.encode(fieldRow('DESTINATION:', data.destination, maxChars)));
   chunks.push(encoder.encode(fieldRow('TYPE:', data.contentType, maxChars)));
+  if (data.pieces) chunks.push(encoder.encode(fieldRow('PCS:', String(data.pieces), maxChars)));
+  if (data.kg) chunks.push(encoder.encode(fieldRow('KG:', String(data.kg), maxChars)));
+  if (data.contents) chunks.push(encoder.encode(fieldRow('CONTENTS:', data.contents, maxChars)));
   chunks.push(encoder.encode(divider(maxChars)));
 
   chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));

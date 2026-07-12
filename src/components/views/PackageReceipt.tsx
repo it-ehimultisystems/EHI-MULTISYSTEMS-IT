@@ -16,6 +16,9 @@ export interface PackageReceiptData {
   phone?: string;
   destination: string;
   contentType: string;
+  pieces?: number;
+  kg?: number;
+  contents?: string;
   amount: number;
   paymentMode: string;
   paymentNarration?: string;
@@ -139,6 +142,9 @@ const PackageReceiptPDF = ({ data }: { data: PackageReceiptData }) => {
   if (data.phone) h += 14;
   if (data.bankName) h += 14;
   if (data.paymentMode === "Transfer" && data.paymentNarration) h += 14;
+  if (data.pieces) h += 14;
+  if (data.kg) h += 14;
+  if (data.contents) h += 14;
 
   return (
     <Document>
@@ -190,6 +196,24 @@ const PackageReceiptPDF = ({ data }: { data: PackageReceiptData }) => {
           <Text style={styles.label}>Type</Text>
           <Text style={styles.value}>{data.contentType}</Text>
         </View>
+        {data.pieces ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Pieces</Text>
+            <Text style={styles.value}>{data.pieces}</Text>
+          </View>
+        ) : null}
+        {data.kg ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Weight</Text>
+            <Text style={styles.value}>{data.kg} KG</Text>
+          </View>
+        ) : null}
+        {data.contents ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Contents</Text>
+            <Text style={styles.value}>{data.contents}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionHeaderText}>PAYMENT</Text>
@@ -235,6 +259,8 @@ export interface PackageDailySummaryData {
     customerName: string;
     destination: string;
     contentType: string;
+    pieces?: number;
+    kg?: number;
     amount: number;
     paymentMode: string;
     bank?: string;
@@ -358,6 +384,8 @@ const PackageDailySummaryPDF = ({ data }: { data: PackageDailySummaryData }) => 
           <View style={summaryStyles.tableColLarge}><Text style={summaryStyles.tableCellHeader}>Customer</Text></View>
           <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCellHeader}>Destination</Text></View>
           <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCellHeader}>Type</Text></View>
+          <View style={summaryStyles.tableColSmall}><Text style={summaryStyles.tableCellHeader}>Pcs</Text></View>
+          <View style={summaryStyles.tableColSmall}><Text style={summaryStyles.tableCellHeader}>KG</Text></View>
           <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCellHeader}>Amount (NGN)</Text></View>
           <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCellHeader}>Mode</Text></View>
         </View>
@@ -367,7 +395,9 @@ const PackageDailySummaryPDF = ({ data }: { data: PackageDailySummaryData }) => 
             <View style={summaryStyles.tableColLarge}><Text style={summaryStyles.tableCell}>{entry.customerName}</Text></View>
             <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCell}>{entry.destination}</Text></View>
             <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCell}>{entry.contentType}</Text></View>
-            <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCell}>{entry.amount.toLocaleString("en-NG")}</Text></View>
+            <View style={summaryStyles.tableColSmall}><Text style={summaryStyles.tableCell}>{entry.pieces || '-'}</Text></View>
+            <View style={summaryStyles.tableColSmall}><Text style={summaryStyles.tableCell}>{entry.kg || '-'}</Text></View>
+            <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCell}>{entry.amount.toLocaleString("en-NG", { maximumFractionDigits: 2 })}</Text></View>
             <View style={summaryStyles.tableCol}><Text style={summaryStyles.tableCell}>{entry.paymentMode}</Text></View>
           </View>
         ))}

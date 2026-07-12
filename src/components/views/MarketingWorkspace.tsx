@@ -111,6 +111,12 @@ export const MarketingWorkspace = ({
   const [bb, setBb] = useState(0);
   const [mb, setMb] = useState(0);
   const [sb, setSb] = useState(0);
+  // Bag counts alone don't tell an airline what to bill/fly -- airlines
+  // charge and route cargo by weight, so each bag category needs its own kg
+  // figure to reconcile against the airline's manifest.
+  const [bbKg, setBbKg] = useState("");
+  const [mbKg, setMbKg] = useState("");
+  const [sbKg, setSbKg] = useState("");
   const [amountOverride, setAmountOverride] = useState("");
   const [debtorName, setDebtorName] = useState("");
 
@@ -148,6 +154,7 @@ export const MarketingWorkspace = ({
 
   const routePrices = pricingMatrix[route] || { BB: 0, MB: 0, SB: 0 };
   const minAmount = bb * routePrices.BB + mb * routePrices.MB + sb * routePrices.SB;
+  const totalKg = (parseFloat(bbKg) || 0) + (parseFloat(mbKg) || 0) + (parseFloat(sbKg) || 0);
   const parsedOverride = parseFloat(amountOverride) || 0;
   const totalAmount = amountOverride !== "" ? parsedOverride : minAmount;
 
@@ -157,7 +164,7 @@ export const MarketingWorkspace = ({
   // Name" field could be filled while the Debt-only "Debtor Name" field was
   // left empty, producing an untraceable debt record with name: "". Matches
   // the branch PackageForm.tsx already uses correctly for the same fields.
-  const isValid = !!awb && (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0) && totalAmount > 0 && (amountOverride === "" || parsedOverride >= minAmount);
+  const isValid = !!awb && (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0) && phone.trim().length > 0 && totalAmount > 0 && (amountOverride === "" || parsedOverride >= minAmount);
 
   // "Less Transfer" — daily adjustment for 3rd-party/corporate transfers (Govt/Honda/Zion)
   // that belong to other accounts and should be excluded from the day's cash tally
@@ -325,6 +332,7 @@ export const MarketingWorkspace = ({
       hub: user.hub,
       // Explicit fields so EHIApp doesn't need to parse the detail string
       ...(bb > 0 || mb > 0 || sb > 0 ? { _bb: bb, _mb: mb, _sb: sb } as any : {}),
+      ...(totalKg > 0 ? { _bbKg: parseFloat(bbKg) || 0, _mbKg: parseFloat(mbKg) || 0, _sbKg: parseFloat(sbKg) || 0 } as any : {}),
       // TODO: capture client_type at entry
     };
 
@@ -361,6 +369,9 @@ export const MarketingWorkspace = ({
     setBb(0);
     setMb(0);
     setSb(0);
+    setBbKg("");
+    setMbKg("");
+    setSbKg("");
     setAmountOverride("");
     setMode("Transfer");
     setNarrationCode("");
@@ -626,6 +637,7 @@ export const MarketingWorkspace = ({
                         bigBags: bb,
                         medBags: mb,
                         smallBags: sb,
+                        totalKg,
                       }));
                     }}
                     className="w-full mt-2 py-2.5 bg-transparent border border-[rgba(16,185,129,0.3)] rounded-lg cursor-pointer text-[11px] font-bold font-mono text-[var(--color-success)] flex items-center justify-center gap-2"
@@ -681,7 +693,7 @@ export const MarketingWorkspace = ({
                     id="mkt-phone"
                     name="phone"
                     type="tel"
-                    placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
+                    placeholder="Phone (required) -- include country code for foreign customers (e.g. +44, +1, +233)"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className={`w-full h-11 pl-9 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
@@ -782,6 +794,37 @@ export const MarketingWorkspace = ({
                     </div>
                   ))}
                 </div>
+
+                {/* Weight per bag category -- airlines fly/bill by kg, not
+                    bag count, so this is needed to reconcile against what
+                    the airline actually charges for the shipment. */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: "bbKg", label: "BB KG", val: bbKg, set: setBbKg },
+                    { key: "mbKg", label: "MB KG", val: mbKg, set: setMbKg },
+                    { key: "sbKg", label: "SB KG", val: sbKg, set: setSbKg },
+                  ].map((f) => (
+                    <div key={f.key} className="space-y-1">
+                      <label htmlFor={`mkt-${f.key}`} className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider block text-center">{f.label}</label>
+                      <input
+                        id={`mkt-${f.key}`}
+                        name={f.key}
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        placeholder="0"
+                        value={f.val}
+                        onChange={(e) => f.set(e.target.value)}
+                        className={`w-full h-10 px-2 text-[13px] text-center rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-mono ${mktgFocusClasses}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {totalKg > 0 && (
+                  <div className="text-[10px] font-mono text-[var(--color-muted)] text-right -mt-2">
+                    Total: <span className="text-[var(--color-success)] font-bold">{totalKg}kg</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center py-2 bg-[var(--color-surface-1)] px-3 rounded border border-[var(--color-border)]">
                   <span className="text-[10px] font-mono text-[var(--color-light-muted)]">

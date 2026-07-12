@@ -22,7 +22,7 @@ export type UserRole =
   | 'super_admin'
   | 'admin'
   | 'cargo_agent'
-  | 'vj_agent'
+  | 'baggage_agent'
   | 'marketing_agent'
   | 'driver'
   | 'accountant'
@@ -40,6 +40,22 @@ export interface User {
   hub_id?: string;
   active?: boolean;
   can_print_ledger?: boolean;   // Super admin grants this per user
+  // Which excess_baggage_airlines.name this user tickets for -- only
+  // meaningful when role === 'baggage_agent'.
+  assigned_airline?: string;
+}
+
+// One row per excess-baggage carrier (ValueJet, and any airline added
+// after it) -- configured in the Excess Baggage Airlines admin screen,
+// no code change needed to onboard a new one.
+export interface ExcessBaggageAirline {
+  id: string;
+  name: string;
+  flight_prefix: string;
+  tag_code: string;
+  free_allowance_kg: number;
+  rate_per_kg: number;
+  active: boolean;
 }
 
 export type PaymentMode = 'Cash' | 'POS' | 'Transfer' | 'Debt' | 'Debt Paid';
@@ -172,8 +188,11 @@ export interface Transaction {
   kg?: number;
   pickupPin?: string;
   contentType?: string;
+  // Package/Parcel specifics -- distinct from contentType, which for this
+  // stream holds the 'Package'/'Parcel' service class, not what's inside.
+  contents?: string;
   remarks?: string;
-  // VJ specifics
+  // Excess-baggage specifics (ValueJet and any other configured airline)
   destination?: string;
   excessKg?: number;
   totalKg?: number;
@@ -237,7 +256,9 @@ export interface Expense {
   rejectedAt?: string;
 }
 
-export type TabView = 'Tower' | 'Cargo' | 'VJ POS' | 'Marketing' | 'Packages' | 'Scan' | 'Incoming' | 'IncomingToHub' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit' | 'AirlineLogos' | 'DataImport' | 'AirlineLedger' | 'WeightManifest';
+// `Baggage:${tag_code}` tabs are generated dynamically, one per active row
+// in excess_baggage_airlines (e.g. 'Baggage:VJ') -- no fixed list here.
+export type TabView = 'Tower' | 'Cargo' | `Baggage:${string}` | 'Marketing' | 'Packages' | 'Scan' | 'Incoming' | 'IncomingToHub' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit' | 'AirlineLogos' | 'DataImport' | 'AirlineLedger' | 'WeightManifest';
 
 export interface AppState {
   user: User | null;

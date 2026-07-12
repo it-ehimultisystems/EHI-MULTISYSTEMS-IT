@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, Transaction, Expense } from "../../lib/types";
-import { BANKS, EXPENSE_CATEGORIES } from "../../lib/constants";
+import { BANKS, EXPENSE_CATEGORIES, CONTENT_TYPES } from "../../lib/constants";
 import { fmt, uid, tnow, generatePaymentNarration, getHubCode } from "../../lib/helpers";
 import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare, Bluetooth } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -73,6 +73,13 @@ export const PackageForm = ({
   const [phone, setPhone] = useState("");
   const [destination, setDestination] = useState<string>(() => destinations[0] || "");
   const [contentType, setContentType] = useState<'Package' | 'Parcel'>('Package');
+  // Pieces/weight/contents were never captured for this stream at all --
+  // every other business line (Cargo, Marketing, ValueJet) tracks these, and
+  // reuses the same shared CONTENT_TYPES list as Cargo rather than a new
+  // hardcoded one, so this scales the same way the rest of the app does.
+  const [pcs, setPcs] = useState("1");
+  const [kg, setKg] = useState("");
+  const [contents, setContents] = useState<string>(CONTENT_TYPES[0]);
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<string>("Cash");
   const [bank, setBank] = useState<string>(BANKS[0]);
@@ -93,8 +100,10 @@ export const PackageForm = ({
   const [expDesc, setExpDesc] = useState("");
 
   const parsedAmount = parseFloat(amount) || 0;
-  const isValid = (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0)
-    && parsedAmount > 0 && destination.trim().length > 0 && !!trackingRef;
+  const pcsNum = parseInt(pcs) || 0;
+  const kgNum = parseFloat(kg) || 0;
+  const isValid = (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0 && phone.trim().length > 0)
+    && parsedAmount > 0 && destination.trim().length > 0 && !!trackingRef && pcsNum > 0;
 
   // "Today" here means the actual calendar day, not whatever the app-wide
   // date-range picker (globalDateRange, defaults to a trailing 7 days) is
@@ -133,7 +142,7 @@ export const PackageForm = ({
     const tx: Transaction = {
       id: trackingRef,
       name: mode === "Debt" ? debtorName.trim() : name.trim(),
-      detail: `${destination} · ${contentType}`,
+      detail: `${destination} · ${contentType} · ${pcsNum}pcs · ${kgNum}kg · ${contents}`,
       amount: parsedAmount,
       mode,
       bank: (mode === "Transfer" || mode === "POS") ? bank : undefined,
@@ -144,6 +153,9 @@ export const PackageForm = ({
       status: "Intake",
       destination,
       contentType,
+      pieces: pcsNum,
+      kg: kgNum,
+      contents,
       hub: user.hub,
       hub_id: user.hub_id,
       debtPaid: mode === "Debt" ? false : undefined,
@@ -175,6 +187,9 @@ export const PackageForm = ({
     setName("");
     setPhone("");
     setDebtorName("");
+    setPcs("1");
+    setKg("");
+    setContents(CONTENT_TYPES[0]);
     setAmount("");
     setMode("Cash");
     setNarrationCode("");
@@ -316,6 +331,9 @@ export const PackageForm = ({
                           phone: phone || undefined,
                           destination,
                           contentType,
+                          pieces: successTx.pieces,
+                          kg: successTx.kg,
+                          contents: successTx.contents,
                           amount: successTx.amount,
                           paymentMode: successTx.mode,
                           paymentNarration: successTx.paymentNarration,
@@ -348,6 +366,9 @@ export const PackageForm = ({
                           phone: phone || undefined,
                           destination,
                           contentType,
+                          pieces: successTx.pieces,
+                          kg: successTx.kg,
+                          contents: successTx.contents,
                           amount: successTx.amount,
                           paymentMode: successTx.mode,
                           paymentNarration: successTx.paymentNarration,
@@ -378,6 +399,9 @@ export const PackageForm = ({
                     phone: phone || undefined,
                     destination,
                     contentType,
+                    pieces: successTx.pieces,
+                    kg: successTx.kg,
+                    contents: successTx.contents,
                     amount: successTx.amount,
                     paymentMode: successTx.mode,
                     paymentNarration: successTx.paymentNarration,
@@ -396,6 +420,9 @@ export const PackageForm = ({
                     name: successTx.name,
                     destination,
                     contentType,
+                    pieces: successTx.pieces,
+                    kg: successTx.kg,
+                    contents: successTx.contents,
                     hubName: user?.hub || "EHI Cargo Station",
                     date: new Date().toLocaleDateString("en-GB"),
                   }));
@@ -436,7 +463,7 @@ export const PackageForm = ({
                         id="pkg-phone"
                         name="phone"
                         type="tel"
-                        placeholder="Phone (optional, for WhatsApp receipt)"
+                        placeholder="Phone (required)"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         className={`w-full h-11 pl-9 pr-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
@@ -462,6 +489,38 @@ export const PackageForm = ({
                     <option value="Parcel">Parcel</option>
                   </select>
                 </div>
+
+                <div className="flex space-x-3">
+                  <input
+                    id="pkg-pcs"
+                    name="pcs"
+                    type="number"
+                    min="1"
+                    placeholder="Pcs"
+                    value={pcs}
+                    onChange={(e) => setPcs(e.target.value)}
+                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans min-w-0 ${focusClasses}`}
+                  />
+                  <input
+                    id="pkg-kg"
+                    name="kg"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    placeholder="KG (optional)"
+                    value={kg}
+                    onChange={(e) => setKg(e.target.value)}
+                    className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans min-w-0 ${focusClasses}`}
+                  />
+                </div>
+
+                <select
+                  value={contents}
+                  onChange={(e) => setContents(e.target.value)}
+                  className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
+                >
+                  {CONTENT_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
 
                 <select
                   value={mode}
@@ -690,6 +749,8 @@ export const PackageForm = ({
                       customerName: t.name,
                       destination: t.destination || '',
                       contentType: t.contentType || '',
+                      pieces: t.pieces,
+                      kg: t.kg,
                       amount: t.amount,
                       paymentMode: t.mode,
                       bank: t.bank,

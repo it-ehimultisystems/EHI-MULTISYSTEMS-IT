@@ -193,7 +193,7 @@ export const Dashboard = React.memo(
     // Accountant/auditor need to see all three streams to review financial activity —
     // same visibility as admin, not the single-stream visibility of a field agent.
     const showCargo     = isAdmin || isAccountant || user.role === "cargo_agent";
-    const showVJ        = isAdmin || isAccountant || user.role === "vj_agent";
+    const showVJ        = isAdmin || isAccountant || user.role === "baggage_agent";
     const showMktg      = isAdmin || isAccountant || user.role === "marketing_agent";
     const showRevSummary = isAdmin || isAccountant;
 
@@ -328,7 +328,7 @@ export const Dashboard = React.memo(
             )}
             {showVJ && (
               <ScoreCard
-                label="ValueJet" icon={Plane}
+                label="Excess Baggage" icon={Plane}
                 color="var(--color-accent-cobalt)"
                 bg="rgba(59,130,246,0.07)" borderColor="rgba(59,130,246,0.22)"
                 total={vjTotal}
@@ -407,7 +407,7 @@ export const Dashboard = React.memo(
                 No activity yet today
               </div>
               <div className="text-[12px] text-[var(--color-muted)] font-sans mt-1 mb-4">
-                Start by logging a cargo, ValueJet or marketing entry
+                Start by logging a cargo, excess baggage or marketing entry
               </div>
               <div className="flex gap-2 flex-wrap justify-center">
                 {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'cargo_agent') && (
@@ -418,12 +418,12 @@ export const Dashboard = React.memo(
                     + Cargo Entry
                   </button>
                 )}
-                {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'vj_agent') && (
+                {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'baggage_agent') && user.assigned_airline && (
                   <button
-                    onClick={() => window.dispatchEvent(new CustomEvent('ehi-nav', { detail: 'VJ POS' }))}
+                    onClick={() => window.dispatchEvent(new CustomEvent('ehi-nav', { detail: `Baggage:${user.assigned_airline}` }))}
                     className="px-3 py-1.5 bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)] text-[var(--color-accent-cobalt)] text-[11px] font-bold rounded-lg"
                   >
-                    + ValueJet POS
+                    + {user.assigned_airline} POS
                   </button>
                 )}
                 {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'marketing_agent') && (

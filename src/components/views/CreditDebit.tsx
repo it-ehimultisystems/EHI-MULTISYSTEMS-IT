@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { User, Transaction } from '../../lib/types';
-import { fmt } from '../../lib/helpers';
+import { fmt, roundMoney } from '../../lib/helpers';
 import { ArrowLeft, CreditCard, Building2, Users, Search, ArrowDownLeft, ArrowUpRight, TrendingDown, TrendingUp, Building, UserSquare2, Loader } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { normalizeAirlineName } from '../../lib/helpers';
@@ -120,7 +120,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
       const normalizedCommissions: Record<string, number> = {};
       Object.entries(commissions).forEach(([k, v]) => { normalizedCommissions[normalizeAirlineName(k)] = v; });
       const commRate = tx.commissionRate ?? normalizedCommissions[airline] ?? 0;
-      const weOwe = tx.amount * (1 - commRate / 100);
+      const weOwe = roundMoney(tx.amount * (1 - commRate / 100));
       summary[airline] = (summary[airline] || 0) + weOwe;
     });
     return Object.entries(summary).map(([airline, amount]) => ({ airline, amount })).sort((a, b) => b.amount - a.amount);
@@ -273,7 +273,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
               {credits.map((tx, i) => {
                 const normalizedAirline = normalizeAirlineName(tx.airline);
                 const commRate = tx.commissionRate ?? commissions[normalizedAirline] ?? commissions[tx.airline!] ?? 0;
-                const weOwe = tx.amount * (1 - commRate / 100);
+                const weOwe = roundMoney(tx.amount * (1 - commRate / 100));
                 return (
                   <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-surface-2)] transition-colors">
                     <div className="flex justify-between items-start mb-2">
@@ -281,7 +281,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
                       <span className="text-[13px] font-mono font-bold text-[var(--color-success)]">{fmt(weOwe)}</span>
                     </div>
                     <div className="text-[11px] font-mono text-[var(--color-muted)] mb-3 bg-[var(--color-surface-2)] inline-block px-2 py-1 rounded">
-                      Base: {fmt(tx.amount)} <span className="mx-1 opacity-50">&middot;</span> Comm: {commRate}% <span className="text-[var(--color-accent-amber)]">({fmt(tx.amount * commRate / 100)})</span>
+                      Base: {fmt(tx.amount)} <span className="mx-1 opacity-50">&middot;</span> Comm: {commRate}% <span className="text-[var(--color-accent-amber)]">({fmt(roundMoney(tx.amount * commRate / 100))})</span>
                     </div>
                     <div className="text-[12px] font-sans text-[var(--color-muted)] line-clamp-1 pt-1">
                       {tx.detail}

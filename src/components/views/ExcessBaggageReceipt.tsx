@@ -14,7 +14,8 @@ import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 import { openPdfOrDownload } from "../../lib/helpers";
 import { notifySilentError } from "../../lib/ToastContext";
 
-export interface VJReceiptData {
+export interface BaggageReceiptData {
+  airlineName: string;
   entryRef: string;
   date: string;
   hubName: string;
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
   qrImage: { width: 55, height: 55 },
 });
 
-const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => {
+const BaggageReceiptPDF = ({ data }: { data: BaggageReceiptData }) => {
   // +45 to accommodate the larger header logos (see CargoReceipt.tsx note).
   let h = 315;
   if (data.qrCodeDataUrl) h += 60;
@@ -139,7 +140,7 @@ const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => {
     <Page size={[226, h]} style={styles.page}>
       <View style={styles.headerRow}>
         <EHILogoPDF width={105} />
-        <AirlineLogoPDF airline="ValueJet" logoUrl={data.airlineLogoUrl} width={105} />
+        <AirlineLogoPDF airline={data.airlineName} logoUrl={data.airlineLogoUrl} width={105} />
       </View>
       <Text style={styles.title}>EXCESS BAGGAGE RECEIPT</Text>
       <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6 }}>Origin: {data.hubName}</Text>
@@ -252,7 +253,7 @@ const VJReceiptPDF = ({ data }: { data: VJReceiptData }) => {
   );
 };
 
-export const downloadVJReceipt = async (data: VJReceiptData) => {
+export const downloadBaggageReceipt = async (data: BaggageReceiptData) => {
   if (!data.qrCodeDataUrl) {
     try {
       data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
@@ -266,9 +267,9 @@ export const downloadVJReceipt = async (data: VJReceiptData) => {
     }
   }
   if (data.airlineLogoUrl === undefined) {
-    data.airlineLogoUrl = await resolveAirlineLogoUrl("ValueJet");
+    data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airlineName);
   }
-  const blob = await pdf(<VJReceiptPDF data={data} />).toBlob();
+  const blob = await pdf(<BaggageReceiptPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -277,7 +278,7 @@ export const downloadVJReceipt = async (data: VJReceiptData) => {
   URL.revokeObjectURL(url);
 };
 
-export const printVJReceipt = async (data: VJReceiptData): Promise<void> => {
+export const printBaggageReceipt = async (data: BaggageReceiptData): Promise<void> => {
   if (!data.qrCodeDataUrl) {
     try {
       data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
@@ -291,9 +292,9 @@ export const printVJReceipt = async (data: VJReceiptData): Promise<void> => {
     }
   }
   if (data.airlineLogoUrl === undefined) {
-    data.airlineLogoUrl = await resolveAirlineLogoUrl("ValueJet");
+    data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airlineName);
   }
-  const blob = await pdf(<VJReceiptPDF data={data} />).toBlob();
+  const blob = await pdf(<BaggageReceiptPDF data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
   const win = openPdfOrDownload(url, `Receipt_${data.entryRef}.pdf`);
   if (win) win.print();

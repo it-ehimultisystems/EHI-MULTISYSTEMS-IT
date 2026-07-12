@@ -298,7 +298,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
           <span className="text-[14px] font-bold font-mono text-[var(--color-success)]">{fmt(expectedTotals.mktgTotal)}</span>
         </div>
         <div className="p-3 border-b border-[var(--color-border)] flex justify-between items-center bg-[rgba(59,130,246,0.05)]">
-          <span className="text-[11px] font-mono text-[var(--color-muted)]">ValueJet Baggage</span>
+          <span className="text-[11px] font-mono text-[var(--color-muted)]">Excess Baggage</span>
           <span className="text-[14px] font-bold font-mono text-[var(--color-accent-cobalt)]">{fmt(expectedTotals.vjTotal)}</span>
         </div>
         <div className="p-3 border-b border-[var(--color-border)] flex justify-between items-center bg-[rgba(255,255,255,0.02)]">

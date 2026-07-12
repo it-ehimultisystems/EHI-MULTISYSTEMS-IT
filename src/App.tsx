@@ -69,17 +69,21 @@ const PublicTrackingPage = () => {
       return;
     }
 
-    // Check Marketing Entries
+    // Check Marketing Entries -- match on either entry_ref (internal id) or
+    // awb_tag_number (the ref actually printed on the bag tag/QR code), the
+    // same way cargo_entries is matched above. Only entry_ref used to be
+    // queryable, so scanning a printed tag's QR/AWB always came back empty.
     const { data: marketing } = await supabase
       .from('marketing_entries')
-      .select('entry_ref, customer_name, route, status')
-      .eq('entry_ref', query)
+      .select('entry_ref, awb_tag_number, customer_name, route, status')
+      .or(`entry_ref.eq."${query}",awb_tag_number.eq."${query}"`)
       .limit(1);
 
     if (marketing && marketing.length > 0) {
       const m = marketing[0];
       setResult({
         id: m.entry_ref,
+        awb_tag_number: m.awb_tag_number,
         name: m.customer_name,
         route: m.route,
         status: m.status || 'Intake'
@@ -89,7 +93,7 @@ const PublicTrackingPage = () => {
       return;
     }
 
-    // Check Manifests (ValueJet)
+    // Check Manifests (excess baggage -- ValueJet and any other configured airline)
     const { data: manifest } = await supabase
       .from('manifests')
       .select('transaction_id, passenger_name, destination, excess_kg, total_kg, total_pcs, status')
@@ -112,11 +116,9 @@ const PublicTrackingPage = () => {
     }
 
     // Check Package Entries (Package/Parcel desk)
-    // No weight/piece count -- this stream is flat-fee, the schema never
-    // tracked those. contentType shows 'Package' or 'Parcel' instead.
     const { data: pkg } = await supabase
       .from('package_entries')
-      .select('entry_ref, customer_name, destination, content_type, status')
+      .select('entry_ref, customer_name, destination, content_type, total_pcs, total_kg, contents, status')
       .eq('entry_ref', query)
       .limit(1);
 
@@ -126,7 +128,9 @@ const PublicTrackingPage = () => {
         id: p.entry_ref,
         name: p.customer_name,
         route: p.destination,
-        contentType: p.content_type,
+        contentType: p.contents || p.content_type,
+        kg: p.total_kg || undefined,
+        pieces: p.total_pcs || undefined,
         status: p.status || 'Intake'
       });
       fetchTimeline(p.entry_ref);

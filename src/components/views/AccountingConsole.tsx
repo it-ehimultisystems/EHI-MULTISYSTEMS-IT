@@ -323,7 +323,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                 <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[var(--color-accent-cobalt)]" />
                 <div className="flex items-center space-x-2 mb-2 ml-2">
                   <Plane size={16} className="text-[var(--color-accent-cobalt)]" />
-                  <span className="text-[13px] font-sans font-medium text-[var(--color-muted)]">ValueJet POS</span>
+                  <span className="text-[13px] font-sans font-medium text-[var(--color-muted)]">Excess Baggage</span>
                 </div>
                 <div className="text-[20px] font-bold font-mono text-[var(--color-accent-cobalt)] ml-2 mb-1">{fmt(vjTotal)}</div>
                 <div className="text-[12px] font-sans text-[var(--color-light-muted)] ml-2 mb-3">{vjTx.length} Passengers</div>

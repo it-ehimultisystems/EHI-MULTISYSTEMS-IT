@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow } from "../../lib/helpers";
+import { CONTENT_TYPES } from "../../lib/constants";
 import {
   ArrowLeft,
   Edit2,
@@ -66,7 +67,16 @@ export const TransactionLedger = ({
   // not as discrete Transaction fields, so the edit modal keeps its own
   // working copy (seeded by parsing `detail` in handleEditClick) and
   // reassembles `detail` from it in handleSaveEdit.
-  const [editBagCounts, setEditBagCounts] = useState({ bb: 0, mb: 0, sb: 0 });
+  const [editBagCounts, setEditBagCounts] = useState({ bb: '0', mb: '0', sb: '0' });
+  // Pieces/weight/amount are edited as plain strings, not numbers, and only
+  // parsed in handleSaveEdit -- binding a number input's value directly to a
+  // number forces every keystroke through parseFloat/parseInt and back into
+  // the input, which silently eats a trailing decimal point (typing "99."
+  // re-renders as "99", so the next digit lands after the whole number
+  // instead of after the point) and made editing an existing amount unreliable.
+  const [pieceInput, setPieceInput] = useState('');
+  const [kgInput, setKgInput] = useState('');
+  const [amountInput, setAmountInput] = useState('');
   const [viewingQrTx, setViewingQrTx] = useState<Entry | null>(null);
   const [viewingDetail, setViewingDetail] = useState<Entry | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,12 +163,15 @@ export const TransactionLedger = ({
     if (e.source === "transaction") {
       const tx = { ...e.raw } as Transaction;
       setEditingTx(tx);
+      setPieceInput(String(tx.pieces ?? ''));
+      setKgInput(String(tx.kg ?? ''));
+      setAmountInput(String(tx.amount ?? ''));
       if (tx.type === 'marketing') {
         const bagsStr = tx.detail?.split(' · ')[1] || '';
         setEditBagCounts({
-          bb: parseInt(bagsStr.match(/(\d+)\s*BB/)?.[1] || '0'),
-          mb: parseInt(bagsStr.match(/(\d+)\s*MB/)?.[1] || '0'),
-          sb: parseInt(bagsStr.match(/(\d+)\s*SB/)?.[1] || '0'),
+          bb: bagsStr.match(/(\d+)\s*BB/)?.[1] || '0',
+          mb: bagsStr.match(/(\d+)\s*MB/)?.[1] || '0',
+          sb: bagsStr.match(/(\d+)\s*SB/)?.[1] || '0',
         });
       }
     }
@@ -166,12 +179,13 @@ export const TransactionLedger = ({
 
   const handleSaveEdit = () => {
     if (!editingTx) return;
-    if (
-      editingTx.amount < 0 ||
-      (editingTx.pieces ?? 0) < 0 ||
-      (editingTx.kg ?? 0) < 0 ||
-      editBagCounts.bb < 0 || editBagCounts.mb < 0 || editBagCounts.sb < 0
-    ) {
+    const pieces = parseInt(pieceInput) || 0;
+    const kg = parseFloat(kgInput) || 0;
+    const amount = parseFloat(amountInput) || 0;
+    const bb = parseInt(editBagCounts.bb) || 0;
+    const mb = parseInt(editBagCounts.mb) || 0;
+    const sb = parseInt(editBagCounts.sb) || 0;
+    if (amount < 0 || pieces < 0 || kg < 0 || bb < 0 || mb < 0 || sb < 0) {
       showToast({ message: 'Amount, pieces, weight, and bag counts cannot be negative.', type: 'warning' });
       return;
     }
@@ -180,18 +194,18 @@ export const TransactionLedger = ({
     // app (ledger rows, receipts) displays -- rebuild it here so the
     // optimistic local update stays consistent with what a refetch from
     // Supabase will later reconstruct (see EHIApp.tsx's fetchInitial).
-    const finalTx: Transaction = { ...editingTx };
+    const finalTx: Transaction = { ...editingTx, pieces, kg, amount };
     if (finalTx.type === 'cargo') {
-      finalTx.detail = `${finalTx.airline || ''} · ${finalTx.awb_tag_number || ''} · ${finalTx.pieces || 0}pcs · ${finalTx.kg || 0}kg · ${finalTx.route || ''} · ${finalTx.contentType || ''}`;
+      finalTx.detail = `${finalTx.airline || ''} · ${finalTx.awb_tag_number || ''} · ${pieces}pcs · ${kg}kg · ${finalTx.route || ''} · ${finalTx.contentType || ''}`;
     } else if (finalTx.type === 'baggage') {
       finalTx.detail = `${finalTx.flight || ''} · ${finalTx.destination || ''} · ${finalTx.excessKg || 0}kg excess`;
     } else if (finalTx.type === 'marketing') {
-      finalTx.detail = `${finalTx.route || ''} · ${editBagCounts.bb}BB ${editBagCounts.mb}MB ${editBagCounts.sb}SB`;
-      (finalTx as any)._bb = editBagCounts.bb;
-      (finalTx as any)._mb = editBagCounts.mb;
-      (finalTx as any)._sb = editBagCounts.sb;
+      finalTx.detail = `${finalTx.route || ''} · ${bb}BB ${mb}MB ${sb}SB`;
+      (finalTx as any)._bb = bb;
+      (finalTx as any)._mb = mb;
+      (finalTx as any)._sb = sb;
     } else if (finalTx.type === 'package') {
-      finalTx.detail = `${finalTx.destination || ''} · ${finalTx.contentType || 'Package'}`;
+      finalTx.detail = `${finalTx.destination || ''} · ${finalTx.contentType || 'Package'} · ${pieces}pcs · ${kg}kg${finalTx.contents ? ` · ${finalTx.contents}` : ''}`;
     }
     onUpdateTx(finalTx);
     setEditingTx(null);
@@ -231,8 +245,9 @@ export const TransactionLedger = ({
             trackingUrl: `https://app.ehimultisystems.com/track/${tx.id}`,
           }, width);
         } else if (tx.type === 'baggage') {
-          const { compileVJReceiptStream } = await import('../../lib/escposVJPrinting');
-          return await compileVJReceiptStream({
+          const { compileBaggageReceiptStream } = await import('../../lib/escposBaggagePrinting');
+          return await compileBaggageReceiptStream({
+            airlineName: tx.airline || 'ValueJet',
             entryRef: tx.id,
             date: tx.time,
             originState: tx.hub || user.hub,
@@ -598,7 +613,7 @@ export const TransactionLedger = ({
           </button>
           <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">
             {defaultTypeFilter === 'cargo' ? '● CARGO LEDGER'
-             : defaultTypeFilter === 'baggage' ? '● VALUEJET LEDGER'
+             : defaultTypeFilter === 'baggage' ? '● EXCESS BAGGAGE LEDGER'
              : defaultTypeFilter === 'marketing' ? '● MARKETING LEDGER'
              : '● MASTER LEDGER'}
             {viewOnly && <span className="ml-2 text-[var(--color-muted)] tracking-normal normal-case">view only</span>}
@@ -632,11 +647,17 @@ export const TransactionLedger = ({
             <button
               onClick={() => {
                 if (defaultTypeFilter === 'baggage') {
-                  import('./ValueJetLedgerPDF').then(({ downloadVJLedgerPDF }) => {
+                  import('./ExcessBaggageLedgerPDF').then(({ downloadBaggageLedgerPDF }) => {
                     const txs = filteredEntries
                       .filter(e => e.source === 'transaction')
                       .map(e => e.raw as Transaction);
-                    downloadVJLedgerPDF({
+                    // This is the aggregate master ledger across every
+                    // configured airline (unlike the per-airline "Daily PDF"
+                    // button on the ticketing form itself), so it uses a
+                    // generic title/no single airline logo rather than
+                    // whichever airline happens to be first in the list.
+                    downloadBaggageLedgerPDF({
+                      airlineName: 'Excess Baggage',
                       date: new Date().toLocaleDateString('en-GB'),
                       hubName: user.hub || 'EHI Hub',
                       transactions: txs,
@@ -812,7 +833,7 @@ export const TransactionLedger = ({
               <tr className="text-[var(--color-muted)] border-b border-[var(--color-border)] uppercase">
                 {isAccountantOrAdmin && <th className="py-3 px-3 w-[36px]"></th>}
                 {canSeePin && <th className="py-3 px-2 w-[64px] font-medium">PIN</th>}
-                <th className="py-3 px-2 w-[90px] font-medium">ID</th>
+                <th className="py-3 px-2 w-[150px] font-medium">ID</th>
                 <th className="py-3 px-2 w-[72px] font-medium">Date</th>
                 <th className="py-3 px-2 font-medium min-w-[120px]">Customer / Detail</th>
                 <th className="py-3 px-2 w-[72px] font-medium text-center">Status</th>
@@ -923,8 +944,8 @@ export const TransactionLedger = ({
                       </td>
                     )}
                     {/* ID */}
-                    <td className="py-2.5 px-2 text-[var(--color-light-muted)] whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
+                    <td className="py-2.5 px-2 text-[var(--color-light-muted)]">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
                           e.type === 'cargo' ? 'bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]' :
                           e.type === 'baggage' ? 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]' :
@@ -936,7 +957,7 @@ export const TransactionLedger = ({
                           {e.type === 'marketing' && <TrendingUp size={10} />}
                           {e.source === 'expense' && <Minus size={10} />}
                         </div>
-                        {e.id.slice(-8)}
+                        <span className="truncate min-w-0" title={e.id}>{e.id}</span>
                       </div>
                     </td>
                     {/* Date + Time */}
@@ -1335,8 +1356,8 @@ export const TransactionLedger = ({
                         name="edit-tx-pieces"
                         type="number"
                         min="0"
-                        value={editingTx.pieces ?? ''}
-                        onChange={(e) => setEditingTx({ ...editingTx, pieces: parseInt(e.target.value) || 0 })}
+                        value={pieceInput}
+                        onChange={(e) => setPieceInput(e.target.value)}
                         className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                       />
                     </div>
@@ -1349,8 +1370,8 @@ export const TransactionLedger = ({
                         name="edit-tx-kg"
                         type="number"
                         min="0"
-                        value={editingTx.kg ?? ''}
-                        onChange={(e) => setEditingTx({ ...editingTx, kg: parseFloat(e.target.value) || 0 })}
+                        value={kgInput}
+                        onChange={(e) => setKgInput(e.target.value)}
                         className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                       />
                     </div>
@@ -1449,7 +1470,7 @@ export const TransactionLedger = ({
                         type="number"
                         min="0"
                         value={editBagCounts.bb}
-                        onChange={(e) => setEditBagCounts({ ...editBagCounts, bb: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => setEditBagCounts({ ...editBagCounts, bb: e.target.value })}
                         className="w-full h-10 px-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[14px] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                       />
                     </div>
@@ -1463,7 +1484,7 @@ export const TransactionLedger = ({
                         type="number"
                         min="0"
                         value={editBagCounts.mb}
-                        onChange={(e) => setEditBagCounts({ ...editBagCounts, mb: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => setEditBagCounts({ ...editBagCounts, mb: e.target.value })}
                         className="w-full h-10 px-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[14px] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                       />
                     </div>
@@ -1477,7 +1498,7 @@ export const TransactionLedger = ({
                         type="number"
                         min="0"
                         value={editBagCounts.sb}
-                        onChange={(e) => setEditBagCounts({ ...editBagCounts, sb: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => setEditBagCounts({ ...editBagCounts, sb: e.target.value })}
                         className="w-full h-10 px-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[14px] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                       />
                     </div>
@@ -1530,6 +1551,50 @@ export const TransactionLedger = ({
                       </select>
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
+                        Pieces
+                      </label>
+                      <input
+                        id="edit-tx-package-pcs"
+                        name="edit-tx-package-pcs"
+                        type="number"
+                        min="0"
+                        value={pieceInput}
+                        onChange={(e) => setPieceInput(e.target.value)}
+                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
+                        Weight (KG)
+                      </label>
+                      <input
+                        id="edit-tx-package-kg"
+                        name="edit-tx-package-kg"
+                        type="number"
+                        min="0"
+                        value={kgInput}
+                        onChange={(e) => setKgInput(e.target.value)}
+                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
+                      Contents
+                    </label>
+                    <select
+                      id="edit-tx-package-contents"
+                      name="edit-tx-package-contents"
+                      value={editingTx.contents || CONTENT_TYPES[0]}
+                      onChange={(e) => setEditingTx({ ...editingTx, contents: e.target.value })}
+                      className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    >
+                      {CONTENT_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
                 </>
               )}
 
@@ -1546,13 +1611,8 @@ export const TransactionLedger = ({
                   name="edit-tx-amount"
                   type="number"
                   min="0"
-                  value={editingTx.amount}
-                  onChange={(e) =>
-                    setEditingTx({
-                      ...editingTx,
-                      amount: parseFloat(e.target.value) || 0,
-                    })
-                  }
+                  value={amountInput}
+                  onChange={(e) => setAmountInput(e.target.value)}
                   className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                 />
               </div>

@@ -23,7 +23,13 @@ interface ImportResult {
 
 const CARGO_COLUMNS = ['date', 'consignee_name', 'awb_tag_number', 'airline', 'route', 'total_pcs', 'total_kg', 'content_type', 'amount', 'receipt_mode', 'bank', 'remark'];
 const MARKETING_COLUMNS = ['date', 'customer_name', 'airline', 'route', 'big_bags', 'med_bags', 'small_bags', 'amount', 'payment_mode', 'bank'];
-const CARGO_REQUIRED = ['date', 'consignee_name', 'route', 'amount'];
+// awb_tag_number is required (not just optional column) -- a row without a
+// real AWB used to get a randomly-generated placeholder, which meant the
+// imported entry's tag number never matched any physical tag and looked
+// like a different, inconsistent id format everywhere it showed up (the
+// ledger, receipts, tracking). Better to reject the row and have staff
+// supply the real AWB than silently invent one.
+const CARGO_REQUIRED = ['date', 'consignee_name', 'awb_tag_number', 'route', 'amount'];
 const MARKETING_REQUIRED = ['date', 'customer_name', 'route', 'amount'];
 const ALL_KNOWN_COLUMNS = new Set([...CARGO_COLUMNS, ...MARKETING_COLUMNS]);
 const CHUNK_SIZE = 25;
@@ -31,7 +37,7 @@ const CHUNK_SIZE = 25;
 const CARGO_TEMPLATE = [
   CARGO_COLUMNS.join(','),
   '2024-01-15,John Doe,AWB-123456,Green Africa Airways,LOS/ABJ,2,10.5,Clothes & Shoes,15000,Cash,,',
-  '2024-01-15,Jane Smith,,United Nigeria Airlines,LOS/PHC,1,5.0,Documents,8000,Transfer,GTBank,Urgent',
+  '2024-01-15,Jane Smith,AWB-123457,United Nigeria Airlines,LOS/PHC,1,5.0,Documents,8000,Transfer,GTBank,Urgent',
 ].join('\n');
 
 const MARKETING_TEMPLATE = [
@@ -187,9 +193,13 @@ export const DataImport = ({ user, onBack }: { user: User; onBack: () => void })
 
       const records = chunk.map(r => {
         if (importType === 'cargo') {
+          // awb_tag_number is now a required column (validateRows rejects
+          // rows missing it), so this is always the real, physical AWB --
+          // use it as entry_ref too, matching how every other cargo-entry
+          // code path (CargoForm.tsx) keeps entry_ref === awb_tag_number.
           return {
-            entry_ref: uid('CG'),
-            awb_tag_number: r.awb_tag_number || `AWB-${Math.floor(100000 + Math.random() * 900000)}`,
+            entry_ref: r.awb_tag_number,
+            awb_tag_number: r.awb_tag_number,
             consignee_name: r.consignee_name,
             airline: r.airline || null,
             route: r.route,
@@ -308,7 +318,9 @@ export const DataImport = ({ user, onBack }: { user: User; onBack: () => void })
                   </span>
                   {'. '}
                   Date format: <span className="font-mono text-[var(--color-foreground)]">YYYY-MM-DD</span>.
-                  entry_ref is auto-generated.
+                  {importType === 'cargo'
+                    ? ' The reference used everywhere in the app (ledger, receipts, tracking) is your awb_tag_number -- not auto-generated, so it must be the real physical AWB.'
+                    : ' entry_ref is auto-generated.'}
                 </p>
               </div>
 

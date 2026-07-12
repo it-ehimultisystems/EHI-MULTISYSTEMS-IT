@@ -11,21 +11,21 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
     const home   = { id: 'Tower' as TabView, title: 'Dashboard', icon: HouseIcon };
     const cargo  = { id: 'Cargo' as TabView, title: 'Cargo', icon: PackageIcon };
     const mkt    = { id: 'Marketing' as TabView, title: 'Marketing', icon: TrendUpIcon };
-    const vj     = { id: 'VJ POS' as TabView, title: 'ValueJet', icon: AirplaneIcon };
+    const baggage = { id: `Baggage:${user.assigned_airline || ''}` as TabView, title: user.assigned_airline || 'Baggage', icon: AirplaneIcon };
     const scan   = { id: 'Scan' as TabView, title: 'Scanner', icon: QrCodeIcon };
     const trips  = { id: 'MyTrips' as TabView, title: 'My Trips', icon: TruckIcon };
     const more   = { id: 'More' as TabView, title: 'More', icon: DotsThreeIcon };
 
     switch (role) {
       case 'super_admin':
-        // All 3 revenue streams visible — VJ accessible via More
+        // All revenue streams visible — Baggage airlines accessible via More
         return [home, cargo, mkt, scan, more];
       case 'admin':
         return [home, cargo, mkt, scan, more];
       case 'cargo_agent':
         return [home, cargo, scan, more];
-      case 'vj_agent':
-        return [home, vj, scan, more];
+      case 'baggage_agent':
+        return [home, baggage, scan, more];
       case 'marketing_agent':
         return [home, mkt, scan, more];
       case 'driver':

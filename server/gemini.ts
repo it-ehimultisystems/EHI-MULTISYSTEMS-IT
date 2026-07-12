@@ -39,7 +39,7 @@ Analyze this data and provide 3 concise business insights (2 sentences each):
 Today's Data:
 - Cargo Revenue: ₦${(cargoRevenue || 0).toLocaleString()}
 - Marketing Revenue: ₦${(marketingRevenue || 0).toLocaleString()}
-- ValueJet Revenue: ₦${(vjRevenue || 0).toLocaleString()}
+- Excess Baggage Revenue: ₦${(vjRevenue || 0).toLocaleString()}
 - Top Route: ${topRoute || 'N/A'}
 - Total Debt: ₦${(totalDebt || 0).toLocaleString()}
 - Cargo Entries: ${cargoCount || 0}

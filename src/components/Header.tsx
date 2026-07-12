@@ -28,7 +28,7 @@ export const Header = ({
   const getRoleDisplay = (role: string) => {
     switch(role) {
       case 'cargo_agent': return 'Cargo Agent';
-      case 'vj_agent': return 'ValueJet POS';
+      case 'baggage_agent': return user.assigned_airline ? `${user.assigned_airline} POS` : 'Baggage POS';
       case 'marketing_agent': return 'Marketing';
       case 'super_admin': return 'Super Admin';
       case 'admin': return 'Admin';
@@ -44,7 +44,7 @@ export const Header = ({
       case 'super_admin': return { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', text: 'var(--color-accent-amber)' };
       case 'admin':       return { bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.3)', text: 'var(--color-accent-cobalt)' };
       case 'cargo_agent': return { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', text: 'var(--color-success)' };
-      case 'vj_agent':    return { bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)', text: 'var(--color-purple)' };
+      case 'baggage_agent': return { bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)', text: 'var(--color-purple)' };
       case 'accountant':  return { bg: 'rgba(20,184,166,0.12)', border: 'rgba(20,184,166,0.3)', text: '#14b8a6' };
       case 'auditor':     return { bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)', text: '#f97316' };
       case 'driver':      return { bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.3)', text: '#64748b' };

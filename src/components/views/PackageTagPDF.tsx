@@ -23,6 +23,9 @@ export interface PackageTagPDFData {
   name: string; // Customer name
   destination: string;
   contentType: string; // 'Package' | 'Parcel'
+  pieces?: number;
+  kg?: number;
+  contents?: string;
   hubName?: string;
   date?: string;
   qrCodeDataUrl?: string;
@@ -109,6 +112,14 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#111827",
   },
+  // Consignee is the field a handler needs at a glance besides the
+  // destination -- same "large" treatment CargoTagPDF gives Consignee/
+  // Weight, instead of the regular fieldValue (9) used for Hub/Pcs/KG.
+  fieldValueLarge: {
+    fontSize: 13,
+    fontFamily: "Helvetica-Bold",
+    color: "#111827",
+  },
   typeBadge: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -170,7 +181,20 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
           </View>
 
           <View style={styles.typeBadge}>
-            <Text style={styles.typeBadgeText}>{data.contentType?.toUpperCase() || "PACKAGE"}</Text>
+            <Text style={styles.typeBadgeText}>
+              {data.contentType?.toUpperCase() || "PACKAGE"}{data.contents ? ` · ${data.contents.toUpperCase()}` : ""}
+            </Text>
+          </View>
+
+          <View style={styles.fieldRow}>
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>Pcs</Text>
+              <Text style={styles.fieldValue}>{data.pieces || "—"}</Text>
+            </View>
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>KG</Text>
+              <Text style={styles.fieldValue}>{data.kg || "—"}</Text>
+            </View>
           </View>
 
           <View style={styles.fieldRow}>
@@ -183,7 +207,7 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
           <View style={styles.fieldRow}>
             <View style={styles.fieldBlock}>
               <Text style={styles.fieldLabel}>Consignee</Text>
-              <Text style={styles.fieldValue}>{data.name || "—"}</Text>
+              <Text style={styles.fieldValueLarge}>{data.name || "—"}</Text>
             </View>
           </View>
         </View>

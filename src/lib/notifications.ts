@@ -82,7 +82,7 @@ export function buildCargoWhatsApp(data: {
   return text;
 }
 
-export function buildValueJetWhatsApp(data: {
+export function buildExcessBaggageWhatsApp(airlineName: string, data: {
   ref: string;
   passenger: string;
   flight: string;
@@ -93,8 +93,8 @@ export function buildValueJetWhatsApp(data: {
   mode: string;
   paymentNarration?: string;
 }, freeAllowanceKg: number, ratePerKg: number): string {
-  let text = 
-    `✈️ *EHI Multisystems — ValueJet*\n` +
+  let text =
+    `✈️ *EHI Multisystems — ${airlineName}*\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `*EXCESS BAGGAGE RECEIPT*\n` +
     `Ref: \`${data.ref}\`\n\n` +
@@ -111,9 +111,9 @@ export function buildValueJetWhatsApp(data: {
     text += `📝 *Narration:* ${data.paymentNarration}\n`;
   }
 
-  text += 
+  text +=
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `Thank you for flying ValueJet.\n` +
+    `Thank you for flying ${airlineName}.\n` +
     `_EHI Multisystems Nigeria Ltd_`;
 
   return text;

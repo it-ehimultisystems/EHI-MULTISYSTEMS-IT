@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense, useRef, useCallback, memo, useMemo } from 'react';
-import { User, TabView, Transaction, Expense } from '../lib/types';
+import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport, cleanupOldQueue } from '../lib/sync';
 import { useTheme } from '../lib/useTheme';
 import { Header as HeaderRaw } from './Header';
@@ -10,7 +10,7 @@ import { supabase, writeAuditLog } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { Dashboard as DashboardRaw } from './views/Dashboard';
 import { CargoForm as CargoFormRaw } from './views/CargoForm';
-import { ValueJetForm as ValueJetFormRaw } from './views/ValueJetForm';
+import { ExcessBaggageForm as ExcessBaggageFormRaw } from './views/ExcessBaggageForm';
 import { Analytics as AnalyticsRaw } from './views/Analytics';
 import { More as MoreRaw } from './views/More';
 import { TransactionLedger as TransactionLedgerRaw } from './views/TransactionLedger';
@@ -33,7 +33,7 @@ const BottomNav = memo(BottomNavRaw);
 const SideNav = memo(SideNavRaw);
 const Dashboard = memo(DashboardRaw);
 const CargoForm = memo(CargoFormRaw);
-const ValueJetForm = memo(ValueJetFormRaw);
+const ExcessBaggageForm = memo(ExcessBaggageFormRaw);
 const Analytics = memo(AnalyticsRaw);
 const More = memo(MoreRaw);
 const TransactionLedger = memo(TransactionLedgerRaw);
@@ -56,7 +56,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     if (role === 'office_work') return 'Cargo';
     if (role === 'marketing_agent') return 'Marketing';
     if (role === 'driver') return 'MyTrips';
-    if (role === 'vj_agent') return 'VJ POS';
+    if (role === 'baggage_agent') return `Baggage:${user.assigned_airline || ''}`;
     return 'Tower';
   };
   // Restores the tab the user was last on instead of always landing back on
@@ -87,6 +87,26 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   const [initError, setInitError] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  // Drives one nav tab per active row -- fetched once here and passed down
+  // to SideNav/BottomNav/More/the tab dispatch below, so every one of them
+  // stays in sync with whatever's configured in ExcessBaggageAirlines.tsx
+  // without each fetching (and possibly disagreeing) independently.
+  const [excessBaggageAirlines, setExcessBaggageAirlines] = useState<ExcessBaggageAirline[]>(() => {
+    try {
+      const cached = localStorage.getItem('ehi_excess_baggage_airlines');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    supabase.from('excess_baggage_airlines').select('*').eq('active', true).order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        if (data && !error) {
+          setExcessBaggageAirlines(data);
+          localStorage.setItem('ehi_excess_baggage_airlines', JSON.stringify(data));
+        }
+      });
+  }, []);
 
   const { theme, toggle } = useTheme();
   const { showToast } = useToast();
@@ -130,15 +150,19 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       const role = user.role;
       const allowed: TabView[] = [];
 
-      if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'accountant', 'auditor'].includes(role)) allowed.push('Tower');
+      if (['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'accountant', 'auditor'].includes(role)) allowed.push('Tower');
       if (['super_admin', 'admin', 'cargo_agent', 'office_work'].includes(role)) allowed.push('Cargo');
       if (['super_admin', 'admin', 'marketing_agent', 'office_work'].includes(role)) allowed.push('Marketing');
-      if (['super_admin', 'admin', 'vj_agent'].includes(role)) allowed.push('VJ POS');
+      if (['super_admin', 'admin'].includes(role)) {
+        excessBaggageAirlines.forEach(a => allowed.push(`Baggage:${a.name}`));
+      } else if (role === 'baggage_agent' && user.assigned_airline) {
+        allowed.push(`Baggage:${user.assigned_airline}`);
+      }
       if (['super_admin', 'admin', 'cargo_agent', 'marketing_agent', 'office_work'].includes(role)) allowed.push('Packages');
-      if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('Scan');
-      if (['super_admin', 'admin', 'cargo_agent', 'vj_agent', 'driver', 'office_work'].includes(role)) allowed.push('Incoming');
+      if (['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('Scan');
+      if (['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'driver', 'office_work'].includes(role)) allowed.push('Incoming');
       if (['driver'].includes(role)) allowed.push('MyTrips');
-      if (['super_admin', 'admin', 'accountant', 'auditor', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('More');
+      if (['super_admin', 'admin', 'accountant', 'auditor', 'cargo_agent', 'baggage_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('More');
       
       // IT Debug and Credit & Debit are sub-views typically reached from More
       if (role === 'super_admin') allowed.push('IT Debug');
@@ -156,7 +180,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('ehi-nav', handleEhiNav);
     };
-  }, [showToast, user.role]);
+  }, [showToast, user.role, user.assigned_airline, excessBaggageAirlines]);
 
   const flushPendingTx = useCallback(() => {
     if (pendingTxRef.current.length === 0) return;
@@ -194,11 +218,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         const startISO = startDate.toISOString();
         const endISO = endDate.toISOString();
 
-        const [cargoRes, vjRes, mktRes, packageRes, expRes] = await Promise.all([
+        const [cargoRes, baggageRes, mktRes, packageRes, expRes] = await Promise.all([
           addHubFilter(supabase.from('cargo_entries').select(`entry_ref,consignee_name,airline,commission_rate,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,amount_paid,payment_history${canSeePin ? ',pickup_pin' : ''}`).gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name),debt_amount_paid,payment_history').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,status,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,created_at,hub_id').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history,airline').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('marketing_entries').select('entry_ref,awb_tag_number,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,bb_kg,mb_kg,sb_kg,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name),debt_amount_paid,payment_history').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,status,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,created_at,hub_id').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('expenses').select('*').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500))
         ]);
 
@@ -235,11 +259,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           });
         }
 
-        if (vjRes.data) {
-          vjRes.data.forEach(r => {
+        if (baggageRes.data) {
+          baggageRes.data.forEach(r => {
             allTx.push({
               id: r.transaction_id || r.id,
-              name: r.passenger_name || 'VJ Passenger',
+              name: r.passenger_name || 'Baggage Passenger',
               detail: `${r.flight_no || ''} · ${r.destination || ''} · ${r.excess_kg || 0}kg excess`,
               amount: r.amount || 0,
               mode: r.payment_mode || 'POS',
@@ -249,6 +273,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               created_at: r.created_at,
               bank: r.bank,
               hub_id: r.hub_id,
+              airline: r.airline,
               destination: r.destination,
               excessKg: r.excess_kg,
               totalKg: r.total_kg,
@@ -269,6 +294,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             const enteredByName = Array.isArray(r.user_profiles) ? r.user_profiles[0]?.name : r.user_profiles?.name;
             allTx.push({
               id: r.entry_ref || r.id,
+              awb_tag_number: r.awb_tag_number || undefined,
               name: r.customer_name || 'Customer',
               detail: `${r.route || ''} · ${r.qty_big_bag || 0}BB ${r.qty_med_bag || 0}MB ${r.qty_small_bag || 0}SB`,
               amount: r.amount_paid || 0,
@@ -292,7 +318,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             allTx.push({
               id: r.entry_ref || r.id,
               name: r.customer_name || 'Customer',
-              detail: `${r.destination || ''} · ${r.content_type || 'Package'}`,
+              detail: `${r.destination || ''} · ${r.content_type || 'Package'} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg${r.contents ? ` · ${r.contents}` : ''}`,
               amount: r.amount || 0,
               mode: r.payment_mode || 'Cash',
               time: new Date(r.created_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
@@ -303,6 +329,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               hub_id: r.hub_id,
               destination: r.destination,
               contentType: r.content_type,
+              pieces: r.total_pcs || undefined,
+              kg: r.total_kg || undefined,
+              contents: r.contents || undefined,
               paymentNarration: r.payment_narration || undefined,
               debtPaid: r.debt_paid ?? undefined,
               debtPaidAt: r.debt_paid_at || undefined,
@@ -386,13 +415,13 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     // Tower, Scan, and More hold all channels, while type-specific views hold one.
     // Non-admin roles retain their original scale-readiness behavior.
     let needsCargo = ['cargo_agent', 'office_work', 'auditor'].includes(user.role);
-    let needsVJ = user.role === 'vj_agent';
+    let needsBaggage = user.role === 'baggage_agent';
     let needsMarketing = user.role === 'marketing_agent';
 
     if (isAdmin) {
       const isAggregateView = ['Tower', 'Scan', 'More'].includes(currentTab);
       needsCargo = isAggregateView || currentTab === 'Cargo';
-      needsVJ = isAggregateView || currentTab === 'VJ POS';
+      needsBaggage = isAggregateView || currentTab.startsWith('Baggage:');
       needsMarketing = isAggregateView || currentTab === 'Marketing';
     } else {
       // Preserve the exact existing logic for non-admins if they weren't explicitly matched above
@@ -460,15 +489,15 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       )
       .subscribe() : null;
 
-    const vjChannel = needsVJ ? supabase
-      .channel('ehi-vj-live')
+    const baggageChannel = needsBaggage ? supabase
+      .channel('ehi-baggage-live')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'manifests', filter: hubFilter },
         payload => {
           const r = payload.new as any;
           pushUnique({
             id: r.transaction_id || r.id,
-            name: r.passenger_name || 'VJ Passenger',
+            name: r.passenger_name || 'Baggage Passenger',
             detail: `${r.flight_no || ''} · ${r.destination || ''} · +${r.excess_kg || 0}kg excess`,
             amount: r.amount || 0,
             mode: r.payment_mode || 'POS',
@@ -477,6 +506,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             status: 'Delivered',
             created_at: r.created_at,
             hub_id: r.hub_id,
+            airline: r.airline,
             destination: r.destination,
             excessKg: r.excess_kg,
             totalKg: r.total_kg,
@@ -510,6 +540,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           const r = payload.new as any;
           pushUnique({
             id: r.entry_ref || r.id,
+            awb_tag_number: r.awb_tag_number || undefined,
             name: r.customer_name || 'Customer',
             detail: `${r.route || ''} · ${r.qty_big_bag || 0}BB ${r.qty_med_bag || 0}MB ${r.qty_small_bag || 0}SB`,
             amount: r.amount_paid || 0,
@@ -541,7 +572,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
     return () => {
       if (cargoChannel) supabase.removeChannel(cargoChannel);
-      if (vjChannel) supabase.removeChannel(vjChannel);
+      if (baggageChannel) supabase.removeChannel(baggageChannel);
       if (marketingChannel) supabase.removeChannel(marketingChannel);
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     };
@@ -587,11 +618,19 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       payload = {
         id: tx.id,
         entry_ref: tx.id,
+        // The tag/AWB number printed on the physical bag and encoded in its
+        // QR code -- distinct from entry_ref (an internal id the customer
+        // never sees). Without this, the public tracking page had no
+        // column to look it up by at all.
+        awb_tag_number: (tx as any).awb_tag_number || undefined,
         customer_name: tx.name,
         route: route,
         qty_big_bag: bb,
         qty_med_bag: mb,
         qty_small_bag: sb,
+        bb_kg: (tx as any)._bbKg ?? 0,
+        mb_kg: (tx as any)._mbKg ?? 0,
+        sb_kg: (tx as any)._sbKg ?? 0,
         amount_paid: tx.amount,
         payment_mode: tx.mode,
         bank: tx.bank,
@@ -643,6 +682,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         transaction_id: tx.id,
         passenger_name: tx.name,
         passenger_phone: (tx as any).phone || null,
+        airline: tx.airline || 'ValueJet',
         flight_no: flightNo,
         destination: dest,
         pnr: pnr,
@@ -663,6 +703,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         customer_name: tx.name,
         destination: tx.destination || '',
         content_type: (tx as any).contentType || 'Package',
+        total_pcs: tx.pieces || 1,
+        total_kg: tx.kg || 0,
+        contents: (tx as any).contents || null,
         status: tx.status || 'Intake',
         amount: tx.amount,
         payment_mode: tx.mode,
@@ -787,6 +830,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       updatePayload.customer_name = tx.name;
       updatePayload.destination = tx.destination;
       updatePayload.content_type = tx.contentType;
+      updatePayload.total_pcs = tx.pieces || 1;
+      updatePayload.total_kg = tx.kg || 0;
+      updatePayload.contents = (tx as any).contents || null;
     }
 
     const { error } = await supabase.from(table).update(updatePayload).eq(idCol, tx.id);
@@ -917,6 +963,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         onLogout={onLogout}
         theme={theme}
         onToggleTheme={toggle}
+        excessBaggageAirlines={excessBaggageAirlines}
       />
 
       <div
@@ -986,13 +1033,27 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                   onShowHistory={handleShowMarketingHistory}
                 />
               )}
-              {currentTab === 'VJ POS' && (
-                <ValueJetForm
-                  onAddTx={handleAddTx}
-                  user={user}
-                  onShowHistory={handleShowBaggageHistory}
-                  transactions={transactions}
-                />
+              {currentTab.startsWith('Baggage:') && (
+                (() => {
+                  const airlineName = currentTab.slice('Baggage:'.length);
+                  const airline = excessBaggageAirlines.find(a => a.name === airlineName);
+                  if (!airline) {
+                    return (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="animate-spin text-[var(--color-muted)]" size={24} />
+                      </div>
+                    );
+                  }
+                  return (
+                    <ExcessBaggageForm
+                      airline={airline}
+                      onAddTx={handleAddTx}
+                      user={user}
+                      onShowHistory={handleShowBaggageHistory}
+                      transactions={transactions}
+                    />
+                  );
+                })()
               )}
               {currentTab === 'Packages' && (
                 <PackageForm
@@ -1026,6 +1087,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                    dateRange={globalDateRange}
                    onDateRangeChange={setGlobalDateRange}
                    onEOD={handleEOD}
+                   excessBaggageAirlines={excessBaggageAirlines}
                 />
               )}
             </ErrorBoundary>

@@ -14,9 +14,10 @@ import { SupportTickets } from './SupportTickets';
 
 import { PricingConfiguration } from './PricingConfiguration';
 import { AirlineCommissions } from './AirlineCommissions';
+import { ExcessBaggageAirlines } from './ExcessBaggageAirlines';
 
 import { useState } from 'react';
-import { User, TabView, Transaction, Expense } from '../../lib/types';
+import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import {
   FileTextIcon,
@@ -47,11 +48,12 @@ import { ChevronRight } from 'lucide-react';
 
 import { StaffManagement } from './StaffManagement';
 
-export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onUpdateExpense, onChangeTab, dateRange, onDateRangeChange }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: (summary: any) => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; }) => {
+export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onUpdateExpense, onChangeTab, dateRange, onDateRangeChange, excessBaggageAirlines }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: (summary: any) => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; excessBaggageAirlines: ExcessBaggageAirline[]; }) => {
   const [eodView, setEodView] = useState(false);
   const [accountingView, setAccountingView] = useState(false);
   const [reportsView, setReportsView] = useState(false);
   const [settingsView, setSettingsView] = useState(false);
+  const [excessBaggageAirlinesView, setExcessBaggageAirlinesView] = useState(false);
 
   // Premium Enterprise modules views states
   const [bankReconView, setBankReconView] = useState(false);
@@ -138,6 +140,10 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
     return <PricingConfiguration user={user} onBack={() => setPricingView(false)} />;
   }
 
+  if (excessBaggageAirlinesView) {
+    return <ExcessBaggageAirlines onBack={() => setExcessBaggageAirlinesView(false)} />;
+  }
+
   if (supportView) {
     return <SupportTickets user={user} onBack={() => setSupportView(false)} />;
   }
@@ -220,14 +226,15 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           subtitle={`${transactions.length} entries — view, search and export`}
           onClick={() => setLedgerView(true)}
         />
-        {(user.role === 'super_admin' || user.role === 'admin') && (
+        {(user.role === 'super_admin' || user.role === 'admin') && excessBaggageAirlines.map(a => (
           <MenuItem
+            key={a.id}
             icon={AirplaneIcon}
-            title="ValueJet POS"
-            subtitle="Excess baggage counter — MMA2 terminal"
-            onClick={() => onChangeTab('VJ POS')}
+            title={`${a.name} POS`}
+            subtitle="Excess baggage counter"
+            onClick={() => onChangeTab(`Baggage:${a.name}`)}
           />
-        )}
+        ))}
         {['super_admin', 'admin', 'cargo_agent', 'marketing_agent', 'office_work'].includes(user.role) && (
           <MenuItem
             icon={TruckIcon}
@@ -396,6 +403,13 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           title="Pricing & Rates Configuration"
           subtitle="B2B client rates and retail standard tariffs"
           onClick={() => { if (isSuperAdmin) setPricingView(true); }}
+          disabled={!isSuperAdmin}
+        />
+        <MenuItem
+          icon={AirplaneIcon}
+          title="Excess Baggage Airlines"
+          subtitle="Add airlines and set their free allowance / rate per KG"
+          onClick={() => { if (isSuperAdmin) setExcessBaggageAirlinesView(true); }}
           disabled={!isSuperAdmin}
         />
         <MenuItem

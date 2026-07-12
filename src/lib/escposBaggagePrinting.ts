@@ -5,7 +5,8 @@ import {
   getAirlineLogoRaster, imageToEscPosRaster,
 } from './escposShared';
 
-export interface VJReceiptPrintData {
+export interface BaggageReceiptPrintData {
+  airlineName: string;
   entryRef: string;
   date: string;
   originState: string;
@@ -25,22 +26,23 @@ export interface VJReceiptPrintData {
   bankName?: string;
 }
 
-export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '58mm' | '80mm'): Promise<Uint8Array> {
+export async function compileBaggageReceiptStream(data: BaggageReceiptPrintData, width: '58mm' | '80mm'): Promise<Uint8Array> {
   const maxChars = width === '58mm' ? 32 : 48;
+  const airlineUpper = data.airlineName.toUpperCase();
   const chunks: Uint8Array[] = [new Uint8Array(INIT)];
   if (width === '58mm') {
-    // Plain-text EHI header (no logo raster), then ValueJet's own logo --
+    // Plain-text EHI header (no logo raster), then the airline's own logo --
     // keeps this width fast to print.
-    chunks.push(...(await textHeaderWithAirline('ValueJet', 100, 'VALUEJET AIRLINES')));
+    chunks.push(...(await textHeaderWithAirline(data.airlineName, 100, airlineUpper)));
   } else {
     chunks.push(...(await brandingHeader()));
-    const airlineRaster = await getAirlineLogoRaster('ValueJet', 130);
+    const airlineRaster = await getAirlineLogoRaster(data.airlineName, 130);
     if (airlineRaster) {
       chunks.push(airlineRaster);
       chunks.push(encoder.encode('\n'));
     } else {
       chunks.push(new Uint8Array(BOLD_ON));
-      chunks.push(encoder.encode("VALUEJET AIRLINES\n"));
+      chunks.push(encoder.encode(`${airlineUpper}\n`));
       chunks.push(new Uint8Array(BOLD_OFF));
     }
   }
@@ -48,7 +50,7 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
   chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT), new Uint8Array(BOLD_ON));
   chunks.push(encoder.encode("EXCESS BAGGAGE RECEIPT\n"));
   chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
-  chunks.push(encoder.encode(`ValueJet Counter - ${data.originState}\n\n`));
+  chunks.push(encoder.encode(`${data.airlineName} Counter - ${data.originState}\n\n`));
 
   // QR dropped on 58mm -- keeps the receipt shorter/faster to print; the
   // ref number below is still there for manual lookup/tracking.
@@ -66,7 +68,7 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
   chunks.push(encoder.encode(fieldRow('PASSENGER:', data.passengerName, maxChars)));
   chunks.push(encoder.encode(fieldRow('FLIGHT:', data.flight, maxChars)));
   chunks.push(encoder.encode(fieldRow('DESTINATION:', data.destination, maxChars)));
-  
+
   // Clean, structured border for Baggage Breakdown section
   chunks.push(encoder.encode(divider(maxChars, '=')));
   chunks.push(new Uint8Array(CENTER), new Uint8Array(BOLD_ON));
@@ -77,7 +79,7 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
   chunks.push(encoder.encode(fieldRow('  Total Pieces:', `${data.totalPieces} PCS`, maxChars)));
   chunks.push(encoder.encode(fieldRow('  Total Weight:', `${data.totalWeightKg} KG`, maxChars)));
   chunks.push(encoder.encode(fieldRow('  Free Allowance:', `${data.freeAllowanceKg} KG`, maxChars)));
-  
+
   if (data.excessChargeKg > 0) {
     chunks.push(new Uint8Array(BOLD_ON));
     chunks.push(encoder.encode(fieldRow('  EXCESS WEIGHT:', `${data.excessChargeKg} KG`, maxChars)));
@@ -85,7 +87,7 @@ export async function compileVJReceiptStream(data: VJReceiptPrintData, width: '5
   } else {
     chunks.push(encoder.encode(fieldRow('  Excess Weight:', '0 KG', maxChars)));
   }
-  
+
   chunks.push(encoder.encode(fieldRow('  Rate per KG:', `NGN ${data.ratePerKg.toLocaleString('en-NG')}`, maxChars)));
   chunks.push(encoder.encode(divider(maxChars)));
 

@@ -40,21 +40,24 @@ export async function fetchCargoByRef(ref: string, localTransactions?: any[]): P
 
   if (cargoData) return { ...cargoData, _table: 'cargo_entries' };
 
-  // Try manifests (ValueJet)
-  const { data: vjData } = await supabase
+  // Try manifests (excess-baggage tickets -- ValueJet and any other configured airline)
+  const { data: baggageData } = await supabase
     .from('manifests')
     .select('*')
     .eq('transaction_id', cleanRef)
     .limit(1)
     .maybeSingle();
 
-  if (vjData) return { ...vjData, _table: 'manifests' };
+  if (baggageData) return { ...baggageData, _table: 'manifests' };
 
-  // Try marketing_entries (marketing)
+  // Try marketing_entries (marketing) -- match on either entry_ref (internal
+  // id) or awb_tag_number (the ref actually printed on the bag tag/QR code).
+  // Scanning the physical tag only ever produces the latter, so matching
+  // entry_ref alone meant a marketing tag could never be found by scan.
   const { data: mktData } = await supabase
     .from('marketing_entries')
     .select('*')
-    .eq('entry_ref', cleanRef)
+    .or(`entry_ref.eq."${safeRef}",awb_tag_number.eq."${safeRef}"`)
     .limit(1)
     .maybeSingle();
 
@@ -213,23 +216,24 @@ export async function validateScan(
     remark: cargo.remark || null,
   };
 
-  // ValueJet excess-baggage tickets (manifests) are a point-of-sale
-  // transaction, not a tracked shipment -- ValueJetForm sets status:
-  // 'Delivered' directly at creation with no ARRIVE/DEPART scan and no
-  // tracking_events row ever written. The terminal-state DELIVER guard
-  // below already blocks a DELIVER scan on these (no ARRIVE record can
-  // ever exist), but ARRIVE/DEPART's "first-ever scan" allowance (for
-  // legitimate origin-hub cargo) doesn't know the difference -- scanning a
-  // VJ ticket's QR in either mode was reachable via the Scanner (no type
-  // gate blocks it) and would create a bogus tracking_events row, revert
-  // manifests.status from 'Delivered' back to 'Arrived'/'In-Transit', and
-  // could fire a stray arrival/departure SMS to the passenger.
+  // Excess-baggage tickets (manifests) -- ValueJet or any other configured
+  // airline -- are a point-of-sale transaction, not a tracked shipment --
+  // ExcessBaggageForm sets status: 'Delivered' directly at creation with no
+  // ARRIVE/DEPART scan and no tracking_events row ever written. The
+  // terminal-state DELIVER guard below already blocks a DELIVER scan on
+  // these (no ARRIVE record can ever exist), but ARRIVE/DEPART's
+  // "first-ever scan" allowance (for legitimate origin-hub cargo) doesn't
+  // know the difference -- scanning a baggage ticket's QR in either mode
+  // was reachable via the Scanner (no type gate blocks it) and would create
+  // a bogus tracking_events row, revert manifests.status from 'Delivered'
+  // back to 'Arrived'/'In-Transit', and could fire a stray arrival/
+  // departure SMS to the passenger.
   if (cargo._table === 'manifests' && (mode === 'ARRIVE' || mode === 'DEPART')) {
     return {
       type: 'ERROR',
       cargo: cargoInfo,
       currentHub,
-      message: `${awb} is a ValueJet excess-baggage ticket, already paid and delivered at the counter -- it doesn't use ARRIVE/DEPART scanning.`,
+      message: `${awb} is a ${cargo.airline || 'ValueJet'} excess-baggage ticket, already paid and delivered at the counter -- it doesn't use ARRIVE/DEPART scanning.`,
     };
   }
 
@@ -578,9 +582,9 @@ export async function logScanEvent(
       consigneeName  = vjHit.data.passenger_name || '';
       consigneePhone = vjHit.data.passenger_phone || '';
     } else {
-      const mktHit = await supabase.from('marketing_entries').select('entry_ref, customer_name, customer_phone').eq('entry_ref', ref).limit(1).maybeSingle();
+      const mktHit = await supabase.from('marketing_entries').select('entry_ref, customer_name, customer_phone').or(`entry_ref.eq."${safeRef}",awb_tag_number.eq."${safeRef}"`).limit(1).maybeSingle();
       if (mktHit.data) {
-        await supabase.from('marketing_entries').update({ status: newStatus }).eq('entry_ref', ref);
+        await supabase.from('marketing_entries').update({ status: newStatus }).eq('entry_ref', mktHit.data.entry_ref);
         consigneeName  = mktHit.data.customer_name || '';
         consigneePhone = mktHit.data.customer_phone || '';
       } else {

@@ -96,8 +96,8 @@ const RoutesTable = ({ data }: { data: any[] }) => (
       <View style={styles.tableRow} key={i}>
         <View style={styles.tableCol}><Text style={styles.tableCell}>{r.route}</Text></View>
         <View style={styles.tableCol}><Text style={[styles.tableCell, styles.textCenter]}>{r.count}</Text></View>
-        <View style={styles.tableCol}><Text style={[styles.tableCell, styles.textRight]}>{r.cargo.toLocaleString('en-NG')}</Text></View>
-        <View style={styles.tableCol}><Text style={[styles.tableCell, styles.textRight]}>{r.mktg.toLocaleString('en-NG')}</Text></View>
+        <View style={styles.tableCol}><Text style={[styles.tableCell, styles.textRight]}>{r.cargo.toLocaleString('en-NG', { maximumFractionDigits: 2 })}</Text></View>
+        <View style={styles.tableCol}><Text style={[styles.tableCell, styles.textRight]}>{r.mktg.toLocaleString('en-NG', { maximumFractionDigits: 2 })}</Text></View>
         <View style={styles.tableCol}><Text style={[styles.tableCell, styles.textRight, styles.fontBold]}>{fmt(r.revenue)}</Text></View>
       </View>
     ))}

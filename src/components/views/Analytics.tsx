@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
-import { fmt, uid } from '../../lib/helpers';
+import { fmt, uid, roundMoney } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { normalizeAirlineName } from '../../lib/helpers';
 import { AnimatedNumber } from '../ui/AnimatedNumber';
@@ -186,7 +186,7 @@ export const Analytics = ({
       if (!t.airline) return sum;
       const normalizedAirline = normalizeAirlineName(t.airline);
       const commRate = t.commissionRate ?? airlineCommissions[normalizedAirline] ?? 0;
-      return sum + t.amount * (1 - commRate / 100);
+      return sum + roundMoney(t.amount * (1 - commRate / 100));
     }, 0);
 
     // Find top route in today's transactions
@@ -247,7 +247,7 @@ export const Analytics = ({
         time: label,
         cargo:     txInHour.filter(t => t.type === 'cargo').reduce((s, t) => s + t.amount, 0),
         marketing: txInHour.filter(t => t.type === 'marketing').reduce((s, t) => s + t.amount, 0),
-        valuejet:  txInHour.filter(t => t.type === 'baggage').reduce((s, t) => s + t.amount, 0),
+        excessBaggage: txInHour.filter(t => t.type === 'baggage').reduce((s, t) => s + t.amount, 0),
       };
     });
     return hours;
@@ -483,10 +483,10 @@ export const Analytics = ({
           </div>
         </div>
 
-        {/* KPI 3 : ValueJet Baggage */}
+        {/* KPI 3 : Excess Baggage */}
         <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
           <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-accent-cobalt)]" />
-          <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">ValueJet Baggage</div>
+          <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Excess Baggage</div>
           <div className="text-[17px] font-bold font-mono text-[var(--color-accent-cobalt)] pl-1">
             {fmt(stats.vjRev)}
           </div>
@@ -556,7 +556,7 @@ export const Analytics = ({
               />
               <Area type="monotone" dataKey="cargo" stroke="var(--color-accent-amber)" fill="rgba(245,158,11,0.05)" strokeWidth={1.5} />
               <Area type="monotone" dataKey="marketing" stroke="var(--color-success)" fill="rgba(16,185,129,0.05)" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="valuejet" stroke="var(--color-accent-cobalt)" fill="rgba(59,130,246,0.05)" strokeWidth={1.5} />
+              <Area type="monotone" dataKey="excessBaggage" stroke="var(--color-accent-cobalt)" fill="rgba(59,130,246,0.05)" strokeWidth={1.5} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -571,7 +571,7 @@ export const Analytics = ({
           </div>
           <div className="flex items-center space-x-1">
             <span className="w-2 h-2 rounded-full bg-[var(--color-accent-cobalt)]" />
-            <span>ValueJet</span>
+            <span>Excess Baggage</span>
           </div>
         </div>
       </div>

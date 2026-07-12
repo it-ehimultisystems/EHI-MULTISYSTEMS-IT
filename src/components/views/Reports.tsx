@@ -173,7 +173,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
       streams: [
         { name: 'Air Cargo',          count: cargo.length,     amount: cargo.reduce((s,t) => s+t.amount, 0) },
         { name: 'Field Marketing',    count: marketing.length, amount: marketing.reduce((s,t) => s+t.amount, 0) },
-        { name: 'ValueJet POS',       count: vj.length,        amount: vj.reduce((s,t) => s+t.amount, 0) },
+        { name: 'Excess Baggage',     count: vj.length,        amount: vj.reduce((s,t) => s+t.amount, 0) },
       ],
       modes: [
         { name: 'Cash',     amount: filteredTx.filter(t => t.mode === 'Cash').reduce((s,t) => s+t.amount, 0) },

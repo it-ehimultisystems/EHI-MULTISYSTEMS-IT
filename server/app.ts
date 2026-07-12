@@ -182,7 +182,7 @@ export function createApp() {
     if (!adminCtx) return;
     const { adminClient } = { adminClient: adminCtx.admin };
 
-    const { name, email, password, role, hub_id, hub_type, phone } = req.body;
+    const { name, email, password, role, hub_id, hub_type, phone, assigned_airline } = req.body;
     if (!name || !email || !password || !role || !hub_id) {
       return res.status(400).json({ error: 'Missing required fields: name, email, password, role, hub_id' });
     }
@@ -205,7 +205,7 @@ export function createApp() {
 
       const { error: profileError } = await adminClient
         .from('user_profiles')
-        .upsert({ id: authData.user.id, email: email, name, role, hub_id, hub_type: hub_type || 'Cargo Station', phone: phone || null, active: true });
+        .upsert({ id: authData.user.id, email: email, name, role, hub_id, hub_type: hub_type || 'Cargo Station', phone: phone || null, assigned_airline: assigned_airline || null, active: true });
 
       if (profileError) {
         console.error('Profile update failed:', profileError.message);
@@ -242,7 +242,7 @@ export function createApp() {
     // super_admin is deliberately not a selectable role here, same reasoning
     // as the update-staff fix: granting the top role should be a conscious
     // one-at-a-time action, never something a CSV typo can do to N rows at once.
-    const VALID_ROLES = ['admin', 'cargo_agent', 'vj_agent', 'marketing_agent', 'driver', 'accountant', 'auditor'];
+    const VALID_ROLES = ['admin', 'cargo_agent', 'baggage_agent', 'marketing_agent', 'driver', 'accountant', 'auditor'];
 
     const results: Array<{ row: number; email: string; success: boolean; tempPassword?: string; error?: string }> = [];
 

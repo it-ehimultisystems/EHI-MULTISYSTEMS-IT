@@ -30,6 +30,7 @@ export interface MarketingTagPDFData {
   bigBags: number;
   medBags: number;
   smallBags: number;
+  totalKg?: number;
   qrCodeDataUrl?: string;
   airlineLogoUrl?: string | null;
 }
@@ -140,6 +141,14 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#111827",
   },
+  // Customer and Total KG are the two fields a handler needs at a glance
+  // besides the route -- same "large" treatment CargoTagPDF gives Consignee
+  // and Weight, instead of the regular fieldValue (9) used for Hub.
+  fieldValueLarge: {
+    fontSize: 13,
+    fontFamily: "Helvetica-Bold",
+    color: "#111827",
+  },
   bagBadge: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -215,8 +224,8 @@ const MarketingTagPage = ({
 
         <View style={styles.fieldRow}>
           <View style={styles.fieldBlock}>
-            <Text style={styles.fieldLabel}>Bag Type</Text>
-            <Text style={styles.fieldValue}>{bagPage.bagTypeFull}</Text>
+            <Text style={styles.fieldLabel}>Total KG</Text>
+            <Text style={styles.fieldValueLarge}>{data.totalKg ? `${data.totalKg} KG` : "—"}</Text>
           </View>
           <View style={styles.fieldBlock}>
             <Text style={styles.fieldLabel}>Hub</Text>
@@ -227,7 +236,7 @@ const MarketingTagPage = ({
         <View style={styles.fieldRow}>
           <View style={styles.fieldBlock}>
             <Text style={styles.fieldLabel}>Customer</Text>
-            <Text style={styles.fieldValue}>{data.name || "—"}</Text>
+            <Text style={styles.fieldValueLarge}>{data.name || "—"}</Text>
           </View>
         </View>
       </View>

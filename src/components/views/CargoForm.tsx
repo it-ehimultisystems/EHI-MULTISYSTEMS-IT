@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Transaction, User } from "../../lib/types";
 import {
-  CORPORATE_CLIENTS,
   CONTENT_TYPES,
   BANKS,
   CARGO_ROUTES,
 } from "../../lib/constants";
-import { fmt, tnow, generatePickupPin, normalizeAirlineName, getHubCode } from "../../lib/helpers";
+import { fmt, roundMoney, tnow, generatePickupPin, normalizeAirlineName, getHubCode } from "../../lib/helpers";
 import { isTagAlreadyDelivered } from "../../lib/scanLogic";
 import {
   CheckCircle,
@@ -141,7 +140,7 @@ export const CargoForm = ({
 
   // --- STANDARD RETAIL STATES ---
   const [serialNumber, setSerialNumber] = useState<number>(getLocalSerial);
-  const [consignee, setConsignee] = useState(CORPORATE_CLIENTS[0] as string);
+  const [consignee, setConsignee] = useState("Other");
   const [airline, setAirline] = useState("Arik Air");
   const [customAirline, setCustomAirline] = useState("");
   const [customConsignee, setCustomConsignee] = useState("");
@@ -187,7 +186,7 @@ export const CargoForm = ({
         // both processing their own transaction #5 of the day would
         // generate the IDENTICAL narration code, a guaranteed collision,
         // not just a probabilistic one. Matches the random-serial approach
-        // PackageForm/MarketingWorkspace/ValueJetForm already use.
+        // PackageForm/MarketingWorkspace/ExcessBaggageForm already use.
         setNarrationCode(generatePaymentNarration(user.hub_code || user.hub, Math.floor(Math.random() * 9000) + 1000));
       });
     }
@@ -231,7 +230,7 @@ export const CargoForm = ({
   const autoAmount = useMemo(() => {
     const w = Math.round(parseFloat(kg)) || 0;
     const rate = standardRates[route] || 500;
-    return w > 0 ? (w * rate).toString() : "";
+    return w > 0 ? roundMoney(w * rate).toString() : "";
   }, [kg, route, standardRates]);
 
   const [availableAirlines, setAvailableAirlines] = useState<string[]>([
@@ -463,6 +462,28 @@ export const CargoForm = ({
     return () => { active = false; };
   }, []);
 
+  // Options for the Retail Entry Consignee dropdown -- the real corporate
+  // client list from Supabase (kept live-synced above), not a hardcoded
+  // roster. "Other" always stays last so staff can type a one-off name for
+  // a walk-in customer who isn't a registered corporate client.
+  const consigneeOptions = useMemo(
+    () => [...corpClients.map((c) => c.company_name), "Other"],
+    [corpClients],
+  );
+
+  // consignee starts on "Other" (see useState above) so the field is never
+  // silently defaulted to a hardcoded company name -- once real corporate
+  // clients are available (from the localStorage cache on first paint, or
+  // the live Supabase fetch above), switch to the first real one so staff
+  // aren't stuck manually picking it every time. Skipped if the agent has
+  // already started typing a custom name.
+  useEffect(() => {
+    if (corpClients.length > 0 && consignee === "Other" && !customConsignee) {
+      setConsignee(corpClients[0].company_name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [corpClients]);
+
   // Load real corporate contract rates from Supabase — this table was
   // NEVER fetched here at all: corpRates only ever came from localStorage
   // or the hardcoded placeholder seed above, whose corporate_client_id
@@ -561,6 +582,10 @@ export const CargoForm = ({
   const handleLogFieldIntake = async () => {
     if (!intakeAwb.trim()) {
       showToast({ message: "Please provide the Air Waybill / Tag Number.", type: "warning" });
+      return;
+    }
+    if (!intakeSenderPhone.trim()) {
+      showToast({ message: "Client phone number is required.", type: "warning" });
       return;
     }
     // parseInt(intakePcs) || 1 at the point of use only catches "0" and
@@ -678,7 +703,7 @@ export const CargoForm = ({
         ? contractRateRecord.rate_per_kg
         : 500;
 
-    const computedCost = weightNum * rateToUse;
+    const computedCost = roundMoney(weightNum * rateToUse);
 
     // Build central ledger transaction record (Debt contract)
     const finalTxDetail = `${selectedIntake.airline} · ${selectedIntake.awb} · ${selectedIntake.pieces}pcs · ${weightNum}KG · ${selectedIntake.route} · ${selectedIntake.contentType}`;
@@ -808,7 +833,7 @@ export const CargoForm = ({
   const actualConsignee = consignee === "Other" ? customConsignee : consignee;
   const w = Math.round(parseFloat(kg)) || 0;
   const rate = standardRates[route] || 500;
-  const minAmount = w * rate;
+  const minAmount = roundMoney(w * rate);
   // Use manual amount if typed, else fall back to auto-computed price
   const effectiveAmount = amount || autoAmount;
   const parsedAmount = parseFloat(effectiveAmount) || 0;
@@ -823,12 +848,13 @@ export const CargoForm = ({
   const isRetailFormValid = useMemo(
     () =>
       actualConsignee.trim().length > 0 &&
+      senderPhone.trim().length > 0 &&
       route.trim().length > 0 &&
       contentType.trim().length > 0 &&
       w > 0 &&
       Number.isInteger(piecesNum) && piecesNum > 0 &&
       parsedAmount >= minAmount && parsedAmount > 0,
-    [actualConsignee, route, contentType, w, piecesNum, parsedAmount, minAmount],
+    [actualConsignee, senderPhone, route, contentType, w, piecesNum, parsedAmount, minAmount],
   );
 
   const handleRetailSubmit = async () => {
@@ -976,9 +1002,9 @@ export const CargoForm = ({
   };
 
   const handleReset = () => {
-    setConsignee(CORPORATE_CLIENTS[0] as string);
+    setConsignee(consigneeOptions[0] || "Other");
     setCustomConsignee("");
-    setAirline("Arik Air");
+    setAirline(availableAirlines[0] || "Other");
     setCustomAirline("");
     fetchAwbPreview();
     setPcs("1");
@@ -1410,7 +1436,7 @@ export const CargoForm = ({
                     onChange={(e) => setConsignee(e.target.value)}
                     className={formInputClass}
                   >
-                    {CORPORATE_CLIENTS.map((c) => (
+                    {consigneeOptions.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>
@@ -1430,9 +1456,18 @@ export const CargoForm = ({
                     id="retail-consignee-phone"
                     name="consignee-phone"
                     type="tel"
-                    placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
+                    placeholder="Consignee phone -- include country code for foreign customers (e.g. +44, +1, +233)"
                     value={consigneePhone}
                     onChange={(e) => setConsigneePhone(e.target.value)}
+                    className={formInputClass}
+                  />
+                  <input
+                    id="retail-sender-phone"
+                    name="sender-phone"
+                    type="tel"
+                    placeholder="Sender phone (required) -- include country code for foreign customers (e.g. +44, +1, +233)"
+                    value={senderPhone}
+                    onChange={(e) => setSenderPhone(e.target.value)}
                     className={formInputClass}
                   />
                 </div>
@@ -1687,22 +1722,6 @@ export const CargoForm = ({
                   className={formInputClass}
                 />
               </div>
-
-              <div>
-                {renderLabel(
-                  MessageSquare,
-                  "Sender Phone — WhatsApp Receipt (Optional)",
-                )}
-                <input
-                  id="retail-sender-phone"
-                  name="sender-phone"
-                  type="tel"
-                  placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
-                  value={senderPhone}
-                  onChange={(e) => setSenderPhone(e.target.value)}
-                  className={formInputClass}
-                />
-              </div>
             </div>
 
             <div className="pt-8">
@@ -1925,6 +1944,17 @@ export const CargoForm = ({
                   </div>
 
                   <div>
+                    {renderLabel(MessageSquare, "Client Phone (Required)")}
+                    <input
+                      type="tel"
+                      placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
+                      value={intakeSenderPhone}
+                      onChange={(e) => setIntakeSenderPhone(e.target.value)}
+                      className={formInputClass}
+                    />
+                  </div>
+
+                  <div>
                     {renderLabel(Plane, "Carrier Airline")}
                     <select
                       value={intakeAirline}
@@ -1977,34 +2007,19 @@ export const CargoForm = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      {renderLabel(Layers, "Cargo Content Type")}
-                      <select
-                        value={intakeContentType}
-                        onChange={(e) => setIntakeContentType(e.target.value)}
-                        className={formInputClass}
-                      >
-                        {CONTENT_TYPES.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      {renderLabel(
-                        MessageSquare,
-                        "Field Client Phone (WhatsApp Optional)",
-                      )}
-                      <input
-                        type="tel"
-                        placeholder="Include country code for foreign customers (e.g. +44, +1, +233)"
-                        value={intakeSenderPhone}
-                        onChange={(e) => setIntakeSenderPhone(e.target.value)}
-                        className={formInputClass}
-                      />
-                    </div>
+                  <div>
+                    {renderLabel(Layers, "Cargo Content Type")}
+                    <select
+                      value={intakeContentType}
+                      onChange={(e) => setIntakeContentType(e.target.value)}
+                      className={formInputClass}
+                    >
+                      {CONTENT_TYPES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="bg-[rgba(245,158,11,0.03)] border border-[rgba(245,158,11,0.1)] p-3 rounded text-[11px] font-sans text-[var(--color-light-muted)] space-y-1">

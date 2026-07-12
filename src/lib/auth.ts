@@ -110,6 +110,7 @@ export interface CreateStaffPayload {
   hub_id:    string;
   hub_type:  string;
   phone?:    string;
+  assigned_airline?: string;
 }
 
 // Creates a new staff account via the server endpoint
@@ -219,7 +220,7 @@ export async function fetchStaffList(hubId?: string): Promise<any[]> {
 // Update a staff profile (role, hub, active status)
 export async function updateStaffProfile(
   userId: string,
-  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string; can_print_ledger?: boolean }
+  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string; can_print_ledger?: boolean; assigned_airline?: string | null }
 ): Promise<void> {
   const { data: sess } = await supabase.auth.getSession();
   const token = sess.session?.access_token || '';

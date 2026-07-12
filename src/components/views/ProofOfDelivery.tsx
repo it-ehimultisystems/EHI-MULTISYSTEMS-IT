@@ -22,6 +22,7 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
   const [notes, setNotes] = useState('');
   const [isPhotoActive, setIsPhotoActive] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [hasSignature, setHasSignature] = useState(false);
   const { showToast } = useToast();
 
   const signatureRef = useRef<SignatureCanvas>(null);
@@ -65,6 +66,7 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
 
   const clearSignature = () => {
     signatureRef.current?.clear();
+    setHasSignature(false);
   };
 
   const handleConfirm = () => {
@@ -115,7 +117,7 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
     }
   };
 
-  const isFormValid = receiverName.trim() !== '' && !signatureRef.current?.isEmpty();
+  const isFormValid = receiverName.trim() !== '' && hasSignature;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-start overflow-y-auto w-full p-4 md:p-8 select-none">
@@ -199,13 +201,12 @@ export const ProofOfDeliveryForm = ({ awbNumber, consigneeName, user, onComplete
               <label className="text-[10px] text-[var(--color-muted)] font-mono uppercase">Sign here to confirm receipt <span className="text-red-500">*</span></label>
               <button onClick={clearSignature} className="text-[10px] font-mono text-[var(--color-accent-amber)] hover:text-amber-400 bg-transparent border-none cursor-pointer">Clear</button>
             </div>
-            <div className="w-full h-[200px] bg-white rounded border-2 border-dashed border-[var(--color-accent-amber)] overflow-hidden" onTouchEnd={() => setReceiverPhone(receiverPhone)}>
-              {/* onTouchEnd trick forces re-render to evaluate isFormValid after signature ends */}
-              <SignatureCanvas 
-                ref={signatureRef} 
-                penColor="black" 
-                canvasProps={{ className: 'sigCanvas w-full h-full' }} 
-                onEnd={() => setReceiverName(receiverName)} 
+            <div className="w-full h-[200px] bg-white rounded border-2 border-dashed border-[var(--color-accent-amber)] overflow-hidden">
+              <SignatureCanvas
+                ref={signatureRef}
+                penColor="black"
+                canvasProps={{ className: 'sigCanvas w-full h-full' }}
+                onEnd={() => setHasSignature(!signatureRef.current?.isEmpty())}
               />
             </div>
           </div>

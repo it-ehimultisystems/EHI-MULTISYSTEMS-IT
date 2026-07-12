@@ -1,6 +1,16 @@
 import { PRICING, CARGO_ROUTES } from './constants.js';
 import { Transaction, PaymentMode } from './types.js';
 
+// Money math done as plain float multiplication/division (e.g. amount * (1
+// - commissionRate / 100)) routinely lands a fraction of a kobo off an exact
+// value -- 8300 * (1 - 7/100) is 7718.999999999999, not 7719 -- because 0.07
+// has no exact binary representation. A single result like that displays
+// fine (fmt() rounds it), but summing many such near-misses across a ledger
+// before ever rounding lets the error compound into a visibly wrong total.
+// Round each line item to the nearest kobo immediately after computing it,
+// before it goes into any sum.
+export const roundMoney = (amount: number): number => Math.round(amount * 100) / 100;
+
 export const fmt = (amount: number) => {
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
@@ -186,10 +196,11 @@ export function downloadDailyCSV(
       ];
     });
   } else if (streamType === 'baggage') {
-    headers = ['Ref', 'Time', 'Passenger', 'PNR', 'Flight', 'Destination', 'PCS', 'Total KG', 'Excess KG', 'Amount', 'Mode', 'Bank'];
+    headers = ['Ref', 'Time', 'Airline', 'Passenger', 'PNR', 'Flight', 'Destination', 'PCS', 'Total KG', 'Excess KG', 'Amount', 'Mode', 'Bank'];
     rows = todayTx.map(t => [
       t.id,
       t.time || '',
+      t.airline || 'ValueJet',
       t.name || '',
       t.pnr || '',
       t.flight || '',
@@ -225,7 +236,7 @@ export function downloadDailyCSV(
   // Escape CSV values
   const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
 
-  const titleRow = `EHI Multisystems Nigeria Ltd — ${streamType === 'cargo' ? 'Cargo' : streamType === 'baggage' ? 'ValueJet' : 'Marketing'} Entries`;
+  const titleRow = `EHI Multisystems Nigeria Ltd — ${streamType === 'cargo' ? 'Cargo' : streamType === 'baggage' ? 'Excess Baggage' : 'Marketing'} Entries`;
   const dateRow = `Hub: ${hubName} | Date: ${todayLabel}`;
   const totalAmount = todayTx.reduce((s, t) => s + (t.amount || 0), 0);
   const summaryRow = `Total Entries: ${todayTx.length} | Total Revenue: NGN ${totalAmount.toLocaleString('en-NG')}`;

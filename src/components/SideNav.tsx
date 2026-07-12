@@ -13,8 +13,13 @@ import {
   SunIcon,
   MoonIcon,
 } from "@phosphor-icons/react";
-import { User, TabView } from "../lib/types";
+import { User, TabView, ExcessBaggageAirline } from "../lib/types";
 import { Theme } from "../lib/useTheme";
+
+// Sentinel id in allTabs' role-gated list below, expanded at render time
+// into one real nav entry per active configured excess-baggage airline
+// (or the agent's single assigned one) -- see visibleTabs.
+const BAGGAGE_MARKER = "__BAGGAGE__";
 
 export const SideNav = ({
   user,
@@ -23,6 +28,7 @@ export const SideNav = ({
   onLogout,
   theme,
   onToggleTheme,
+  excessBaggageAirlines,
 }: {
   user: User;
   currentTab: TabView;
@@ -30,6 +36,7 @@ export const SideNav = ({
   onLogout: () => void;
   theme: Theme;
   onToggleTheme: () => void;
+  excessBaggageAirlines: ExcessBaggageAirline[];
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -63,7 +70,7 @@ export const SideNav = ({
         "super_admin",
         "admin",
         "cargo_agent",
-        "vj_agent",
+        "baggage_agent",
         "marketing_agent",
         "accountant",
         "auditor",
@@ -82,10 +89,10 @@ export const SideNav = ({
       roles: ["super_admin", "admin", "marketing_agent", "office_work"],
     },
     {
-      id: "VJ POS",
+      id: BAGGAGE_MARKER as TabView,
       icon: AirplaneIcon,
-      label: "ValueJet POS",
-      roles: ["super_admin", "admin", "vj_agent"],
+      label: "",
+      roles: ["super_admin", "admin", "baggage_agent"],
     },
     {
       id: "Packages",
@@ -101,7 +108,7 @@ export const SideNav = ({
         "super_admin",
         "admin",
         "cargo_agent",
-        "vj_agent",
+        "baggage_agent",
         "marketing_agent",
         "accountant",
         "auditor",
@@ -113,18 +120,34 @@ export const SideNav = ({
       id: "Incoming",
       icon: ArrowLineDownIcon,
       label: "Incoming To Hub",
-      roles: ["super_admin", "admin", "cargo_agent", "vj_agent", "driver", "office_work"],
+      roles: ["super_admin", "admin", "cargo_agent", "baggage_agent", "driver", "office_work"],
     },
     { id: "MyTrips", icon: TruckIcon, label: "My Trips", roles: ["driver"] },
     {
       id: "More",
       icon: DotsThreeIcon,
       label: "More",
-      roles: ["super_admin", "admin", "accountant", "auditor", "cargo_agent", "vj_agent", "marketing_agent", "driver", "office_work"],
+      roles: ["super_admin", "admin", "accountant", "auditor", "cargo_agent", "baggage_agent", "marketing_agent", "driver", "office_work"],
     },
   ];
 
-  const visibleTabs = allTabs.filter((t) => t.roles.includes(user.role));
+  const visibleTabs = allTabs
+    .filter((t) => t.roles.includes(user.role))
+    .flatMap((t) => {
+      if ((t.id as string) !== BAGGAGE_MARKER) return [t];
+      if (user.role === "baggage_agent") {
+        return user.assigned_airline
+          ? [{ id: `Baggage:${user.assigned_airline}` as TabView, icon: AirplaneIcon, label: user.assigned_airline, roles: t.roles }]
+          : [];
+      }
+      // super_admin/admin see every active configured airline
+      return excessBaggageAirlines.map((a) => ({
+        id: `Baggage:${a.name}` as TabView,
+        icon: AirplaneIcon,
+        label: `${a.name} POS`,
+        roles: t.roles,
+      }));
+    });
 
   const activeColor = "var(--color-accent-amber)";
 

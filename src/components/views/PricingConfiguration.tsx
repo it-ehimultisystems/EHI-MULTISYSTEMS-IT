@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CARGO_ROUTES } from '../../lib/constants';
-import { Save, Plus, ArrowLeft, Trash2, Edit3, Building, DollarSign, Plane } from 'lucide-react';
+import { Save, Plus, ArrowLeft, Trash2, Edit3, Building, DollarSign } from 'lucide-react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
@@ -31,50 +31,13 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   const [ratePrice, setRatePrice] = useState('');
   const { showToast } = useToast();
 
-  // VJ settings and the BB/MB/SB pricing matrix used to be localStorage-only
-  // -- a value set on one device was invisible everywhere else. Both now
-  // load from Supabase (localStorage is kept only as an offline-read cache,
-  // never the source of truth) and every edit writes straight back to the
-  // server so other devices see it on their next fetch.
-  const [vjFreeKg, setVjFreeKg] = useState(() => localStorage.getItem('ehi_vj_free_kg') || '23');
-  const [vjRatePerKg, setVjRatePerKg] = useState(() => localStorage.getItem('ehi_vj_rate_per_kg') || '1000');
-  const [vjSaving, setVjSaving] = useState(false);
-
-  useEffect(() => {
-    const fetchVjSettings = async () => {
-      const { data, error } = await supabase.from('pricing_config')
-        .select('config_value')
-        .eq('config_key', 'vj_settings')
-        .single();
-      if (data?.config_value && !error) {
-        const cfg = data.config_value as { freeKg?: string | number; ratePerKg?: string | number };
-        if (cfg.freeKg !== undefined) setVjFreeKg(String(cfg.freeKg));
-        if (cfg.ratePerKg !== undefined) setVjRatePerKg(String(cfg.ratePerKg));
-        localStorage.setItem('ehi_vj_free_kg', String(cfg.freeKg ?? vjFreeKg));
-        localStorage.setItem('ehi_vj_rate_per_kg', String(cfg.ratePerKg ?? vjRatePerKg));
-      }
-    };
-    fetchVjSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleSaveVjSettings = async () => {
-    setVjSaving(true);
-    const { error } = await supabase.from('pricing_config').upsert({
-      config_key: 'vj_settings',
-      config_value: { freeKg: vjFreeKg, ratePerKg: vjRatePerKg },
-      description: 'ValueJet excess-baggage free allowance and rate per KG',
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'config_key' });
-    setVjSaving(false);
-    if (error) {
-      showToast({ message: `Failed to save VJ settings: ${error.message}`, type: 'error' });
-      return;
-    }
-    localStorage.setItem('ehi_vj_free_kg', vjFreeKg);
-    localStorage.setItem('ehi_vj_rate_per_kg', vjRatePerKg);
-  };
-
+  // BB/MB/SB pricing matrix used to be localStorage-only -- a value set on
+  // one device was invisible everywhere else. It now loads from Supabase
+  // (localStorage is kept only as an offline-read cache, never the source
+  // of truth) and every edit writes straight back to the server so other
+  // devices see it on their next fetch.
+  // (Excess-baggage airline pricing, formerly ValueJet-only "VJ settings"
+  // here, now lives in its own screen: ExcessBaggageAirlines.tsx.)
   const [pricing, setPricing] = useState(() => {
     const saved = localStorage.getItem('ehi_setting_pricing');
     return saved ? JSON.parse(saved) : [
@@ -252,46 +215,6 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
         <div>
           <h2 className="text-[20px] font-sans font-bold text-[var(--color-foreground)] tracking-tight">Pricing Configuration</h2>
           <p className="text-[12px] font-mono text-[var(--color-muted)]">Manage standard retail rates and B2B negotiated tariffs</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 mb-6">
-        <div className="ehi-card p-4 space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
-              <Plane size={12} className="text-[var(--color-accent-amber)]" />
-              <span>VALUEJET CONFIGURATION</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="vj-free-kg" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">VJ FREE ALLOWANCE (KG)</label>
-              <input
-                id="vj-free-kg"
-                type="number"
-                value={vjFreeKg}
-                onChange={(e) => setVjFreeKg(e.target.value)}
-                className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-3 py-2 text-[12px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
-              />
-            </div>
-            <div>
-              <label htmlFor="vj-rate-per-kg" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">VJ RATE ₦/KG</label>
-              <input
-                id="vj-rate-per-kg"
-                type="number"
-                value={vjRatePerKg}
-                onChange={(e) => setVjRatePerKg(e.target.value)}
-                className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-3 py-2 text-[12px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
-              />
-            </div>
-          </div>
-          <button
-            onClick={handleSaveVjSettings}
-            disabled={vjSaving}
-            className="w-full bg-[var(--color-accent-amber)] hover:bg-amber-600 disabled:opacity-60 text-black py-2 rounded-md text-[12px] font-bold transition-colors mt-2"
-          >
-            {vjSaving ? 'SAVING...' : 'SAVE COMPANY SETTINGS'}
-          </button>
         </div>
       </div>
 
