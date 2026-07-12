@@ -26,8 +26,17 @@ export const LoginScreen = ({ onLogin }: { onLogin: (user: UserProfile) => void 
     setResetSending(true);
     setResetError('');
     try {
+      // Always point the emailed reset link at the real production app, not
+      // whichever origin happened to be open when "Forgot password" was
+      // clicked -- window.location.origin previously meant a reset requested
+      // from a local dev server, a Vercel preview URL, or any other non-canonical
+      // origin sent staff a link that only worked on that one machine/deploy,
+      // not "reset your password" in any usable sense elsewhere. import.meta.env.DEV
+      // (Vite's built-in flag, true only under `vite dev`) keeps the dynamic
+      // origin for local testing, where the production domain isn't reachable.
+      const resetOrigin = import.meta.env.DEV ? window.location.origin : 'https://app.ehimultisystems.com';
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: `${resetOrigin}/`,
       });
       if (error) {
         setResetError(error.message || 'Could not send reset email. Try again.');
