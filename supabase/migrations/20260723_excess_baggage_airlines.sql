@@ -50,6 +50,39 @@ ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS airline text NOT NULL DEFA
 -- ── Generalize the vj_agent role into baggage_agent + assigned_airline ─
 ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS assigned_airline text;
 
+-- Ordering matters here: the constraint must be DROPPED before the data
+-- migrates (the existing CHECK allows 'vj_agent' but not 'baggage_agent',
+-- so writing the new role value first would violate it) and the new
+-- constraint must be ADDED only after the data migrates (ADD CONSTRAINT
+-- validates every existing row immediately, and the new list no longer
+-- contains 'vj_agent' -- adding it first would fail against any row not
+-- yet migrated off that value). Drop -> migrate data -> add is the only
+-- ordering where neither step fails.
+--
+-- Looked up by querying the catalog rather than assuming Postgres's
+-- default auto-generated name (`user_profiles_role_check`) -- if the
+-- original migration ever named it explicitly or Postgres picked a
+-- different name, a hardcoded DROP CONSTRAINT IF EXISTS would silently
+-- no-op, leave the real constraint in place, and the UPDATE below would
+-- then fail against it.
+DO $$
+DECLARE
+  v_conname text;
+BEGIN
+  SELECT con.conname INTO v_conname
+  FROM pg_constraint con
+  JOIN pg_class rel ON rel.oid = con.conrelid
+  JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+  WHERE nsp.nspname = 'public'
+    AND rel.relname = 'user_profiles'
+    AND con.contype = 'c'
+    AND pg_get_constraintdef(con.oid) LIKE '%role%vj_agent%';
+
+  IF v_conname IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE public.user_profiles DROP CONSTRAINT %I', v_conname);
+  END IF;
+END $$;
+
 UPDATE public.user_profiles SET assigned_airline = 'ValueJet' WHERE role = 'vj_agent';
 UPDATE public.user_profiles SET role = 'baggage_agent' WHERE role = 'vj_agent';
 

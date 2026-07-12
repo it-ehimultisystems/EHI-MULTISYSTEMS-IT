@@ -56,7 +56,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     if (role === 'office_work') return 'Cargo';
     if (role === 'marketing_agent') return 'Marketing';
     if (role === 'driver') return 'MyTrips';
-    if (role === 'baggage_agent') return `Baggage:${user.assigned_airline || ''}`;
+    if (role === 'baggage_agent' && user.assigned_airline) return `Baggage:${user.assigned_airline}`;
     return 'Tower';
   };
   // Restores the tab the user was last on instead of always landing back on

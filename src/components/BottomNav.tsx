@@ -25,7 +25,10 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
       case 'cargo_agent':
         return [home, cargo, scan, more];
       case 'baggage_agent':
-        return [home, baggage, scan, more];
+        // No assigned airline yet (e.g. a bulk-imported account awaiting
+        // setup) -- omit the tab rather than link to a dead `Baggage:`
+        // (empty name) that matches no configured airline.
+        return user.assigned_airline ? [home, baggage, scan, more] : [home, scan, more];
       case 'marketing_agent':
         return [home, mkt, scan, more];
       case 'driver':
