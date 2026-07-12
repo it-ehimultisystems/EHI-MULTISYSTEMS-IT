@@ -124,6 +124,7 @@ export const PackageForm = ({
   const unpaidDebts = packageTxs.filter(t => t.mode === 'Debt' && !t.debtPaid);
 
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [closingDay, setClosingDay] = useState(false);
 
   const handleAddEntry = () => {
     if (!isValid || submitting) return;
@@ -205,6 +206,7 @@ export const PackageForm = ({
   };
 
   const handleCloseDay = async () => {
+    if (closingDay) return;
     const ok = await confirm({
       title: 'Close Package Desk session?',
       message: "Close today's Package Desk session? This cannot be undone.",
@@ -212,8 +214,8 @@ export const PackageForm = ({
       tone: 'danger',
     });
     if (!ok) return;
+    setClosingDay(true);
     try {
-      setShowCloseModal(false);
       const today = new Date().toISOString().slice(0, 10);
       const { error } = await supabase.from('package_day_close').upsert({
         hub_id: user.hub_id,
@@ -233,8 +235,11 @@ export const PackageForm = ({
       }, { onConflict: 'hub_id,date' });
       if (error) throw error;
       showToast({ message: 'Day closed successfully', type: 'success' });
+      setShowCloseModal(false);
     } catch (err: any) {
       showToast({ message: 'Failed to close day: ' + err.message, type: 'error' });
+    } finally {
+      setClosingDay(false);
     }
   };
 
@@ -637,8 +642,13 @@ export const PackageForm = ({
 
       {showCloseModal && (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 16 }}>
-          <div style={{ background: "var(--color-obsidian)", width: "100%", maxWidth: 480, borderRadius: 16, border: "1px solid var(--color-surface-2)", padding: 24, position: "relative" }}>
+          <div style={{ background: "var(--color-obsidian)", width: "100%", maxWidth: 480, maxHeight: "90vh", borderRadius: 16, border: "1px solid var(--color-surface-2)", padding: "24px 24px 0 24px", position: "relative", display: "flex", flexDirection: "column" }}>
             <button onClick={() => setShowCloseModal(false)} aria-label="Close" style={{ position: "absolute", top: 16, right: 16, color: "var(--color-muted)" }}>×</button>
+            {/* Scrollable body -- same fix as TransactionLedger/MarketingWorkspace's
+                close-day modal: keeps CONFIRM & CLOSE DAY reachable even if this
+                grows unbounded content later, rather than assuming today's fixed
+                fields are the ceiling. */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
             <div className="text-[10px] font-mono text-[var(--color-accent-cobalt)] tracking-widest font-bold mb-1">▸ PACKAGE DESK SALES ANALYSIS</div>
             <div className="text-[12px] text-[var(--color-muted)] mb-4">
               {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
@@ -658,7 +668,8 @@ export const PackageForm = ({
               </div>
               <div className="text-[11px] text-[rgba(59,130,246,0.7)] mt-1">({fmt(cashSales)} cash-in-hand − {fmt(totalExpenses)} expenses)</div>
             </div>
-            <div className="flex gap-3">
+            </div>{/* end scrollable body */}
+            <div className="flex gap-3" style={{ paddingTop: 16, paddingBottom: 24, flexShrink: 0 }}>
               <button
                 onClick={() => {
                   import('./PackageReceipt').then(m => m.downloadPackageDailySummary({
@@ -687,8 +698,8 @@ export const PackageForm = ({
               >
                 DOWNLOAD SUMMARY PDF
               </button>
-              <button onClick={handleCloseDay} style={{ flex: 1, padding: 12, background: "var(--color-accent-cobalt)", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer" }}>
-                CONFIRM & CLOSE DAY
+              <button onClick={handleCloseDay} disabled={closingDay} style={{ flex: 1, padding: 12, background: "var(--color-accent-cobalt)", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontFamily: "monospace", fontWeight: "bold", cursor: closingDay ? "not-allowed" : "pointer", opacity: closingDay ? 0.6 : 1 }}>
+                {closingDay ? 'CLOSING…' : 'CONFIRM & CLOSE DAY'}
               </button>
             </div>
           </div>

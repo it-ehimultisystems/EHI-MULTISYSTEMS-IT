@@ -193,6 +193,7 @@ export const MarketingWorkspace = ({
   });
 
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [closingDay, setClosingDay] = useState(false);
 
   const handleDownloadReceipt = async () => {
     if (successTx) {
@@ -219,6 +220,7 @@ export const MarketingWorkspace = ({
   };
 
   const handleCloseDay = async () => {
+    if (closingDay) return;
     const ok = await confirm({
       title: 'Close marketing session?',
       message: "Close today's marketing session? This cannot be undone.",
@@ -226,8 +228,8 @@ export const MarketingWorkspace = ({
       tone: 'danger',
     });
     if (!ok) return;
+    setClosingDay(true);
     try {
-      setShowCloseModal(false);
       const today = new Date().toISOString().slice(0, 10);
       const { error } = await supabase.from('marketing_day_close').upsert({
         hub_id: user.hub_id,
@@ -249,8 +251,11 @@ export const MarketingWorkspace = ({
       }, { onConflict: 'hub_id,date' });
       if (error) throw error;
       showToast({ message: 'Day closed successfully', type: 'success' });
+      setShowCloseModal(false);
     } catch (err: any) {
       showToast({ message: 'Failed to close day: ' + err.message, type: 'error' });
+    } finally {
+      setClosingDay(false);
     }
   };
 
@@ -1064,10 +1069,13 @@ export const MarketingWorkspace = ({
               background: "var(--color-obsidian)",
               width: "100%",
               maxWidth: 480,
+              maxHeight: "90vh",
               borderRadius: 16,
               border: "1px solid var(--color-surface-2)",
-              padding: 24,
+              padding: "24px 24px 0 24px",
               position: "relative",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <button
@@ -1082,6 +1090,12 @@ export const MarketingWorkspace = ({
             >
               ×
             </button>
+            {/* Scrollable body -- same fix as TransactionLedger's Edit
+                Transaction modal: expenses/routes lists here are
+                unbounded, so without a scroll container the CONFIRM &
+                CLOSE DAY button below can be pushed off-screen entirely
+                on a short viewport with no way to reach it. */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
             {/* Header */}
             <div className="text-[10px] font-mono text-[var(--color-success)] tracking-widest font-bold mb-1">▸ ARENA SALES ANALYSIS</div>
             <div className="text-[12px] text-[var(--color-muted)] mb-4">
@@ -1147,8 +1161,9 @@ export const MarketingWorkspace = ({
                 ({fmt(cashSales + transferCashSales)} cash-in-hand{lessTransfer > 0 ? ` − ${fmt(lessTransfer)} less-transfer` : ''} − {fmt(totalExpenses)} expenses)
               </div>
             </div>
+            </div>{/* end scrollable body */}
 
-            <div className="flex gap-3">
+            <div className="flex gap-3" style={{ paddingTop: 16, paddingBottom: 24, flexShrink: 0 }}>
               <button
                 onClick={handleDownloadSummary}
                 style={{
@@ -1168,6 +1183,7 @@ export const MarketingWorkspace = ({
               </button>
               <button
                 onClick={handleCloseDay}
+                disabled={closingDay}
                 style={{
                   flex: 1,
                   padding: 12,
@@ -1178,10 +1194,11 @@ export const MarketingWorkspace = ({
                   fontSize: 11,
                   fontFamily: "monospace",
                   fontWeight: "bold",
-                  cursor: "pointer",
+                  cursor: closingDay ? "not-allowed" : "pointer",
+                  opacity: closingDay ? 0.6 : 1,
                 }}
               >
-                CONFIRM & CLOSE DAY
+                {closingDay ? 'CLOSING…' : 'CONFIRM & CLOSE DAY'}
               </button>
             </div>
           </div>
