@@ -190,6 +190,8 @@ export const TransactionLedger = ({
       (finalTx as any)._bb = editBagCounts.bb;
       (finalTx as any)._mb = editBagCounts.mb;
       (finalTx as any)._sb = editBagCounts.sb;
+    } else if (finalTx.type === 'package') {
+      finalTx.detail = `${finalTx.destination || ''} · ${finalTx.contentType || 'Package'}`;
     }
     onUpdateTx(finalTx);
     setEditingTx(null);
@@ -1468,6 +1470,54 @@ export const TransactionLedger = ({
                         onChange={(e) => setEditBagCounts({ ...editBagCounts, sb: parseInt(e.target.value) || 0 })}
                         className="w-full h-10 px-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[14px] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
                       />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {editingTx.type === 'package' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
+                      Customer Name
+                    </label>
+                    <input
+                      id="edit-tx-package-name"
+                      name="edit-tx-package-name"
+                      type="text"
+                      value={editingTx.name}
+                      onChange={(e) => setEditingTx({ ...editingTx, name: e.target.value })}
+                      className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
+                        Destination
+                      </label>
+                      <input
+                        id="edit-tx-package-destination"
+                        name="edit-tx-package-destination"
+                        type="text"
+                        value={editingTx.destination || ''}
+                        onChange={(e) => setEditingTx({ ...editingTx, destination: e.target.value })}
+                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
+                        Content Type
+                      </label>
+                      <select
+                        id="edit-tx-package-content-type"
+                        name="edit-tx-package-content-type"
+                        value={editingTx.contentType || 'Package'}
+                        onChange={(e) => setEditingTx({ ...editingTx, contentType: e.target.value })}
+                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                      >
+                        <option value="Package">Package</option>
+                        <option value="Parcel">Parcel</option>
+                      </select>
                     </div>
                   </div>
                 </>
