@@ -182,8 +182,13 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
 
           <View style={styles.typeBadge}>
             <Text style={styles.typeBadgeText}>
-              {data.contentType?.toUpperCase() || "PACKAGE"}{data.contents ? ` · ${data.contents.toUpperCase()}` : ""}
+              {data.contentType?.toUpperCase() || "PACKAGE"}
             </Text>
+            {data.contents && (
+              <Text style={styles.typeBadgeText}>
+                {data.contents.toUpperCase()}
+              </Text>
+            )}
           </View>
 
           <View style={styles.fieldRow}>
