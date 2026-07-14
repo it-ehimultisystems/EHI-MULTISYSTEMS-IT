@@ -263,7 +263,7 @@ export interface Expense {
 
 // `Baggage:${tag_code}` tabs are generated dynamically, one per active row
 // in excess_baggage_airlines (e.g. 'Baggage:VJ') -- no fixed list here.
-export type TabView = 'Tower' | 'Cargo' | `Baggage:${string}` | 'Marketing' | 'Packages' | 'Scan' | 'Incoming' | 'IncomingToHub' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit' | 'AirlineLogos' | 'DataImport' | 'AirlineLedger' | 'WeightManifest';
+export type TabView = 'Tower' | 'Cargo' | `Baggage:${string}` | 'Marketing' | 'Packages' | 'Scan' | 'Incoming' | 'IncomingToHub' | 'OutboundArrivals' | 'More' | 'MyTrips' | 'IT Debug' | 'Credit & Debit' | 'AirlineLogos' | 'DataImport' | 'AirlineLedger' | 'WeightManifest';
 
 export interface AppState {
   user: User | null;

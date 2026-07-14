@@ -7,6 +7,7 @@ import {
   AirplaneIcon,
   QrCodeIcon,
   ArrowLineDownIcon,
+  ArrowLineUpIcon,
   DotsThreeIcon,
   TruckIcon,
   SignOutIcon,
@@ -27,6 +28,7 @@ const VIEW_ICON: Record<string, any> = {
   Packages: TruckIcon,
   Scan: QrCodeIcon,
   Incoming: ArrowLineDownIcon,
+  OutboundArrivals: ArrowLineUpIcon,
   MyTrips: TruckIcon,
   More: DotsThreeIcon,
 };
@@ -37,6 +39,7 @@ const VIEW_LABEL: Record<string, string> = {
   Packages: "Package Desk",
   Scan: "QR Scanner",
   Incoming: "Incoming To Hub",
+  OutboundArrivals: "Outbound Arrivals",
   MyTrips: "My Trips",
   More: "More",
 };
@@ -102,7 +105,7 @@ export const SideNav = ({
   const visibleTabs = [
     ...toEntries(["Tower", "Cargo", "Marketing"]),
     ...baggageEntries,
-    ...toEntries(["Packages", "Scan", "Incoming", "MyTrips", "More"]),
+    ...toEntries(["Packages", "Scan", "Incoming", "OutboundArrivals", "MyTrips", "More"]),
   ];
 
   const activeColor = "var(--color-accent-amber)";

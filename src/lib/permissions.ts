@@ -24,6 +24,7 @@ export const STATIC_VIEWS: ViewDef[] = [
   { id: 'Packages', label: 'Package Desk', roles: ['super_admin', 'admin', 'cargo_agent', 'marketing_agent', 'office_work'] },
   { id: 'Scan', label: 'QR Scanner', roles: ['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'marketing_agent', 'accountant', 'auditor', 'driver', 'office_work'] },
   { id: 'Incoming', label: 'Incoming To Hub', roles: ['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'driver', 'office_work'] },
+  { id: 'OutboundArrivals', label: 'Outbound Arrivals', roles: ['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'marketing_agent', 'driver', 'accountant', 'auditor', 'office_work'] },
   { id: 'MyTrips', label: 'My Trips', roles: ['driver'] },
   { id: 'More', label: 'More', roles: ['super_admin', 'admin', 'accountant', 'auditor', 'cargo_agent', 'baggage_agent', 'marketing_agent', 'driver', 'office_work'] },
   { id: 'IT Debug', label: 'IT Debug Console', roles: ['super_admin'] },

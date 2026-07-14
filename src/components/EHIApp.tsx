@@ -19,6 +19,7 @@ import { MarketingWorkspace as MarketingWorkspaceRaw } from './views/MarketingWo
 import { PackageForm as PackageFormRaw } from './views/PackageForm';
 import { Scanner as ScannerRaw } from './views/Scanner';
 import { IncomingToHub as IncomingToHubRaw } from './views/IncomingToHub';
+import { OutboundArrivals as OutboundArrivalsRaw } from './views/OutboundArrivals';
 import { MyTrips as MyTripsRaw } from './views/MyTrips';
 import { ITDashboard as ITDashboardRaw } from './views/ITDashboard';
 import { CreditDebit as CreditDebitRaw } from './views/CreditDebit';
@@ -42,6 +43,7 @@ const MarketingWorkspace = memo(MarketingWorkspaceRaw);
 const PackageForm = memo(PackageFormRaw);
 const Scanner = memo(ScannerRaw);
 const IncomingToHub = memo(IncomingToHubRaw);
+const OutboundArrivals = memo(OutboundArrivalsRaw);
 const MyTrips = memo(MyTripsRaw);
 const ITDashboard = memo(ITDashboardRaw);
 const CreditDebit = memo(CreditDebitRaw);
@@ -1096,6 +1098,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               )}
               {currentTab === 'Scan' && <Scanner transactions={transactions} user={user} showToast={showToast} />}
               {currentTab === 'Incoming' && <IncomingToHub user={user} onBack={() => setCurrentTab('More')} />}
+              {currentTab === 'OutboundArrivals' && <OutboundArrivals user={user} onBack={() => setCurrentTab('More')} />}
               {currentTab === 'MyTrips' && <MyTrips user={user} />}
               {currentTab === 'IT Debug' && <ITDashboard user={user} onBack={() => setCurrentTab('More')} />}
               {currentTab === 'Credit & Debit' && <CreditDebit user={user} transactions={transactions} onBack={() => setCurrentTab('More')} />}

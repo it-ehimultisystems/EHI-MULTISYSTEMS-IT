@@ -9,6 +9,7 @@ export interface CorporateClient {
   id: string;
   company_name: string;
   contact_phone: string;
+  accumulated_monthly_debt: number;
 }
 
 export interface CorporateRouteRate {
@@ -168,7 +169,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
       return;
     }
 
-    const newClient: CorporateClient = { id: data.id, company_name: data.company_name, contact_phone: data.contact_phone };
+    const newClient: CorporateClient = { id: data.id, company_name: data.company_name, contact_phone: data.contact_phone, accumulated_monthly_debt: data.accumulated_monthly_debt };
     setCorpClients([...corpClients, newClient]);
     setNewClientName('');
     setNewClientPhone('');
@@ -332,7 +333,12 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                   className={`p-3 rounded border cursor-pointer transition-colors ${selectedRateClient?.id === c.id ? 'bg-[rgba(251,191,36,0.1)] border-[var(--color-accent-amber)]' : 'bg-[var(--color-bg)] border-[var(--color-border)] hover:border-[var(--color-muted)]'}`}
                 >
                   <div className="font-bold text-[12px] text-[var(--color-foreground)]">{c.company_name}</div>
-                  <div className="text-[10px] text-[var(--color-muted)] font-mono mt-1">{corpRates.filter(r => r.corporate_client_id === c.id).length} routes configured</div>
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="text-[10px] text-[var(--color-muted)] font-mono">{corpRates.filter(r => r.corporate_client_id === c.id).length} routes configured</div>
+                    <div className="text-[10px] font-mono font-bold" style={{ color: (c.accumulated_monthly_debt || 0) > 0 ? 'var(--color-error)' : 'var(--color-muted)' }}>
+                      ₦{(c.accumulated_monthly_debt || 0).toLocaleString()} owed
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

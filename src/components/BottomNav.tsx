@@ -3,11 +3,11 @@ import { HouseIcon, PackageIcon, TrendUpIcon, AirplaneIcon, QrCodeIcon, DotsThre
 
 const VIEW_ICON: Record<string, any> = {
   Tower: HouseIcon, Cargo: PackageIcon, Marketing: TrendUpIcon, Packages: PackageIcon,
-  Scan: QrCodeIcon, Incoming: PackageIcon, MyTrips: TruckIcon, More: DotsThreeIcon,
+  Scan: QrCodeIcon, Incoming: PackageIcon, OutboundArrivals: PackageIcon, MyTrips: TruckIcon, More: DotsThreeIcon,
 };
 const VIEW_TITLE: Record<string, string> = {
   Tower: 'Dashboard', Cargo: 'Cargo', Marketing: 'Marketing', Packages: 'Packages',
-  Scan: 'Scanner', Incoming: 'Incoming', MyTrips: 'My Trips', More: 'More',
+  Scan: 'Scanner', Incoming: 'Incoming', OutboundArrivals: 'Outbound Arrivals', MyTrips: 'My Trips', More: 'More',
 };
 
 export const BottomNav = ({ user, currentTab, onChangeTab }: {
