@@ -1,11 +1,36 @@
 import { User, TabView } from '../lib/types';
 import { HouseIcon, PackageIcon, TrendUpIcon, AirplaneIcon, QrCodeIcon, DotsThreeIcon, TruckIcon } from '@phosphor-icons/react';
 
+const VIEW_ICON: Record<string, any> = {
+  Tower: HouseIcon, Cargo: PackageIcon, Marketing: TrendUpIcon, Packages: PackageIcon,
+  Scan: QrCodeIcon, Incoming: PackageIcon, MyTrips: TruckIcon, More: DotsThreeIcon,
+};
+const VIEW_TITLE: Record<string, string> = {
+  Tower: 'Dashboard', Cargo: 'Cargo', Marketing: 'Marketing', Packages: 'Packages',
+  Scan: 'Scanner', Incoming: 'Incoming', MyTrips: 'My Trips', More: 'More',
+};
+
 export const BottomNav = ({ user, currentTab, onChangeTab }: {
   user: User;
   currentTab: TabView;
   onChangeTab: (t: TabView) => void;
 }) => {
+  // A super-admin-set view_overrides is an exact replacement list -- when
+  // present, show everything in it (no 5-item curation: the admin picked
+  // this set deliberately for this specific person) instead of the normal
+  // per-role curated set below.
+  if (user.view_overrides != null) {
+    const overrideTabs = user.view_overrides.map((id) => {
+      const isBaggage = id.startsWith('Baggage:');
+      return {
+        id: id as TabView,
+        title: isBaggage ? id.slice('Baggage:'.length) : (VIEW_TITLE[id] || id),
+        icon: isBaggage ? AirplaneIcon : (VIEW_ICON[id] || DotsThreeIcon),
+      };
+    });
+    return <BottomNavTabs tabs={overrideTabs} currentTab={currentTab} onChangeTab={onChangeTab} />;
+  }
+
   // Role-specific tab sets — max 5 items per role
   const getTabsForRole = (role: string) => {
     const home   = { id: 'Tower' as TabView, title: 'Dashboard', icon: HouseIcon };
@@ -45,6 +70,16 @@ export const BottomNav = ({ user, currentTab, onChangeTab }: {
   };
 
   const tabs = getTabsForRole(user.role);
+  return <BottomNavTabs tabs={tabs} currentTab={currentTab} onChangeTab={onChangeTab} />;
+};
+
+type NavTab = { id: TabView; title: string; icon: any };
+
+const BottomNavTabs = ({ tabs, currentTab, onChangeTab }: {
+  tabs: NavTab[];
+  currentTab: TabView;
+  onChangeTab: (t: TabView) => void;
+}) => {
   const activeIndex = Math.max(0, tabs.findIndex(tab => tab.id === currentTab));
 
   return (

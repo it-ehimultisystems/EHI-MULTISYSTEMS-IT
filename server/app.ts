@@ -345,6 +345,14 @@ export function createApp() {
       return res.status(403).json({ error: 'Only a super_admin can grant the super_admin role.' });
     }
 
+    // view_overrides is the "master control" lever for per-staff view
+    // access -- an admin (who already has Staff Management access) must
+    // not be able to grant themselves or anyone else extra views, or
+    // strip another admin's, via this generic update path.
+    if ('view_overrides' in updates && adminCtx.callerRole !== 'super_admin') {
+      return res.status(403).json({ error: 'Only a super_admin can edit view access.' });
+    }
+
     try {
       const { error } = await adminClient.from('user_profiles').update(updates).eq('id', userId);
       if (error) return res.status(400).json({ error: error.message });

@@ -15,12 +15,31 @@ import {
 } from "@phosphor-icons/react";
 import { User, TabView, ExcessBaggageAirline } from "../lib/types";
 import { Theme } from "../lib/useTheme";
+import { getAllowedTabs } from "../lib/permissions";
 
-// Sentinel id in allTabs' role-gated list below, expanded at render time
-// into one real nav entry per active configured excess-baggage airline
-// (or the agent's single assigned one) -- see visibleTabs.
-const BAGGAGE_MARKER = "__BAGGAGE__";
-
+// Icon/label lookup for the static views -- getAllowedTabs (src/lib/permissions.ts)
+// is the single source of truth for WHICH ids a user can see (role default
+// or their super-admin-set override); this is purely presentational.
+const VIEW_ICON: Record<string, any> = {
+  Tower: HouseIcon,
+  Cargo: PackageIcon,
+  Marketing: TrendUpIcon,
+  Packages: TruckIcon,
+  Scan: QrCodeIcon,
+  Incoming: ArrowLineDownIcon,
+  MyTrips: TruckIcon,
+  More: DotsThreeIcon,
+};
+const VIEW_LABEL: Record<string, string> = {
+  Tower: "Dashboard",
+  Cargo: "Cargo Entry",
+  Marketing: "Marketing",
+  Packages: "Package Desk",
+  Scan: "QR Scanner",
+  Incoming: "Incoming To Hub",
+  MyTrips: "My Trips",
+  More: "More",
+};
 export const SideNav = ({
   user,
   currentTab,
@@ -56,98 +75,35 @@ export const SideNav = ({
     localStorage.setItem("ehi_sidebar_expanded", String(nextState));
   };
 
-  const allTabs: {
-    id: TabView;
-    icon: any;
-    label: string;
-    roles: string[];
-  }[] = [
-    {
-      id: "Tower",
-      icon: HouseIcon,
-      label: "Dashboard",
-      roles: [
-        "super_admin",
-        "admin",
-        "cargo_agent",
-        "baggage_agent",
-        "marketing_agent",
-        "accountant",
-        "auditor",
-      ],
-    },
-    {
-      id: "Cargo",
-      icon: PackageIcon,
-      label: "Cargo Entry",
-      roles: ["super_admin", "admin", "cargo_agent", "office_work"],
-    },
-    {
-      id: "Marketing",
-      icon: TrendUpIcon,
-      label: "Marketing",
-      roles: ["super_admin", "admin", "marketing_agent", "office_work"],
-    },
-    {
-      id: BAGGAGE_MARKER as TabView,
-      icon: AirplaneIcon,
-      label: "",
-      roles: ["super_admin", "admin", "baggage_agent"],
-    },
-    {
-      id: "Packages",
-      icon: TruckIcon,
-      label: "Package Desk",
-      roles: ["super_admin", "admin", "cargo_agent", "marketing_agent", "office_work"],
-    },
-    {
-      id: "Scan",
-      icon: QrCodeIcon,
-      label: "QR Scanner",
-      roles: [
-        "super_admin",
-        "admin",
-        "cargo_agent",
-        "baggage_agent",
-        "marketing_agent",
-        "accountant",
-        "auditor",
-        "driver",
-        "office_work"
-      ],
-    },
-    {
-      id: "Incoming",
-      icon: ArrowLineDownIcon,
-      label: "Incoming To Hub",
-      roles: ["super_admin", "admin", "cargo_agent", "baggage_agent", "driver", "office_work"],
-    },
-    { id: "MyTrips", icon: TruckIcon, label: "My Trips", roles: ["driver"] },
-    {
-      id: "More",
-      icon: DotsThreeIcon,
-      label: "More",
-      roles: ["super_admin", "admin", "accountant", "auditor", "cargo_agent", "baggage_agent", "marketing_agent", "driver", "office_work"],
-    },
-  ];
+  // getAllowedTabs is the single source of truth for which ids this user
+  // can see -- their super-admin-set view_overrides if present, else the
+  // normal role-derived default (src/lib/permissions.ts). This component
+  // only decides how to DISPLAY whatever ids come back.
+  const allowedTabs = getAllowedTabs(user, excessBaggageAirlines);
+  const allowedSet = new Set(allowedTabs);
 
-  const visibleTabs = allTabs
-    .filter((t) => t.roles.includes(user.role))
-    .flatMap((t) => {
-      if ((t.id as string) !== BAGGAGE_MARKER) return [t];
-      if (user.role === "baggage_agent") {
-        return user.assigned_airline
-          ? [{ id: `Baggage:${user.assigned_airline}` as TabView, icon: AirplaneIcon, label: user.assigned_airline, roles: t.roles }]
-          : [];
-      }
-      // super_admin/admin see every active configured airline
-      return excessBaggageAirlines.map((a) => ({
-        id: `Baggage:${a.name}` as TabView,
+  const baggageEntries = allowedTabs
+    .filter((id) => id.startsWith("Baggage:"))
+    .map((id) => {
+      const airlineName = id.slice("Baggage:".length);
+      return {
+        id,
         icon: AirplaneIcon,
-        label: `${a.name} POS`,
-        roles: t.roles,
-      }));
+        label: user.role === "baggage_agent" ? airlineName : `${airlineName} POS`,
+      };
     });
+
+  // Baggage entries always sit between Marketing and Packages regardless of
+  // whether Marketing/Packages themselves are in this user's allowed set --
+  // a baggage_agent (who has no Marketing access at all) must still see
+  // their own airline tab, so the split can't be conditional on Marketing
+  // surviving the filter.
+  const toEntries = (ids: TabView[]) => ids.filter((id) => allowedSet.has(id)).map((id) => ({ id, icon: VIEW_ICON[id], label: VIEW_LABEL[id] }));
+  const visibleTabs = [
+    ...toEntries(["Tower", "Cargo", "Marketing"]),
+    ...baggageEntries,
+    ...toEntries(["Packages", "Scan", "Incoming", "MyTrips", "More"]),
+  ];
 
   const activeColor = "var(--color-accent-amber)";
 

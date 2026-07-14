@@ -3,10 +3,11 @@ import {
   ArrowLeft, Plus, RefreshCw, Search, Edit2, UserX, UserCheck,
   MapPin, Phone, Mail, Loader, AlertTriangle, Check, Eye, EyeOff, Shield, Upload, Printer
 } from 'lucide-react';
-import { User } from '../../lib/types';
+import { User, UserRole } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { createStaffAccount, updateStaffProfile } from '../../lib/auth';
 import { BulkStaffImport } from './BulkStaffImport';
+import { getAllViewDefs, getRoleDefaultTabs } from '../../lib/permissions';
 
 interface StaffMember {
   id: string;
@@ -19,6 +20,7 @@ interface StaffMember {
   phone?: string;
   can_print_ledger?: boolean;
   assigned_airline?: string | null;
+  view_overrides?: string[] | null;
   hub?: { name: string; code: string };
 }
 
@@ -85,7 +87,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       if (hubData) setHubs(hubData as Hub[]);
 
       let q = supabase.from('user_profiles')
-        .select('id, email, name, role, hub_id, hub_type, active, phone, can_print_ledger, assigned_airline, hubs(name, code)')
+        .select('id, email, name, role, hub_id, hub_type, active, phone, can_print_ledger, assigned_airline, view_overrides, hubs(name, code)')
         .order('name');
 
       if (!isSuperAdmin && user.hub_id) {
@@ -562,6 +564,69 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     </div>
                   )}
                 </div>
+
+                {/* View Access Override — master control: only super_admin
+                    can edit any staff member's view access, regardless of
+                    who is being edited. When off, this person's access
+                    follows the normal role-based defaults. */}
+                <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Eye size={12} className="text-[var(--color-accent-amber)]" />
+                        <span className="text-[12px] font-bold text-[var(--color-foreground)]">Custom View Access</span>
+                      </div>
+                      <p className="text-[10px] text-[var(--color-muted)] leading-snug">
+                        Override exactly which views this person can see, regardless of role. Off = normal role-based access.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setEditingStaff(s => {
+                        if (!s) return null;
+                        if (s.view_overrides != null) return { ...s, view_overrides: null };
+                        // Seed the checklist from the role's current defaults so
+                        // flipping this on doesn't instantly lock the person out
+                        // of every view until boxes are checked.
+                        return { ...s, view_overrides: getRoleDefaultTabs({ role: s.role as UserRole, assigned_airline: s.assigned_airline || undefined }, airlines as any) };
+                      })}
+                      role="switch"
+                      aria-checked={editingStaff.view_overrides != null}
+                      aria-label="Custom view access"
+                      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors ml-3 ${
+                        editingStaff.view_overrides != null
+                          ? 'bg-[var(--color-accent-amber)] border-[var(--color-accent-amber)]'
+                          : 'bg-[var(--color-surface-2)] border-[var(--color-border)]'
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow transition-transform ${
+                        editingStaff.view_overrides != null ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                  {editingStaff.view_overrides != null && (
+                    <div className="mt-3 grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                      {getAllViewDefs(airlines as any).map(v => {
+                        const checked = editingStaff.view_overrides?.includes(v.id) ?? false;
+                        return (
+                          <label key={v.id} className="flex items-center gap-1.5 text-[10px] text-[var(--color-foreground)] bg-[var(--color-surface-2)] rounded px-2 py-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={e => setEditingStaff(s => {
+                                if (!s) return null;
+                                const current = s.view_overrides || [];
+                                const next = e.target.checked ? [...current, v.id] : current.filter(id => id !== v.id);
+                                return { ...s, view_overrides: next };
+                              })}
+                              className="shrink-0"
+                            />
+                            <span className="truncate">{v.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
                 </>
               )}
 
@@ -575,6 +640,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     hub_id: editingStaff.hub_id,
                     can_print_ledger: editingStaff.can_print_ledger,
                     assigned_airline: editingStaff.role === 'baggage_agent' ? (editingStaff.assigned_airline || null) : null,
+                    ...(isSuperAdmin ? { view_overrides: editingStaff.view_overrides ?? null } : {}),
                   })}
                   disabled={saving}
                   className="flex-1 h-11 bg-[var(--color-accent-cobalt)] text-white rounded-lg text-[12px] font-bold disabled:opacity-60"

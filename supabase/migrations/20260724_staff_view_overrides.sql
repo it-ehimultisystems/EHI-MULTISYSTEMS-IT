@@ -1,0 +1,11 @@
+-- Per-staff view access override. Until now, which nav tabs/views a staff
+-- member can see was derived entirely from their `role` -- there was no way
+-- to grant or restrict a specific person's access without changing their
+-- role (which also changes everything else tied to that role: default tab,
+-- realtime channels, etc). This adds an optional override: when set, it is
+-- the exact, complete list of views that user can see, replacing the
+-- role-derived default entirely (not additive). NULL (the default for every
+-- existing account) means "no override -- use the normal role-based access,"
+-- so this ships with zero behavior change for every staff member until an
+-- admin explicitly sets one.
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS view_overrides text[];

@@ -13,6 +13,9 @@ export interface UserProfile {
   hubType: HubType;
   hub_id?: string;
   active: boolean;
+  can_print_ledger?: boolean;
+  assigned_airline?: string;
+  view_overrides?: string[] | null;
 }
 
 export async function signIn(email: string, password: string): Promise<UserProfile> {
@@ -40,6 +43,8 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       active,
       hub_id,
       can_print_ledger,
+      assigned_airline,
+      view_overrides,
       hubs (
         name,
         code,
@@ -70,6 +75,8 @@ export async function signIn(email: string, password: string): Promise<UserProfi
       hub_id: profile.hub_id,
       active: profile.active,
       can_print_ledger: profile.can_print_ledger ?? false,
+      assigned_airline: profile.assigned_airline ?? undefined,
+      view_overrides: profile.view_overrides ?? null,
   };
 
   // Write audit log (fire-and-forget)
@@ -220,7 +227,7 @@ export async function fetchStaffList(hubId?: string): Promise<any[]> {
 // Update a staff profile (role, hub, active status)
 export async function updateStaffProfile(
   userId: string,
-  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string; can_print_ledger?: boolean; assigned_airline?: string | null }
+  updates: { role?: string; hub_id?: string; hub_type?: string; active?: boolean; name?: string; phone?: string; can_print_ledger?: boolean; assigned_airline?: string | null; view_overrides?: string[] | null }
 ): Promise<void> {
   const { data: sess } = await supabase.auth.getSession();
   const token = sess.session?.access_token || '';
@@ -267,6 +274,8 @@ async function getSessionInner(): Promise<UserProfile | null> {
       active,
       hub_id,
       can_print_ledger,
+      assigned_airline,
+      view_overrides,
       hubs (
         name,
         code,
@@ -303,6 +312,8 @@ async function getSessionInner(): Promise<UserProfile | null> {
     hub_id: profile.hub_id,
     active: profile.active,
     can_print_ledger: profile.can_print_ledger ?? false,
+    assigned_airline: profile.assigned_airline ?? undefined,
+    view_overrides: profile.view_overrides ?? null,
   } as any;
 }
 

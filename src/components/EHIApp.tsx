@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense, useRef, useCallback, memo, useMemo
 import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport, cleanupOldQueue } from '../lib/sync';
 import { useTheme } from '../lib/useTheme';
+import { getAllowedTabs } from '../lib/permissions';
 import { Header as HeaderRaw } from './Header';
 import { BottomNav as BottomNavRaw } from './BottomNav';
 import { SideNav as SideNavRaw } from './SideNav';
@@ -144,29 +145,13 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Dashboard empty state CTA buttons dispatch this event
+    // Dashboard empty state CTA buttons dispatch this event. getAllowedTabs
+    // (src/lib/permissions.ts) is the single source of truth for which tabs
+    // this user can reach -- their super-admin-set view_overrides if set,
+    // else the normal role-derived default.
     const handleEhiNav = (e: Event) => {
       const requested = (e as CustomEvent).detail as TabView;
-      const role = user.role;
-      const allowed: TabView[] = [];
-
-      if (['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'accountant', 'auditor'].includes(role)) allowed.push('Tower');
-      if (['super_admin', 'admin', 'cargo_agent', 'office_work'].includes(role)) allowed.push('Cargo');
-      if (['super_admin', 'admin', 'marketing_agent', 'office_work'].includes(role)) allowed.push('Marketing');
-      if (['super_admin', 'admin'].includes(role)) {
-        excessBaggageAirlines.forEach(a => allowed.push(`Baggage:${a.name}`));
-      } else if (role === 'baggage_agent' && user.assigned_airline) {
-        allowed.push(`Baggage:${user.assigned_airline}`);
-      }
-      if (['super_admin', 'admin', 'cargo_agent', 'marketing_agent', 'office_work'].includes(role)) allowed.push('Packages');
-      if (['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('Scan');
-      if (['super_admin', 'admin', 'cargo_agent', 'baggage_agent', 'driver', 'office_work'].includes(role)) allowed.push('Incoming');
-      if (['driver'].includes(role)) allowed.push('MyTrips');
-      if (['super_admin', 'admin', 'accountant', 'auditor', 'cargo_agent', 'baggage_agent', 'marketing_agent', 'driver', 'office_work'].includes(role)) allowed.push('More');
-      
-      // IT Debug and Credit & Debit are sub-views typically reached from More
-      if (role === 'super_admin') allowed.push('IT Debug');
-      if (['super_admin', 'admin', 'accountant'].includes(role)) allowed.push('Credit & Debit');
+      const allowed = getAllowedTabs(user, excessBaggageAirlines);
 
       if (allowed.includes(requested) || requested === 'More') {
         setCurrentTab(requested);
@@ -180,7 +165,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('ehi-nav', handleEhiNav);
     };
-  }, [showToast, user.role, user.assigned_airline, excessBaggageAirlines]);
+  }, [showToast, user.role, user.assigned_airline, user.view_overrides, excessBaggageAirlines]);
 
   const flushPendingTx = useCallback(() => {
     if (pendingTxRef.current.length === 0) return;

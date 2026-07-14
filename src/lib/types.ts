@@ -43,6 +43,11 @@ export interface User {
   // Which excess_baggage_airlines.name this user tickets for -- only
   // meaningful when role === 'baggage_agent'.
   assigned_airline?: string;
+  // Super-admin-set exact list of TabView ids this user can access,
+  // replacing their role-derived default entirely. undefined/null means
+  // "no override -- use the normal role-based access" (see
+  // src/lib/permissions.ts, the single source of truth for both paths).
+  view_overrides?: string[] | null;
 }
 
 // One row per excess-baggage carrier (ValueJet, and any airline added

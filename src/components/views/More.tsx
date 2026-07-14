@@ -19,6 +19,7 @@ import { ExcessBaggageAirlines } from './ExcessBaggageAirlines';
 import { useState } from 'react';
 import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
+import { canAccessTab } from '../../lib/permissions';
 import {
   FileTextIcon,
   PulseIcon,
@@ -206,7 +207,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
       {/* Daily Operations */}
       <SectionLabel label="Daily Operations" />
       <div>
-        {['super_admin', 'admin', 'cargo_agent', 'office_work'].includes(user.role) && (
+        {canAccessTab(user, 'Incoming', excessBaggageAirlines) && (
           <MenuItem
             icon={SealCheckIcon}
             title="Incoming to Hub"
@@ -226,7 +227,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           subtitle={`${transactions.length} entries — view, search and export`}
           onClick={() => setLedgerView(true)}
         />
-        {(user.role === 'super_admin' || user.role === 'admin') && excessBaggageAirlines.map(a => (
+        {excessBaggageAirlines.filter(a => canAccessTab(user, `Baggage:${a.name}`, excessBaggageAirlines)).map(a => (
           <MenuItem
             key={a.id}
             icon={AirplaneIcon}
@@ -235,7 +236,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             onClick={() => onChangeTab(`Baggage:${a.name}`)}
           />
         ))}
-        {['super_admin', 'admin', 'cargo_agent', 'marketing_agent', 'office_work'].includes(user.role) && (
+        {canAccessTab(user, 'Packages', excessBaggageAirlines) && (
           <MenuItem
             icon={TruckIcon}
             title="Package & Parcel Desk"
@@ -253,7 +254,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           title="Credit & Debit"
           subtitle="View receivables and payables (Airline commissions)"
           onClick={() => onChangeTab('Credit & Debit')}
-          disabled={!canAccessAccounting}
+          disabled={!canAccessTab(user, 'Credit & Debit', excessBaggageAirlines)}
         />
         <MenuItem
           icon={StackIcon}
@@ -396,7 +397,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           title="IT Debug Console"
           subtitle="Live system logs, debugging and diagnostics"
           onClick={() => onChangeTab('IT Debug')}
-          disabled={!isSuperAdmin}
+          disabled={!canAccessTab(user, 'IT Debug', excessBaggageAirlines)}
         />
         <MenuItem
           icon={CurrencyDollarIcon}
