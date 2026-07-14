@@ -1,6 +1,8 @@
 import { useState, useEffect, lazy, Suspense, useRef, useCallback, memo, useMemo } from 'react';
 import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport, cleanupOldQueue } from '../lib/sync';
+import { refillPoolIfLow } from '../lib/tagPool';
+import { getHubCode } from '../lib/helpers';
 import { useTheme } from '../lib/useTheme';
 import { getAllowedTabs } from '../lib/permissions';
 import { Header as HeaderRaw } from './Header';
@@ -131,6 +133,25 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         showToast({ message: `${count} transaction(s) synced to server`, type: 'success' });
         setPendingSyncCount(0);
       }
+
+      // Top up this user's tag-number pools (src/lib/tagPool.ts) the
+      // moment connectivity returns, rather than waiting for whichever
+      // form they next happen to open -- keeps a busy hub's pools full
+      // through the next connectivity gap instead of only reacting to one
+      // once it's already been hit. Scoped to whichever streams this
+      // user's role can actually reach (getAllowedTabs is the single
+      // source of truth for that, same as the nav itself uses).
+      const hubCode = getHubCode(user.hub_code || user.hub);
+      const allowedTabs = getAllowedTabs(user, excessBaggageAirlines);
+      if (allowedTabs.includes('Cargo')) refillPoolIfLow(`${hubCode}-CG`);
+      if (allowedTabs.includes('Marketing')) refillPoolIfLow(`${hubCode}-MK`);
+      if (allowedTabs.includes('Packages')) refillPoolIfLow(`${hubCode}-PKG`);
+      allowedTabs.forEach(tab => {
+        if (!tab.startsWith('Baggage:')) return;
+        const airlineName = tab.slice('Baggage:'.length);
+        const airline = excessBaggageAirlines.find(a => a.name === airlineName);
+        if (airline) refillPoolIfLow(`${hubCode}-${airline.tag_code}`);
+      });
     };
     const handleOffline = () => setIsOffline(true);
 

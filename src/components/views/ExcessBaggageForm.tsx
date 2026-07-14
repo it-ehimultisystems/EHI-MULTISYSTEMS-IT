@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useEnterToNextField } from '../../lib/useEnterToNextField';
 import { PaymentMode, Transaction, User, ExcessBaggageAirline } from '../../lib/types';
 import { fmt, roundMoney, tnow, getHubCode, upperOnChange } from '../../lib/helpers';
+import { getNextTag } from '../../lib/tagPool';
 import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer, Bluetooth } from 'lucide-react';
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildExcessBaggageWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
 import { CARGO_ROUTES, BANKS } from '../../lib/constants';
-import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
 
 export const ExcessBaggageForm = ({
@@ -83,13 +83,12 @@ export const ExcessBaggageForm = ({
     setSubmitting(true);
 
     const hubCode = getHubCode(user.hub_code || user.hub);
-    const { data: seq, error: tagError } = await supabase.rpc('next_awb_number', { p_hub_code: `${hubCode}-${airline.tag_code}` });
-    if (tagError || !seq) {
-      showToast({ message: `Failed to generate tag number: ${tagError?.message || 'unknown error'}. Please try again.`, type: 'error' });
+    const resolvedTag = await getNextTag(`${hubCode}-${airline.tag_code}`, `EHI-${hubCode}-${airline.tag_code}`);
+    if (!resolvedTag) {
+      showToast({ message: 'No tag number available offline. Connect to the internet briefly to reserve more, then try again.', type: 'error' });
       setSubmitting(false);
       return;
     }
-    const resolvedTag = `EHI-${hubCode}-${airline.tag_code}-${String(seq).padStart(6, '0')}`;
 
     const tx: Transaction = {
       id: resolvedTag,

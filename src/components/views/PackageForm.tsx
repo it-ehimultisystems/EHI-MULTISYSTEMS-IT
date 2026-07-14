@@ -3,6 +3,7 @@ import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { User, Transaction, Expense } from "../../lib/types";
 import { BANKS, EXPENSE_CATEGORIES, CONTENT_TYPES } from "../../lib/constants";
 import { fmt, uid, tnow, generatePaymentNarration, getHubCode, upperOnChange } from "../../lib/helpers";
+import { getNextTag } from "../../lib/tagPool";
 import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare, Bluetooth } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { sendReceiptWhatsApp, buildPackageWhatsApp } from "../../lib/notifications";
@@ -55,16 +56,19 @@ export const PackageForm = ({
   const [trackingRef, setTrackingRef] = useState<string>('');
   useEffect(() => {
     // Tracking numbers are allocated atomically server-side, keyed per hub
-    // with a "-PKG" suffix on the same next_awb_number counter cargo and
-    // marketing use, so two agents can never be issued the same one.
+    // with a "-PKG" suffix on the same counter cargo and marketing use, so
+    // two agents can never be issued the same one. Popped from the local
+    // tag pool (src/lib/tagPool.ts) rather than a direct RPC call -- a
+    // pure local operation once the pool's been reserved while online, so
+    // it works offline too, still guaranteed unique.
     const allocate = async () => {
       const hubCode = getHubCode(user.hub_code || user.hub);
-      const { data: seq, error } = await supabase.rpc('next_awb_number', { p_hub_code: `${hubCode}-PKG` });
-      if (!error && seq) {
-        setTrackingRef(`EHI-${hubCode}-PKG-${String(seq).padStart(6, '0')}`);
+      const tag = await getNextTag(`${hubCode}-PKG`, `EHI-${hubCode}-PKG`);
+      if (tag) {
+        setTrackingRef(tag);
       } else {
         setTrackingRef('');
-        showToast({ message: 'Failed to allocate tracking number. Please try again.', type: 'error' });
+        showToast({ message: 'No tracking number available offline. Connect to the internet briefly to reserve more, then try again.', type: 'error' });
       }
     };
     allocate();
@@ -213,12 +217,12 @@ export const PackageForm = ({
     // first one's row, losing a sale that was already collected.
     setTrackingRef('');
     const hubCodeReset = getHubCode(user.hub_code || user.hub);
-    supabase.rpc('next_awb_number', { p_hub_code: `${hubCodeReset}-PKG` }).then(({ data: seq, error }) => {
-      if (!error && seq) {
-        setTrackingRef(`EHI-${hubCodeReset}-PKG-${String(seq).padStart(6, '0')}`);
+    getNextTag(`${hubCodeReset}-PKG`, `EHI-${hubCodeReset}-PKG`).then(tag => {
+      if (tag) {
+        setTrackingRef(tag);
       } else {
         setTrackingRef('');
-        showToast({ message: 'Failed to allocate tracking number. Please try again.', type: 'error' });
+        showToast({ message: 'No tracking number available offline. Connect to the internet briefly to reserve more, then try again.', type: 'error' });
       }
     });
   };

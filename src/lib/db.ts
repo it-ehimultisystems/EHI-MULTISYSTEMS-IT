@@ -18,6 +18,18 @@ export interface SyncQueueItem {
   created_at: string;
 }
 
+// A locally-held pool of tag/AWB numbers pre-reserved from the atomic
+// server-side counter (reserve_awb_block RPC, see lib/tagPool.ts) -- one
+// row per unused reserved number. Popping a row here is a pure local
+// operation (no network needed), which is what lets tag generation work
+// offline while still guaranteeing every number came from the same
+// collision-free server sequence next_awb_number() already relies on.
+export interface TagPoolItem {
+  id?: number;
+  pool_key: string;
+  number: number;
+}
+
 class EHILocalDB extends Dexie {
   shipments!: Table<LocalShipment>;
   manifests!: Table<LocalShipment>;
@@ -27,6 +39,7 @@ class EHILocalDB extends Dexie {
   proof_of_delivery!: Table<ProofOfDelivery>;
   trip_pings!: Table<TripPing>;
   sync_queue!: Table<SyncQueueItem>;
+  tag_pools!: Table<TagPoolItem>;
 
   constructor() {
     super('EHILocalDB');
@@ -76,6 +89,16 @@ class EHILocalDB extends Dexie {
       proof_of_delivery: 'id, awbNumber, synced, deliveredAt',
       trip_pings: '++id, tripId, timestamp, synced',
       sync_queue: '++id, table_name, record_id, synced, created_at',
+    });
+    this.version(7).stores({
+      cargo_entries: 'id, synced, created_at',
+      manifests: 'id, synced, created_at',
+      marketing_entries: 'id, synced, created_at',
+      package_entries: 'id, synced, created_at',
+      proof_of_delivery: 'id, awbNumber, synced, deliveredAt',
+      trip_pings: '++id, tripId, timestamp, synced',
+      sync_queue: '++id, table_name, record_id, synced, created_at',
+      tag_pools: '++id, pool_key, number',
     });
   }
 }

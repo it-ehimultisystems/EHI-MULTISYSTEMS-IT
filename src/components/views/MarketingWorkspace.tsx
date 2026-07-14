@@ -3,6 +3,7 @@ import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { User, Transaction, Expense } from "../../lib/types";
 import { PRICING, BANKS, EXPENSE_CATEGORIES, AIRLINES } from "../../lib/constants";
 import { fmt, uid, tnow, getHubCode, upperOnChange } from "../../lib/helpers";
+import { getNextTag } from "../../lib/tagPool";
 import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer, Minus, TrendingDown, BarChart2, Bluetooth } from "lucide-react";
 import { motion } from "motion/react";
 import { supabase } from "../../lib/supabase";
@@ -64,10 +65,14 @@ export const MarketingWorkspace = ({
 
   // Marketing entries aren't airway bills -- this is just a printable tag
   // reference, distinct from the entry's own system ref (successTx.id).
-  // Uses the same atomic per-key counter as cargo's AWB (next_awb_number),
-  // keyed with a "-MK" suffix so marketing tags run on their own
-  // independent sequence per hub instead of interleaving with that hub's
-  // cargo AWB numbers. On failure, awb stays empty and submission is
+  // Uses the same atomic per-key counter as cargo's AWB, keyed with a
+  // "-MK" suffix so marketing tags run on their own independent sequence
+  // per hub instead of interleaving with that hub's cargo AWB numbers.
+  // Popped from the local tag pool (src/lib/tagPool.ts) rather than a
+  // direct RPC call -- a pure local operation once the pool's been
+  // reserved while online, so it works offline too, still guaranteed
+  // unique since every pooled number came from the same atomic counter.
+  // On failure (pool empty + offline), awb stays empty and submission is
   // blocked below -- no silent random fallback, since a non-atomic tag
   // could collide with a real one.
   const [awb, setAwb] = useState('');
@@ -75,13 +80,13 @@ export const MarketingWorkspace = ({
   const fetchNextTag = async () => {
     setAwbError(false);
     const hubCode = getHubCode(user.hub_code || user.hub);
-    const { data: seq, error } = await supabase.rpc('next_awb_number', { p_hub_code: `${hubCode}-MK` });
-    if (!error && seq) {
-      setAwb(`EHI-${hubCode}-MK-${String(seq).padStart(6, '0')}`);
+    const tag = await getNextTag(`${hubCode}-MK`, `EHI-${hubCode}-MK`);
+    if (tag) {
+      setAwb(tag);
     } else {
       setAwb('');
       setAwbError(true);
-      showToast({ message: 'Failed to generate tag number. Please try again.', type: 'error' });
+      showToast({ message: 'No tag number available offline. Connect to the internet briefly to reserve more, then try again.', type: 'error' });
     }
   };
   useEffect(() => { fetchNextTag(); }, []);

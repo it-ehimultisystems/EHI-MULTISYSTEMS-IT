@@ -8,6 +8,7 @@ import {
 import { fmt, roundMoney, tnow, generatePickupPin, normalizeAirlineName, getHubCode, upperOnChange, isStandalonePWA } from "../../lib/helpers";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { isTagAlreadyDelivered } from "../../lib/scanLogic";
+import { getNextTag } from "../../lib/tagPool";
 import {
   CheckCircle,
   Loader2,
@@ -151,21 +152,19 @@ export const CargoForm = ({
   const [customAirline, setCustomAirline] = useState("");
   const [customConsignee, setCustomConsignee] = useState("");
 
-  // This is a PREVIEW ONLY -- it shows the agent what the real atomic AWB
-  // will likely look like before they submit, without actually consuming
-  // a number from the hub's counter (peek_next_awb_number is read-only).
-  // The real number is only allocated by next_awb_number() at submit time
-  // in handleRetailSubmit, so an abandoned/reset form never wastes a
-  // sequence number -- it's just left available for whoever submits next.
+  // This is now a REAL, already-allocated number, not a non-destructive
+  // preview -- popped from the local tag pool (src/lib/tagPool.ts), which
+  // is a pure local operation, so it works offline too. Popping a pooled
+  // number doesn't touch the shared server counter (that already happened
+  // when the block was reserved), so an abandoned/reset form just leaves
+  // this one number unused within this device's own pool -- not "stolen"
+  // from another agent the way calling next_awb_number() directly would be.
   const [awb, setAwb] = useState('');
   const fetchAwbPreview = async () => {
     const hubCode = getHubCode(user.hub_code || user.hub);
-    const { data: previewSeq, error } = await supabase.rpc('peek_next_awb_number', { p_hub_code: `${hubCode}-CG` });
-    if (!error && previewSeq) {
-      setAwb(`EHI-${hubCode}-CG-${String(previewSeq).padStart(6, '0')}`);
-    } else {
-      setAwb('');
-    }
+    const poolKey = `${hubCode}-CG`;
+    const tag = await getNextTag(poolKey, `EHI-${hubCode}-CG`);
+    setAwb(tag || '');
   };
   useEffect(() => { fetchAwbPreview(); }, []);
 
@@ -769,20 +768,20 @@ export const CargoForm = ({
     }
 
     const gateHubCode = getHubCode(user.hub_code || user.hub);
-    const { data: gateSeq, error: gateTagError } = await supabase.rpc('next_awb_number', { p_hub_code: `${gateHubCode}-CG` });
-    if (gateTagError || !gateSeq) {
-      showToast({ message: `Failed to generate reference number: ${gateTagError?.message || 'unknown error'}. Please try again.`, type: "error" });
+    const gateResolvedId = await getNextTag(`${gateHubCode}-CG`, `EHI-${gateHubCode}-CG`);
+    if (!gateResolvedId) {
+      showToast({ message: "No tag number available offline. Connect to the internet briefly to reserve more, then try again.", type: "error" });
       setIsWeighingSubmitting(false);
       return;
     }
-    const gateResolvedId = `EHI-${gateHubCode}-CG-${String(gateSeq).padStart(6, '0')}`;
 
     // Block reusing a physical AWB whose previous consignment already
     // completed delivery -- the same check the retail flow already has.
     // This was missing here entirely: a duplicated physical tag lets two
     // shipments share one tracking history, a common consign-fraud
     // pattern, and corporate gate-weighing had no protection against it.
-    if (await isTagAlreadyDelivered(selectedIntake.awb)) {
+    // Skipped offline -- see the retail submit path's identical comment.
+    if (navigator.onLine && await isTagAlreadyDelivered(selectedIntake.awb)) {
       showToast({
         message: `${selectedIntake.awb} was already delivered on a previous consignment. This tag cannot be reused -- verify the physical AWB before finalizing.`,
         type: "error",
@@ -960,28 +959,31 @@ export const CargoForm = ({
     }
 
     // AWB is EHI-{HUBCODE}-{6-digit per-hub sequence}, e.g. EHI-LOS-001042.
-    // The sequence comes from next_awb_number(), an atomic Postgres-side
-    // counter per hub_code -- not a client-side "read max, add one" scheme,
-    // which would race under concurrent submissions at a busy hub (the same
-    // class of bug already fixed once in this project's rate limiter). On
-    // failure we surface it directly rather than silently falling back to a
-    // random number, which would defeat the whole point of guaranteed
-    // per-hub uniqueness.
+    // The number was already allocated on mount/reset (see fetchAwbPreview
+    // above) from the local tag pool -- popped from a block reserved via
+    // the atomic reserve_awb_block()/next_awb_number() counter, so it's
+    // already guaranteed unique whether or not this device is online right
+    // now. Only re-attempt allocation here if that earlier pop somehow
+    // came back empty (pool + connectivity both unavailable at mount time).
     const hubCode = getHubCode(user.hub_code || user.hub);
-    const { data: awbSeq, error: awbError } = await supabase.rpc('next_awb_number', {
-      p_hub_code: `${hubCode}-CG`,
-    });
-    if (awbError) {
-      showToast({ message: `Failed to generate AWB number: ${awbError.message}. Please try again.`, type: "error" });
-      setSubmitting(false);
-      return;
+    let resolvedAwb = awb;
+    if (!resolvedAwb) {
+      const retry = await getNextTag(`${hubCode}-CG`, `EHI-${hubCode}-CG`);
+      if (!retry) {
+        showToast({ message: "No tag number available offline. Connect to the internet briefly to reserve more, then try again.", type: "error" });
+        setSubmitting(false);
+        return;
+      }
+      resolvedAwb = retry;
     }
-    const resolvedAwb = `EHI-${hubCode}-CG-${String(awbSeq).padStart(6, '0')}`;
 
     // Block reusing a tag whose previous consignment already completed
     // delivery -- a duplicated physical tag makes two shipments share one
-    // tracking history and is a common consign-fraud pattern.
-    if (await isTagAlreadyDelivered(resolvedAwb)) {
+    // tracking history and is a common consign-fraud pattern. Skipped
+    // offline: this AWB just came from the atomic pool/counter, so it
+    // cannot possibly have a prior DELIVER event -- the check would only
+    // ever fail on the network call itself while offline.
+    if (navigator.onLine && await isTagAlreadyDelivered(resolvedAwb)) {
       showToast({
         message: `${resolvedAwb} was already delivered on a previous consignment. This tag cannot be reused -- generate a new one.`,
         type: "error",
