@@ -142,6 +142,10 @@ export const TransactionLedger = ({
         if (e.source === "expense" || e.mode === "Debt") return false;
       } else if (modeFilter === "Expense") {
         if (e.source !== "expense") return false;
+      } else if (modeFilter === "Unverified") {
+        // Mirrors unverifiedCash/unconfirmedTransfer below: Cash or Transfer
+        // entries that haven't had their payment_confirmed flag set.
+        if (!((e.mode === 'Cash' || e.mode === 'Transfer') && !e.raw.paymentConfirmed)) return false;
       } else {
         if (e.mode.toLowerCase() !== modeFilter.toLowerCase()) return false;
       }
@@ -408,7 +412,7 @@ export const TransactionLedger = ({
           route,
           airline: tx.airline,
           hubName: user?.hub || 'EHI Cargo Station',
-          date: tx.time || new Date().toLocaleDateString('en-GB'),
+          date: `${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')} ${tx.time || tnow()}`,
           bigBags: big,
           medBags: med,
           smallBags: small,
@@ -443,7 +447,8 @@ export const TransactionLedger = ({
         weight: tx.kg || 0,
         airline: tx.airline,
         hubName: user?.hub || 'EHI Cargo Station',
-        date: tx.time || new Date().toLocaleDateString('en-GB'),
+        date: `${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')} ${tx.time || tnow()}`,
+        contentType: tx.contentType || (tx.detail ? tx.detail.split(' · ')[5] : undefined),
       };
 
       await printCargoTagPDF(data, preOpenedWindow);
@@ -500,7 +505,7 @@ export const TransactionLedger = ({
           route,
           airline: tx.airline,
           hubName: user?.hub || 'EHI Cargo Station',
-          date: tx.time || new Date().toLocaleDateString('en-GB'),
+          date: `${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')} ${tx.time || tnow()}`,
           bigBags: big,
           medBags: med,
           smallBags: small,
@@ -535,7 +540,8 @@ export const TransactionLedger = ({
         weight: tx.kg || 0,
         airline: tx.airline,
         hubName: user?.hub || 'EHI Cargo Station',
-        date: tx.time || new Date().toLocaleDateString('en-GB'),
+        date: `${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')} ${tx.time || tnow()}`,
+        contentType: tx.contentType || (tx.detail ? tx.detail.split(' · ')[5] : undefined),
       };
 
       await printCargoTagPDF(data, preOpenedWindow);
@@ -702,46 +708,53 @@ export const TransactionLedger = ({
             </div>
           )}
 
-          {/* Download today's entries */}
-          {defaultTypeFilter && (
-            <button
-              onClick={() => {
-                if (defaultTypeFilter === 'baggage') {
-                  import('./ExcessBaggageLedgerPDF').then(({ downloadBaggageLedgerPDF }) => {
-                    const txs = filteredEntries
-                      .filter(e => e.source === 'transaction')
-                      .map(e => e.raw as Transaction);
-                    // This is the aggregate master ledger across every
-                    // configured airline (unlike the per-airline "Daily PDF"
-                    // button on the ticketing form itself), so it uses a
-                    // generic title/no single airline logo rather than
-                    // whichever airline happens to be first in the list.
-                    downloadBaggageLedgerPDF({
-                      airlineName: 'Excess Baggage',
-                      date: new Date().toLocaleDateString('en-GB'),
-                      hubName: user.hub || 'EHI Hub',
-                      transactions: txs,
-                      filters: {
-                        flight: vjFlightFilter === 'All' ? '' : vjFlightFilter,
-                        destination: vjDestFilter === 'All' ? '' : vjDestFilter
-                      }
-                    });
+          {/* Download entries currently in view -- respects whatever
+              date range / type / mode / search filters are active
+              (filteredEntries), not just "today". Always rendered, so the
+              Master Ledger (opened with no defaultTypeFilter) gets an
+              export option too, not just the per-stream ledgers. */}
+          <button
+            onClick={() => {
+              if (defaultTypeFilter === 'baggage') {
+                import('./ExcessBaggageLedgerPDF').then(({ downloadBaggageLedgerPDF }) => {
+                  const txs = filteredEntries
+                    .filter(e => e.source === 'transaction')
+                    .map(e => e.raw as Transaction);
+                  // This is the aggregate master ledger across every
+                  // configured airline (unlike the per-airline "Daily PDF"
+                  // button on the ticketing form itself), so it uses a
+                  // generic title/no single airline logo rather than
+                  // whichever airline happens to be first in the list.
+                  downloadBaggageLedgerPDF({
+                    airlineName: 'Excess Baggage',
+                    date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
+                    hubName: user.hub || 'EHI Hub',
+                    transactions: txs,
+                    filters: {
+                      flight: vjFlightFilter === 'All' ? '' : vjFlightFilter,
+                      destination: vjDestFilter === 'All' ? '' : vjDestFilter
+                    }
                   });
-                } else {
-                  import('../../lib/helpers').then(({ downloadDailyCSV }) => {
-                    // Export only filtered if we want, but CSV exports 'transactions' directly. Let's pass filtered transactions.
-                    const txs = filteredEntries
-                      .filter(e => e.source === 'transaction')
-                      .map(e => e.raw as Transaction);
-                    downloadDailyCSV(defaultTypeFilter, txs, user.hub || 'EHI Hub');
-                  });
-                }
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg text-[10px] font-mono text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors"
-            >
-              <Download size={11} /> {defaultTypeFilter === 'baggage' ? 'Download PDF' : 'Download CSV'}
-            </button>
-          )}
+                });
+              } else {
+                import('../../lib/helpers').then(({ downloadDailyCSV }) => {
+                  // Whatever is currently filtered/date-scoped in the ledger
+                  // UI, not a re-derived "today" slice -- downloadDailyCSV no
+                  // longer re-filters internally.
+                  const txs = filteredEntries
+                    .filter(e => e.source === 'transaction')
+                    .map(e => e.raw as Transaction);
+                  // Master Ledger (no defaultTypeFilter) can contain a mix
+                  // of cargo/baggage/marketing/package entries at once, so
+                  // it falls back to the generic 'mixed' column layout.
+                  downloadDailyCSV(defaultTypeFilter || 'mixed', txs, user.hub || 'EHI Hub');
+                });
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg text-[10px] font-mono text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors"
+          >
+            <Download size={11} /> {defaultTypeFilter === 'baggage' ? 'Download PDF' : 'Download CSV'}
+          </button>
 
           {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant' || user.role === 'auditor') && (
             <button
@@ -863,6 +876,7 @@ export const TransactionLedger = ({
               <option value="Transfer">Transfer</option>
               <option value="POS">POS</option>
               <option value="Debt">Debt (Credit)</option>
+              <option value="Unverified">Unverified</option>
             </select>
           </div>
         </div>

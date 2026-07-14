@@ -1,5 +1,6 @@
 import { PRICING, CARGO_ROUTES } from './constants.js';
 import { Transaction, PaymentMode } from './types.js';
+import type { ChangeEvent } from 'react';
 
 // Money math done as plain float multiplication/division (e.g. amount * (1
 // - commissionRate / 100)) routinely lands a fraction of a kobo off an exact
@@ -9,6 +10,14 @@ import { Transaction, PaymentMode } from './types.js';
 // before ever rounding lets the error compound into a visibly wrong total.
 // Round each line item to the nearest kobo immediately after computing it,
 // before it goes into any sum.
+// Free-text fields across the entry forms (consignee names, remarks,
+// content descriptions, etc.) are meant to be recorded in all-caps for
+// consistency with printed tags/receipts. Wrapping a setState function with
+// this gives a drop-in onChange handler that uppercases as the agent types,
+// instead of every form re-implementing `e.target.value.toUpperCase()` by
+// hand. Not for phone numbers or numeric fields -- only apply to free text.
+export const upperOnChange = (setter: (v: string) => void) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setter(e.target.value.toUpperCase());
+
 export const roundMoney = (amount: number): number => Math.round(amount * 100) / 100;
 
 export const fmt = (amount: number) => {
@@ -175,25 +184,24 @@ export function generatePickupPin(): string {
 }
 
 // ── DAILY ENTRIES CSV DOWNLOAD ────────────────────────────────
+// `transactions` is expected to already be scoped to whatever date range /
+// filters the caller applied (e.g. TransactionLedger's `filteredEntries`) --
+// this function must not re-filter it, or a caller-selected date range would
+// silently get discarded and replaced with "today only".
 export function downloadDailyCSV(
-  streamType: 'cargo' | 'baggage' | 'marketing',
+  streamType: 'cargo' | 'baggage' | 'marketing' | 'package' | 'mixed',
   transactions: any[],
   hubName: string
 ): void {
   const today = new Date().toISOString().slice(0, 10);
-  const todayLabel = new Date().toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-  const todayTx = transactions.filter(t => {
-    if (!t.created_at) return true;
-    return t.created_at.slice(0, 10) === today;
-  });
+  const generatedLabel = new Date().toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   let headers: string[];
   let rows: string[][];
 
   if (streamType === 'cargo') {
     headers = ['Ref', 'Time', 'Consignee', 'AWB/Tag', 'Airline', 'Route', 'Pieces', 'KG', 'Content', 'Amount', 'Mode', 'Bank', 'Status'];
-    rows = todayTx.map(t => {
+    rows = transactions.map(t => {
       const parts = t.detail?.split(' · ') || [];
       return [
         t.id,
@@ -213,7 +221,7 @@ export function downloadDailyCSV(
     });
   } else if (streamType === 'baggage') {
     headers = ['Ref', 'Time', 'Airline', 'Passenger', 'PNR', 'Flight', 'Destination', 'PCS', 'Total KG', 'Excess KG', 'Amount', 'Mode', 'Bank'];
-    rows = todayTx.map(t => [
+    rows = transactions.map(t => [
       t.id,
       t.time || '',
       t.airline || 'ValueJet',
@@ -228,9 +236,9 @@ export function downloadDailyCSV(
       t.mode || '',
       t.bank || '',
     ]);
-  } else {
+  } else if (streamType === 'marketing') {
     headers = ['Ref', 'Time', 'Customer', 'Phone', 'Route', 'Big Bags', 'Med Bags', 'Sm Bags', 'Amount', 'Mode', 'Bank'];
-    rows = todayTx.map(t => {
+    rows = transactions.map(t => {
       const bags = t.detail?.split(' · ')[1] || '';
       const bb = bags.match(/(\d+)BB/)?.[1] || '';
       const mb = bags.match(/(\d+)MB/)?.[1] || '';
@@ -247,15 +255,55 @@ export function downloadDailyCSV(
         t.bank || '',
       ];
     });
+  } else if (streamType === 'package') {
+    headers = ['Ref', 'Time', 'Name', 'Destination', 'Content Type', 'Pieces', 'KG', 'Contents', 'Amount', 'Mode', 'Bank', 'Status'];
+    rows = transactions.map(t => {
+      const parts = t.detail?.split(' · ') || [];
+      return [
+        t.id,
+        t.time || '',
+        t.name || '',
+        t.destination || parts[0] || '',
+        t.contentType || parts[1] || '',
+        String(t.pieces || parts[2]?.replace('pcs','') || ''),
+        String(t.kg || parts[3]?.replace('kg','') || ''),
+        t.contents || parts[4] || '',
+        String(t.amount || 0),
+        t.mode || '',
+        t.bank || '',
+        t.status || 'Intake',
+      ];
+    });
+  } else {
+    // 'mixed' -- generic export for the all-streams Master Ledger view,
+    // where entries can be cargo/baggage/marketing/package all at once and
+    // none of the stream-specific column sets above apply uniformly.
+    headers = ['Ref', 'Time', 'Type', 'Name', 'Detail', 'Amount', 'Mode', 'Bank', 'Status'];
+    rows = transactions.map(t => [
+      t.id,
+      t.time || '',
+      t.type || '',
+      t.name || '',
+      t.detail || '',
+      String(t.amount || 0),
+      t.mode || '',
+      t.bank || '',
+      t.status || 'Intake',
+    ]);
   }
 
   // Escape CSV values
   const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
 
-  const titleRow = `EHI Multisystems Nigeria Ltd — ${streamType === 'cargo' ? 'Cargo' : streamType === 'baggage' ? 'Excess Baggage' : 'Marketing'} Entries`;
-  const dateRow = `Hub: ${hubName} | Date: ${todayLabel}`;
-  const totalAmount = todayTx.reduce((s, t) => s + (t.amount || 0), 0);
-  const summaryRow = `Total Entries: ${todayTx.length} | Total Revenue: NGN ${totalAmount.toLocaleString('en-NG')}`;
+  const streamLabel = streamType === 'cargo' ? 'Cargo'
+    : streamType === 'baggage' ? 'Excess Baggage'
+    : streamType === 'marketing' ? 'Marketing'
+    : streamType === 'package' ? 'Package Desk'
+    : 'Master Ledger';
+  const titleRow = `EHI Multisystems Nigeria Ltd — ${streamLabel} Entries`;
+  const dateRow = `Hub: ${hubName} | Generated: ${generatedLabel}`;
+  const totalAmount = transactions.reduce((s, t) => s + (t.amount || 0), 0);
+  const summaryRow = `Total Entries: ${transactions.length} | Total Revenue: NGN ${totalAmount.toLocaleString('en-NG')}`;
 
   const csvLines = [
     esc(titleRow),

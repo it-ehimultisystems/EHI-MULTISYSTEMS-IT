@@ -2222,3 +2222,57 @@ ALTER TABLE public.user_profiles ADD CONSTRAINT user_profiles_role_check CHECK (
 -- admin explicitly sets one.
 ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS view_overrides text[];
 
+
+-- ============================================================
+-- FILE: supabase/migrations/20260725_payment_confirmation_columns.sql
+-- ============================================================
+-- handleUpdateTx (src/components/EHIApp.tsx) resolves a Transaction's target
+-- table generically and writes payment_confirmed/pos_approval_code/
+-- confirmed_by/confirmed_at unconditionally, regardless of which table it
+-- resolved to. 20260719_package_payment_columns.sql gave package_entries
+-- these columns, but cargo_entries, manifests (baggage), and
+-- marketing_entries never got them (cargo_entries got confirmed_by/
+-- confirmed_at only, from 20260706_full_schema.sql -- it was still missing
+-- payment_confirmed/pos_approval_code). That meant confirming a Cash/
+-- Transfer payment for a Cargo, Baggage, or Marketing transaction either
+-- failed against Supabase's schema cache or was silently dropped. This
+-- brings all three tables to the same column parity as package_entries.
+-- ADD COLUMN IF NOT EXISTS is used throughout (including for cargo_entries'
+-- confirmed_by/confirmed_at) so this is safe to run regardless of exactly
+-- which of these columns already exist on a given table.
+
+ALTER TABLE public.cargo_entries ADD COLUMN IF NOT EXISTS payment_confirmed boolean NOT NULL DEFAULT false;
+ALTER TABLE public.cargo_entries ADD COLUMN IF NOT EXISTS pos_approval_code text;
+ALTER TABLE public.cargo_entries ADD COLUMN IF NOT EXISTS confirmed_by text;
+ALTER TABLE public.cargo_entries ADD COLUMN IF NOT EXISTS confirmed_at timestamptz;
+
+ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS payment_confirmed boolean NOT NULL DEFAULT false;
+ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS pos_approval_code text;
+ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS confirmed_by text;
+ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS confirmed_at timestamptz;
+
+ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS payment_confirmed boolean NOT NULL DEFAULT false;
+ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS pos_approval_code text;
+ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS confirmed_by text;
+ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS confirmed_at timestamptz;
+
+
+-- ============================================================
+-- FILE: supabase/migrations/20260726_outbound_arrivals_indexes.sql
+-- ============================================================
+-- New "Outbound Arrivals" view (src/components/views/OutboundArrivals.tsx)
+-- lets a sending hub see which of its dispatched cargo_entries,
+-- marketing_entries, and package_entries rows have status = 'Arrived' at
+-- their destination, filtered by hub_id = the origin hub. None of the
+-- three tables has an index that serves hub_id + status + recency together:
+-- cargo_entries only has (hub_id, created_at) and a lone (status) index;
+-- marketing_entries and package_entries only have (hub_id, created_at) with
+-- no status index at all (marketing_entries.status predates this feature,
+-- package_entries.status was added later in 20260718_package_tracking.sql
+-- with no accompanying index). Add a composite index per table so this
+-- query doesn't fall back to scanning every row for the hub.
+
+CREATE INDEX IF NOT EXISTS idx_cargo_entries_hub_status_created ON public.cargo_entries(hub_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_marketing_entries_hub_status_created ON public.marketing_entries(hub_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_package_entries_hub_status_created ON public.package_entries(hub_id, status, created_at DESC);
+

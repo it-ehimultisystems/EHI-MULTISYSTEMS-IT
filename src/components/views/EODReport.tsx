@@ -13,6 +13,7 @@ export interface EODReportData {
   cargoTotal: number;
   mktgTotal: number;
   vjTotal: number;
+  packageTotal: number;
   grossTotal: number;
   cashTotal: number;
   transferTotal: number;
@@ -31,6 +32,7 @@ export interface EODReportData {
   cargoCount: number;
   mktgCount: number;
   vjCount: number;
+  packageCount: number;
   transactions: Transaction[];
   expenses: Expense[];
 }
@@ -98,6 +100,10 @@ const EODReportPDF = ({ data }: { data: EODReportData }) => (
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Excess Baggage ({data.vjCount})</Text>
             <Text style={styles.summaryValue}>NGN {data.vjTotal.toLocaleString('en-NG', { maximumFractionDigits: 2 })}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Package Desk ({data.packageCount})</Text>
+            <Text style={styles.summaryValue}>NGN {data.packageTotal.toLocaleString('en-NG', { maximumFractionDigits: 2 })}</Text>
           </View>
           <View style={[styles.summaryRow, { marginTop: 4, paddingTop: 4, borderTopWidth: 1, borderTopColor: '#e5e7eb' }]}>
             <Text style={[styles.summaryLabel, { fontWeight: 'bold' }]}>GROSS TOTAL</Text>

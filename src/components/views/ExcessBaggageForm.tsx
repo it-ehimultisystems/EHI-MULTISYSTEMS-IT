@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PaymentMode, Transaction, User, ExcessBaggageAirline } from '../../lib/types';
-import { fmt, roundMoney, tnow, getHubCode } from '../../lib/helpers';
+import { fmt, roundMoney, tnow, getHubCode, upperOnChange } from '../../lib/helpers';
 import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer, Bluetooth } from 'lucide-react';
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildExcessBaggageWhatsApp } from '../../lib/notifications';
@@ -155,7 +155,7 @@ export const ExcessBaggageForm = ({
       const data = {
         airlineName: airline.name,
         entryRef: successTx.tx.id,
-        date: new Date().toLocaleDateString('en-GB'),
+        date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
         hubName: `${airline.name} Counter`,
         agentName: user.name || 'Agent',
         passengerName: successTx.tx.name,
@@ -181,7 +181,7 @@ export const ExcessBaggageForm = ({
     await printBaggageReceipt({
       airlineName: airline.name,
       entryRef: successTx.tx.id,
-      date: new Date().toLocaleDateString('en-GB'),
+      date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
       hubName: `${airline.name} Counter`,
       agentName: user.name || 'Agent',
       passengerName: successTx.tx.name,
@@ -269,7 +269,7 @@ export const ExcessBaggageForm = ({
                     const printData = {
                       airlineName: airline.name,
                       entryRef: s.tx.id,
-                      date: new Date().toLocaleDateString('en-GB'),
+                      date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
                       originState: user.hub || 'Lagos',
                       agentName: user.name || 'Agent',
                       passengerName: s.tx.name,
@@ -306,7 +306,7 @@ export const ExcessBaggageForm = ({
                     const printData = {
                       airlineName: airline.name,
                       entryRef: s.tx.id,
-                      date: new Date().toLocaleDateString('en-GB'),
+                      date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
                       originState: user.hub || 'Lagos',
                       agentName: user.name || 'Agent',
                       passengerName: s.tx.name,
@@ -392,7 +392,7 @@ export const ExcessBaggageForm = ({
                 baggageToday.sort((a, b) => (a.flight || '').localeCompare(b.flight || ''));
                 downloadBaggageLedgerPDF({
                   airlineName: airline.name,
-                  date: new Date().toLocaleDateString('en-GB'),
+                  date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
                   hubName: user.hub || 'EHI Hub',
                   transactions: baggageToday,
                   filters: { flight: '', destination: '' }
@@ -424,7 +424,7 @@ export const ExcessBaggageForm = ({
               name="name"
               placeholder="Enter Passenger Name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={upperOnChange(setName)}
               className={formInputClass}
             />
           </div>

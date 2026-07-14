@@ -41,12 +41,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   divider: {
-    height: 2,
+    height: 1,
     backgroundColor: "#000000",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   body: {
     flexDirection: "row",
@@ -159,6 +159,16 @@ const styles = StyleSheet.create({
   },
 });
 
+// Same fixed-page/wrap={false} clipping risk as CargoTagPDF.tsx (see its
+// truncateForTag comment) -- `contents` is free text with no length limit
+// from the form, and unlike `contentType` (a bounded Package/Parcel select
+// value) it can easily run long enough to wrap within the typeBadge and
+// push the footer (company name/date) off the bottom of this fixed
+// 100x80mm label. truncateForTag isn't exported from CargoTagPDF.tsx, so
+// this is the same clamping logic duplicated locally.
+const truncateForTag = (str: string, max: number) =>
+  str.length > max ? str.slice(0, max - 1).trimEnd() + "…" : str;
+
 // No pieces/multi-page concept here -- unlike Cargo (which can have several
 // physical pieces) a Package/Parcel entry is always exactly one item, so
 // this is a single Page, not a Document loop.
@@ -166,7 +176,7 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
   <Document>
     <Page size={[PAGE_WIDTH, PAGE_HEIGHT]} style={styles.page} wrap={false}>
       <View style={styles.headerRow}>
-        <EHILogoPDF width={70} variant="cargo" />
+        <EHILogoPDF width={54} variant="cargo" />
       </View>
       <View style={styles.divider} />
 
@@ -186,7 +196,7 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
             </Text>
             {data.contents && (
               <Text style={styles.typeBadgeText}>
-                {data.contents.toUpperCase()}
+                {truncateForTag(data.contents.toUpperCase(), 30)}
               </Text>
             )}
           </View>

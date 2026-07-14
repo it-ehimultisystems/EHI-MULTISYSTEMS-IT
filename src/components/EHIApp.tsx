@@ -176,17 +176,21 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   }, []);
 
   // Fetch Initial Data
-  useEffect(() => {
-    if (isOffline) return;
+  // Hoisted into a stable callback (rather than declared inline inside the
+  // effect below) so the tab-switch effect further down can trigger the
+  // exact same cargo/baggage/marketing/package/expense fetch without
+  // duplicating the query logic.
+  const fetchEpochRef = useRef(0);
+  const fetchInitial = useCallback(async () => {
     // globalDateRange changes on every filter click -- without this guard,
     // quickly clicking through Today -> Yesterday -> 7 days can let an
     // older, slower request resolve AFTER a newer one and overwrite the
     // whole ledger with the wrong date range's data, with no visible error.
-    let active = true;
-
-    const fetchInitial = async () => {
-      setInitError(false);
-      try {
+    // fetchEpochRef replaces what used to be an effect-local `active` flag
+    // so the same guard works when this is called from multiple effects.
+    const myEpoch = ++fetchEpochRef.current;
+    setInitError(false);
+    try {
         const isAdmin = ['super_admin','admin','accountant','auditor'].includes(user.role);
         // Deliberately narrower than isAdmin -- pickup PIN visibility is
         // specifically admin/super_admin/accountant, not auditor.
@@ -204,14 +208,14 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         const endISO = endDate.toISOString();
 
         const [cargoRes, baggageRes, mktRes, packageRes, expRes] = await Promise.all([
-          addHubFilter(supabase.from('cargo_entries').select(`entry_ref,consignee_name,airline,commission_rate,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,amount_paid,payment_history${canSeePin ? ',pickup_pin' : ''}`).gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history,airline').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('marketing_entries').select('entry_ref,awb_tag_number,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,bb_kg,mb_kg,sb_kg,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name),debt_amount_paid,payment_history').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,status,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,created_at,hub_id').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('cargo_entries').select(`entry_ref,consignee_name,airline,commission_rate,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at${canSeePin ? ',pickup_pin' : ''}`).gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history,airline,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('marketing_entries').select('entry_ref,awb_tag_number,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,bb_kg,mb_kg,sb_kg,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name),debt_amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,status,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,created_at,hub_id,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('expenses').select('*').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500))
         ]);
 
-        if (!active) return;
+        if (fetchEpochRef.current !== myEpoch) return;
         if (cargoRes.error) console.error('Cargo fetch error:', cargoRes.error);
 
         const allTx: Transaction[] = [];
@@ -240,6 +244,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               contentType: r.content_type,
               amountPaid: r.amount_paid || 0,
               paymentHistory: r.payment_history || [],
+              paymentConfirmed: r.payment_confirmed,
+              posApprovalCode: r.pos_approval_code || undefined,
+              confirmedBy: r.confirmed_by || undefined,
+              confirmedAt: r.confirmed_at || undefined,
             });
           });
         }
@@ -268,6 +276,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               pieces: r.total_pcs,
               amountPaid: r.amount_paid || 0,
               paymentHistory: r.payment_history || [],
+              paymentConfirmed: r.payment_confirmed,
+              posApprovalCode: r.pos_approval_code || undefined,
+              confirmedBy: r.confirmed_by || undefined,
+              confirmedAt: r.confirmed_at || undefined,
             });
           });
         }
@@ -294,6 +306,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               enteredByName: enteredByName || undefined,
               amountPaid: r.debt_amount_paid || 0,
               paymentHistory: r.payment_history || [],
+              paymentConfirmed: r.payment_confirmed,
+              posApprovalCode: r.pos_approval_code || undefined,
+              confirmedBy: r.confirmed_by || undefined,
+              confirmedAt: r.confirmed_at || undefined,
             });
           });
         }
@@ -320,6 +336,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               paymentNarration: r.payment_narration || undefined,
               debtPaid: r.debt_paid ?? undefined,
               debtPaidAt: r.debt_paid_at || undefined,
+              paymentConfirmed: r.payment_confirmed,
+              posApprovalCode: r.pos_approval_code || undefined,
+              confirmedBy: r.confirmed_by || undefined,
+              confirmedAt: r.confirmed_at || undefined,
             });
           });
         }
@@ -367,15 +387,40 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           return combined.slice(0, 1000);
         });
       } catch (err) {
-        if (!active) return;
+        if (fetchEpochRef.current !== myEpoch) return;
         console.error("Failed to fetch initial tx:", err);
         setInitError(true);
       }
-    };
+  }, [globalDateRange, user.role, user.hub_id]);
 
+  useEffect(() => {
+    if (isOffline) return;
     fetchInitial();
-    return () => { active = false; };
-  }, [isOffline, globalDateRange, user.role, user.hub_id, retryTrigger]);
+  }, [isOffline, retryTrigger, fetchInitial]);
+
+  // The realtime channels below (cargoChannel/baggageChannel/marketingChannel)
+  // are only subscribed while currentTab actually needs them, and
+  // package_entries has no realtime channel at all -- so an entry inserted
+  // elsewhere while its channel wasn't open is otherwise never pushed into
+  // local state until a manual reload or a date-range change re-runs
+  // fetchInitial. Refetch when navigating into a tab that needs fresh data,
+  // so anything missed while on an unrelated tab shows up immediately,
+  // without refetching on every single tab click (e.g. Settings, Profile).
+  const prevTabRef = useRef(currentTab);
+  useEffect(() => {
+    const prevTab = prevTabRef.current;
+    prevTabRef.current = currentTab;
+    if (isOffline || prevTab === currentTab) return;
+
+    const isDataTab =
+      currentTab === 'Cargo' ||
+      currentTab === 'Marketing' ||
+      currentTab === 'Packages' ||
+      currentTab.startsWith('Baggage:') ||
+      ['Tower', 'Scan', 'More'].includes(currentTab);
+
+    if (isDataTab) fetchInitial();
+  }, [currentTab, isOffline, fetchInitial]);
 
   // Supabase real-time
   useEffect(() => {

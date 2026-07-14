@@ -27,6 +27,13 @@ export interface MarketingTagPDFData {
   airline?: string;
   hubName?: string;
   date?: string;
+  // Unlike Cargo/Package, marketing entries don't currently collect a
+  // content-type/category on the entry form -- there's no equivalent
+  // state or stored field to thread in from MarketingWorkspace.tsx today.
+  // Kept optional and rendered defensively (falls back to "—", same as
+  // hubName below) so this tag is forward-compatible if that's added
+  // later, without inventing data that doesn't exist yet.
+  contentType?: string;
   bigBags: number;
   medBags: number;
   smallBags: number;
@@ -70,12 +77,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   divider: {
-    height: 2,
+    height: 1,
     backgroundColor: "#000000",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   body: {
     flexDirection: "row",
@@ -188,6 +195,12 @@ const styles = StyleSheet.create({
   },
 });
 
+// Same fixed-page/wrap={false} clipping risk as CargoTagPDF.tsx (see its
+// truncateForTag comment) -- truncateForTag isn't exported from there, so
+// this is the same clamping logic duplicated locally.
+const truncateForTag = (str: string, max: number) =>
+  str.length > max ? str.slice(0, max - 1).trimEnd() + "…" : str;
+
 const MarketingTagPage = ({
   data,
   bagPage,
@@ -199,8 +212,8 @@ const MarketingTagPage = ({
 }) => (
   <Page size={[PAGE_WIDTH, PAGE_HEIGHT]} style={styles.page} wrap={false}>
     <View style={styles.headerRow}>
-      <EHILogoPDF width={70} variant="cargo" />
-      {data.airline ? <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={70} /> : null}
+      <EHILogoPDF width={54} variant="cargo" />
+      {data.airline ? <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={54} /> : null}
     </View>
     <View style={styles.divider} />
 
@@ -230,6 +243,13 @@ const MarketingTagPage = ({
           <View style={styles.fieldBlock}>
             <Text style={styles.fieldLabel}>Hub</Text>
             <Text style={styles.fieldValue}>{data.hubName || "—"}</Text>
+          </View>
+          {/* Squeezed into this existing row rather than a new one, same
+              reasoning as CargoTagPDF's Type column -- zero extra height
+              cost on an already-tight fixed-height label. */}
+          <View style={styles.fieldBlock}>
+            <Text style={styles.fieldLabel}>Type</Text>
+            <Text style={styles.fieldValue}>{truncateForTag(data.contentType || "—", 11)}</Text>
           </View>
         </View>
 

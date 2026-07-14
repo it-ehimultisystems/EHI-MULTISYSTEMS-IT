@@ -31,6 +31,7 @@ export interface CargoTagPDFData {
   airline?: string;
   hubName?: string;
   date?: string;
+  contentType?: string;
   qrCodeDataUrl?: string;
   airlineLogoUrl?: string | null;
 }
@@ -45,12 +46,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   goldDivider: {
-    height: 2,
+    height: 1,
     backgroundColor: "#000000",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   body: {
     flexDirection: "row",
@@ -186,8 +187,8 @@ const CargoTagPage = ({
 }) => (
   <Page size={[PAGE_WIDTH, PAGE_HEIGHT]} style={styles.page} wrap={false}>
     <View style={styles.headerRow}>
-      <EHILogoPDF width={70} variant="cargo" />
-      {data.airline ? <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={70} /> : null}
+      <EHILogoPDF width={54} variant="cargo" />
+      {data.airline ? <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={54} /> : null}
     </View>
     <View style={styles.goldDivider} />
 
@@ -217,6 +218,17 @@ const CargoTagPage = ({
           <View style={styles.fieldBlock}>
             <Text style={styles.fieldLabel}>Hub</Text>
             <Text style={styles.fieldValue}>{data.hubName || "—"}</Text>
+          </View>
+          {/* Squeezed into this existing row (rather than a new row of its
+              own, like PackageTagPDF's typeBadge) -- the fixed-height
+              label's vertical budget is already tight after the
+              logo/margin trims above, and a 3-column row costs zero extra
+              height. Column is ~1/3 the width of the old 2-column layout,
+              so content type needs a shorter clamp than the 20-char one
+              used for Consignee below. */}
+          <View style={styles.fieldBlock}>
+            <Text style={styles.fieldLabel}>Type</Text>
+            <Text style={styles.fieldValue}>{truncateForTag(data.contentType || "—", 11)}</Text>
           </View>
         </View>
 

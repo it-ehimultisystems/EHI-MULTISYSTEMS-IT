@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { User, Transaction, Expense } from "../../lib/types";
 import { PRICING, BANKS, EXPENSE_CATEGORIES, AIRLINES } from "../../lib/constants";
-import { fmt, uid, tnow, getHubCode } from "../../lib/helpers";
+import { fmt, uid, tnow, getHubCode, upperOnChange } from "../../lib/helpers";
 import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer, Minus, TrendingDown, BarChart2, Bluetooth } from "lucide-react";
 import { motion } from "motion/react";
 import { supabase } from "../../lib/supabase";
@@ -215,7 +215,7 @@ export const MarketingWorkspace = ({
         entryRef: successTx.id,
         awbTagNumber: successTx.awb_tag_number,
         airline: successTx.airline,
-        date: new Date().toLocaleDateString("en-GB"),
+        date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
         agentName: user.name,
         customerName: successTx.name,
         phone: phone || undefined,
@@ -518,7 +518,7 @@ export const MarketingWorkspace = ({
                         // Build the MarketingReceiptPrintData object
                         const printData = {
                           entryRef: successTx.id,
-                          date: new Date().toLocaleDateString("en-GB"),
+                          date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
                           agentName: user.name,
                           customerName: successTx.name,
                           phone: phone || undefined,
@@ -553,7 +553,7 @@ export const MarketingWorkspace = ({
                         const m = await import('../../lib/escposMarketingPrinting');
                         const printData = {
                           entryRef: successTx.id,
-                          date: new Date().toLocaleDateString("en-GB"),
+                          date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
                           agentName: user.name,
                           customerName: successTx.name,
                           phone: phone || undefined,
@@ -633,7 +633,7 @@ export const MarketingWorkspace = ({
                         route,
                         airline,
                         hubName: user?.hub || "EHI Cargo Station",
-                        date: new Date().toLocaleDateString("en-GB"),
+                        date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
                         bigBags: bb,
                         medBags: mb,
                         smallBags: sb,
@@ -684,7 +684,7 @@ export const MarketingWorkspace = ({
                   name="name"
                   placeholder="Customer Name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={upperOnChange(setName)}
                   className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                 />
                 <div className="relative">
@@ -756,7 +756,7 @@ export const MarketingWorkspace = ({
                       type="text"
                       placeholder="Debtor Name / Company"
                       value={debtorName}
-                      onChange={(e) => setDebtorName(e.target.value)}
+                      onChange={upperOnChange(setDebtorName)}
                       className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                     />
                   </div>
@@ -918,7 +918,7 @@ export const MarketingWorkspace = ({
                 name="exp-desc"
                 placeholder="Description (optional)"
                 value={expDesc}
-                onChange={(e) => setExpDesc(e.target.value)}
+                onChange={upperOnChange(setExpDesc)}
                 className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
               />
               <button
@@ -1011,7 +1011,7 @@ export const MarketingWorkspace = ({
                       type="text"
                       placeholder="Who? (e.g. Govt/Honda/Zion)"
                       value={lessTransferLabel}
-                      onChange={e => setLessTransferLabel(e.target.value)}
+                      onChange={upperOnChange(setLessTransferLabel)}
                       className="w-full h-7 text-[10px] font-mono bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded px-2 text-[var(--color-muted)] focus:outline-none"
                     />
                   )}

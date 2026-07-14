@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { User, Transaction, Expense } from "../../lib/types";
 import { BANKS, EXPENSE_CATEGORIES, CONTENT_TYPES } from "../../lib/constants";
-import { fmt, uid, tnow, generatePaymentNarration, getHubCode } from "../../lib/helpers";
+import { fmt, uid, tnow, generatePaymentNarration, getHubCode, upperOnChange } from "../../lib/helpers";
 import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare, Bluetooth } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { sendReceiptWhatsApp, buildPackageWhatsApp } from "../../lib/notifications";
@@ -80,6 +80,7 @@ export const PackageForm = ({
   const [pcs, setPcs] = useState("1");
   const [kg, setKg] = useState("");
   const [contents, setContents] = useState<string>(CONTENT_TYPES[0]);
+  const [customContents, setCustomContents] = useState("");
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<string>("Cash");
   const [bank, setBank] = useState<string>(BANKS[0]);
@@ -99,6 +100,11 @@ export const PackageForm = ({
   const [expAmount, setExpAmount] = useState("");
   const [expDesc, setExpDesc] = useState("");
 
+  // "Other" in the Contents dropdown needs a free-text fallback, same
+  // pattern CargoForm.tsx already uses for customConsignee/customAirline --
+  // otherwise the ledger would literally record the word "Other" instead
+  // of what the agent actually typed.
+  const actualContents = contents === "Other" ? customContents : contents;
   const parsedAmount = parseFloat(amount) || 0;
   const pcsNum = parseInt(pcs) || 0;
   const kgNum = parseFloat(kg) || 0;
@@ -142,7 +148,7 @@ export const PackageForm = ({
     const tx: Transaction = {
       id: trackingRef,
       name: mode === "Debt" ? debtorName.trim() : name.trim(),
-      detail: `${destination} · ${contentType} · ${pcsNum}pcs · ${kgNum}kg · ${contents}`,
+      detail: `${destination} · ${contentType} · ${pcsNum}pcs · ${kgNum}kg · ${actualContents}`,
       amount: parsedAmount,
       mode,
       bank: (mode === "Transfer" || mode === "POS") ? bank : undefined,
@@ -155,7 +161,7 @@ export const PackageForm = ({
       contentType,
       pieces: pcsNum,
       kg: kgNum,
-      contents,
+      contents: actualContents,
       hub: user.hub,
       hub_id: user.hub_id,
       debtPaid: mode === "Debt" ? false : undefined,
@@ -190,6 +196,7 @@ export const PackageForm = ({
     setPcs("1");
     setKg("");
     setContents(CONTENT_TYPES[0]);
+    setCustomContents("");
     setAmount("");
     setMode("Cash");
     setNarrationCode("");
@@ -325,7 +332,7 @@ export const PackageForm = ({
                         const m = await import('../../lib/escposPackagePrinting');
                         const printData = {
                           entryRef: successTx.id,
-                          date: new Date().toLocaleDateString("en-GB"),
+                          date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
                           agentName: user.name,
                           customerName: successTx.name,
                           phone: phone || undefined,
@@ -360,7 +367,7 @@ export const PackageForm = ({
                         const m = await import('../../lib/escposPackagePrinting');
                         const printData = {
                           entryRef: successTx.id,
-                          date: new Date().toLocaleDateString("en-GB"),
+                          date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
                           agentName: user.name,
                           customerName: successTx.name,
                           phone: phone || undefined,
@@ -393,7 +400,7 @@ export const PackageForm = ({
                 onClick={() => {
                   import('./PackageReceipt').then(m => m.downloadPackageReceipt({
                     entryRef: successTx.id,
-                    date: new Date().toLocaleDateString("en-GB"),
+                    date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
                     agentName: user.name,
                     customerName: successTx.name,
                     phone: phone || undefined,
@@ -424,7 +431,7 @@ export const PackageForm = ({
                     kg: successTx.kg,
                     contents: successTx.contents,
                     hubName: user?.hub || "EHI Cargo Station",
-                    date: new Date().toLocaleDateString("en-GB"),
+                    date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
                   }));
                 }}
                 className="w-full mt-2 py-3 bg-transparent border border-[rgba(59,130,246,0.3)] rounded-lg cursor-pointer text-[11px] font-bold font-mono text-[var(--color-accent-cobalt)] flex items-center justify-center gap-2"
@@ -454,7 +461,7 @@ export const PackageForm = ({
                       name="name"
                       placeholder="Customer Name"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={upperOnChange(setName)}
                       className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                     />
                     <div className="relative">
@@ -521,6 +528,16 @@ export const PackageForm = ({
                 >
                   {CONTENT_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
+                {contents === "Other" && (
+                  <input
+                    id="pkg-custom-contents"
+                    name="custom-contents"
+                    placeholder="Enter content type"
+                    value={customContents}
+                    onChange={upperOnChange(setCustomContents)}
+                    className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
+                  />
+                )}
 
                 <select
                   value={mode}
@@ -602,7 +619,7 @@ export const PackageForm = ({
               <input id="pkg-exp-amount" name="exp-amount" type="number" min="0" placeholder="Amount" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
             </div>
             <div className="flex space-x-2">
-              <input id="pkg-exp-desc" name="exp-desc" placeholder="Description (optional)" value={expDesc} onChange={(e) => setExpDesc(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
+              <input id="pkg-exp-desc" name="exp-desc" placeholder="Description (optional)" value={expDesc} onChange={upperOnChange(setExpDesc)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
               <button onClick={handleAddExpense} disabled={!(parseFloat(expAmount) > 0)} className="h-11 px-4 bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[12px] font-mono font-bold rounded disabled:opacity-50 cursor-pointer hover:bg-[var(--color-surface-3)] transition-colors">
                 LOG
               </button>

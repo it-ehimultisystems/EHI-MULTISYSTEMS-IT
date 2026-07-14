@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
-import { fmt } from '../../lib/helpers';
+import { fmt, tnow } from '../../lib/helpers';
 import { ArrowLeft, Check, AlertTriangle, Printer, Lock, ChevronRight } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 import { supabase, writeAuditLog } from '../../lib/supabase';
@@ -62,11 +62,13 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     const cargoTx = todaysTx.filter(t => t.type === 'cargo');
     const mktgTx  = todaysTx.filter(t => t.type === 'marketing');
     const vjTx    = todaysTx.filter(t => t.type === 'baggage');
+    const packageTx = todaysTx.filter(t => t.type === 'package');
 
     const cargoTotal = cargoTx.reduce((s, t) => s + t.amount, 0);
     const mktgTotal = mktgTx.reduce((s, t)  => s + t.amount, 0);
     const vjTotal = vjTx.reduce((s, t)    => s + t.amount, 0);
-    const grossTotal = cargoTotal + mktgTotal + vjTotal;
+    const packageTotal = packageTx.reduce((s, t) => s + t.amount, 0);
+    const grossTotal = cargoTotal + mktgTotal + vjTotal + packageTotal;
 
     const cashTotal = todaysTx.filter(t => t.mode === 'Cash').reduce((s, t) => s + t.amount, 0);
     const transferTotal = todaysTx.filter(t => t.mode === 'Transfer').reduce((s, t) => s + t.amount, 0);
@@ -78,9 +80,9 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     const netExpectedCash = cashTotal - expensesTotal;
 
     return {
-      cargoTotal, mktgTotal, vjTotal, grossTotal,
+      cargoTotal, mktgTotal, vjTotal, packageTotal, grossTotal,
       cashTotal, transferTotal, posTotal, debtTotal, expensesTotal, netExpectedCash,
-      cargoCount: cargoTx.length, mktgCount: mktgTx.length, vjCount: vjTx.length
+      cargoCount: cargoTx.length, mktgCount: mktgTx.length, vjCount: vjTx.length, packageCount: packageTx.length
     };
   }, [todaysTx, todaysExp]);
 
@@ -122,13 +124,14 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
   };
 
   const generateEODData = () => ({
-    date: new Date().toLocaleDateString('en-GB'),
+    date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
     hubName: user.hub,
     lockedBy: user.name,
     lockedAt: new Date().toLocaleTimeString('en-GB'),
     cargoTotal: expectedTotals.cargoTotal,
     mktgTotal: expectedTotals.mktgTotal,
     vjTotal: expectedTotals.vjTotal,
+    packageTotal: expectedTotals.packageTotal,
     grossTotal: expectedTotals.grossTotal,
     cashTotal: expectedTotals.cashTotal,
     transferTotal: expectedTotals.transferTotal,
@@ -145,6 +148,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
     cargoCount: expectedTotals.cargoCount,
     mktgCount: expectedTotals.mktgCount,
     vjCount: expectedTotals.vjCount,
+    packageCount: expectedTotals.packageCount,
     transactions,
     expenses,
   });

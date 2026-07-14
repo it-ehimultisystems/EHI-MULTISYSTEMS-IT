@@ -5,7 +5,7 @@ import {
   BANKS,
   CARGO_ROUTES,
 } from "../../lib/constants";
-import { fmt, roundMoney, tnow, generatePickupPin, normalizeAirlineName, getHubCode } from "../../lib/helpers";
+import { fmt, roundMoney, tnow, generatePickupPin, normalizeAirlineName, getHubCode, upperOnChange } from "../../lib/helpers";
 import { isTagAlreadyDelivered } from "../../lib/scanLogic";
 import {
   CheckCircle,
@@ -141,7 +141,11 @@ export const CargoForm = ({
 
   // --- STANDARD RETAIL STATES ---
   const [serialNumber, setSerialNumber] = useState<number>(getLocalSerial);
-  const [consignee, setConsignee] = useState("Other");
+  // Starts blank (not "Other") so the field is immediately typeable -- see
+  // the consigneeOptions/datalist combobox below, which lets staff either
+  // pick a known corporate client or type a new/walk-in name directly,
+  // without a forced dropdown pick or an auto-select effect fighting it.
+  const [consignee, setConsignee] = useState("");
   const [airline, setAirline] = useState("Arik Air");
   const [customAirline, setCustomAirline] = useState("");
   const [customConsignee, setCustomConsignee] = useState("");
@@ -168,6 +172,7 @@ export const CargoForm = ({
   const [kg, setKg] = useState("");
   const [route, setRoute] = useState(CARGO_ROUTES[0]);
   const [contentType, setContentType] = useState(CONTENT_TYPES[0] as string);
+  const [customContentType, setCustomContentType] = useState("");
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<"Cash" | "Transfer" | "POS" | "Debt">(
     "Cash",
@@ -471,19 +476,6 @@ export const CargoForm = ({
     () => [...corpClients.map((c) => c.company_name), "Other"],
     [corpClients],
   );
-
-  // consignee starts on "Other" (see useState above) so the field is never
-  // silently defaulted to a hardcoded company name -- once real corporate
-  // clients are available (from the localStorage cache on first paint, or
-  // the live Supabase fetch above), switch to the first real one so staff
-  // aren't stuck manually picking it every time. Skipped if the agent has
-  // already started typing a custom name.
-  useEffect(() => {
-    if (corpClients.length > 0 && consignee === "Other" && !customConsignee) {
-      setConsignee(corpClients[0].company_name);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [corpClients]);
 
   // Load real corporate contract rates from Supabase — this table was
   // NEVER fetched here at all: corpRates only ever came from localStorage
@@ -828,6 +820,7 @@ export const CargoForm = ({
 
   // --- RETAIL BILLING SUBMIT ---
   const actualConsignee = consignee === "Other" ? customConsignee : consignee;
+  const actualContentType = contentType === "Other" ? customContentType : contentType;
   const w = Math.round(parseFloat(kg)) || 0;
   const rate = standardRates[route] || 500;
   const minAmount = roundMoney(w * rate);
@@ -846,11 +839,11 @@ export const CargoForm = ({
     () =>
       actualConsignee.trim().length > 0 &&
       route.trim().length > 0 &&
-      contentType.trim().length > 0 &&
+      actualContentType.trim().length > 0 &&
       w > 0 &&
       Number.isInteger(piecesNum) && piecesNum > 0 &&
       parsedAmount >= minAmount && parsedAmount > 0,
-    [actualConsignee, route, contentType, w, piecesNum, parsedAmount, minAmount],
+    [actualConsignee, route, actualContentType, w, piecesNum, parsedAmount, minAmount],
   );
 
   const handleRetailSubmit = async () => {
@@ -935,7 +928,7 @@ export const CargoForm = ({
     const nextSerial = incrementLocalSerial();
     setSerialNumber(nextSerial);
 
-    const summaryStr = `${actualAirline} · ${resolvedAwb} · ${pcs}pcs · ${kg}KG · ${route} · ${contentType}`;
+    const summaryStr = `${actualAirline} · ${resolvedAwb} · ${pcs}pcs · ${kg}KG · ${route} · ${actualContentType}`;
 
     const tx: Transaction = {
       id: resolvedAwb,
@@ -1004,7 +997,7 @@ export const CargoForm = ({
   };
 
   const handleReset = () => {
-    setConsignee(consigneeOptions[0] || "Other");
+    setConsignee("");
     setCustomConsignee("");
     setAirline(availableAirlines[0] || "Other");
     setCustomAirline("");
@@ -1013,6 +1006,7 @@ export const CargoForm = ({
     setKg("");
     setRoute(CARGO_ROUTES[0]);
     setContentType(CONTENT_TYPES[0] as string);
+    setCustomContentType("");
     setAmount("");
     setMode("Cash");
     setBank(BANKS[0] as string);
@@ -1028,7 +1022,7 @@ export const CargoForm = ({
       const data = {
         entryRef: successTx.id,
         serialNumber: serialNumber - 1,
-        date: new Date().toLocaleDateString("en-GB"),
+        date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
         hubName: user?.hub || "EHI Cargo Station",
         agentName: user?.name || "EHI Agent",
         airline:
@@ -1060,7 +1054,7 @@ export const CargoForm = ({
       const printData = {
         entryRef: successTx.id,
         serialNumber: serialNumber - 1,
-        date: new Date().toLocaleDateString("en-GB"),
+        date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
         hubName: user?.hub || "EHI Cargo Station",
         agentName: user?.name || "EHI Agent",
         airline:
@@ -1114,7 +1108,8 @@ export const CargoForm = ({
                 ? "United Nigeria Airlines"
                 : airline,
           hubName: user?.hub || "EHI Cargo Station",
-          date: new Date().toLocaleDateString("en-GB"),
+          date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
+          contentType: successTx.detail.split(" · ")[5] || contentType,
         }, preOpenedWindow);
       } catch (err) {
         console.error('Failed to open tag PDF', err);
@@ -1160,7 +1155,7 @@ export const CargoForm = ({
     const printData = {
       entryRef: successTx.id,
       serialNumber: serialNumber - 1,
-      date: new Date().toLocaleDateString("en-GB"),
+      date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
       hubName: user?.hub || "EHI Cargo Station",
       agentName: user?.name || "EHI Agent",
       airline:
@@ -1442,24 +1437,27 @@ export const CargoForm = ({
               <div>
                 {renderLabel(UserIcon, "Consignee")}
                 <div className="flex flex-col space-y-2">
-                  <select
+                  <input
+                    id="retail-consignee"
+                    name="consignee"
+                    list="consignee-datalist"
+                    placeholder="Type or select consignee name"
                     value={consignee}
                     onChange={(e) => setConsignee(e.target.value)}
                     className={formInputClass}
-                  >
+                  />
+                  <datalist id="consignee-datalist">
                     {consigneeOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+                      <option key={c} value={c} />
                     ))}
-                  </select>
+                  </datalist>
                   {consignee === "Other" && (
                     <input
                       id="retail-custom-consignee"
                       name="custom-consignee"
                       placeholder="Enter Consignee Name"
                       value={customConsignee}
-                      onChange={(e) => setCustomConsignee(e.target.value)}
+                      onChange={upperOnChange(setCustomConsignee)}
                       className={formInputClass}
                     />
                   )}
@@ -1503,7 +1501,7 @@ export const CargoForm = ({
                     name="custom-airline"
                     placeholder="Enter new airline name"
                     value={customAirline}
-                    onChange={(e) => setCustomAirline(e.target.value)}
+                    onChange={upperOnChange(setCustomAirline)}
                     className={`${formInputClass} mt-2`}
                   />
                 )}
@@ -1582,6 +1580,16 @@ export const CargoForm = ({
                       </option>
                     ))}
                   </select>
+                  {contentType === "Other" && (
+                    <input
+                      id="retail-custom-content"
+                      name="custom-content"
+                      placeholder="Enter content type"
+                      value={customContentType}
+                      onChange={upperOnChange(setCustomContentType)}
+                      className={`${formInputClass} mt-2`}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -1729,7 +1737,7 @@ export const CargoForm = ({
                   name="remark"
                   placeholder="Add notes..."
                   value={remark}
-                  onChange={(e) => setRemark(e.target.value)}
+                  onChange={upperOnChange(setRemark)}
                   className={formInputClass}
                 />
               </div>
@@ -1810,7 +1818,7 @@ export const CargoForm = ({
                 <div className="flex justify-between border-b border-[var(--color-border)] pb-1 mb-1">
                   <span style={{ color: "var(--color-muted)" }}>Content</span>
                   <span className="font-semibold text-[var(--color-foreground)]">
-                    {contentType}
+                    {actualContentType || "—"}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -1941,17 +1949,20 @@ export const CargoForm = ({
                 <div className="space-y-4">
                   <div>
                     {renderLabel(UserIcon, "B2B Corporate Client")}
-                    <select
+                    <input
+                      id="intake-consignee"
+                      name="intake-consignee"
+                      list="intake-consignee-datalist"
+                      placeholder="Type or select corporate client"
                       value={intakeConsignee}
                       onChange={(e) => setIntakeConsignee(e.target.value)}
                       className={formInputClass}
-                    >
+                    />
+                    <datalist id="intake-consignee-datalist">
                       {corpClients.map((c) => (
-                        <option key={c.id} value={c.company_name}>
-                          {c.company_name}
-                        </option>
+                        <option key={c.id} value={c.company_name} />
                       ))}
-                    </select>
+                    </datalist>
                   </div>
 
                   <div>
