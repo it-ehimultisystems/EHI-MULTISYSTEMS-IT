@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, ParsedBankAlert, PaymentMatch, User } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
-import { AlertCircle, CheckCircle, Mail, Clock, Search, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertCircle, CheckCircle, Mail, Search, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '../../lib/ToastContext';
 
 interface PaymentValidationProps {
@@ -283,47 +283,13 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
 
         </div>
 
-        {/* RIGHT COLUMN: Pending & Confirmed */}
+        {/* RIGHT COLUMN: Confirmed history + auto-forward setup. The plain
+            "pending transfers + manual confirm" list that used to live here
+            is now redundant with the Transaction Ledger, which surfaces
+            Cash and Transfer together under its "Unverified" filter with
+            the same confirm action -- this screen's remaining job is just
+            the bank-alert paste-and-match tool above. */}
         <div className="space-y-4">
-          <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 shadow-md flex flex-col" style={{ maxHeight: '60vh' }}>
-            <h3 className="text-[13px] font-bold text-[var(--color-foreground)] mb-3 flex justify-between items-center">
-              <span className="flex items-center"><Clock size={14} className="mr-2 text-amber-500" /> PENDING TRANSFERS</span>
-              <span className="bg-amber-500/20 text-amber-500 text-[10px] px-2 py-0.5 rounded-full">{unconfirmedTransfers.length}</span>
-            </h3>
-            
-            <div className="flex-1 overflow-y-auto pr-1 space-y-2">
-              {unconfirmedTransfers.length === 0 ? (
-                <div className="text-center text-[var(--color-muted)] text-[12px] py-8">No pending transfers.</div>
-              ) : (
-                unconfirmedTransfers.map(tx => (
-                  <div key={tx.id} className="bg-[var(--color-surface-1)] p-3 rounded-lg border border-[var(--color-border)]">
-                    <div className="flex justify-between items-start mb-1">
-                      <div className="text-[13px] font-bold text-[var(--color-foreground)] truncate max-w-[60%]">{tx.name}</div>
-                      <div className="text-[13px] font-mono font-bold text-amber-500">{fmt(tx.amount)}</div>
-                    </div>
-                    <div className="text-[10px] text-[var(--color-muted)] mb-3">{new Date(tx.time).toLocaleString()} · {tx.detail?.split('·')[0] || ''}</div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[9px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded uppercase font-bold border border-amber-500/20">Pending</span>
-                        {tx.paymentNarration && (
-                          <span className="text-[9px] bg-[var(--color-border)] text-[var(--color-foreground)] px-1.5 py-0.5 rounded border border-[var(--color-surface-2)] font-mono">
-                            {tx.paymentNarration}
-                          </span>
-                        )}
-                      </div>
-                      <button 
-                        onClick={() => confirmMatch(tx)}
-                        className="text-[10px] text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-[var(--color-border)] hover:border-[rgba(255,255,255,0.3)] bg-[var(--color-surface-2)] px-2 py-1 rounded transition-colors"
-                      >
-                        CONFIRM MANUALLY
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
           <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 shadow-md">
             <h3 className="text-[13px] font-bold text-[var(--color-foreground)] mb-3 flex justify-between items-center">
               <span className="flex items-center"><CheckCircle size={14} className="mr-2 text-green-500" /> RECENTLY CONFIRMED</span>

@@ -35,29 +35,41 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
         // outstanding, so this can't be date-bounded the way Credits is
         // below. Capped at 1000 most-recent rows per table instead of
         // truly unbounded, which grows every month forever with no ceiling.
-        const [cargoDebts, vjDebts, mktDebts] = await Promise.all([
+        const [cargoDebts, vjDebts, mktDebts, pkgDebts] = await Promise.all([
           addHubFilter(supabase.from('cargo_entries').select('*').eq('receipt_mode', 'Debt').order('created_at', { ascending: false }).limit(1000)),
           addHubFilter(supabase.from('manifests').select('*').eq('payment_mode', 'Debt').order('created_at', { ascending: false }).limit(1000)),
-          addHubFilter(supabase.from('marketing_entries').select('*').eq('payment_mode', 'Debt').order('created_at', { ascending: false }).limit(1000))
+          addHubFilter(supabase.from('marketing_entries').select('*').eq('payment_mode', 'Debt').order('created_at', { ascending: false }).limit(1000)),
+          addHubFilter(supabase.from('package_entries').select('*').eq('payment_mode', 'Debt').order('created_at', { ascending: false }).limit(1000))
         ]);
 
+        // amountPaid is carried through so downstream balance calcs (below)
+        // reflect payments already recorded via DebtorsTab -- previously
+        // this view summed the full original `amount` regardless of partial
+        // payoffs made elsewhere, overstating outstanding debt until a debt
+        // was paid all the way to zero (the only thing that flips mode away
+        // from 'Debt').
         const mappedDebts: Transaction[] = [];
         if (cargoDebts.data) {
           cargoDebts.data.forEach(r => mappedDebts.push({
-            id: r.entry_ref || r.id, name: r.consignee_name || 'Cargo', detail: `${r.airline || ''} · ${r.awb_tag_number || ''}`, amount: r.amount || 0, mode: 'Debt', time: r.created_at, type: 'cargo', awb_tag_number: r.awb_tag_number, status: r.status || 'Intake'
+            id: r.entry_ref || r.id, name: r.consignee_name || 'Cargo', detail: `${r.airline || ''} · ${r.awb_tag_number || ''}`, amount: r.amount || 0, amountPaid: r.amount_paid || 0, mode: 'Debt', time: r.created_at, type: 'cargo', awb_tag_number: r.awb_tag_number, status: r.status || 'Intake'
           }));
         }
         if (vjDebts.data) {
           vjDebts.data.forEach(r => mappedDebts.push({
-            id: r.transaction_id || r.id, name: r.passenger_name || 'Passenger', detail: `${r.flight_no || ''}`, amount: r.amount || 0, mode: 'Debt', time: r.created_at, type: 'baggage', status: 'Intake'
+            id: r.transaction_id || r.id, name: r.passenger_name || 'Passenger', detail: `${r.flight_no || ''}`, amount: r.amount || 0, amountPaid: r.amount_paid || 0, mode: 'Debt', time: r.created_at, type: 'baggage', status: 'Intake'
           }));
         }
         if (mktDebts.data) {
           mktDebts.data.forEach(r => mappedDebts.push({
-            id: r.entry_ref || r.id, name: r.customer_name || 'Customer', detail: `${r.route || ''}`, amount: r.amount || 0, mode: 'Debt', time: r.created_at, type: 'marketing', status: 'Intake'
+            id: r.entry_ref || r.id, name: r.customer_name || 'Customer', detail: `${r.route || ''}`, amount: r.amount || 0, amountPaid: r.debt_amount_paid || 0, mode: 'Debt', time: r.created_at, type: 'marketing', status: 'Intake'
           }));
         }
-        setDebtsData(mappedDebts);
+        if (pkgDebts.data) {
+          pkgDebts.data.forEach(r => mappedDebts.push({
+            id: r.entry_ref || r.id, name: r.customer_name || 'Customer', detail: `${r.destination || ''}`, amount: r.amount || 0, amountPaid: r.amount_paid || 0, mode: 'Debt', time: r.created_at, type: 'package', status: r.status || 'Intake'
+          }));
+        }
+        setDebtsData(mappedDebts.filter(tx => (tx.amount - (tx.amountPaid || 0)) > 0));
 
         // Fetch Credits (last 30 days of cargo)
         const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
@@ -99,12 +111,13 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
     const summary: Record<string, number> = {};
     debts.forEach(tx => {
       const name = tx.name || 'Unknown';
-      summary[name] = (summary[name] || 0) + tx.amount;
+      const balance = tx.amount - (tx.amountPaid || 0);
+      summary[name] = (summary[name] || 0) + balance;
     });
     return Object.entries(summary).map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount);
   }, [debts]);
 
-  const totalDebt = debts.reduce((acc, tx) => acc + tx.amount, 0);
+  const totalDebt = debts.reduce((acc, tx) => acc + (tx.amount - (tx.amountPaid || 0)), 0);
 
   const credits = useMemo(() => {
     return creditsData.filter(tx => tx.airline && tx.airline.toLowerCase().includes(search.toLowerCase()));
@@ -227,7 +240,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
                     <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-surface-2)] transition-colors">
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[14px] font-sans font-bold text-[var(--color-foreground)]">{tx.name}</span>
-                        <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(tx.amount)}</span>
+                        <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">{fmt(tx.amount - (tx.amountPaid || 0))}</span>
                       </div>
                       <div className="text-[12px] font-sans text-[var(--color-muted)] mb-3">{tx.detail}</div>
                       <div className="flex justify-between pt-3 border-t border-[var(--color-border)] text-[10px] font-mono text-[var(--color-muted)] uppercase">

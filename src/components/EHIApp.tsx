@@ -231,10 +231,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         const endISO = endDate.toISOString();
 
         const [cargoRes, baggageRes, mktRes, packageRes, expRes] = await Promise.all([
-          addHubFilter(supabase.from('cargo_entries').select(`entry_ref,consignee_name,consignee_phone,client_type,airline,commission_rate,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at${canSeePin ? ',pickup_pin' : ''}`).gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history,airline,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('marketing_entries').select('entry_ref,awb_tag_number,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,bb_kg,mb_kg,sb_kg,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name),debt_amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
-          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,status,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,created_at,hub_id,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('cargo_entries').select(`entry_ref,consignee_name,consignee_phone,client_type,airline,commission_rate,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text${canSeePin ? ',pickup_pin' : ''}`).gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history,airline,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('marketing_entries').select('entry_ref,awb_tag_number,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,bb_kg,mb_kg,sb_kg,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,user_profiles(name),debt_amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
+          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,status,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,amount_paid,payment_history,created_at,hub_id,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500)),
           addHubFilter(supabase.from('expenses').select('*').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(500))
         ]);
 
@@ -273,6 +273,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               confirmedAt: r.confirmed_at || undefined,
               consigneePhone: r.consignee_phone || undefined,
               clientType: r.client_type || undefined,
+              bankReference: r.bank_reference || undefined,
+              bankSender: r.bank_sender || undefined,
+              bankAlertText: r.bank_alert_text || undefined,
             });
           });
         }
@@ -305,6 +308,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               posApprovalCode: r.pos_approval_code || undefined,
               confirmedBy: r.confirmed_by || undefined,
               confirmedAt: r.confirmed_at || undefined,
+              bankReference: r.bank_reference || undefined,
+              bankSender: r.bank_sender || undefined,
+              bankAlertText: r.bank_alert_text || undefined,
             });
           });
         }
@@ -335,6 +341,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               posApprovalCode: r.pos_approval_code || undefined,
               confirmedBy: r.confirmed_by || undefined,
               confirmedAt: r.confirmed_at || undefined,
+              bankReference: r.bank_reference || undefined,
+              bankSender: r.bank_sender || undefined,
+              bankAlertText: r.bank_alert_text || undefined,
             });
           });
         }
@@ -361,6 +370,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               paymentNarration: r.payment_narration || undefined,
               debtPaid: r.debt_paid ?? undefined,
               debtPaidAt: r.debt_paid_at || undefined,
+              amountPaid: r.amount_paid || 0,
+              paymentHistory: r.payment_history || [],
               paymentConfirmed: r.payment_confirmed,
               posApprovalCode: r.pos_approval_code || undefined,
               confirmedBy: r.confirmed_by || undefined,
@@ -766,11 +777,17 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         contents: (tx as any).contents || null,
         status: tx.status || 'Intake',
         amount: tx.amount,
-        payment_mode: tx.mode,
+        // payment_mode's CHECK constraint doesn't allow 'Debt Paid' (that's
+        // an in-app-only completion label, same as handleUpdateTx already
+        // handles for cargo/manifests/marketing) -- write the base 'Debt'
+        // value instead so a debt marked paid here doesn't fail this upsert.
+        payment_mode: tx.mode === 'Debt Paid' ? 'Debt' : tx.mode,
         bank: tx.bank,
         payment_narration: tx.paymentNarration,
         debt_paid: (tx as any).debtPaid ?? false,
         debt_paid_at: (tx as any).debtPaidAt || null,
+        amount_paid: tx.amountPaid,
+        payment_history: tx.paymentHistory,
         hub_id: hubId,
         hub: user.hub,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
@@ -808,6 +825,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   }, [user.hub_id, user.id, showToast]);
 
   const handleUpdateTx = useCallback(async (tx: Transaction) => {
+    // Captured before the optimistic update below so a corporate debt
+    // payment (see decrement_corporate_debt call further down) can compute
+    // the actual delta just paid, not the whole entry's amount -- payments
+    // are recorded one at a time via DebtorsTab, so this only decrements the
+    // client's aggregate balance by what was newly paid in this update.
+    const prevAmountPaid = transactionsRef.current.find(t => t.id === tx.id)?.amountPaid || 0;
     setTransactions(prev => prev.map(t => t.id === tx.id ? tx : t));
 
     const table = tx.type === 'cargo' ? 'cargo_entries'
@@ -838,6 +861,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     if (tx.posApprovalCode)               updatePayload.pos_approval_code  = tx.posApprovalCode;
     if (tx.confirmedBy)                   updatePayload.confirmed_by        = tx.confirmedBy;
     if (tx.confirmedAt)                   updatePayload.confirmed_at        = tx.confirmedAt;
+    // Set when a Transfer is confirmed via a matched bank alert
+    // (PaymentValidation.tsx) -- previously only ever held in optimistic
+    // local state with no column to persist to, so it vanished on refetch.
+    if (tx.bankReference)                 updatePayload.bank_reference      = tx.bankReference;
+    if (tx.bankSender)                    updatePayload.bank_sender         = tx.bankSender;
+    if (tx.bankAlertText)                 updatePayload.bank_alert_text     = tx.bankAlertText;
     // marketing_entries already has an amount_paid column holding the sale
     // amount itself (see 20260710_debt_payment_columns.sql) -- debt
     // repayment tracking for that table lives in debt_amount_paid instead
@@ -895,6 +924,20 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
     const { error } = await supabase.from(table).update(updatePayload).eq(idCol, tx.id);
     if (error) showToast({ message: `Update failed: ${error.message}`, type: 'error' });
+    // A B2B corporate shipment's debt being paid down (via DebtorsTab,
+    // the only place that happens today) should reduce the client's
+    // monthly aggregate the same way finalizing a new shipment increments
+    // it -- previously nothing did this, so PricingConfiguration's "owed"
+    // figure only ever went up. Only the newly-paid delta is decremented,
+    // since payments are recorded one at a time.
+    if (!error && tx.type === 'cargo' && tx.corporate_client_id && (tx.amountPaid || 0) > prevAmountPaid) {
+      supabase.rpc('decrement_corporate_debt', {
+        p_client_id: tx.corporate_client_id,
+        p_amount: (tx.amountPaid || 0) - prevAmountPaid,
+      }).then(({ error: rpcError }) => {
+        if (rpcError) console.error('decrement_corporate_debt failed:', rpcError);
+      });
+    }
     if (!error && tx.paymentConfirmed) {
       writeAuditLog({
         user_id: user.id,

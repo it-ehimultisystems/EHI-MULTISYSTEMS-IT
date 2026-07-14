@@ -2441,3 +2441,74 @@ GRANT EXECUTE ON FUNCTION public.reserve_awb_block(TEXT, INTEGER) TO authenticat
 ALTER TABLE public.marketing_entries DROP CONSTRAINT IF EXISTS marketing_entries_awb_tag_number_key;
 ALTER TABLE public.marketing_entries ADD CONSTRAINT marketing_entries_awb_tag_number_key UNIQUE (awb_tag_number);
 
+
+
+-- ============================================================
+-- FILE: supabase/migrations/20260729_decrement_corporate_debt.sql
+-- ============================================================
+-- increment_corporate_debt (20260719_atomic_corporate_debt.sql) is the only
+-- write path for corporate_clients.accumulated_monthly_debt -- nothing has
+-- ever decremented it, even when a corporate client's shipment debt is
+-- actually paid down via DebtorsTab.handleRecordPayment. That flow already
+-- updates the transaction's own amountPaid/paymentHistory; it just never
+-- reduced the client's aggregate monthly balance, so PricingConfiguration's
+-- "₦X owed" display could only ever go up. This is the symmetric decrement,
+-- mirroring increment_corporate_debt's exact locking/security pattern
+-- (single atomic UPDATE for row-level serialization, SECURITY DEFINER with
+-- an explicit hub-scoping re-check since SECURITY DEFINER bypasses RLS).
+-- Clamped at zero (GREATEST) so no sequence of payments can push a client's
+-- balance negative, e.g. from a rounding mismatch or a duplicate call.
+
+CREATE OR REPLACE FUNCTION public.decrement_corporate_debt(p_client_id uuid, p_amount numeric)
+RETURNS numeric
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_new_total numeric;
+  v_client_hub uuid;
+BEGIN
+  SELECT hub_id INTO v_client_hub FROM public.corporate_clients WHERE id = p_client_id;
+  IF v_client_hub IS NOT NULL
+     AND v_client_hub <> public.current_user_hub_id()
+     AND NOT public.is_hub_unrestricted() THEN
+    RAISE EXCEPTION 'Not authorized to update this corporate client''s debt balance';
+  END IF;
+
+  UPDATE public.corporate_clients
+  SET accumulated_monthly_debt = GREATEST(accumulated_monthly_debt - p_amount, 0)
+  WHERE id = p_client_id
+  RETURNING accumulated_monthly_debt INTO v_new_total;
+
+  RETURN v_new_total;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.decrement_corporate_debt(uuid, numeric) TO authenticated;
+
+
+-- ============================================================
+-- FILE: supabase/migrations/20260730_bank_reference_columns.sql
+-- ============================================================
+-- PaymentValidation.tsx's bank-alert-paste-and-parse confirm flow has always
+-- set bankReference/bankSender/bankAlertText on the in-memory Transaction,
+-- but handleUpdateTx (src/components/EHIApp.tsx) never had columns to write
+-- them to -- they only ever lived in optimistic local React state and were
+-- silently discarded on the next fetch/reload. Adding these lets a matched
+-- bank alert's details actually survive a refetch instead of vanishing.
+-- Transfer debts/payments can occur on any of these three tables, so all
+-- three get the columns (package_entries debt is Cash/POS-collected per its
+-- own migration's comment, not Transfer, so it's not included here).
+
+ALTER TABLE public.cargo_entries ADD COLUMN IF NOT EXISTS bank_reference text;
+ALTER TABLE public.cargo_entries ADD COLUMN IF NOT EXISTS bank_sender text;
+ALTER TABLE public.cargo_entries ADD COLUMN IF NOT EXISTS bank_alert_text text;
+
+ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS bank_reference text;
+ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS bank_sender text;
+ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS bank_alert_text text;
+
+ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS bank_reference text;
+ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS bank_sender text;
+ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS bank_alert_text text;

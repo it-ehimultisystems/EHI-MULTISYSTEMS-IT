@@ -141,7 +141,11 @@ export const PackageForm = ({
     destinationCounts[d] = (destinationCounts[d] || 0) + 1;
   });
 
-  const unpaidDebts = packageTxs.filter(t => t.mode === 'Debt' && !t.debtPaid);
+  // Balance-based, not just !debtPaid -- a payment recorded via DebtorsTab
+  // (used generically by every stream) only ever touches amountPaid/mode,
+  // never this component's own debtPaid flag, so checking debtPaid alone
+  // left debts paid off elsewhere still showing as unpaid here.
+  const unpaidDebts = packageTxs.filter(t => t.mode === 'Debt' && (t.amount - (t.amountPaid || 0)) > 0);
 
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closingDay, setClosingDay] = useState(false);
@@ -239,7 +243,20 @@ export const PackageForm = ({
   };
 
   const handleMarkDebtPaid = (tx: Transaction) => {
-    onAddTx({ ...tx, debtPaid: true, debtPaidAt: new Date().toISOString() });
+    // Mirrors DebtorsTab.handleRecordPayment's full-payoff case (amountPaid/
+    // paymentHistory/mode) so a debt marked paid here is also correctly
+    // reflected there, instead of only flipping the package-specific
+    // debtPaid flag DebtorsTab never looks at. debtPaid/debtPaidAt are kept
+    // too, for anything still relying on them.
+    const historyEntry = { amount: tx.amount - (tx.amountPaid || 0), mode: 'Cash' as const, by: user.name || 'Unknown', at: new Date().toISOString() };
+    onAddTx({
+      ...tx,
+      debtPaid: true,
+      debtPaidAt: new Date().toISOString(),
+      amountPaid: tx.amount,
+      paymentHistory: [...(tx.paymentHistory || []), historyEntry],
+      mode: 'Debt Paid',
+    });
   };
 
   const handleCloseDay = async () => {

@@ -574,10 +574,18 @@ export const TransactionLedger = ({
   const toggleConfirm = (e: Entry, evt: React.MouseEvent) => {
     evt.stopPropagation();
     if (e.source !== 'transaction') return;
+    // Maker-checker: whoever logged the sale can't be the one confirming
+    // the money actually came in. PaymentValidation.tsx's Transfer confirm
+    // already enforced this; Cash/Transfer are unified here now, so both
+    // get the same rule.
+    if (!e.raw.paymentConfirmed && e.raw.enteredByName && e.raw.enteredByName === user.name) {
+      showToast({ message: "You can't confirm a payment you personally logged.", type: 'warning' });
+      return;
+    }
     const updated = { ...e.raw };
     if (!e.raw.paymentConfirmed) {
       updated.paymentConfirmed = true;
-      updated.confirmedAt = tnow();
+      updated.confirmedAt = new Date().toISOString();
       updated.confirmedBy = user.name;
     } else {
       updated.paymentConfirmed = false;
@@ -594,7 +602,7 @@ export const TransactionLedger = ({
     const updated = { ...e.raw };
     updated.posApprovalCode = posCodeInput.code.trim();
     updated.paymentConfirmed = true;
-    updated.confirmedAt = tnow();
+    updated.confirmedAt = new Date().toISOString();
     updated.confirmedBy = user.name;
     onUpdateTx(updated);
     setPosCodeInput({ id: '', code: '' });
@@ -615,14 +623,24 @@ export const TransactionLedger = ({
   const unconfirmedTransfer = filteredEntries.filter(e => e.mode === 'Transfer' && !e.raw.paymentConfirmed);
 
   const selectAllCash = () => {
+    let skipped = 0;
     unverifiedCash.forEach(e => {
       if (e.source !== 'transaction') return;
+      // Same maker-checker rule as toggleConfirm -- skip rows the current
+      // user logged themselves rather than aborting the whole batch.
+      if (e.raw.enteredByName && e.raw.enteredByName === user.name) {
+        skipped++;
+        return;
+      }
       const updated = { ...e.raw };
       updated.paymentConfirmed = true;
-      updated.confirmedAt = tnow();
+      updated.confirmedAt = new Date().toISOString();
       updated.confirmedBy = user.name;
       onUpdateTx(updated);
     });
+    if (skipped > 0) {
+      showToast({ message: `Skipped ${skipped} entr${skipped === 1 ? 'y' : 'ies'} you personally logged.`, type: 'warning' });
+    }
   };
 
   const totalAmount = filteredEntries.reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
@@ -972,7 +990,7 @@ export const TransactionLedger = ({
                   >
                     {isAccountantOrAdmin && (
                       <td className="py-2.5 px-3">
-                        {(e.mode === 'Cash' || e.mode === 'POS') && (
+                        {(e.mode === 'Cash' || e.mode === 'POS' || e.mode === 'Transfer') && (
                           <div onClick={(evt) => evt.stopPropagation()}>
                             {e.mode === 'POS' && !e.posApprovalCode ? (
                               posCodeInput.id === e.id ? (
@@ -1220,7 +1238,7 @@ export const TransactionLedger = ({
                     ) : viewingDetail.raw.paymentConfirmed ? (
                       <div className="text-[11px] text-[var(--color-success)] flex items-center gap-1.5 font-medium">
                         <Check size={14} />
-                        {viewingDetail.mode === 'Transfer' 
+                        {viewingDetail.mode === 'Transfer' && viewingDetail.raw.bankReference
                           ? `Confirmed via bank alert at ${viewingDetail.raw.confirmedAt || ''}`
                           : viewingDetail.mode === 'POS'
                           ? `Approval code ${viewingDetail.posApprovalCode} verified`
@@ -1230,8 +1248,7 @@ export const TransactionLedger = ({
                     ) : (
                       <div className="text-[11px] text-[var(--color-accent-amber)] flex items-center gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-amber)] animate-pulse" />
-                        {viewingDetail.mode === 'Transfer' ? "Awaiting bank confirmation" : 
-                         viewingDetail.mode === 'POS' ? "Enter approval code to confirm" : 
+                        {viewingDetail.mode === 'POS' ? "Enter approval code to confirm" :
                          "Pending verification"}
                       </div>
                     )}
@@ -1283,7 +1300,7 @@ export const TransactionLedger = ({
                     >
                       <QrCode size={14} /> Scan
                     </button>
-                    {viewingDetail.mode !== 'Debt' && viewingDetail.mode !== 'Transfer' && !viewingDetail.raw.paymentConfirmed && isAccountantOrAdmin && (
+                    {viewingDetail.mode !== 'Debt' && !viewingDetail.raw.paymentConfirmed && isAccountantOrAdmin && (
                       <button 
                         onClick={(evt) => toggleConfirm(viewingDetail, evt)}
                         className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold"
