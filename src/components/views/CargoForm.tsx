@@ -222,14 +222,16 @@ export const CargoForm = ({
           setStandardRates(rates);
           localStorage.setItem("ehi_standard_cargo_rates", JSON.stringify(rates));
         } else {
+          // No server rows and no cache: leave standardRates empty rather
+          // than synthesizing a flat 500/route default. resolveRate()'s
+          // company-wide tier must be able to tell "nothing configured"
+          // (undefined) apart from "someone actually set 500" -- a synthetic
+          // default here would be indistinguishable from a real rate, and
+          // once cached to localStorage would keep silently reappearing on
+          // this device even after real rates exist server-side, for any
+          // route/hub combo that never got an override.
           const saved = localStorage.getItem("ehi_standard_cargo_rates");
           if (saved) setStandardRates(JSON.parse(saved));
-          else {
-            const initial: Record<string, number> = {};
-            CARGO_ROUTES.forEach((r) => (initial[r] = 500));
-            setStandardRates(initial);
-            localStorage.setItem("ehi_standard_cargo_rates", JSON.stringify(initial));
-          }
         }
       } catch (err) {
         const saved = localStorage.getItem("ehi_standard_cargo_rates");
@@ -1542,7 +1544,7 @@ export const CargoForm = ({
                 {renderLabel(Plane, "Airline")}
                 <select
                   value={airline}
-                  onChange={(e) => setAirline(e.target.value)}
+                  onChange={(e) => { setAirline(e.target.value); setAmount(""); }}
                   className={formInputClass}
                 >
                   {availableAirlines.map((a) => (
@@ -2009,20 +2011,26 @@ export const CargoForm = ({
                 <div className="space-y-4">
                   <div>
                     {renderLabel(UserIcon, "B2B Corporate Client")}
-                    <input
+                    {/* Deliberately a strict select, not a free-typed datalist
+                        like the retail Consignee field below -- billing at
+                        finalize looks up the client's contract rate by
+                        corporate_client_id (see handleFinalizeWeighing), and
+                        a typo'd/unmatched free-typed name here would silently
+                        fall back to the flat default rate instead of the
+                        client's real negotiated rate, with no warning. */}
+                    <select
                       id="intake-consignee"
                       name="intake-consignee"
-                      list="intake-consignee-datalist"
-                      placeholder="Type or select corporate client"
                       value={intakeConsignee}
                       onChange={(e) => setIntakeConsignee(e.target.value)}
                       className={formInputClass}
-                    />
-                    <datalist id="intake-consignee-datalist">
+                    >
                       {corpClients.map((c) => (
-                        <option key={c.id} value={c.company_name} />
+                        <option key={c.id} value={c.company_name}>
+                          {c.company_name}
+                        </option>
                       ))}
-                    </datalist>
+                    </select>
                   </div>
 
                   <div>

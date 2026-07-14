@@ -50,7 +50,7 @@ export const OutboundArrivals = ({ user, onBack }: { user: User; onBack: () => v
         ).order('created_at', { ascending: false }).limit(200),
         addHubFilter(
           supabase.from('marketing_entries')
-            .select('id, entry_ref, customer_name, route, qty_big_bag, qty_med_bag, qty_small_bag, hub_id, status, created_at')
+            .select('id, entry_ref, customer_name, route, awb_tag_number, qty_big_bag, qty_med_bag, qty_small_bag, hub_id, status, created_at')
             .eq('status', 'Arrived')
         ).order('created_at', { ascending: false }).limit(200),
         addHubFilter(
@@ -60,12 +60,12 @@ export const OutboundArrivals = ({ user, onBack }: { user: User; onBack: () => v
         ).order('created_at', { ascending: false }).limit(200),
       ]);
 
-      let anyError = false;
+      let errorCount = 0;
       const merged: OutboundArrivalRow[] = [];
 
       if (cargoRes.error) {
         console.error('Outbound arrivals (cargo) fetch error:', cargoRes.error);
-        anyError = true;
+        errorCount++;
       } else {
         for (const c of cargoRes.data || []) {
           merged.push({
@@ -86,7 +86,7 @@ export const OutboundArrivals = ({ user, onBack }: { user: User; onBack: () => v
 
       if (mktRes.error) {
         console.error('Outbound arrivals (marketing) fetch error:', mktRes.error);
-        anyError = true;
+        errorCount++;
       } else {
         for (const m of mktRes.data || []) {
           const bags = (m.qty_big_bag || 0) + (m.qty_med_bag || 0) + (m.qty_small_bag || 0);
@@ -97,6 +97,7 @@ export const OutboundArrivals = ({ user, onBack }: { user: User; onBack: () => v
             customerName: m.customer_name,
             destinationLabel: m.route || '—',
             pcs: bags || undefined,
+            awb: m.awb_tag_number,
             createdAt: m.created_at,
           });
         }
@@ -104,7 +105,7 @@ export const OutboundArrivals = ({ user, onBack }: { user: User; onBack: () => v
 
       if (pkgRes.error) {
         console.error('Outbound arrivals (package) fetch error:', pkgRes.error);
-        anyError = true;
+        errorCount++;
       } else {
         for (const p of pkgRes.data || []) {
           merged.push({
@@ -124,7 +125,9 @@ export const OutboundArrivals = ({ user, onBack }: { user: User; onBack: () => v
       merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRows(merged);
 
-      if (anyError) {
+      if (errorCount === 3) {
+        showToast({ message: 'Failed to load outbound arrivals. Please try again.', type: 'error' });
+      } else if (errorCount > 0) {
         showToast({ message: 'Some outbound arrivals failed to load. Showing what succeeded.', type: 'error' });
       }
     } catch (err) {
