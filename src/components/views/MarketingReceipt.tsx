@@ -219,8 +219,8 @@ const MarketingReceiptPDF = ({ data }: { data: MarketingReceiptData }) => {
   <Document>
     <Page size={[226, h]} style={styles.page}>
       <View style={[styles.headerRow, styles.headerBorder]}>
-        <EHILogoPDF width={105} />
-        {data.airline && <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={105} />}
+        <EHILogoPDF width={70} />
+        {data.airline && <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={70} />}
       </View>
 
       <View style={styles.titleBar}>

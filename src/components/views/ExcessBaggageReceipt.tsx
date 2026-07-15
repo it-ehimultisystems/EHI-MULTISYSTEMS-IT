@@ -158,8 +158,8 @@ const BaggageReceiptPDF = ({ data }: { data: BaggageReceiptData }) => {
   <Document>
     <Page size={[226, h]} style={styles.page}>
       <View style={styles.headerRow}>
-        <EHILogoPDF width={105} />
-        <AirlineLogoPDF airline={data.airlineName} logoUrl={data.airlineLogoUrl} width={105} />
+        <EHILogoPDF width={70} />
+        <AirlineLogoPDF airline={data.airlineName} logoUrl={data.airlineLogoUrl} width={70} />
       </View>
       <Text style={styles.title}>EXCESS BAGGAGE RECEIPT</Text>
       <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6 }}>Origin: {data.hubName}</Text>
