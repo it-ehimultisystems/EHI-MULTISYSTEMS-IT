@@ -3,9 +3,9 @@ import { Transaction, User, Expense } from "../../lib/types";
 import {
   CONTENT_TYPES,
   BANKS,
-  CARGO_ROUTES,
 } from "../../lib/constants";
 import { fmt, roundMoney, tnow, generatePickupPin, normalizeAirlineName, getHubCode, upperOnChange, isStandalonePWA } from "../../lib/helpers";
+import { useHubRoutes } from "../../lib/hubRoutes";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { isTagAlreadyDelivered } from "../../lib/scanLogic";
 import { getNextTag } from "../../lib/tagPool";
@@ -141,6 +141,7 @@ export const CargoForm = ({
   const [corpSubTab, setCorpSubTab] = useState<"intake" | "weighing">("intake");
   const { showToast } = useToast();
   const confirm = useConfirm();
+  const routes = useHubRoutes();
 
   const generateAwb = () => `AWB-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -173,7 +174,7 @@ export const CargoForm = ({
 
   const [pcs, setPcs] = useState("1");
   const [kg, setKg] = useState("");
-  const [route, setRoute] = useState(CARGO_ROUTES[0]);
+  const [route, setRoute] = useState(routes[0]);
   const [contentType, setContentType] = useState(CONTENT_TYPES[0] as string);
   const [customContentType, setCustomContentType] = useState("");
   const [amount, setAmount] = useState("");
@@ -242,6 +243,26 @@ export const CargoForm = ({
       }
     };
     fetchRates();
+
+    // Rates change rarely (an admin edits them occasionally), but an agent
+    // can stay on this tab for a full shift without ever re-triggering this
+    // mount-time fetch -- a rate changed mid-shift wouldn't show up until
+    // they navigate away and back or reload. A realtime channel here would
+    // add another persistent connection per active cargo agent on top of
+    // the ones already budgeted in EHIApp.tsx for the entry-stream data,
+    // for data that doesn't need push latency -- refetch on refocus (covers
+    // alt-tabbing away and back) plus a bounded interval backstop (covers
+    // staying continuously foregrounded) instead.
+    const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+    const interval = setInterval(fetchRates, REFRESH_INTERVAL_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchRates(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchRates);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchRates);
+    };
   }, []);
 
   useEffect(() => {
@@ -263,6 +284,20 @@ export const CargoForm = ({
       }
     };
     fetchHubRates();
+
+    // Same staleness reasoning as the standardRates effect above -- see
+    // that comment for why this is a poll+refocus backstop rather than a
+    // realtime subscription.
+    const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+    const interval = setInterval(fetchHubRates, REFRESH_INTERVAL_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchHubRates(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchHubRates);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchHubRates);
+    };
   }, [user.hub_id]);
 
   // Three-tier rate lookup for retail cargo pricing: exact hub+airline+route
@@ -743,7 +778,7 @@ export const CargoForm = ({
 
   const [intakeAwb, setIntakeAwb] = useState(generateAwb());
   const [intakePcs, setIntakePcs] = useState("1");
-  const [intakeRoute, setIntakeRoute] = useState(CARGO_ROUTES[0]);
+  const [intakeRoute, setIntakeRoute] = useState(routes[0]);
   const [intakeContentType, setIntakeContentType] = useState<string>(
     CONTENT_TYPES[0],
   );
@@ -1218,7 +1253,7 @@ export const CargoForm = ({
     fetchAwbPreview();
     setPcs("1");
     setKg("");
-    setRoute(CARGO_ROUTES[0]);
+    setRoute(routes[0]);
     setContentType(CONTENT_TYPES[0] as string);
     setCustomContentType("");
     setAmount("");
@@ -1756,7 +1791,7 @@ export const CargoForm = ({
                     onChange={(e) => { setRoute(e.target.value); setAmount(""); }}
                     className={formInputClass}
                   >
-                    {CARGO_ROUTES.map((r) => (
+                    {routes.map((r) => (
                       <option key={r} value={r}>
                         {r}
                       </option>
@@ -2226,7 +2261,7 @@ export const CargoForm = ({
                         onChange={(e) => setIntakeRoute(e.target.value)}
                         className={formInputClass}
                       >
-                        {CARGO_ROUTES.map((r) => (
+                        {routes.map((r) => (
                           <option key={r} value={r}>
                             {r}
                           </option>

@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { CARGO_ROUTES } from '../../lib/constants';
+import { useHubRoutes } from '../../lib/hubRoutes';
 import { DollarSign, Trash2 } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
 
-const ROUTES = CARGO_ROUTES.filter((r) => r !== 'Other');
 const HUB_DEFAULT_AIRLINE = '__HUB_DEFAULT__';
 
 interface Hub {
@@ -21,6 +20,8 @@ interface Hub {
 // screen's writes feed into.
 export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void }) => {
   const isUnrestricted = user.role === 'super_admin' || user.role === 'admin';
+  const allRoutes = useHubRoutes();
+  const ROUTES = useMemo(() => allRoutes.filter((r) => r !== 'Other'), [allRoutes]);
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [selectedHubId, setSelectedHubId] = useState<string>(user.hub_id || '');
   const [airlines, setAirlines] = useState<string[]>([]);
@@ -93,6 +94,8 @@ export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void
       if (error) {
         setHubRouteRates(prev);
         showToast({ message: `Failed to save ${route} default rate: ${error.message}`, type: 'error' });
+      } else {
+        showToast({ message: `${route} default rate saved.`, type: 'success' });
       }
     } else {
       const key = `${selectedAirline}|${route}`;
@@ -109,6 +112,8 @@ export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void
       if (error) {
         setHubAirlineRouteRates(prev);
         showToast({ message: `Failed to save ${route} rate for ${selectedAirline}: ${error.message}`, type: 'error' });
+      } else {
+        showToast({ message: `${route} rate for ${selectedAirline} saved.`, type: 'success' });
       }
     }
   };
@@ -124,6 +129,8 @@ export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void
       if (error) {
         setHubRouteRates(prev);
         showToast({ message: `Failed to clear ${route} default rate: ${error.message}`, type: 'error' });
+      } else {
+        showToast({ message: `${route} default rate cleared.`, type: 'success' });
       }
     } else {
       const key = `${selectedAirline}|${route}`;
@@ -135,6 +142,8 @@ export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void
       if (error) {
         setHubAirlineRouteRates(prev);
         showToast({ message: `Failed to clear ${route} rate for ${selectedAirline}: ${error.message}`, type: 'error' });
+      } else {
+        showToast({ message: `${route} rate for ${selectedAirline} cleared.`, type: 'success' });
       }
     }
   };
@@ -216,7 +225,17 @@ export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void
                       placeholder="—"
                       defaultValue={val ?? ''}
                       key={`${route}-${selectedAirline}-${val ?? 'empty'}`}
-                      onBlur={(e) => e.target.value && handleSetRate(route, e.target.value)}
+                      onBlur={(e) => {
+                        if (!e.target.value) {
+                          // Clearing the box does not delete the rate -- use
+                          // the trash-icon button to actually remove an
+                          // override. Restore the last saved value so the
+                          // field never visually implies an unsaved change.
+                          e.target.value = val != null ? String(val) : '';
+                          return;
+                        }
+                        handleSetRate(route, e.target.value);
+                      }}
                       className="w-24 bg-[var(--color-bg)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[12px] font-mono text-[var(--color-foreground)] text-right focus:outline-none focus:border-[var(--color-accent-amber)]"
                     />
                     <span className="text-[10px] text-[var(--color-muted)]">/KG</span>

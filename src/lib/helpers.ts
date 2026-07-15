@@ -29,6 +29,13 @@ export const fmt = (amount: number) => {
   }).format(amount).replace('NGN', '₦');
 };
 
+// Deliberately matches against the bundled CARGO_ROUTES constant, not the
+// live hubs table (src/lib/hubRoutes.ts) -- this file is also imported
+// server-side (server/emailParser.ts), and hubRoutes.ts pulls in
+// supabase.ts, which touches `localStorage` at module load time and
+// crashes plain Node. A hub added after this constant was last updated
+// just falls through to the generic derived-code fallback below, same as
+// today.
 export function getHubCode(hubName: string | null | undefined): string {
   if (!hubName) return 'XXX';
   const normalized = hubName.toLowerCase();

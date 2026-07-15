@@ -7,8 +7,9 @@ import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer, Blue
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildExcessBaggageWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
-import { CARGO_ROUTES, BANKS } from '../../lib/constants';
+import { BANKS } from '../../lib/constants';
 import { useToast } from '../../lib/ToastContext';
+import { useHubRoutes } from '../../lib/hubRoutes';
 
 export const ExcessBaggageForm = ({
   airline,
@@ -30,7 +31,8 @@ export const ExcessBaggageForm = ({
   // and compose the real flight code from that everywhere it's needed.
   const [flight, setFlight] = useState('');
   const flightCode = flight ? `${airline.flight_prefix}${flight}` : '';
-  const [dest, setDest] = useState(CARGO_ROUTES[0]);
+  const routes = useHubRoutes();
+  const [dest, setDest] = useState(routes[0]);
   const [kg, setKg] = useState('');
   const [pcs, setPcs] = useState('');
   const [phone, setPhone] = useState('');
@@ -141,7 +143,7 @@ export const ExcessBaggageForm = ({
     setName('');
     setPnr('');
     setFlight('');
-    setDest(CARGO_ROUTES[0]);
+    setDest(routes[0]);
     setKg('');
     setPcs('');
     setAmountOverride('');
@@ -487,7 +489,7 @@ export const ExcessBaggageForm = ({
                 className={formInputClass}
                 style={{ appearance: "none" }}
               >
-                {CARGO_ROUTES.map((route) => (
+                {routes.map((route) => (
                   <option key={route} value={route}>
                     {route}
                   </option>

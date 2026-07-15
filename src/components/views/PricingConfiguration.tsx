@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { CARGO_ROUTES } from '../../lib/constants';
 import { Plus, DollarSign } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
+import { useHubRoutes, getCachedHubRoutes } from '../../lib/hubRoutes';
 
 export interface CorporateClient {
   id: string;
@@ -29,7 +29,8 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [selectedRateClient, setSelectedRateClient] = useState<CorporateClient | null>(null);
-  const [rateRoute, setRateRoute] = useState(CARGO_ROUTES[0]);
+  const routes = useHubRoutes();
+  const [rateRoute, setRateRoute] = useState(routes[0]);
   const [ratePrice, setRatePrice] = useState('');
   const { showToast } = useToast();
 
@@ -104,7 +105,11 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
         setStandardRates(ratesMap);
       } else {
         const initial: Record<string, number> = {};
-        CARGO_ROUTES.forEach(r => initial[r] = 500); // 500 base rate
+        // Synchronous cache/fallback read (not the reactive useHubRoutes()
+        // value) -- this runs once inside a mount-only effect, so closing
+        // over the hook's state would freeze whatever it was at mount and
+        // never pick up the live-fetched list.
+        getCachedHubRoutes().forEach(r => initial[r] = 500); // 500 base rate
         setStandardRates(initial);
       }
     };
@@ -293,7 +298,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
             These rates auto-calculate for retail cargo entries based on weight and route.
           </p>
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-            {CARGO_ROUTES.map(r => (
+            {routes.map(r => (
               <div key={r} className="flex justify-between items-center bg-[var(--color-surface-2)] p-2 rounded">
                 <span className="text-[12px] font-mono text-[var(--color-light-muted)]">{r}</span>
                 <div className="flex items-center space-x-2">
@@ -372,7 +377,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
                           onChange={(e) => setRateRoute(e.target.value)}
                           className="w-full bg-[var(--color-bg)] border border-[var(--color-surface-2)] rounded-md px-3 py-2 text-[13px] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
                         >
-                          {CARGO_ROUTES.map(r => <option key={r} value={r}>{r}</option>)}
+                          {routes.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
                       </div>
                       <div>

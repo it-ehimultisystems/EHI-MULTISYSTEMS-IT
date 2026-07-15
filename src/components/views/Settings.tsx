@@ -14,6 +14,7 @@ import {
 import { BackButton } from '../BackButton';
 import { reinitSupabase, getConnectionMode, testSupabaseConnection, supabase } from '../../lib/supabase';
 import { getConfiguredPrinter, setConfiguredPrinter, listPrinters } from '../../lib/qzPrint';
+import { useToast } from '../../lib/ToastContext';
 
 export const Settings = ({ 
   user, 
@@ -22,6 +23,8 @@ export const Settings = ({
   user: User; 
   onBack: () => void;
 }) => {
+  const { showToast } = useToast();
+
   // Connection & API panel state
   const [configTab, setConfigTab] = useState<
     'CONNECTION' | 'PAYMENTS' | 'NOTIFICATIONS' | 'COMPANY'
@@ -160,9 +163,57 @@ export const Settings = ({
     const target = hubs.find((h: any) => h.id === id);
     if (!target) return;
     const newActive = !target.active;
-    setHubs((prev: any) => prev.map((h: any) => h.id === id ? { ...h, active: newActive } : h));
-    // Persist to Supabase
-    await supabase.from('hubs').update({ active: newActive }).eq('id', id);
+    const prev = hubs;
+    setHubs((prevHubs: any) => prevHubs.map((h: any) => h.id === id ? { ...h, active: newActive } : h));
+    // Persist to Supabase -- previously never checked for an error, so this
+    // was silently failing at the DB layer for as long as `hubs` had no
+    // UPDATE policy (fixed alongside the INSERT policy this form needs).
+    const { error } = await supabase.from('hubs').update({ active: newActive }).eq('id', id);
+    if (error) {
+      setHubs(prev);
+      showToast({ message: `Failed to update hub: ${error.message}`, type: 'error' });
+    }
+  };
+
+  // Add Hub — writes straight to Supabase (single source of truth, same as
+  // the hub list itself); requires the 'Admins insert hubs' RLS policy
+  // (supabase/migrations/20260802_hubs_write_policies.sql) to be applied.
+  const [newHubName, setNewHubName] = useState('');
+  const [newHubCode, setNewHubCode] = useState('');
+  const [newHubState, setNewHubState] = useState('');
+  const [newHubType, setNewHubType] = useState<'airport' | 'transit' | 'depot'>('airport');
+  const [addingHub, setAddingHub] = useState(false);
+
+  const handleAddHub = async () => {
+    const name = newHubName.trim();
+    const code = newHubCode.trim().toUpperCase();
+    if (!name || !code) {
+      showToast({ message: 'Hub name and code are required.', type: 'error' });
+      return;
+    }
+    // Pre-check against the already-loaded list -- code has a DB UNIQUE
+    // constraint (case-sensitive), so a collision without this check
+    // surfaces as a raw Postgres error instead of a clear message.
+    if (hubs.some((h: any) => h.code.toUpperCase() === code)) {
+      showToast({ message: `Hub code "${code}" is already in use.`, type: 'error' });
+      return;
+    }
+    setAddingHub(true);
+    const { data, error } = await supabase.from('hubs')
+      .insert({ name, code, state: newHubState.trim() || null, type: newHubType, active: true })
+      .select('id, name, code, type, active')
+      .single();
+    setAddingHub(false);
+    if (error) {
+      showToast({ message: `Failed to add hub: ${error.message}`, type: 'error' });
+      return;
+    }
+    setHubs((prevHubs: any) => [...prevHubs, { id: data.id, name: `${data.code}/${data.name}`, code: data.code, type: data.type, active: data.active }]);
+    showToast({ message: `${code}/${name} added.`, type: 'success' });
+    setNewHubName('');
+    setNewHubCode('');
+    setNewHubState('');
+    setNewHubType('airport');
   };
 
   const handleToggleCarrier = (code: string) => {
@@ -623,7 +674,55 @@ export const Settings = ({
             </div>
           ))}
         </div>
-        
+
+        {(user.role === 'super_admin' || user.role === 'admin') && (
+          <div className="pt-2 mt-2 border-t border-[var(--color-border)] space-y-2">
+            <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
+              <Plus size={10} />
+              <span>Add Hub</span>
+            </div>
+            <input
+              type="text"
+              placeholder="Name (e.g. Sokoto)"
+              value={newHubName}
+              onChange={e => setNewHubName(e.target.value)}
+              className="w-full h-9 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="Code (e.g. SKT)"
+                value={newHubCode}
+                onChange={e => setNewHubCode(e.target.value)}
+                className="w-full h-9 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+              />
+              <input
+                type="text"
+                placeholder="State"
+                value={newHubState}
+                onChange={e => setNewHubState(e.target.value)}
+                className="w-full h-9 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+              />
+            </div>
+            <select
+              value={newHubType}
+              onChange={e => setNewHubType(e.target.value as 'airport' | 'transit' | 'depot')}
+              className="w-full h-9 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+            >
+              <option value="airport">Airport</option>
+              <option value="transit">Transit</option>
+              <option value="depot">Depot</option>
+            </select>
+            <button
+              onClick={handleAddHub}
+              disabled={addingHub || !newHubName.trim() || !newHubCode.trim()}
+              className="w-full py-2 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded disabled:opacity-50 cursor-pointer"
+            >
+              {addingHub ? 'ADDING…' : 'ADD HUB'}
+            </button>
+          </div>
+        )}
+
         {/* aviation air cargo carriers configuration list */}
         <div className="ehi-card p-4 space-y-3">
         <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">

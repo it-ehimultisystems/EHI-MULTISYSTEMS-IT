@@ -3,6 +3,7 @@ import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { User, Transaction, Expense } from "../../lib/types";
 import { BANKS, EXPENSE_CATEGORIES, CONTENT_TYPES } from "../../lib/constants";
 import { fmt, uid, tnow, generatePaymentNarration, getHubCode, upperOnChange } from "../../lib/helpers";
+import { useHubRoutes } from "../../lib/hubRoutes";
 import { getNextTag } from "../../lib/tagPool";
 import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare, Bluetooth } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -31,27 +32,14 @@ export const PackageForm = ({
   // each option is prefixed with its IATA-style hub code for consistency
   // with the Cargo/ValueJet route pickers. Cached to localStorage for an
   // instant first paint / offline fallback while the fetch is in flight.
+  // No 'Other' option and no bundled-constant cold fallback, matching this
+  // form's original behavior exactly.
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const HUB_DEST_CACHE_KEY = 'ehi_hub_destinations';
-  const [destinations, setDestinations] = useState<string[]>(() => {
-    try {
-      const cached = localStorage.getItem(HUB_DEST_CACHE_KEY);
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
+  const destinations = useHubRoutes({ includeOther: false, coldFallback: false });
   useEffect(() => {
-    supabase.from('hubs').select('name, code').eq('active', true).order('name').then(({ data, error }) => {
-      if (data && !error && data.length > 0) {
-        const formatted = data.map((h: any) => `${h.code}/${h.name}`);
-        setDestinations(formatted);
-        setDestination(prev => prev || formatted[0]);
-        try { localStorage.setItem(HUB_DEST_CACHE_KEY, JSON.stringify(formatted)); } catch {}
-      }
-    });
-  }, []);
+    setDestination(prev => prev || destinations[0] || "");
+  }, [destinations]);
 
   const [trackingRef, setTrackingRef] = useState<string>('');
   useEffect(() => {

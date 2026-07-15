@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { User } from '../../lib/types';
-import { CARGO_ROUTES } from '../../lib/constants';
+import { useHubRoutes } from '../../lib/hubRoutes';
 import { listAirlineLogos } from '../../lib/airlineLogos';
 import { useToast } from '../../lib/ToastContext';
 import { useConfirm } from '../../lib/ConfirmContext';
@@ -52,6 +52,7 @@ export const WeightManifest = ({ user, onBack }: { user: User; onBack: () => voi
   const [showMobileForm, setShowMobileForm] = useState(false);
   const { showToast } = useToast();
   const confirm = useConfirm();
+  const routes = useHubRoutes();
   const [airlineNames, setAirlineNames] = useState<string[]>([]);
 
   const [airline, setAirline] = useState('');
@@ -201,7 +202,7 @@ export const WeightManifest = ({ user, onBack }: { user: User; onBack: () => voi
           className="w-full h-8 px-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded text-[11px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
         >
           <option value="">Select route…</option>
-          {CARGO_ROUTES.map(r => <option key={r} value={r}>{r}</option>)}
+          {routes.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
 
@@ -485,7 +486,7 @@ export const WeightManifest = ({ user, onBack }: { user: User; onBack: () => voi
                 className="w-full h-9 px-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded text-[11px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
               >
                 <option value="">Select route…</option>
-                {CARGO_ROUTES.map(r => <option key={r} value={r}>{r}</option>)}
+                {routes.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
 
