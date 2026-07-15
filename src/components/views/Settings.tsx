@@ -9,11 +9,12 @@ import {
   Plane,
   Check,
   DollarSign,
-  Eye, EyeOff, Wifi, WifiOff, Phone, Mail, Building2, Key
+  Eye, EyeOff, Wifi, WifiOff, Phone, Mail, Building2, Key, Printer
 } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { reinitSupabase, getConnectionMode, testSupabaseConnection, supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
+import { getConfiguredPrinter, setConfiguredPrinter, listPrinters } from '../../lib/qzPrint';
 
 export const Settings = ({ 
   user, 
@@ -216,6 +217,36 @@ export const Settings = ({
 
   const handleToggleCarrier = (code: string) => {
     setCarriers((prev: any) => prev.map((c: any) => c.code === code ? { ...c, active: !c.active } : c));
+  };
+
+  // Silent printing (QZ Tray) — per-device, so read/written straight to
+  // localStorage rather than the pricing/hub/carrier state above, none of
+  // which syncs to Supabase either at the per-terminal level this needs.
+  const [qzStatus, setQzStatus] = useState<'unknown' | 'checking' | 'available' | 'unavailable'>('unknown');
+  const [qzPrinters, setQzPrinters] = useState<string[]>([]);
+  const [receiptPrinter, setReceiptPrinter] = useState(() => getConfiguredPrinter('receipt') || '');
+  const [tagPrinter, setTagPrinter] = useState(() => getConfiguredPrinter('tag') || '');
+
+  const handleDetectPrinters = async () => {
+    setQzStatus('checking');
+    try {
+      const found = await listPrinters();
+      setQzPrinters(found);
+      setQzStatus('available');
+    } catch {
+      setQzPrinters([]);
+      setQzStatus('unavailable');
+    }
+  };
+
+  const handleReceiptPrinterChange = (name: string) => {
+    setReceiptPrinter(name);
+    setConfiguredPrinter('receipt', name || null);
+  };
+
+  const handleTagPrinterChange = (name: string) => {
+    setTagPrinter(name);
+    setConfiguredPrinter('tag', name || null);
   };
 
   return (
@@ -529,6 +560,88 @@ export const Settings = ({
             {driveSync ? <ToggleRight size={38} className="text-[var(--color-success)]" /> : <ToggleLeft size={38} className="text-[var(--color-muted)]" />}
           </button>
         </div>
+      </div>
+
+      {/* Silent Printing (QZ Tray) Card — per-device, visible to every
+          role since any agent working a terminal needs to point it at
+          that terminal's physical printer. */}
+      <div className="ehi-card p-4 space-y-4">
+        <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center gap-1.5">
+          <Printer size={11} className="text-[var(--color-accent-amber)]" />
+          <span>SILENT PRINTING (QZ TRAY)</span>
+        </div>
+
+        <p className="text-[9px] text-[var(--color-muted)] font-mono leading-relaxed">
+          Optional, per-device. Install QZ Tray on this terminal, then detect
+          its printers below and pick one for Receipt and Tag jobs to print
+          straight to it with no print dialog. Devices left unconfigured — or
+          any device where QZ Tray isn't installed — keep opening the PDF for
+          manual printing exactly as before.
+        </p>
+
+        <div className={`flex items-center gap-2 px-3 py-2 rounded text-[10px] font-mono ${
+          qzStatus === 'available'
+            ? 'bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.2)] text-[var(--color-success)]'
+            : qzStatus === 'unavailable'
+              ? 'bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] text-[var(--color-error)]'
+              : 'bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]'
+        }`}>
+          {qzStatus === 'available'
+            ? <><Wifi size={12} /> ● QZ TRAY DETECTED — {qzPrinters.length} printer(s) found</>
+            : qzStatus === 'unavailable'
+              ? <><WifiOff size={12} /> ✗ QZ Tray not detected on this device</>
+              : <><WifiOff size={12} /> ○ Not checked yet</>
+          }
+        </div>
+
+        <button
+          onClick={handleDetectPrinters}
+          disabled={qzStatus === 'checking'}
+          className="w-full py-2.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[11px] font-bold font-mono rounded border border-[var(--color-border)] disabled:opacity-50 cursor-pointer"
+        >
+          {qzStatus === 'checking' ? 'DETECTING…' : 'DETECT QZ TRAY PRINTERS'}
+        </button>
+
+        <div>
+          <label htmlFor="settings-qz-receipt-printer" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+            Receipt Printer
+          </label>
+          <select
+            id="settings-qz-receipt-printer"
+            value={receiptPrinter}
+            onChange={e => handleReceiptPrinterChange(e.target.value)}
+            className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+          >
+            <option value="">Off — open PDF for manual printing</option>
+            {qzPrinters.map(name => <option key={name} value={name}>{name}</option>)}
+            {receiptPrinter && !qzPrinters.includes(receiptPrinter) && (
+              <option value={receiptPrinter}>{receiptPrinter} (saved, not seen yet)</option>
+            )}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="settings-qz-tag-printer" className="block text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">
+            Label / Tag Printer (e.g. XP-402B)
+          </label>
+          <select
+            id="settings-qz-tag-printer"
+            value={tagPrinter}
+            onChange={e => handleTagPrinterChange(e.target.value)}
+            className="w-full h-10 px-3 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+          >
+            <option value="">Off — open PDF for manual printing</option>
+            {qzPrinters.map(name => <option key={name} value={name}>{name}</option>)}
+            {tagPrinter && !qzPrinters.includes(tagPrinter) && (
+              <option value={tagPrinter}>{tagPrinter} (saved, not seen yet)</option>
+            )}
+          </select>
+        </div>
+
+        <p className="text-[9px] text-[var(--color-muted)] font-mono leading-relaxed pt-1">
+          QZ Tray is free background software from qz.io — install it once on
+          this machine, then click "Detect" above.
+        </p>
       </div>
 
       {/* regional and aviation grid container */}

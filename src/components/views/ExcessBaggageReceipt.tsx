@@ -11,7 +11,8 @@ import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
 import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
-import { openPdfOrDownload, estimateWrappedLines } from "../../lib/helpers";
+import { estimateWrappedLines } from "../../lib/helpers";
+import { printPdfSmart } from "../../lib/qzPrint";
 import { notifySilentError } from "../../lib/ToastContext";
 
 export interface BaggageReceiptData {
@@ -313,8 +314,6 @@ export const printBaggageReceipt = async (data: BaggageReceiptData): Promise<voi
     data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airlineName);
   }
   const blob = await pdf(<BaggageReceiptPDF data={data} />).toBlob();
-  const url = URL.createObjectURL(blob);
-  const win = openPdfOrDownload(url, `Receipt_${data.entryRef}.pdf`);
+  const win = await printPdfSmart(blob, `Receipt_${data.entryRef}.pdf`, 'receipt');
   if (win) win.print();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
 };

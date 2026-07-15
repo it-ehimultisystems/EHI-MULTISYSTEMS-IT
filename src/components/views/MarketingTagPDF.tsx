@@ -11,7 +11,7 @@ import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
 import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
-import { openPdfOrDownload } from "../../lib/helpers";
+import { printPdfSmart } from "../../lib/qzPrint";
 import { notifySilentError } from "../../lib/ToastContext";
 
 // Fixed 100mm x 80mm label -- same discrete, fixed-size tag format as
@@ -314,8 +314,7 @@ async function buildTagData(data: MarketingTagPDFData): Promise<MarketingTagPDFD
 export const printMarketingTagPDF = async (data: MarketingTagPDFData, preOpenedWindow?: Window | null) => {
   const withQr = await buildTagData(data);
   const blob = await pdf(<MarketingTagOnlyPDF data={withQr} />).toBlob();
-  const url = URL.createObjectURL(blob);
-  openPdfOrDownload(url, `EHI-Tag-${data.id}.pdf`, preOpenedWindow);
+  await printPdfSmart(blob, `EHI-Tag-${data.id}.pdf`, 'tag', preOpenedWindow);
 };
 
 export const downloadMarketingTagPDF = async (data: MarketingTagPDFData) => {

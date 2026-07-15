@@ -1,7 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
 import { Transaction, Expense } from '../../lib/types';
 import { EHILogoPDF } from '../EHILogoPDF';
-import { openPdfOrDownload } from '../../lib/helpers';
+import { printPdfSmart } from '../../lib/qzPrint';
 
 
 
@@ -274,6 +274,5 @@ export const downloadEODReport = async (data: EODReportData) => {
 
 export const printEODReport = async (data: EODReportData) => {
   const blob = await pdf(<EODReportPDF data={data} />).toBlob();
-  const url = URL.createObjectURL(blob);
-  openPdfOrDownload(url, `EOD_Report_${data.date.replace(/[/ ]/g, '_')}.pdf`);
+  await printPdfSmart(blob, `EOD_Report_${data.date.replace(/[/ ]/g, '_')}.pdf`, 'receipt');
 };

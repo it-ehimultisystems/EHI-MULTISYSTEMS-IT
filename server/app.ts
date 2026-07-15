@@ -6,6 +6,7 @@ import paystackRoutes from './paystack.js';
 import notificationRoutes from './notifications.js';
 import eodRoutes from './eod.js';
 import geminiRoutes from './gemini.js';
+import qzRoutes from './qz.js';
 import { parseBankAlert } from './emailParser.js';
 
 // Same DSN as the client (VITE_SENTRY_DSN reads fine server-side too --
@@ -176,6 +177,7 @@ export function createApp() {
   app.use('/api/notify', notifyLimiter, requireAuthenticatedUser, notificationRoutes);
   app.use('/api/eod', requireAuthenticatedUser, eodRoutes);
   app.use('/api/gemini', notifyLimiter, requireAuthenticatedUser, geminiRoutes);
+  app.use('/api/qz', requireAuthenticatedUser, qzRoutes);
 
   app.post('/api/admin/create-staff', adminLimiter, async (req, res) => {
     const adminCtx = await requireAdminCaller(req, res);

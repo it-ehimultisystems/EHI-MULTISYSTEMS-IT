@@ -11,7 +11,7 @@ import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { AirlineLogoPDF } from "../AirlineLogoPDF";
 import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
-import { openPdfOrDownload } from "../../lib/helpers";
+import { printPdfSmart } from "../../lib/qzPrint";
 import { notifySilentError } from "../../lib/ToastContext";
 
 // Fixed 100mm x 80mm label -- this is a discrete, fixed-size tag (like the
@@ -284,12 +284,14 @@ async function buildTagData(data: CargoTagPDFData): Promise<CargoTagPDFData> {
   return result;
 }
 
-// Opens the tag in a new tab for printing via the browser's native print
-// dialog -- this is the recommended path for the XP-402B and similar
-// gap/die-cut label printers connected over USB, since it goes through
-// the OS's own printer driver rather than raw Bluetooth GATT writes,
-// sidestepping the chunking/speed/corruption issues that come with
-// talking directly to a Bluetooth ESC/POS characteristic.
+// Prints straight to the configured QZ Tray label printer with zero
+// dialogs when a device has one set up (Settings -> Printing); otherwise
+// opens the tag in a new tab for printing via the browser's native print
+// dialog -- this is the recommended fallback path for the XP-402B and
+// similar gap/die-cut label printers connected over USB, since it goes
+// through the OS's own printer driver rather than raw Bluetooth GATT
+// writes, sidestepping the chunking/speed/corruption issues that come
+// from talking directly to a Bluetooth ESC/POS characteristic.
 //
 // Callers should open `preOpenedWindow` themselves via
 // `window.open('', '_blank')` synchronously in their click handler, before
@@ -297,8 +299,7 @@ async function buildTagData(data: CargoTagPDFData): Promise<CargoTagPDFData> {
 export const printCargoTagPDF = async (data: CargoTagPDFData, preOpenedWindow?: Window | null) => {
   const withQr = await buildTagData(data);
   const blob = await pdf(<CargoTagOnlyPDF data={withQr} />).toBlob();
-  const url = URL.createObjectURL(blob);
-  openPdfOrDownload(url, `EHI-Tag-${data.id}.pdf`, preOpenedWindow);
+  await printPdfSmart(blob, `EHI-Tag-${data.id}.pdf`, 'tag', preOpenedWindow);
 };
 
 export const downloadCargoTagPDF = async (data: CargoTagPDFData) => {
