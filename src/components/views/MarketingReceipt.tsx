@@ -61,7 +61,7 @@ function formatNaira(n: number | string): string {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 6, fontFamily: "Helvetica", backgroundColor: "#FFFFFF" },
+  page: { padding: 12, fontFamily: "Helvetica", backgroundColor: "#FFFFFF" },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
