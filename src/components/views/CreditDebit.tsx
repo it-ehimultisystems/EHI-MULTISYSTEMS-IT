@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { User, Transaction } from '../../lib/types';
 import { fmt, roundMoney } from '../../lib/helpers';
-import { CreditCard, Building2, Users, Search, ArrowDownLeft, ArrowUpRight, TrendingDown, TrendingUp, Building, UserSquare2, Loader } from 'lucide-react';
+import { CreditCard, Building2, Users, Search, ArrowDownLeft, ArrowUpRight, TrendingDown, TrendingUp, Building, UserSquare2, Loader, FileDown } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { normalizeAirlineName } from '../../lib/helpers';
@@ -142,6 +142,47 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
 
   const totalCredit = creditSummary.reduce((acc, c) => acc + c.amount, 0);
 
+  // Precomputed once here instead of inline inside the JSX map below --
+  // the PDF export needs the exact same commRate/weOwe numbers the on-screen
+  // list shows, so both read from this single source instead of a third
+  // copy of the same calc silently drifting from the other two.
+  const creditsDetailed = useMemo(() => {
+    return credits.map(tx => {
+      const normalizedAirline = normalizeAirlineName(tx.airline);
+      const commRate = tx.commissionRate ?? commissions[normalizedAirline] ?? commissions[tx.airline!] ?? 0;
+      const commissionAmount = roundMoney(tx.amount * commRate / 100);
+      const weOwe = roundMoney(tx.amount * (1 - commRate / 100));
+      return { airline: tx.airline || 'Unknown', id: tx.id, baseAmount: tx.amount, commRate, commissionAmount, weOwe, detail: tx.detail };
+    });
+  }, [credits, commissions]);
+
+  const handleDownloadPDF = () => {
+    const generatedAt = new Date().toLocaleString('en-GB');
+    if (activeTab === 'debts') {
+      import('./CreditDebitPDF').then(({ downloadDebtsLedgerPDF }) => {
+        downloadDebtsLedgerPDF({
+          hubName: user.hub || 'EHI Hub',
+          generatedBy: user.name,
+          generatedAt,
+          debtSummary,
+          debts: debts.map(t => ({ name: t.name, detail: t.detail, balance: t.amount - (t.amountPaid || 0), id: t.id, time: t.time })),
+          totalDebt,
+        });
+      });
+    } else {
+      import('./CreditDebitPDF').then(({ downloadCreditsLedgerPDF }) => {
+        downloadCreditsLedgerPDF({
+          hubName: user.hub || 'EHI Hub',
+          generatedBy: user.name,
+          generatedAt,
+          creditSummary,
+          credits: creditsDetailed,
+          totalCredit,
+        });
+      });
+    }
+  };
+
   return (
     <main className="flex-1 flex flex-col h-full bg-[var(--color-bg)] overflow-hidden">
       {/* Header */}
@@ -176,15 +217,25 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
           </button>
         </div>
 
-        <div className="relative mt-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" size={14} strokeWidth={1.5} />
-          <input
-            type="text"
-            placeholder={activeTab === 'debts' ? 'Search debtors...' : 'Search airlines...'}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg pl-9 pr-3 py-2 text-[13px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
-          />
+        <div className="flex items-center gap-2 mt-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" size={14} strokeWidth={1.5} />
+            <input
+              type="text"
+              placeholder={activeTab === 'debts' ? 'Search debtors...' : 'Search airlines...'}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg pl-9 pr-3 py-2 text-[13px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
+            />
+          </div>
+          <button
+            onClick={handleDownloadPDF}
+            title="Download PDF"
+            aria-label="Download PDF"
+            className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:border-[var(--color-accent-amber)] hover:text-[var(--color-accent-amber)] text-[var(--color-muted)] transition-colors"
+          >
+            <FileDown size={15} strokeWidth={1.5} />
+          </button>
         </div>
       </div>
 
@@ -280,25 +331,20 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
 
             <div className="mt-8 space-y-3">
               <h3 className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Detailed Remittances</h3>
-              {credits.map((tx, i) => {
-                const normalizedAirline = normalizeAirlineName(tx.airline);
-                const commRate = tx.commissionRate ?? commissions[normalizedAirline] ?? commissions[tx.airline!] ?? 0;
-                const weOwe = roundMoney(tx.amount * (1 - commRate / 100));
-                return (
-                  <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-surface-2)] transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[14px] font-sans font-bold text-[var(--color-foreground)]">{tx.airline} <span className="opacity-50 text-[11px] font-mono ml-1">({tx.id})</span></span>
-                      <span className="text-[13px] font-mono font-bold text-[var(--color-success)]">{fmt(weOwe)}</span>
-                    </div>
-                    <div className="text-[11px] font-mono text-[var(--color-muted)] mb-3 bg-[var(--color-surface-2)] inline-block px-2 py-1 rounded">
-                      Base: {fmt(tx.amount)} <span className="mx-1 opacity-50">&middot;</span> Comm: {commRate}% <span className="text-[var(--color-accent-amber)]">({fmt(roundMoney(tx.amount * commRate / 100))})</span>
-                    </div>
-                    <div className="text-[12px] font-sans text-[var(--color-muted)] line-clamp-1 pt-1">
-                      {tx.detail}
-                    </div>
+              {creditsDetailed.map((c, i) => (
+                <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-surface-2)] transition-colors">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[14px] font-sans font-bold text-[var(--color-foreground)]">{c.airline} <span className="opacity-50 text-[11px] font-mono ml-1">({c.id})</span></span>
+                    <span className="text-[13px] font-mono font-bold text-[var(--color-success)]">{fmt(c.weOwe)}</span>
                   </div>
-                );
-              })}
+                  <div className="text-[11px] font-mono text-[var(--color-muted)] mb-3 bg-[var(--color-surface-2)] inline-block px-2 py-1 rounded">
+                    Base: {fmt(c.baseAmount)} <span className="mx-1 opacity-50">&middot;</span> Comm: {c.commRate}% <span className="text-[var(--color-accent-amber)]">({fmt(c.commissionAmount)})</span>
+                  </div>
+                  <div className="text-[12px] font-sans text-[var(--color-muted)] line-clamp-1 pt-1">
+                    {c.detail}
+                  </div>
+                </div>
+              ))}
             </div>
           </>
         )}

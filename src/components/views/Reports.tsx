@@ -350,17 +350,22 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
           </button>
 
           {/* Date range selector */}
-          <div className="ehi-card space-y-3">
+          <div className="ehi-card p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Calendar size={13} className="text-[var(--color-accent-amber)]" />
               <span className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-accent-amber)] font-bold">Date Range</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {/* auto-fit (not a viewport-width md: breakpoint) so column count
+                tracks the actually-available width next to SideNav, instead
+                of jumping to 4 columns whenever the viewport crosses 768px
+                regardless of how much room is really left -- that's what was
+                spilling the row out of the card. */}
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2">
               {PRESETS.map(p => (
                 <button
                   key={p.id}
                   onClick={() => setPreset(p.id)}
-                  className={`px-3 py-2 text-[11px] font-mono border rounded-[var(--radius-sm)] transition-colors cursor-pointer ${
+                  className={`min-w-0 truncate px-3 py-2 text-[11px] font-mono border rounded-[var(--radius-sm)] transition-colors cursor-pointer ${
                     preset === p.id
                       ? 'bg-[var(--color-accent-amber)] text-[#0B0F19] border-[var(--color-accent-amber)] font-bold'
                       : 'bg-[var(--color-surface-2)] text-[var(--color-muted)] border-[var(--color-border)] font-medium hover:bg-[var(--color-surface-3)] hover:text-[var(--color-foreground)]'
@@ -494,10 +499,10 @@ const CustomerReportView = ({ data }: { data: any[] }) => (
 
 const DebtorReportView = ({ data }: { data: any }) => (
   <div className="space-y-4">
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2">
       {Object.entries(data.buckets).map(([bucket, amount]) => (
-        <div key={bucket} className="p-2.5 bg-[var(--color-surface-2)] rounded-[var(--radius-sm)] text-center border border-[var(--color-border)]">
-          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider font-bold mb-1">{bucket}</div>
+        <div key={bucket} className="min-w-0 p-2.5 bg-[var(--color-surface-2)] rounded-[var(--radius-sm)] text-center border border-[var(--color-border)]">
+          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider font-bold mb-1 truncate">{bucket}</div>
           <div className={`text-[13px] font-mono font-bold ${bucket === 'Write-off risk' ? 'text-[var(--color-error)]' : 'text-[var(--color-foreground)]'}`}>
             {fmt(amount as number)}
           </div>

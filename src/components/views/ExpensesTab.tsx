@@ -3,6 +3,7 @@ import { Expense, User } from '../../lib/types';
 import { fmt, uid, tnow } from '../../lib/helpers';
 import { Car, Truck, Bus, Box, Briefcase, Download, Plus, AlertCircle, Edit2, CheckCircle, XCircle } from 'lucide-react';
 import { EmptyState } from './EmptyState';
+import * as XLSX from 'xlsx';
 
 export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpense, onUpdateExpense }: { expenses?: Expense[], user?: User, period?: string, onAddExpense?: (e: Expense) => void, onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void }) => {
   
@@ -47,6 +48,21 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
     setBudgets(newB);
     localStorage.setItem(storageKey, JSON.stringify(newB));
     setEditingBudget(null);
+  };
+
+  const handleExportCSV = () => {
+    const rows = expenses.map(e => ({
+      Date: e.created_at ? e.created_at.split('T')[0] : '',
+      Time: e.time,
+      Category: e.type,
+      Description: e.description,
+      Amount: e.amount,
+      Mode: e.mode || '',
+      Status: e.status || 'approved',
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Expenses');
+    XLSX.writeFile(wb, `EHI_Expenses_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   const getIcon = (cat: string) => {
@@ -231,7 +247,7 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
       <div>
          <div className="flex justify-between items-center mb-3">
            <span className="text-[14px] font-sans font-semibold text-[var(--color-foreground)]">Expense Log</span>
-           <button className="flex items-center space-x-1 text-[11px] font-sans text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.1)] px-2 py-1 rounded focus:outline-none hover:bg-opacity-20 transition-colors">
+           <button onClick={handleExportCSV} className="flex items-center space-x-1 text-[11px] font-sans text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.1)] px-2 py-1 rounded focus:outline-none hover:bg-opacity-20 transition-colors">
              <Download size={12} />
              <span>CSV</span>
            </button>

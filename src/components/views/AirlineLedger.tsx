@@ -225,6 +225,36 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
           </div>
         </div>
         <button
+          onClick={() => {
+            import('./AirlineLedgerPDF').then(({ downloadAirlineLedgerPDF }) => {
+              downloadAirlineLedgerPDF({
+                airlineName: selectedAirline,
+                hubName: user.hub || 'EHI Hub',
+                generatedBy: user.name,
+                generatedAt: new Date().toLocaleString('en-GB'),
+                rows: rows.map(r => ({
+                  entry_date: r.entry_date,
+                  reference: r.reference,
+                  description: r.description,
+                  entry_type: r.entry_type,
+                  amount: r.amount,
+                  runningBalance: r.runningBalance,
+                })),
+                summary,
+              });
+            });
+          }}
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group shrink-0"
+          title="Download PDF"
+          aria-label="Download PDF"
+        >
+          <FileSpreadsheet
+            size={14}
+            strokeWidth={1.5}
+            className="text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] transition-colors"
+          />
+        </button>
+        <button
           onClick={() => loadEntries(selectedAirline)}
           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group shrink-0"
           title="Refresh"

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
-import { Box, Plane, TrendingUp, Lock, Unlock, AlertCircle } from 'lucide-react';
+import { Box, Plane, TrendingUp, Lock, Unlock, AlertCircle, FileDown } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { DebtorsTab } from './DebtorsTab';
 import { ExpensesTab } from './ExpensesTab';
@@ -304,6 +304,34 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
               />
             </div>
           )}
+
+          <button
+            onClick={() => {
+              import('./AccountingSummaryPDF').then(({ downloadAccountingSummaryPDF }) => {
+                downloadAccountingSummaryPDF({
+                  hubName: user.hub,
+                  generatedBy: user.name,
+                  generatedAt: new Date().toLocaleString('en-GB'),
+                  periodLabel: period === 'Custom' ? `Custom: ${customStart} to ${customEnd}` : period,
+                  streams: [
+                    { name: 'Cargo Station', amount: cargoTotal, count: cargoTx.length },
+                    { name: 'Excess Baggage', amount: vjTotal, count: vjTx.length },
+                    { name: 'Field Marketing', amount: mktgTotal, count: mktgTx.length },
+                  ],
+                  grandRevenue,
+                  totalExpenses,
+                  pendingExpTotal,
+                  netRevenue,
+                  modes: { cash: cashTotal, transfer: transferTotal, pos: posTotal, debt: debtTotal },
+                  collectionEff,
+                  vatEstimate,
+                });
+              });
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[12px] font-sans font-medium text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)] transition-colors"
+          >
+            <FileDown size={14} /> Download PDF
+          </button>
 
           {/* REVENUE SUMMARY ROW */}
           <div className="flex space-x-4 overflow-x-auto pb-2 snap-x">

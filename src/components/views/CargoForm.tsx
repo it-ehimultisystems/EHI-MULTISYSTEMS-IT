@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Transaction, User } from "../../lib/types";
+import { Transaction, User, Expense } from "../../lib/types";
 import {
   CONTENT_TYPES,
   BANKS,
@@ -40,6 +40,8 @@ import {
   Rocket,
   Zap,
   Bluetooth,
+  Lock,
+  Calendar,
 } from "lucide-react";
 import {
   sendReceiptWhatsApp,
@@ -47,6 +49,7 @@ import {
 } from "../../lib/notifications";
 import { supabase } from "../../lib/supabase";
 import { useToast } from "../../lib/ToastContext";
+import { useConfirm } from "../../lib/ConfirmContext";
 
 interface CorporateClient {
   id: string;
@@ -137,6 +140,7 @@ export const CargoForm = ({
   // elsewhere this session for Phase 1 intakes.
   const [corpSubTab, setCorpSubTab] = useState<"intake" | "weighing">("intake");
   const { showToast } = useToast();
+  const confirm = useConfirm();
 
   const generateAwb = () => `AWB-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -352,6 +356,146 @@ export const CargoForm = ({
       successRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [successTx]);
+
+  // --- CARGO DESK DAY CLOSE ---
+  // A wholly separate close from EODReconciliation.tsx's shared aggregate --
+  // that screen assumes a rigid midnight-to-midnight boundary, which breaks
+  // for cargo shifts that span overnight (e.g. 10pm-6am). This lets staff
+  // pick the actual period being closed (which can cross midnight) instead,
+  // persisted via cargo_day_close so the exact boundary is auditable later.
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [closingDay, setClosingDay] = useState(false);
+  const [periodStart, setPeriodStart] = useState<string>('');
+  const [periodEnd, setPeriodEnd] = useState<string>('');
+  const [lastCloseEnd, setLastCloseEnd] = useState<string | null>(null);
+  const [closeSummaryLoading, setCloseSummaryLoading] = useState(false);
+  const [closeEntries, setCloseEntries] = useState<Array<{
+    amount: number; receipt_mode: string; route: string | null; consignee_name: string;
+    airline: string | null; awb_tag_number: string | null; total_pcs: number; total_kg: number;
+    content_type: string | null; bank: string | null;
+  }>>([]);
+  const [closeExpenses, setCloseExpenses] = useState<Expense[]>([]);
+
+  // datetime-local <-> Date, local time (no timezone suffix) -- toISOString()
+  // would shift the displayed value by the browser's UTC offset.
+  const toLocalInputValue = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  // Default the range when the modal opens: start picks up from this hub's
+  // last close (continuous, non-overlapping periods with no gap), falling
+  // back to today-midnight if this hub has never closed a cargo period.
+  useEffect(() => {
+    if (!showCloseModal) return;
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('cargo_day_close')
+        .select('period_end')
+        .eq('hub_id', user.hub_id)
+        .order('period_end', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!active) return;
+      const now = new Date();
+      let defaultStart: Date;
+      if (data?.period_end) {
+        defaultStart = new Date(data.period_end);
+      } else {
+        defaultStart = new Date();
+        defaultStart.setHours(0, 0, 0, 0);
+      }
+      setLastCloseEnd(data?.period_end || null);
+      setPeriodStart(toLocalInputValue(defaultStart));
+      setPeriodEnd(toLocalInputValue(now));
+    })();
+    return () => { active = false; };
+  }, [showCloseModal, user.hub_id]);
+
+  // Reload the summary whenever the picked range changes -- datetime-local
+  // inputs only fire onChange on commit (not per keystroke), so no debounce
+  // is needed here.
+  useEffect(() => {
+    if (!showCloseModal || !periodStart || !periodEnd) return;
+    let active = true;
+    setCloseSummaryLoading(true);
+    (async () => {
+      const startISO = new Date(periodStart).toISOString();
+      const endISO = new Date(periodEnd).toISOString();
+      const [entriesRes, expRes] = await Promise.all([
+        supabase.from('cargo_entries')
+          .select('amount,receipt_mode,route,consignee_name,airline,awb_tag_number,total_pcs,total_kg,content_type,bank,created_at')
+          .eq('hub_id', user.hub_id)
+          .gte('created_at', startISO).lt('created_at', endISO)
+          .order('created_at', { ascending: true }).limit(1000),
+        supabase.from('expenses')
+          .select('*')
+          .eq('hub_id', user.hub_id)
+          .gte('created_at', startISO).lt('created_at', endISO)
+          .limit(1000),
+      ]);
+      if (!active) return;
+      setCloseEntries((entriesRes.data || []) as any);
+      setCloseExpenses((expRes.data || []) as Expense[]);
+      setCloseSummaryLoading(false);
+    })();
+    return () => { active = false; };
+  }, [showCloseModal, periodStart, periodEnd, user.hub_id]);
+
+  const closeTotalSales = closeEntries.reduce((s, t) => s + t.amount, 0);
+  const closeCashSales = closeEntries.reduce((s, t) => s + (t.receipt_mode === 'Cash' ? t.amount : 0), 0);
+  const closePosSales = closeEntries.reduce((s, t) => s + (t.receipt_mode === 'POS' ? t.amount : 0), 0);
+  const closeTransferSales = closeEntries.reduce((s, t) => s + (t.receipt_mode === 'Transfer' ? t.amount : 0), 0);
+  const closeDebtSales = closeEntries.reduce((s, t) => s + (t.receipt_mode === 'Debt' ? t.amount : 0), 0);
+  const closeTotalExpenses = closeExpenses.reduce((s, e) => s + e.amount, 0);
+  const closeBalanceCash = closeCashSales - closeTotalExpenses;
+  const closeRouteCounts: Record<string, number> = {};
+  closeEntries.forEach(t => { const r = t.route || 'Unknown'; closeRouteCounts[r] = (closeRouteCounts[r] || 0) + 1; });
+
+  const handleCloseDay = async () => {
+    if (closingDay) return;
+    const startISO = new Date(periodStart).toISOString();
+    const endISO = new Date(periodEnd).toISOString();
+    if (new Date(endISO) <= new Date(startISO)) {
+      showToast({ message: 'End time must be after start time.', type: 'warning' });
+      return;
+    }
+    const ok = await confirm({
+      title: 'Close Cargo Desk period?',
+      message: `Close the cargo period from ${new Date(startISO).toLocaleString('en-GB')} to ${new Date(endISO).toLocaleString('en-GB')}? This cannot be undone.`,
+      confirmLabel: 'Close Period',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setClosingDay(true);
+    try {
+      const { error } = await supabase.from('cargo_day_close').upsert({
+        hub_id: user.hub_id,
+        hub: user.hub,
+        period_start: startISO,
+        period_end: endISO,
+        total_sales: closeTotalSales,
+        cash_sales: closeCashSales,
+        pos_sales: closePosSales,
+        transfer_sales: closeTransferSales,
+        debt_sales: closeDebtSales,
+        total_expenses: closeTotalExpenses,
+        balance_cash: closeBalanceCash,
+        entry_count: closeEntries.length,
+        route_counts: closeRouteCounts,
+        closed_by: user.name,
+        closed_at: new Date().toISOString(),
+      }, { onConflict: 'hub_id,period_end' });
+      if (error) throw error;
+      showToast({ message: 'Cargo period closed successfully', type: 'success' });
+      setShowCloseModal(false);
+    } catch (err: any) {
+      showToast({ message: 'Failed to close period: ' + err.message, type: 'error' });
+    } finally {
+      setClosingDay(false);
+    }
+  };
 
   // --- B2B CORPORATE PERSISTED STATES ---
   const [corpClients, setCorpClients] = useState<CorporateClient[]>(() => {
@@ -1424,6 +1568,14 @@ export const CargoForm = ({
     >
       {/* SECTION SELECTOR / HUB MODE NAVIGATION */}
       <div className="px-4 pt-4">
+      <div className="flex items-center justify-end mb-3">
+        <button
+          onClick={() => setShowCloseModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-2)] border border-[var(--color-border-strong)] rounded-lg text-[11px] font-mono font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-3)] hover:border-[var(--color-accent-amber)] hover:text-[var(--color-accent-amber)] transition-colors shadow-[var(--shadow-xs)]"
+        >
+          <Lock size={14} /> <span>CLOSE CARGO PERIOD</span>
+        </button>
+      </div>
       <div className="flex bg-[var(--color-obsidian)] rounded-lg p-1 border border-[var(--color-border)] mb-6 max-w-lg mx-auto">
         <button
           onClick={() => setActivePortal("retail")}
@@ -2507,6 +2659,97 @@ export const CargoForm = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {showCloseModal && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 16 }}>
+          <div style={{ background: "var(--color-obsidian)", width: "100%", maxWidth: 480, maxHeight: "90vh", borderRadius: 16, border: "1px solid var(--color-surface-2)", padding: "24px 24px 0 24px", position: "relative", display: "flex", flexDirection: "column" }}>
+            <button onClick={() => setShowCloseModal(false)} aria-label="Close" style={{ position: "absolute", top: 16, right: 16, color: "var(--color-muted)" }}>×</button>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              <div className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold mb-1">▸ CARGO DESK SALES ANALYSIS</div>
+              <div className="text-[12px] text-[var(--color-muted)] mb-4">Agent: <span className="text-[var(--color-foreground)]">{user.name}</span></div>
+
+              <div className="space-y-2 mb-4 border-t border-b border-[var(--color-border)] py-3">
+                <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar size={12} /> Closing Period
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="datetime-local" value={periodStart} onChange={e => setPeriodStart(e.target.value)} className="ehi-input text-[12px]" />
+                  <span className="text-[var(--color-muted)] text-[11px]">to</span>
+                  <input type="datetime-local" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} className="ehi-input text-[12px]" />
+                </div>
+                {lastCloseEnd && (
+                  <div className="text-[10px] font-mono text-[var(--color-muted)]">Last close ended: {new Date(lastCloseEnd).toLocaleString('en-GB')}</div>
+                )}
+                <div className="text-[12px] font-mono font-bold text-[var(--color-accent-amber)]">
+                  Closing: {periodStart ? new Date(periodStart).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                  {' → '}
+                  {periodEnd ? new Date(periodEnd).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                </div>
+              </div>
+
+              {closeSummaryLoading ? (
+                <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-[var(--color-accent-amber)]" /></div>
+              ) : (
+                <>
+                  <div className="space-y-1.5 text-[13px] font-mono pt-1 mb-4">
+                    <div className="flex justify-between"><span className="text-[var(--color-muted)]">Total Sales</span><span className="font-bold text-[var(--color-foreground)]">{fmt(closeTotalSales)}</span></div>
+                    <div className="flex justify-between"><span className="text-[var(--color-muted)]">Cash</span><span className="text-[var(--color-foreground)]">{fmt(closeCashSales)}</span></div>
+                    <div className="flex justify-between"><span className="text-[var(--color-muted)]">POS</span><span className="text-[var(--color-foreground)]">{fmt(closePosSales)}</span></div>
+                    <div className="flex justify-between"><span className="text-[var(--color-muted)]">Bank Transfer</span><span className="text-[var(--color-foreground)]">{fmt(closeTransferSales)}</span></div>
+                    {closeDebtSales > 0 && <div className="flex justify-between"><span className="text-orange-400">Debt / Credit</span><span className="text-orange-400">{fmt(closeDebtSales)}</span></div>}
+                  </div>
+                  <div className="bg-[rgba(245,158,11,0.1)] border border-[var(--color-accent-amber)] rounded-xl p-4 mb-6">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[14px] text-[var(--color-accent-amber)] font-bold font-mono">BAL. CASH</span>
+                      <span className={`text-[22px] font-bold font-mono ${closeBalanceCash >= 0 ? 'text-[var(--color-accent-amber)]' : 'text-red-400'}`}>{fmt(Math.abs(closeBalanceCash))}</span>
+                    </div>
+                    <div className="text-[11px] mt-1 text-[rgba(245,158,11,0.7)]">({fmt(closeCashSales)} cash-in-hand − {fmt(closeTotalExpenses)} expenses)</div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex gap-3" style={{ paddingTop: 16, paddingBottom: 24, flexShrink: 0 }}>
+              <button
+                disabled={closeSummaryLoading}
+                onClick={() => {
+                  import('./CargoReceipt').then(m => m.downloadCargoDailySummary({
+                    periodStart: periodStart ? new Date(periodStart).toLocaleString('en-GB') : '',
+                    periodEnd: periodEnd ? new Date(periodEnd).toLocaleString('en-GB') : '',
+                    agentName: user.name,
+                    hubName: user.hub,
+                    entries: closeEntries.map(t => ({
+                      consignee: t.consignee_name,
+                      airline: t.airline || '',
+                      awb: t.awb_tag_number || '',
+                      route: t.route || '',
+                      contentType: t.content_type || '',
+                      pieces: t.total_pcs,
+                      kg: t.total_kg,
+                      amount: t.amount,
+                      paymentMode: t.receipt_mode,
+                      bank: t.bank || undefined,
+                    })),
+                    totalSales: closeTotalSales,
+                    cashSales: closeCashSales,
+                    posSales: closePosSales,
+                    transferSales: closeTransferSales,
+                    debtSales: closeDebtSales,
+                    expenses: closeExpenses.map(e => ({ type: e.type, amount: e.amount, description: e.description })),
+                    totalExpenses: closeTotalExpenses,
+                    balanceCash: closeBalanceCash,
+                  }));
+                }}
+                style={{ flex: 1, padding: 12, background: "transparent", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 8, color: "var(--color-accent-amber)", fontSize: 11, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer" }}
+              >
+                DOWNLOAD SUMMARY PDF
+              </button>
+              <button onClick={handleCloseDay} disabled={closingDay || closeSummaryLoading} style={{ flex: 1, padding: 12, background: "var(--color-accent-amber)", border: "none", borderRadius: 8, color: "#0B0F19", fontSize: 11, fontFamily: "monospace", fontWeight: "bold", cursor: closingDay ? "not-allowed" : "pointer", opacity: closingDay ? 0.6 : 1 }}>
+                {closingDay ? 'CLOSING…' : 'CONFIRM & CLOSE PERIOD'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

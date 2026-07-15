@@ -16,6 +16,7 @@ import {
   Package,
   Scale,
   RefreshCw,
+  Printer,
 } from 'lucide-react';
 
 interface WeightManifestEntry {
@@ -248,12 +249,32 @@ export const WeightManifest = ({ user, onBack }: { user: User; onBack: () => voi
       <div className="ehi-view-header">
         <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● WEIGHT MANIFEST</span>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={e => setSelectedDate(e.target.value)}
-          className="h-7 px-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded text-[11px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="h-7 px-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded text-[11px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+          />
+          <button
+            onClick={() => {
+              import('./WeightManifestPDF').then(({ downloadWeightManifestPDF }) => {
+                downloadWeightManifestPDF({
+                  hubName: user.hub || 'EHI Hub',
+                  date: selectedDate,
+                  generatedBy: user.name,
+                  entries,
+                  totalPieces,
+                  totalKg,
+                  verifiedCount,
+                });
+              });
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)] transition-colors cursor-pointer"
+          >
+            <Printer size={14} /> <span>Daily PDF</span>
+          </button>
+        </div>
       </div>
 
       <div className="px-4 pt-3 pb-2 grid grid-cols-2 md:grid-cols-4 gap-2 flex-shrink-0">
