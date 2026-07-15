@@ -111,7 +111,7 @@ export function getBaggageViews(role: UserRole, assignedAirline: string | undefi
 // view-access editor), independent of what that user's role would
 // normally default to.
 export function getAllViewDefs(airlines: ExcessBaggageAirline[]): ViewDef[] {
-  const allAirlineViews = airlines.map((a) => ({ id: `Baggage:${a.name}` as TabView, label: `${a.name} POS`, roles: ['super_admin', 'admin'] as UserRole[] }));
+  const allAirlineViews = airlines.map((a) => ({ id: `Baggage:${a.name}` as TabView, label: `${a.name} POS`, roles: ['super_admin', 'admin'] as UserRole[], category: 'Daily Operations' }));
   return [...STATIC_VIEWS, ...allAirlineViews];
 }
 

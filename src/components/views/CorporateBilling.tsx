@@ -195,6 +195,10 @@ export const CorporateBilling = ({ user, onBack }: { user: User; onBack: () => v
 
   const handleGenerate = async () => {
     if (!selectedClientId) return;
+    if (rangeMode === 'custom' && customEnd < customStart) {
+      showToast({ message: 'End date is before start date -- pick a valid range.', type: 'error' });
+      return;
+    }
     setGenerating(true);
     setEntries(null);
     try {
@@ -232,7 +236,14 @@ export const CorporateBilling = ({ user, onBack }: { user: User; onBack: () => v
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Statement_${selectedClient.company_name.replace(/\s+/g, '_')}_${periodLabel.replace(/[\s,]+/g, '_')}.pdf`;
+    // Custom-range periodLabel is en-GB-formatted ("14/07/2026 –
+    // 15/07/2026") -- the slashes would otherwise land in a filename
+    // download attribute, where browsers treat them as path separators.
+    // Collapsing every run of non-alphanumeric characters (not just
+    // whitespace/commas) covers that plus the en-dash and any other
+    // punctuation a locale might introduce.
+    const safe = (s: string) => s.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    a.download = `Statement_${safe(selectedClient.company_name)}_${safe(periodLabel)}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   };
