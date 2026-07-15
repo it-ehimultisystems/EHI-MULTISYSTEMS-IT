@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
 import { fmt, tnow } from '../../lib/helpers';
-import { ArrowLeft, Check, AlertTriangle, Printer, Lock, ChevronRight } from 'lucide-react';
+import { Check, AlertTriangle, Printer, Lock, ChevronRight } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { LoadingState } from './LoadingState';
 import { supabase, writeAuditLog } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
@@ -611,10 +612,7 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       )}
       {/* Sticky header */}
       <div className="ehi-view-header">
-        <button onClick={onBack} className="flex items-center space-x-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={16} />
-          <span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● EOD RECONCILIATION</span>
         <div className="w-16" />
       </div>

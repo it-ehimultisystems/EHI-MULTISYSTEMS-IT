@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { User, Transaction } from '../../lib/types';
 import { fmt, roundMoney } from '../../lib/helpers';
-import { ArrowLeft, CreditCard, Building2, Users, Search, ArrowDownLeft, ArrowUpRight, TrendingDown, TrendingUp, Building, UserSquare2, Loader } from 'lucide-react';
+import { CreditCard, Building2, Users, Search, ArrowDownLeft, ArrowUpRight, TrendingDown, TrendingUp, Building, UserSquare2, Loader } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { normalizeAirlineName } from '../../lib/helpers';
 import { EmptyState } from './EmptyState';
@@ -145,11 +146,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
     <main className="flex-1 flex flex-col h-full bg-[var(--color-bg)] overflow-hidden">
       {/* Header */}
       <div className="bg-[var(--color-surface-card)] border-b border-[var(--color-border)] p-4 flex flex-col">
-        {onBack && (
-          <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] text-[11px] font-mono mb-3 w-fit transition-colors">
-            <ArrowLeft size={12} /> Back to Menu
-          </button>
-        )}
+        {onBack && <BackButton onClick={onBack} label="Back to Menu" className="mb-3" />}
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[rgba(245,158,11,0.1)] rounded-lg">
             <CreditCard size={20} strokeWidth={1.5} className="text-[var(--color-accent-amber)]" />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plane, Plus, Trash2, Loader, Power } from 'lucide-react';
+import { Plane, Plus, Trash2, Loader, Power } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
 import { useConfirm } from '../../lib/ConfirmContext';
@@ -90,9 +91,7 @@ export const ExcessBaggageAirlines = ({ onBack }: { onBack: () => void }) => {
   return (
     <main className="flex flex-col h-full bg-[var(--color-obsidian)] overflow-y-auto">
       <div className="ehi-view-header">
-        <button onClick={onBack} aria-label="Back" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group">
-          <ArrowLeft size={16} strokeWidth={1.5} className="text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] transition-colors" />
-        </button>
+        <BackButton onClick={onBack} />
         <div className="text-center">
           <div className="text-[12px] font-bold text-[var(--color-foreground)]">Excess Baggage Airlines</div>
           <div className="text-[10px] font-mono text-[var(--color-muted)]">Synced across all devices</div>

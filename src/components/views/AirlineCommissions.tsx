@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Percent, Save, Building2, Plus, Trash2, Loader, Check } from 'lucide-react';
+import { Percent, Save, Building2, Plus, Trash2, Loader, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
 import { useConfirm } from '../../lib/ConfirmContext';
+import { BackButton } from '../BackButton';
 
 const DEFAULT_COMMISSIONS: Record<string, string> = {
   'Arik Air':              '7',
@@ -175,9 +176,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
     <main className="flex flex-col h-full bg-[var(--color-obsidian)] overflow-y-auto">
       {/* Header */}
       <div className="ehi-view-header">
-        <button onClick={onBack} aria-label="Back" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group">
-          <ArrowLeft size={16} strokeWidth={1.5} className="text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] transition-colors" />
-        </button>
+        <BackButton onClick={onBack} />
         <div className="text-center">
           <div className="text-[12px] font-bold text-[var(--color-foreground)]">Airline Commissions</div>
           <div className="text-[10px] font-mono text-[var(--color-muted)]">Synced across all devices</div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Fuel, Truck, Wrench, Loader } from 'lucide-react';
+import { Plus, Fuel, Truck, Wrench, Loader } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { fmt } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { User } from '../../lib/types';
@@ -152,9 +153,7 @@ export const Fleet = ({ onBack, user }: { onBack: () => void; user?: User }) => 
     <div className="flex flex-col min-h-full bg-[var(--color-obsidian)]">
       <div className="ehi-page-body px-4 pt-4 text-[var(--color-foreground)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
-        <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={16} /><span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] tracking-widest font-bold">● FLEET</span>
       </div>
 

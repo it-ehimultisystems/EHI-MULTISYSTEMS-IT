@@ -329,28 +329,3 @@ export const printCargoReceipt = async (data: CargoReceiptData) => {
   const url = URL.createObjectURL(blob);
   openPdfOrDownload(url, `Receipt_${data.entryRef}.pdf`);
 };
-
-export const downloadCargoReceipt = async (data: CargoReceiptData) => {
-  if (!data.qrCodeDataUrl) {
-    try {
-      data.qrCodeDataUrl = await QRCode.toDataURL(data.entryRef, {
-        margin: 1,
-        width: 200,
-        errorCorrectionLevel: 'L',
-      });
-    } catch (e) {
-      console.warn("Failed to generate QR code", e);
-      notifySilentError('This receipt printed without a scannable tracking QR code.');
-    }
-  }
-  if (data.airlineLogoUrl === undefined) {
-    data.airlineLogoUrl = await resolveAirlineLogoUrl(data.airline);
-  }
-  const blob = await pdf(<CargoReceiptOnlyPDF data={data} />).toBlob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `Receipt_${data.entryRef}.pdf`;
-  a.click();
-  URL.revokeObjectURL(url);
-};

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '../../lib/types';
-import { ArrowLeft, Upload, Trash2, Plane, Loader2 } from 'lucide-react';
+import { Upload, Trash2, Plane, Loader2 } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { listAirlineLogos, uploadAirlineLogo, deleteAirlineLogo } from '../../lib/airlineLogos';
 import { useToast } from '../../lib/ToastContext';
 import { useConfirm } from '../../lib/ConfirmContext';
@@ -59,9 +60,7 @@ export const AirlineLogoManager = ({ user, onBack }: { user: User; onBack: () =>
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] animate-in slide-in-from-right overflow-hidden">
       {/* Header */}
       <div className="ehi-view-header">
-        <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent text-[11px] font-mono">
-          <ArrowLeft size={14} /> Back
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● AIRLINE LOGOS</span>
         <div className="w-12" />
       </div>

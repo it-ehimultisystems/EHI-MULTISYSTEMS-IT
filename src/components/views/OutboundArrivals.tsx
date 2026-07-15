@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
-import { ArrowLeft, RefreshCw, Loader, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Loader, CheckCircle2 } from 'lucide-react';
+import { BackButton } from '../BackButton';
 
 function timeSince(dateStr: string): string {
   const diffMs = Date.now() - new Date(dateStr).getTime();
@@ -143,10 +144,7 @@ export const OutboundArrivals = ({ user, onBack }: { user: User; onBack: () => v
   return (
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] overflow-hidden">
       <div className="ehi-view-header">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={15} />
-          <span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-success)] tracking-widest font-bold">● OUTBOUND ARRIVALS</span>
         <button onClick={fetchArrivals} aria-label="Refresh" className="p-1.5 rounded hover:bg-[var(--color-surface-2)] transition-colors">
           <RefreshCw size={14} className={`text-[var(--color-muted)] ${loading ? 'animate-spin' : ''}`} />

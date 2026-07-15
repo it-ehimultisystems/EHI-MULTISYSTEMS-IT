@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Upload, CheckCircle2, AlertCircle, RefreshCw, Layers, DollarSign, FileSpreadsheet, Loader2, AlertTriangle, Download } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, RefreshCw, Layers, DollarSign, FileSpreadsheet, Loader2, AlertTriangle, Download } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { fmt } from '../../lib/helpers';
 import { Transaction, User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
@@ -328,10 +329,7 @@ export const BankReconciliation = ({
   return (
     <div className="flex flex-col min-h-full bg-[var(--color-obsidian)] p-4 text-[var(--color-foreground)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4 mb-4">
-        <button onClick={onBack} className="flex items-center space-x-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={18} />
-          <span className="text-[14px] font-sans font-medium">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
       </div>
 
       <div className="mb-6">

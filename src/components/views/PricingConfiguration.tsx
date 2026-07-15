@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CARGO_ROUTES } from '../../lib/constants';
-import { Plus, ArrowLeft, DollarSign } from 'lucide-react';
+import { Plus, DollarSign } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
@@ -217,9 +218,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4 mb-4">
-        <button onClick={onBack} aria-label="Back" className="p-2 hover:bg-[var(--color-surface-2)] rounded-full transition-colors text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
-          <ArrowLeft size={20} />
-        </button>
+        <BackButton onClick={onBack} />
         <div>
           <h2 className="text-[20px] font-sans font-bold text-[var(--color-foreground)] tracking-tight">Pricing Configuration</h2>
           <p className="text-[12px] font-mono text-[var(--color-muted)]">Manage standard retail rates and B2B negotiated tariffs</p>

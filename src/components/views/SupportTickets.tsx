@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { User } from '../../lib/types';
-import { ArrowLeft, MessageSquarePlus, CheckCircle2, Circle, Clock, MessageSquare, Loader2 } from 'lucide-react';
+import { MessageSquarePlus, CheckCircle2, Circle, Clock, MessageSquare, Loader2 } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { fmt, tnow } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
@@ -128,13 +129,7 @@ export const SupportTickets = ({ user, onBack }: { user: User; onBack: () => voi
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
-        <button
-          onClick={onBack}
-          className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent"
-        >
-          <ArrowLeft size={16} />
-          <span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">
           ● ISSUE RESOLUTION
         </span>

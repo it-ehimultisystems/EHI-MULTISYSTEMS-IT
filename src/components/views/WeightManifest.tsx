@@ -6,8 +6,8 @@ import { listAirlineLogos } from '../../lib/airlineLogos';
 import { useToast } from '../../lib/ToastContext';
 import { useConfirm } from '../../lib/ConfirmContext';
 import { EmptyState } from './EmptyState';
+import { BackButton } from '../BackButton';
 import {
-  ArrowLeft,
   CheckCircle,
   Circle,
   Plus,
@@ -246,12 +246,7 @@ export const WeightManifest = ({ user, onBack }: { user: User; onBack: () => voi
   return (
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] overflow-hidden">
       <div className="ehi-view-header">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent text-[11px] font-mono"
-        >
-          <ArrowLeft size={14} /> Back
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● WEIGHT MANIFEST</span>
         <input
           type="date"

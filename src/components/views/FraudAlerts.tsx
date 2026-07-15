@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ShieldAlert, CheckCircle, RefreshCcw, Eye, AlertOctagon, Loader } from 'lucide-react';
+import { ShieldAlert, CheckCircle, RefreshCcw, Eye, AlertOctagon, Loader } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { fmt } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { useConfirm } from '../../lib/ConfirmContext';
@@ -170,10 +171,7 @@ export const FraudAlerts = ({
       <div className="ehi-page-body px-4 pt-4 text-[var(--color-foreground)]">
       {/* Header back navigation */}
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
-        <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={16} />
-          <span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-error)] tracking-widest font-bold">● COGNITIVE AUDIT COCKPIT</span>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { CARGO_ROUTES } from '../../lib/constants';
-import { ArrowLeft, DollarSign, Trash2 } from 'lucide-react';
+import { DollarSign, Trash2 } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
@@ -144,9 +145,7 @@ export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4 mb-4">
-        <button onClick={onBack} aria-label="Back" className="p-2 hover:bg-[var(--color-surface-2)] rounded-full transition-colors text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
-          <ArrowLeft size={20} />
-        </button>
+        <BackButton onClick={onBack} />
         <div>
           <h2 className="text-[20px] font-sans font-bold text-[var(--color-foreground)] tracking-tight">Hub Cargo Rates</h2>
           <p className="text-[12px] font-mono text-[var(--color-muted)]">Per-hub, per-airline overrides on top of the standard route rate</p>

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Box, Plane, TrendingUp, Lock, Unlock, AlertCircle } from 'lucide-react';
+import { Box, Plane, TrendingUp, Lock, Unlock, AlertCircle } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { DebtorsTab } from './DebtorsTab';
 import { ExpensesTab } from './ExpensesTab';
 import { BankReconciliation } from './BankReconciliation';
@@ -242,10 +243,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] overflow-y-auto animate-in slide-in-from-right">
       <div className="ehi-page-body px-4 pt-4 relative text-[var(--color-foreground)]">
       <div className="flex items-center justify-between mb-4">
-        <button onClick={onBack} className="flex items-center space-x-2 text-[var(--color-light-muted)] w-max p-2 -ml-2 rounded-xl hover:bg-[var(--color-surface-2)] transition-colors focus:outline-none">
-          <ArrowLeft size={18} />
-          <span className="text-[14px] font-sans font-medium">Accounting</span>
-        </button>
+        <BackButton onClick={onBack} label="Accounting" />
       </div>
 
       {/* TABS HEADER */}

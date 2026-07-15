@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, Download, CheckCircle, AlertTriangle, ArrowLeft, FileText, X, RefreshCw, Table } from 'lucide-react';
+import { Upload, Download, CheckCircle, AlertTriangle, FileText, X, RefreshCw, Table } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { uid } from '../../lib/helpers';
 import { User } from '../../lib/types';
@@ -257,12 +258,7 @@ export const DataImport = ({ user, onBack }: { user: User; onBack: () => void })
   return (
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] animate-in slide-in-from-right overflow-hidden">
       <div className="ehi-view-header">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent text-[11px] font-mono"
-        >
-          <ArrowLeft size={14} /> Back
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● DATA IMPORT</span>
         <div className="w-12" />
       </div>

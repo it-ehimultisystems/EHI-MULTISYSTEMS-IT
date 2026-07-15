@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Package, CheckCircle, RefreshCw, Loader, History } from 'lucide-react';
+import { Package, CheckCircle, RefreshCw, Loader, History } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { isTagAlreadyDelivered, logScanEvent } from '../../lib/scanLogic';
 import { ProofOfDeliveryForm } from './ProofOfDelivery';
 import { useToast } from '../../lib/ToastContext';
@@ -304,10 +305,7 @@ export const ArrivalsView = ({ user, onBack }: { user: User; onBack: () => void 
 
       {/* Header */}
       <div className="ehi-view-header">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={15} />
-          <span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● ARRIVALS</span>
         <button onClick={() => activeTab === 'LOG' ? fetchLog() : fetchCargo()} aria-label="Refresh" className="p-1.5 rounded hover:bg-[var(--color-surface-2)] transition-colors">
           <RefreshCw size={14} className={`text-[var(--color-muted)] ${loading ? 'animate-spin' : ''}`} />

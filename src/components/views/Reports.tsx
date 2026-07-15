@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { User, Transaction } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
-import { Calendar, FileText, Download, Printer, ChevronRight, Filter, Loader2, ArrowLeft } from 'lucide-react';
+import { Calendar, FileText, Download, Printer, ChevronRight, Filter, Loader2 } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import * as XLSX from 'xlsx';
 
 const REPORT_TYPES = [
@@ -309,11 +310,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
     <div>
       <div className="ehi-page-body px-4 pt-4 space-y-4">
       <div className="flex items-center gap-3 border-b border-[var(--color-border)] pb-2">
-        {onBack && (
-          <button onClick={onBack} aria-label="Back" className="p-1 rounded hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent">
-            <ArrowLeft size={18} />
-          </button>
-        )}
+        {onBack && <BackButton onClick={onBack} />}
         <div>
           <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.12em] uppercase">▸ REPORTS CENTRE</div>
           <div className="text-[11px] font-mono text-[var(--color-accent-amber)] mt-0.5">{user.hub}</div>

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  ArrowLeft,
   Plus,
   TrendingUp,
   TrendingDown,
@@ -8,6 +7,7 @@ import {
   RefreshCw,
   FileSpreadsheet,
 } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { User } from '../../lib/types';
 import { listAirlineLogos } from '../../lib/airlineLogos';
@@ -215,17 +215,7 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
   return (
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)] shrink-0">
-        <button
-          onClick={onBack}
-          aria-label="Back"
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-2)] transition-colors group shrink-0"
-        >
-          <ArrowLeft
-            size={16}
-            strokeWidth={1.5}
-            className="text-[var(--color-muted)] group-hover:text-[var(--color-accent-amber)] transition-colors"
-          />
-        </button>
+        <BackButton onClick={onBack} />
         <div className="flex-1 min-w-0">
           <div className="text-[12px] font-bold text-[var(--color-foreground)] truncate">
             Airline Balance Ledger

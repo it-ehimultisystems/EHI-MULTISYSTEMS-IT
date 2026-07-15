@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  ArrowLeft, Plus, RefreshCw, Search, Edit2, UserX, UserCheck,
+  Plus, RefreshCw, Search, Edit2, UserX, UserCheck,
   MapPin, Phone, Mail, Loader, AlertTriangle, Check, Eye, EyeOff, Shield, Upload, Printer
 } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { User, UserRole } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { createStaffAccount, updateStaffProfile } from '../../lib/auth';
@@ -214,9 +215,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
     <div className="flex flex-col h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
-        <button onClick={onBack} className="flex items-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={16} /><span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● STAFF MANAGEMENT</span>
       </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../../lib/db';
 import { DriverTrip, TripPing } from '../../lib/types';
 import { MapPin, Navigation, X, Truck, Phone } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -64,9 +65,7 @@ export const Dispatch = ({ onBack }: { onBack: () => void }) => {
       <div className="ehi-page-body px-4 pt-4 space-y-4 flex flex-col flex-1">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
         <div className="flex items-center gap-2">
-          <button onClick={onBack} aria-label="Back" className="p-1 rounded hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent">
-            ←
-          </button>
+          <BackButton onClick={onBack} />
           <div>
             <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.12em] uppercase">▸ DISPATCH</div>
             <div className="text-[12px] font-bold text-[var(--color-foreground)] tracking-wide mt-0.5">ACTIVE FLEET</div>

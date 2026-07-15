@@ -3,8 +3,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow, isStandalonePWA } from "../../lib/helpers";
 import { CONTENT_TYPES } from "../../lib/constants";
+import { BackButton } from "../BackButton";
 import {
-  ArrowLeft,
   Edit2,
   X,
   Check,
@@ -692,13 +692,7 @@ export const TransactionLedger = ({
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shrink-0">
         <div className="flex items-center space-x-4">
-          <button
-            onClick={onBack}
-            className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent"
-          >
-            <ArrowLeft size={16} />
-            <span className="text-[11px] font-mono">Back</span>
-          </button>
+          <BackButton onClick={onBack} label="Back" />
           <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">
             {defaultTypeFilter === 'cargo' ? '● CARGO LEDGER'
              : defaultTypeFilter === 'baggage' ? '● EXCESS BAGGAGE LEDGER'

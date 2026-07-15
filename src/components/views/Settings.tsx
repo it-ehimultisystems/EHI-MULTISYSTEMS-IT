@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { User } from '../../lib/types';
-import { 
-  Settings as SettingsIcon, 
-  ToggleLeft, 
-  ToggleRight, 
-  Plus, 
-  MapPin, 
-  Plane, 
-  Check, 
-  ArrowLeft,
+import {
+  Settings as SettingsIcon,
+  ToggleLeft,
+  ToggleRight,
+  Plus,
+  MapPin,
+  Plane,
+  Check,
   DollarSign,
   Eye, EyeOff, Wifi, WifiOff, Phone, Mail, Building2, Key
 } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { reinitSupabase, getConnectionMode, testSupabaseConnection, supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
 
@@ -223,10 +223,7 @@ export const Settings = ({
       
       {/* Header back navigation */}
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
-        <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={16} />
-          <span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">● SYSTEM ADMIN CONSOLE</span>
       </div>
 

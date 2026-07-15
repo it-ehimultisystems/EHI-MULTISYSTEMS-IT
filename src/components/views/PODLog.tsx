@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { fetchProofOfDeliveryRecords } from '../../lib/sync';
 import { ProofOfDelivery, User } from '../../lib/types';
-import { ShieldCheck, MapPin, Search, Calendar, ChevronRight, RefreshCw, X, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, MapPin, Search, Calendar, ChevronRight, RefreshCw, X } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { EmptyState } from './EmptyState';
 
 export const PODLog = ({ user, onBack }: { user: User; onBack: () => void }) => {
@@ -42,9 +43,7 @@ export const PODLog = ({ user, onBack }: { user: User; onBack: () => void }) => 
       <div className="ehi-page-body px-4 pt-4 space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[var(--color-border)] pb-3">
-        <button onClick={onBack} aria-label="Back" className="p-1 rounded hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer border-none bg-transparent">
-          <ArrowLeft size={18} />
-        </button>
+        <BackButton onClick={onBack} />
         <div>
           <div className="text-[9px] font-mono text-[var(--color-muted)] tracking-[0.12em] uppercase">▸ PROOF OF DELIVERY LOG</div>
           <div className="text-[12px] font-bold text-[var(--color-foreground)] tracking-wide mt-0.5">Secure Evidence</div>

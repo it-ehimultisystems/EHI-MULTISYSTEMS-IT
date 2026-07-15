@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Shield, Download, Search, Loader } from 'lucide-react';
+import { Shield, Download, Search, Loader } from 'lucide-react';
+import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { User } from '../../lib/types';
 import { EmptyState } from './EmptyState';
@@ -107,9 +108,7 @@ export const AuditLog = ({ onBack, user }: { onBack: () => void; user?: User }) 
     <div className="flex flex-col min-h-full bg-[var(--color-obsidian)]">
       <div className="ehi-page-body px-4 pt-4 text-[var(--color-foreground)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-4">
-        <button onClick={onBack} className="flex items-center space-x-1 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-          <ArrowLeft size={16} /><span className="text-[11px] font-mono">Back</span>
-        </button>
+        <BackButton onClick={onBack} label="Back" />
         <span className="text-[10px] font-mono text-[var(--color-purple)] tracking-widest font-bold">● AUDIT TRAIL</span>
       </div>
 

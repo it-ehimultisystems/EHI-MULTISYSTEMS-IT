@@ -40,7 +40,6 @@ import {
   Rocket,
   Zap,
   Bluetooth,
-  Download,
 } from "lucide-react";
 import {
   sendReceiptWhatsApp,
@@ -1087,38 +1086,6 @@ export const CargoForm = ({
     setSuccessTx(null);
   };
 
-  const handleDownloadReceipt = async () => {
-    if (successTx) {
-      const { downloadCargoReceipt } = await import("./CargoReceipt");
-      const data = {
-        entryRef: successTx.id,
-        serialNumber: serialNumber - 1,
-        date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
-        hubName: user?.hub || "EHI Cargo Station",
-        agentName: user?.name || "EHI Agent",
-        airline:
-          airline === "Green Africa"
-            ? "Green Africa Airways"
-            : airline === "United Nigeria"
-              ? "United Nigeria Airlines"
-              : airline,
-        consignee: successTx.name,
-        awbTagNumber: successTx.awb_tag_number || awb,
-        pieces: successTx.pieces || parseInt(pcs),
-        kg: successTx.kg || Math.round(parseFloat(kg)),
-        route: successTx.detail.split(" · ")[4] || route,
-        contentType: successTx.detail.split(" · ")[5] || contentType,
-        amount: successTx.amount,
-        paymentMode: successTx.mode,
-        paymentNarration: successTx.paymentNarration,
-        bankName: successTx.bank || undefined,
-        remark: successTx.remarks || undefined,
-        pickupPin: (successTx as any).pickupPin || undefined,
-      };
-      downloadCargoReceipt(data);
-    }
-  };
-
   const handlePrintReceipt = async () => {
     if (successTx) {
       const { printCargoReceipt } = await import("./CargoReceipt");
@@ -1373,18 +1340,12 @@ export const CargoForm = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-1 gap-3 mb-3">
             <button
               onClick={handlePrintReceipt}
               className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none flex items-center justify-center gap-1.5"
             >
               PDF Receipt
-            </button>
-            <button
-              onClick={handleDownloadReceipt}
-              className="py-3.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] text-[12px] font-sans font-semibold rounded-[var(--radius-sm)] border border-[var(--color-border)] transition-colors cursor-pointer focus:outline-none flex items-center justify-center gap-1.5"
-            >
-              <Download size={14} /> Download PDF
             </button>
           </div>
 
