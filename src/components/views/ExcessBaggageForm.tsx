@@ -7,7 +7,7 @@ import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer, Blue
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildExcessBaggageWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
-import { BANKS } from '../../lib/constants';
+import { useBanks } from '../../lib/banks';
 import { useToast } from '../../lib/ToastContext';
 import { useHubRoutes, useValidatedRouteSelection } from '../../lib/hubRoutes';
 
@@ -38,7 +38,8 @@ export const ExcessBaggageForm = ({
   const [pcs, setPcs] = useState('');
   const [phone, setPhone] = useState('');
   const [mode, setMode] = useState<PaymentMode>('POS');
-  const [bank, setBank] = useState(BANKS[0] || 'Sterling Bank');
+  const banks = useBanks();
+  const [bank, setBank] = useState(banks[0] || 'Sterling Bank');
   const [amountOverride, setAmountOverride] = useState<string>('');
   const [narrationCode, setNarrationCode] = useState<string>('');
 
@@ -602,7 +603,7 @@ export const ExcessBaggageForm = ({
                   className={formInputClass}
                   style={{ appearance: 'none' }}
                 >
-                  {BANKS.map((b) => (
+                  {banks.map((b) => (
                     <option key={b} value={b}>
                       {b}
                     </option>

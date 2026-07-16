@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useHubRoutes } from '../../lib/hubRoutes';
+import { useAirlines } from '../../lib/airlines';
 import { DollarSign, Trash2 } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { User } from '../../lib/types';
@@ -24,7 +25,9 @@ export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void
   const ROUTES = useMemo(() => allRoutes.filter((r) => r !== 'Other'), [allRoutes]);
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [selectedHubId, setSelectedHubId] = useState<string>(user.hub_id || '');
-  const [airlines, setAirlines] = useState<string[]>([]);
+  // Same canonical airline source CargoForm.tsx uses -- the key-set of
+  // pricing_config's airline_commissions row, not a separate hardcoded list.
+  const airlines = useAirlines({ includeOther: false });
   const [selectedAirline, setSelectedAirline] = useState<string>(HUB_DEFAULT_AIRLINE);
   const [hubRouteRates, setHubRouteRates] = useState<Record<string, number>>({});
   const [hubAirlineRouteRates, setHubAirlineRouteRates] = useState<Record<string, number>>({});
@@ -37,17 +40,6 @@ export const HubCargoRates = ({ user, onBack }: { user: User; onBack: () => void
       if (data) setHubs(data);
     });
   }, [isUnrestricted]);
-
-  // Same canonical airline source CargoForm.tsx uses -- the key-set of
-  // pricing_config's airline_commissions row, not a separate hardcoded list.
-  useEffect(() => {
-    supabase.from('pricing_config').select('config_value').eq('config_key', 'airline_commissions').single()
-      .then(({ data, error }) => {
-        if (data?.config_value && !error) {
-          setAirlines(Object.keys(data.config_value as Record<string, number>));
-        }
-      });
-  }, []);
 
   const fetchHubRates = async (hubId: string) => {
     if (!hubId) { setHubRouteRates({}); setHubAirlineRouteRates({}); setLoading(false); return; }

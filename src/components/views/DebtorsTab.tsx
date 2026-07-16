@@ -37,10 +37,11 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
 
       return {
         ...t,
-        // Prefer the value set at entry time; fall back to the legacy
-        // hardcoded whitelist only for older records that predate the
-        // client_type column.
-        clientType: t.clientType || (['Aramex', 'SAHCO', 'GlobaCom', 'ZeemMax', 'Slot', 'Salco', 'Slot Nigeria'].includes(t.name) ? 'Corporate' : 'Individual'),
+        // Prefer the value set at entry time; otherwise classify off the
+        // real corporate_client_id link rather than matching a hardcoded
+        // list of client names (which silently misclassified any corporate
+        // client not on that list, and never updated as new ones onboarded).
+        clientType: t.clientType || (t.corporate_client_id ? 'Corporate' : 'Individual'),
         ageInDays,
         agingBucket: bucket,
         balance: t.amount - (t.amountPaid || 0),

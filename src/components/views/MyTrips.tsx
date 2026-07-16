@@ -5,16 +5,7 @@ import { db } from '../../lib/db';
 import { Truck, Plus, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
-
-const NIGERIAN_HUBS = [
-  'Lagos HQ', 'Abuja Station',
-  'Port Harcourt Station', 'Kano Station', 'Enugu Station',
-  'Asaba Station', 'Akure Station', 'Bauchi Station',
-  'Benin City Station', 'Calabar Station', 'Gombe Station',
-  'Ibadan Station', 'Ilorin Station', 'Kaduna Station',
-  'Maiduguri Station', 'Owerri Station', 'Uyo Station',
-  'Warri (Osubi) Station', 'Yola Station'
-];
+import { useHubRoutes } from '../../lib/hubRoutes';
 
 interface TripCardProps {
   trip: DriverTrip;
@@ -321,10 +312,16 @@ export const MyTrips = ({ user }: { user: User }) => {
   const [showNewTripForm, setShowNewTripForm] = useState(false);
   const [expandedTrip, setExpandedTrip] = useState<string | null>(null);
 
+  // Live hub list (was a standalone hardcoded NIGERIAN_HUBS array that never
+  // reflected hubs added/renamed via Settings -> Add Hub). Format matches
+  // every other hub-driven screen ("CODE/City"), not the old "City Station"
+  // labels, since the hubs table has no separate display-label column.
+  const hubOptions = useHubRoutes({ includeOther: false });
+
   // New trip form state
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [origin, setOrigin] = useState(user.hub);
-  const [destination, setDestination] = useState(NIGERIAN_HUBS[1]);
+  const [destination, setDestination] = useState(() => hubOptions[1] || hubOptions[0] || '');
   const [cargoRefsInput, setCargoRefsInput] = useState('');
   const [notes, setNotes] = useState('');
   const [gpsEnabled, setGpsEnabled] = useState(false);
@@ -465,7 +462,7 @@ export const MyTrips = ({ user }: { user: User }) => {
               onChange={e => setOrigin(e.target.value)}
               className="flex-1 h-11 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none"
             >
-              {NIGERIAN_HUBS.map(h => (
+              {hubOptions.map(h => (
                 <option key={h} value={h}>{h}</option>
               ))}
             </select>
@@ -475,7 +472,7 @@ export const MyTrips = ({ user }: { user: User }) => {
               onChange={e => setDestination(e.target.value)}
               className="flex-1 h-11 px-3 text-[12px] rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none"
             >
-              {NIGERIAN_HUBS.map(h => (
+              {hubOptions.map(h => (
                 <option key={h} value={h}>{h}</option>
               ))}
             </select>

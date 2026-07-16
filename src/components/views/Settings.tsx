@@ -15,13 +15,16 @@ import { BackButton } from '../BackButton';
 import { reinitSupabase, getConnectionMode, testSupabaseConnection, supabase } from '../../lib/supabase';
 import { getConfiguredPrinter, setConfiguredPrinter, listPrinters } from '../../lib/qzPrint';
 import { useToast } from '../../lib/ToastContext';
+import { useAirlines } from '../../lib/airlines';
 
-export const Settings = ({ 
-  user, 
-  onBack 
-}: { 
-  user: User; 
+export const Settings = ({
+  user,
+  onBack,
+  onOpenAirlineCommissions,
+}: {
+  user: User;
   onBack: () => void;
+  onOpenAirlineCommissions?: () => void;
 }) => {
   const { showToast } = useToast();
 
@@ -56,7 +59,11 @@ export const Settings = ({
     () => localStorage.getItem('ehi_admin_email') || ''
   );
 
-  // Company tab
+  // Company tab -- Supabase (pricing_config, config_key='company_settings')
+  // is the source of truth so every device/terminal shows the same company
+  // identity; localStorage is only a read-through cache for instant paint
+  // while the fetch below is in flight, same pattern as the other config
+  // screens (PricingConfiguration, HubCargoRates).
   const [companyName, setCompanyName] = useState(
     () => localStorage.getItem('ehi_company_name') ||
          'EHI Multisystems Nigeria Limited'
@@ -67,6 +74,25 @@ export const Settings = ({
   const [companyAddress, setCompanyAddress] = useState(
     () => localStorage.getItem('ehi_company_address') || ''
   );
+  const [savingCompany, setSavingCompany] = useState(false);
+
+  useEffect(() => {
+    supabase.from('pricing_config').select('config_value').eq('config_key', 'company_settings').single()
+      .then(({ data, error }) => {
+        if (!data?.config_value || error) return;
+        const c = data.config_value as { name?: string; phone?: string; address?: string };
+        if (c.name) setCompanyName(c.name);
+        if (c.phone != null) setCompanyPhone(c.phone);
+        if (c.address != null) setCompanyAddress(c.address);
+        try {
+          localStorage.setItem('ehi_company_name', c.name || '');
+          localStorage.setItem('ehi_company_phone', c.phone || '');
+          localStorage.setItem('ehi_company_address', c.address || '');
+        } catch {
+          // localStorage unavailable -- state above is already updated
+        }
+      });
+  }, []);
 
   const connectionMode = getConnectionMode();
 
@@ -99,10 +125,25 @@ export const Settings = ({
     localStorage.setItem('ehi_admin_email', adminEmail.trim());
   };
 
-  const handleSaveCompany = () => {
-    localStorage.setItem('ehi_company_name', companyName.trim());
-    localStorage.setItem('ehi_company_phone', companyPhone.trim());
-    localStorage.setItem('ehi_company_address', companyAddress.trim());
+  const handleSaveCompany = async () => {
+    const name = companyName.trim();
+    const phone = companyPhone.trim();
+    const address = companyAddress.trim();
+    setSavingCompany(true);
+    const { error } = await supabase.from('pricing_config').upsert({
+      config_key: 'company_settings',
+      config_value: { name, phone, address },
+      description: 'Company identity shown on receipts and printouts',
+    }, { onConflict: 'config_key' });
+    setSavingCompany(false);
+    if (error) {
+      showToast({ message: `Failed to save company settings: ${error.message}`, type: 'error' });
+      return;
+    }
+    localStorage.setItem('ehi_company_name', name);
+    localStorage.setItem('ehi_company_phone', phone);
+    localStorage.setItem('ehi_company_address', address);
+    showToast({ message: 'Company settings saved.', type: 'success' });
   };
 
   // Option Toggles (persisted locally)
@@ -133,14 +174,12 @@ export const Settings = ({
     });
   }, []);
 
-  const [carriers, setCarriers] = useState(() => {
-    const saved = localStorage.getItem('ehi_setting_carriers');
-    return saved ? JSON.parse(saved) : [
-      { code: 'AK', name: 'Arik Air', active: true },
-      { code: 'GA', name: 'Green Africa', active: true },
-      { code: 'UN', name: 'United Nigeria', active: true }
-    ];
-  });
+  // Live airline list -- same pricing_config.airline_commissions source
+  // Airline Commissions itself writes to. This used to be a separate
+  // localStorage-only list with an Active/Muted toggle that wrote back to
+  // that same key and nowhere else -- muting a carrier here had no effect
+  // anywhere else in the app.
+  const airlines = useAirlines({ includeOther: false });
 
   // Persist edits
   useEffect(() => {
@@ -154,10 +193,6 @@ export const Settings = ({
   useEffect(() => {
     localStorage.setItem('ehi_setting_drive_sync', String(driveSync));
   }, [driveSync]);
-
-  useEffect(() => {
-    localStorage.setItem('ehi_setting_carriers', JSON.stringify(carriers));
-  }, [carriers]);
 
   const handleToggleHub = async (id: string) => {
     const target = hubs.find((h: any) => h.id === id);
@@ -214,10 +249,6 @@ export const Settings = ({
     setNewHubCode('');
     setNewHubState('');
     setNewHubType('airport');
-  };
-
-  const handleToggleCarrier = (code: string) => {
-    setCarriers((prev: any) => prev.map((c: any) => c.code === code ? { ...c, active: !c.active } : c));
   };
 
   // Silent printing (QZ Tray) — per-device, so read/written straight to
@@ -497,10 +528,14 @@ export const Settings = ({
                 </div>
                 <button
                   onClick={handleSaveCompany}
-                  className="w-full py-2.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer"
+                  disabled={savingCompany}
+                  className="w-full py-2.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-bold font-mono rounded cursor-pointer disabled:opacity-50"
                 >
-                  SAVE COMPANY SETTINGS
+                  {savingCompany ? 'SAVING…' : 'SAVE COMPANY SETTINGS'}
                 </button>
+                <p className="text-[9px] text-[var(--color-muted)] font-mono leading-relaxed pt-1">
+                  Saved to the database — visible on every device immediately, not just this one.
+                </p>
               </div>
             )}
           </div>
@@ -722,8 +757,11 @@ export const Settings = ({
             </button>
           </div>
         )}
+        </div>
 
-        {/* aviation air cargo carriers configuration list */}
+        {/* aviation air cargo carriers -- read-only, sourced live from the
+            same pricing_config row Airline Commissions writes to. Editing
+            happens there, not here. */}
         <div className="ehi-card p-4 space-y-3">
         <div className="text-[9px] font-mono text-[var(--color-foreground)] tracking-widest uppercase flex items-center space-x-1.5">
           <Plane size={11} className="text-[var(--color-accent-cobalt)]" />
@@ -731,26 +769,24 @@ export const Settings = ({
         </div>
 
         <div className="space-y-2">
-          {carriers.map((c: any) => (
-            <div key={c.code} className="p-2.5 bg-[var(--color-surface-2)] rounded border border-[var(--color-border)] flex justify-between items-center text-[11px]">
-              <div>
-                <span className="font-bold text-[var(--color-foreground)] block">{c.name}</span>
-                <span className="text-[8.5px] font-mono text-[var(--color-muted)] block">Carrier Code: {c.code}</span>
-              </div>
-              
-              <button 
-                onClick={() => handleToggleCarrier(c.code)}
-                className={`text-[9px] font-mono px-2 py-0.5 rounded border border-solid font-bold uppercase cursor-pointer ${
-                  c.active ? 'bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)] border-[rgba(59,130,246,0.3)]' :
-                  'bg-[var(--color-surface-2)] text-[var(--color-muted)] border-none'
-                }`}
-              >
-                {c.active ? 'Active' : 'Muted'}
-              </button>
+          {airlines.map((name: string) => (
+            <div key={name} className="p-2.5 bg-[var(--color-surface-2)] rounded border border-[var(--color-border)] text-[11px]">
+              <span className="font-bold text-[var(--color-foreground)] block">{name}</span>
             </div>
           ))}
+          {airlines.length === 0 && (
+            <div className="text-[10px] font-mono text-[var(--color-muted)]">No airlines configured yet.</div>
+          )}
         </div>
-      </div>
+
+        {onOpenAirlineCommissions && (
+          <button
+            onClick={onOpenAirlineCommissions}
+            className="w-full py-2 text-[10px] font-mono text-[var(--color-accent-amber)] bg-transparent border border-[var(--color-border)] rounded cursor-pointer hover:bg-[var(--color-surface-2)]"
+          >
+            Manage airlines &amp; commission rates →
+          </button>
+        )}
       </div>
       </div>
     </div>

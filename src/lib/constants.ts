@@ -23,14 +23,6 @@ export const PRICING: Record<string, { BB: number; MB: number; SB: number }> = {
   'Other': { BB: 30000, MB: 18000, SB: 21000 },
 };
 
-export const AIRLINES = [
-  { code: 'AK',  name: 'Arik Air' },
-  { code: 'GA',  name: 'Green Africa Airways' },
-  { code: 'UN',  name: 'United Nigeria Airlines' },
-] as const;
-
-export const CORPORATE_CLIENTS = ['Aramex', 'SAHCO', 'GlobaCom', 'ZeemMax', 'EHI', 'Salco', 'Slot', 'Prosper', 'Evergreen', 'Wellcare', 'Other'] as const;
-
 export const CARGO_ROUTES = [
   'LOS/Lagos',
   'ABV/Abuja',
@@ -82,5 +74,3 @@ export const EXPENSE_CATEGORIES = [
 
 export const PAYMENT_MODES = ['Cash', 'POS', 'Transfer', 'Debt'] as const;
 export const BANKS = ['UBA', 'GTBank', 'Access', 'Zenith', 'First Bank', 'Polaris', 'Keystone', 'Fidelity', 'Sterling', 'Other'] as const;
-
-export const ALL_STATUSES = ['Intake', 'Departure', 'In-Transit', 'Arrived', 'Delivered', 'Pending', 'Received', 'Dispatched'] as const;

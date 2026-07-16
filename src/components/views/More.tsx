@@ -17,6 +17,9 @@ import { HubCargoRates } from './HubCargoRates';
 import { AirlineCommissions } from './AirlineCommissions';
 import { ExcessBaggageAirlines } from './ExcessBaggageAirlines';
 import { CorporateBilling } from './CorporateBilling';
+import { ContentTypes } from './ContentTypes';
+import { ExpenseCategories } from './ExpenseCategories';
+import { Banks } from './Banks';
 
 import { useState } from 'react';
 import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../../lib/types';
@@ -48,6 +51,8 @@ import {
   BookOpenIcon,
   ClipboardTextIcon,
   ReceiptIcon,
+  TagIcon,
+  BankIcon,
 } from '@phosphor-icons/react';
 import { ChevronRight } from 'lucide-react';
 
@@ -59,6 +64,9 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   const [reportsView, setReportsView] = useState(false);
   const [settingsView, setSettingsView] = useState(false);
   const [excessBaggageAirlinesView, setExcessBaggageAirlinesView] = useState(false);
+  const [contentTypesView, setContentTypesView] = useState(false);
+  const [expenseCategoriesView, setExpenseCategoriesView] = useState(false);
+  const [banksView, setBanksView] = useState(false);
 
   // Premium Enterprise modules views states
   const [bankReconView, setBankReconView] = useState(false);
@@ -90,7 +98,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (settingsView) {
-    return <Settings user={user} onBack={() => setSettingsView(false)} />;
+    return <Settings user={user} onBack={() => setSettingsView(false)} onOpenAirlineCommissions={() => { setSettingsView(false); setAirlineCommissionsView(true); }} />;
   }
 
   if (bankReconView) {
@@ -157,6 +165,18 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
   if (excessBaggageAirlinesView) {
     return <ExcessBaggageAirlines onBack={() => setExcessBaggageAirlinesView(false)} />;
+  }
+
+  if (contentTypesView) {
+    return <ContentTypes onBack={() => setContentTypesView(false)} />;
+  }
+
+  if (expenseCategoriesView) {
+    return <ExpenseCategories onBack={() => setExpenseCategoriesView(false)} />;
+  }
+
+  if (banksView) {
+    return <Banks onBack={() => setBanksView(false)} />;
   }
 
   if (supportView) {
@@ -445,6 +465,27 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           subtitle="Add airlines and set their free allowance / rate per KG"
           onClick={() => { if (canAccessTab(user, 'More:ExcessBaggageAirlines', excessBaggageAirlines)) setExcessBaggageAirlinesView(true); }}
           disabled={!canAccessTab(user, 'More:ExcessBaggageAirlines', excessBaggageAirlines)}
+        />
+        <MenuItem
+          icon={TagIcon}
+          title="Content Types"
+          subtitle="Cargo/package content categories staff pick from at intake"
+          onClick={() => { if (canAccessTab(user, 'More:ContentTypes', excessBaggageAirlines)) setContentTypesView(true); }}
+          disabled={!canAccessTab(user, 'More:ContentTypes', excessBaggageAirlines)}
+        />
+        <MenuItem
+          icon={ReceiptIcon}
+          title="Expense Categories"
+          subtitle="Categories staff log expenses against, plus monthly budgets"
+          onClick={() => { if (canAccessTab(user, 'More:ExpenseCategories', excessBaggageAirlines)) setExpenseCategoriesView(true); }}
+          disabled={!canAccessTab(user, 'More:ExpenseCategories', excessBaggageAirlines)}
+        />
+        <MenuItem
+          icon={BankIcon}
+          title="Banks"
+          subtitle="Bank list used in Transfer/POS payment dropdowns"
+          onClick={() => { if (canAccessTab(user, 'More:Banks', excessBaggageAirlines)) setBanksView(true); }}
+          disabled={!canAccessTab(user, 'More:Banks', excessBaggageAirlines)}
         />
         <MenuItem
           icon={GearIcon}

@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { User, Transaction, Expense } from "../../lib/types";
-import { PRICING, BANKS, EXPENSE_CATEGORIES, AIRLINES } from "../../lib/constants";
+import { PRICING } from "../../lib/constants";
+import { useAirlines } from "../../lib/airlines";
+import { useExpenseCategories } from "../../lib/expenseCategories";
+import { useBanks } from "../../lib/banks";
 import { fmt, uid, tnow, getHubCode, upperOnChange } from "../../lib/helpers";
 import { getNextTag } from "../../lib/tagPool";
 import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer, Minus, TrendingDown, BarChart2, Bluetooth } from "lucide-react";
@@ -91,29 +94,24 @@ export const MarketingWorkspace = ({
   };
   useEffect(() => { fetchNextTag(); }, []);
 
-  // Available airlines — loaded from Supabase Storage (uploaded via AirlineLogoManager)
-  const [availableAirlines, setAvailableAirlines] = useState<string[]>(
-    AIRLINES.map(a => a.name)
-  );
-  const [airline, setAirline] = useState(AIRLINES[0]?.name || '');
-
+  // Same canonical airline source every other picker uses (was previously
+  // sourced from whatever logo files happened to be uploaded to Supabase
+  // Storage -- an airline with no uploaded logo silently never appeared here).
+  const availableAirlines = useAirlines({ includeOther: false });
+  const [airline, setAirline] = useState('');
   useEffect(() => {
-    import('../../lib/airlineLogos').then(({ listAirlineLogos }) => {
-      listAirlineLogos().then(logos => {
-        if (logos.length > 0) {
-          const names = logos.map(l => l.name);
-          setAvailableAirlines(names);
-          setAirline(names[0]);
-        }
-      }).catch(() => {});
-    });
-  }, []);
+    if (availableAirlines.length > 0 && !availableAirlines.includes(airline)) {
+      setAirline(availableAirlines[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableAirlines]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [route, setRoute] = useState<string>(Object.keys(pricingMatrix)[0]);
   const [mode, setMode] = useState<string>("Transfer");
-  const [bank, setBank] = useState<string>(BANKS[0]);
+  const banks = useBanks();
+  const [bank, setBank] = useState<string>(banks[0]);
   const [bb, setBb] = useState(0);
   const [mb, setMb] = useState(0);
   const [sb, setSb] = useState(0);
@@ -154,7 +152,12 @@ export const MarketingWorkspace = ({
   }, [successTx]);
 
   // Expense State
-  const [expType, setExpType] = useState<string>(EXPENSE_CATEGORIES[0]);
+  const expenseCategoryNames = useExpenseCategories().map(c => c.name);
+  const [expType, setExpType] = useState<string>('');
+  useEffect(() => {
+    if (expenseCategoryNames.length > 0 && !expenseCategoryNames.includes(expType)) setExpType(expenseCategoryNames[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenseCategoryNames]);
   const [expAmount, setExpAmount] = useState("");
   const [expDesc, setExpDesc] = useState("");
 
@@ -748,7 +751,7 @@ export const MarketingWorkspace = ({
                       className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
                     >
                       <option disabled value="">Bank / POS Terminal</option>
-                      {BANKS.map((b) => (
+                      {banks.map((b) => (
                         <option key={b} value={b}>
                           {b}
                         </option>
@@ -905,7 +908,7 @@ export const MarketingWorkspace = ({
                 onChange={(e) => setExpType(e.target.value)}
                 className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${mktgFocusClasses}`}
               >
-                {EXPENSE_CATEGORIES.map((e) => (
+                {expenseCategoryNames.map((e) => (
                   <option key={e} value={e}>
                     {e}
                   </option>

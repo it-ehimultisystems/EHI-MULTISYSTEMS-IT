@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Expense, User } from '../../lib/types';
 import { fmt, uid, tnow } from '../../lib/helpers';
-import { Car, Truck, Bus, Box, Briefcase, Download, Plus, AlertCircle, Edit2, CheckCircle, XCircle } from 'lucide-react';
+import { Car, Truck, Bus, Box, Package, Briefcase, Download, Plus, AlertCircle, Edit2, CheckCircle, XCircle } from 'lucide-react';
 import { EmptyState } from './EmptyState';
+import { useExpenseCategories, useExpenseBudgets, saveExpenseBudget } from '../../lib/expenseCategories';
+import { useToast } from '../../lib/ToastContext';
 import * as XLSX from 'xlsx';
 
 export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpense, onUpdateExpense }: { expenses?: Expense[], user?: User, period?: string, onAddExpense?: (e: Expense) => void, onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void }) => {
-  
+  const { showToast } = useToast();
+
   const [showForm, setShowForm] = useState(true);
-  const [category, setCategory] = useState<string>('Cars');
+  const expenseCategories = useExpenseCategories();
+  const categories = expenseCategories.map(c => c.name);
+  const [category, setCategory] = useState<string>('');
+  useEffect(() => {
+    if (categories.length > 0 && !categories.includes(category)) setCategory(categories[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories]);
   const [subCategory, setSubCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [desc, setDesc] = useState('');
@@ -17,37 +26,29 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   const monthKey = date.substring(0, 7); // YYYY-MM
-  const storageKey = `ehi-budgets-${monthKey}`;
 
-  const defaultBudgets: Record<string, number> = {
-    'Cars': 80000,
-    'Carrier': 150000,
-    'Transport': 120000,
-    'Bus Hire': 60000,
-    'Sack & Nylon': 40000,
-    'Miscellaneous': 30000
-  };
+  // Budgets are per category-per-month rows in Supabase now, not a
+  // localStorage blob keyed per device -- a budget set on one terminal is
+  // visible everywhere immediately, and each month keeps its own value
+  // (pre-filled from the most recent prior month until edited).
+  const { budgets: budgetRows, refetch: refetchBudgets } = useExpenseBudgets(monthKey);
+  const budgets: Record<string, number> = {};
+  const categoryIds: Record<string, string> = {};
+  budgetRows.forEach(b => { budgets[b.name] = b.budget; categoryIds[b.name] = b.categoryId; });
 
-  const categories = Object.keys(defaultBudgets);
-
-  const [budgets, setBudgets] = useState<Record<string, number>>(defaultBudgets);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [budgetInput, setBudgetInput] = useState('');
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      setBudgets(saved ? JSON.parse(saved) : defaultBudgets);
-    } catch {
-      setBudgets(defaultBudgets);
-    }
-  }, [storageKey]);
-
-  const saveBudget = (cat: string, val: number) => {
-    const newB = { ...budgets, [cat]: val };
-    setBudgets(newB);
-    localStorage.setItem(storageKey, JSON.stringify(newB));
+  const saveBudget = async (cat: string, val: number) => {
     setEditingBudget(null);
+    const categoryId = categoryIds[cat];
+    if (!categoryId) return;
+    const errorMsg = await saveExpenseBudget(categoryId, monthKey, val);
+    if (errorMsg) {
+      showToast({ message: `Failed to save ${cat} budget: ${errorMsg}`, type: 'error' });
+      return;
+    }
+    refetchBudgets();
   };
 
   const handleExportCSV = () => {
@@ -67,11 +68,12 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
 
   const getIcon = (cat: string) => {
     switch (cat) {
-      case 'Cars': return <Car size={16} />;
+      case 'Card/Cardboard': return <Box size={16} />;
       case 'Carrier': return <Truck size={16} />;
-      case 'Transport': return <Briefcase size={16} />;
+      case 'Transport': return <Car size={16} />;
       case 'Bus Hire': return <Bus size={16} />;
-      case 'Sack & Nylon': return <Box size={16} />;
+      case 'Sack & Nylon': return <Package size={16} />;
+      case 'Marker': return <Edit2 size={16} />;
       default: return <Briefcase size={16} />;
     }
   };
@@ -191,7 +193,9 @@ export const ExpensesTab = ({ expenses = [], user, period = 'today', onAddExpens
          <div className="text-[15px] font-sans font-bold text-[var(--color-foreground)] mb-4">Budget Tracker</div>
          <div className="space-y-4">
            {categories.map(c => {
-             const budget = budgets[c];
+             // Falls back to 0 (not undefined) during the brief window
+             // before useExpenseBudgets' fetch resolves.
+             const budget = budgets[c] ?? 0;
              const spent = expenses.filter(e => e.type === c && (e.status || 'approved') === 'approved').reduce((sum, e) => sum + e.amount, 0);
              const pct = budget ? (spent / budget) * 100 : 0;
              

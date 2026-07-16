@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Transaction, User, Expense } from "../../lib/types";
-import {
-  CONTENT_TYPES,
-  BANKS,
-} from "../../lib/constants";
 import { fmt, roundMoney, tnow, generatePickupPin, normalizeAirlineName, getHubCode, upperOnChange, isStandalonePWA } from "../../lib/helpers";
-import { useHubRoutes } from "../../lib/hubRoutes";
+import { useHubRoutes, useValidatedRouteSelection } from "../../lib/hubRoutes";
+import { useAirlines, addAirlineIfMissing } from "../../lib/airlines";
+import { useContentTypes } from "../../lib/contentTypes";
+import { useBanks } from "../../lib/banks";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { isTagAlreadyDelivered } from "../../lib/scanLogic";
 import { getNextTag } from "../../lib/tagPool";
@@ -142,6 +141,8 @@ export const CargoForm = ({
   const { showToast } = useToast();
   const confirm = useConfirm();
   const routes = useHubRoutes();
+  const contentTypes = useContentTypes();
+  const banks = useBanks();
 
   const generateAwb = () => `AWB-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -175,13 +176,14 @@ export const CargoForm = ({
   const [pcs, setPcs] = useState("1");
   const [kg, setKg] = useState("");
   const [route, setRoute] = useState(routes[0]);
-  const [contentType, setContentType] = useState(CONTENT_TYPES[0] as string);
+  useValidatedRouteSelection(routes, route, setRoute);
+  const [contentType, setContentType] = useState(contentTypes[0] as string);
   const [customContentType, setCustomContentType] = useState("");
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<"Cash" | "Transfer" | "POS" | "Debt">(
     "Cash",
   );
-  const [bank, setBank] = useState(BANKS[0] as string);
+  const [bank, setBank] = useState(banks[0] as string);
   const [remark, setRemark] = useState("");
   const [senderPhone, setSenderPhone] = useState("");
   const [consigneePhone, setConsigneePhone] = useState("");
@@ -333,51 +335,14 @@ export const CargoForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kg, route, actualAirline, standardRates, hubRouteRates, hubAirlineRouteRates]);
 
-  const [availableAirlines, setAvailableAirlines] = useState<string[]>([
-    "Arik Air",
-    "Green Africa Airways",
-    "United Nigeria Airlines",
-    "Other",
-  ]);
+  const availableAirlines = useAirlines();
 
   useEffect(() => {
-    const loadAirlines = async () => {
-      try {
-        const { data, error } = await supabase.from('pricing_config')
-          .select('config_value')
-          .eq('config_key', 'airline_commissions')
-          .single();
-
-        if (data && data.config_value && !error) {
-          const parsed = data.config_value;
-          const keys = Object.keys(parsed);
-          if (keys.length > 0) {
-            setAvailableAirlines(keys);
-            if (!keys.includes(airline)) {
-              setAirline(keys[0]);
-            }
-            localStorage.setItem("ehi_airline_commissions", JSON.stringify(parsed));
-          }
-        } else {
-          const rawCommissions = localStorage.getItem("ehi_airline_commissions");
-          if (rawCommissions) {
-            const parsed = JSON.parse(rawCommissions);
-            const keys = Object.keys(parsed);
-            if (keys.length > 0) {
-              setAvailableAirlines(keys);
-              if (!keys.includes(airline)) {
-                setAirline(keys[0]);
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // Ignore
-      }
-    };
-    loadAirlines();
+    if (availableAirlines.length > 0 && !availableAirlines.includes(airline)) {
+      setAirline(availableAirlines[0]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [availableAirlines]);
 
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -544,114 +509,12 @@ export const CargoForm = ({
     }
   });
 
-  const [corpRates, setCorpRates] = useState<CorporateRouteRate[]>(() => {
-    try {
-      if (typeof window === "undefined" || !window.localStorage) {
-        const initial = [
-          {
-            id: "rate_1",
-            corporate_client_id: "corp_1",
-            route_name: "ABV/Abuja",
-            rate_per_kg: 600,
-          },
-          {
-            id: "rate_2",
-            corporate_client_id: "corp_1",
-            route_name: "BNI/Benin City",
-            rate_per_kg: 400,
-          },
-          {
-            id: "rate_3",
-            corporate_client_id: "corp_1",
-            route_name: "LOS/Lagos",
-            rate_per_kg: 350,
-          },
-          {
-            id: "rate_4",
-            corporate_client_id: "corp_2",
-            route_name: "ABV/Abuja",
-            rate_per_kg: 500,
-          },
-          {
-            id: "rate_5",
-            corporate_client_id: "corp_2",
-            route_name: "BNI/Benin City",
-            rate_per_kg: 420,
-          },
-          {
-            id: "rate_6",
-            corporate_client_id: "corp_3",
-            route_name: "ABV/Abuja",
-            rate_per_kg: 650,
-          },
-          {
-            id: "rate_7",
-            corporate_client_id: "corp_3",
-            route_name: "PHC/Port Harcourt",
-            rate_per_kg: 750,
-          },
-        ];
-        return initial;
-      }
-      const saved = localStorage.getItem("ehi_corporate_route_rates_v2");
-      if (saved) return JSON.parse(saved);
-      const initial = [
-      {
-        id: "rate_1",
-        corporate_client_id: "corp_1",
-        route_name: "ABV/Abuja",
-        rate_per_kg: 600,
-      },
-      {
-        id: "rate_2",
-        corporate_client_id: "corp_1",
-        route_name: "BNI/Benin City",
-        rate_per_kg: 400,
-      },
-      {
-        id: "rate_3",
-        corporate_client_id: "corp_1",
-        route_name: "LOS/Lagos",
-        rate_per_kg: 350,
-      },
-      {
-        id: "rate_4",
-        corporate_client_id: "corp_2",
-        route_name: "ABV/Abuja",
-        rate_per_kg: 500,
-      },
-      {
-        id: "rate_5",
-        corporate_client_id: "corp_2",
-        route_name: "BNI/Benin City",
-        rate_per_kg: 420,
-      },
-      {
-        id: "rate_6",
-        corporate_client_id: "corp_3",
-        route_name: "ABV/Abuja",
-        rate_per_kg: 650,
-      },
-      {
-        id: "rate_7",
-        corporate_client_id: "corp_3",
-        route_name: "PHC/Port Harcourt",
-        rate_per_kg: 750,
-      },
-    ];
-    try {
-      localStorage.setItem(
-        "ehi_corporate_route_rates_v2",
-        JSON.stringify(initial),
-      );
-    } catch (e) {
-      /* ignore */
-    }
-    return initial;
-    } catch (e) {
-      return [];
-    }
-  });
+  // Real values always come from the corporate_route_rates fetch below --
+  // no local seed. A prior placeholder seed here used fake IDs ("corp_1"
+  // .."corp_3") that could never match a real client's Postgres UUID, which
+  // meant every corporate shipment silently billed at the fallback rate
+  // instead of its negotiated one until the fetch below was added.
+  const [corpRates, setCorpRates] = useState<CorporateRouteRate[]>([]);
 
   const [pendingIntakes, setPendingIntakes] = useState<PendingWeighingIntake[]>(
     () => {
@@ -685,10 +548,12 @@ export const CargoForm = ({
     let active = true;
     (async () => {
       try {
+        // No 'active' column exists on corporate_clients (nothing in the app
+        // exposes a way to deactivate one) -- filtering on it made this
+        // query error and silently fall back to an empty/stale list.
         const { data } = await supabase
           .from('corporate_clients')
           .select('id, company_name, contact_phone, accumulated_monthly_debt')
-          .eq('active', true)
           .order('company_name');
         if (active && data && data.length > 0) {
           const mapped = data.map((c: any) => ({
@@ -779,8 +644,9 @@ export const CargoForm = ({
   const [intakeAwb, setIntakeAwb] = useState(generateAwb());
   const [intakePcs, setIntakePcs] = useState("1");
   const [intakeRoute, setIntakeRoute] = useState(routes[0]);
+  useValidatedRouteSelection(routes, intakeRoute, setIntakeRoute);
   const [intakeContentType, setIntakeContentType] = useState<string>(
-    CONTENT_TYPES[0],
+    contentTypes[0],
   );
   const [intakeSenderPhone, setIntakeSenderPhone] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -1094,30 +960,16 @@ export const CargoForm = ({
     if (!isRetailFormValid || submitting) return;
     setSubmitting(true);
 
-    // Check if new custom airline needs to be added to db and local state
-    if (airline === "Other" && actualAirline) {
-      if (!availableAirlines.includes(actualAirline)) {
-        const updatedAirlines = [...availableAirlines.filter(a => a !== "Other"), actualAirline, "Other"];
-        setAvailableAirlines(updatedAirlines);
-        
-        try {
-          const { data, error } = await supabase.from('pricing_config')
-            .select('config_value')
-            .eq('config_key', 'airline_commissions')
-            .single();
-
-          if (data && data.config_value && !error) {
-            const parsed = data.config_value as Record<string, number>;
-            parsed[actualAirline] = 5; // Default 5% commission
-            await supabase.from('pricing_config').upsert({
-              config_key: 'airline_commissions',
-              config_value: parsed,
-            }, { onConflict: 'config_key' });
-            localStorage.setItem("ehi_airline_commissions", JSON.stringify(parsed));
-          }
-        } catch (e) {
-          // Ignore
-        }
+    // New custom airline typed into "Other" -- add it to pricing_config
+    // (visible to Airline Commissions, Hub Cargo Rates, Airline Ledger,
+    // Marketing Workspace next time each of those fetches) with a default
+    // 5% commission. It won't appear in this screen's own dropdown until
+    // its next fetch/remount, same as any other config screen.
+    if (airline === "Other" && actualAirline && !availableAirlines.includes(actualAirline)) {
+      try {
+        await addAirlineIfMissing(actualAirline);
+      } catch (e) {
+        // Ignore
       }
     }
 
@@ -1254,11 +1106,11 @@ export const CargoForm = ({
     setPcs("1");
     setKg("");
     setRoute(routes[0]);
-    setContentType(CONTENT_TYPES[0] as string);
+    setContentType(contentTypes[0] as string);
     setCustomContentType("");
     setAmount("");
     setMode("Cash");
-    setBank(BANKS[0] as string);
+    setBank(banks[0] as string);
     setRemark("");
     setSenderPhone("");
     setConsigneePhone("");
@@ -1805,7 +1657,7 @@ export const CargoForm = ({
                     onChange={(e) => setContentType(e.target.value)}
                     className={formInputClass}
                   >
-                    {CONTENT_TYPES.map((c) => (
+                    {contentTypes.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>
@@ -1938,7 +1790,7 @@ export const CargoForm = ({
                     onChange={(e) => setBank(e.target.value)}
                     className={formInputClass}
                   >
-                    {BANKS.map((b) => (
+                    {banks.map((b) => (
                       <option key={b} value={b}>
                         {b}
                       </option>
@@ -1956,7 +1808,7 @@ export const CargoForm = ({
                     onChange={(e) => setBank(e.target.value)}
                     className={formInputClass}
                   >
-                    {BANKS.map((b) => (
+                    {banks.map((b) => (
                       <option key={b} value={b}>
                         {b}
                       </option>
@@ -2277,7 +2129,7 @@ export const CargoForm = ({
                       onChange={(e) => setIntakeContentType(e.target.value)}
                       className={formInputClass}
                     >
-                      {CONTENT_TYPES.map((c) => (
+                      {contentTypes.map((c) => (
                         <option key={c} value={c}>
                           {c}
                         </option>

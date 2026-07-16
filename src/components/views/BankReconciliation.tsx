@@ -4,6 +4,7 @@ import { BackButton } from '../BackButton';
 import { fmt } from '../../lib/helpers';
 import { Transaction, User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
+import { useBanksWithFormat } from '../../lib/banks';
 
 export type BankFormat = 'UBA' | 'GTBank' | 'Access' | 'Zenith' | 'FirstBank';
 
@@ -116,6 +117,7 @@ export const BankReconciliation = ({
   user?: User;
 }) => {
   const [method, setMethod] = useState<'CSV' | 'PDF'>('CSV');
+  const banksWithFormat = useBanksWithFormat();
   const [bankType, setBankType] = useState<BankFormat>('UBA');
   const [fileImported, setFileImported] = useState(false);
   const [matchingInProgress, setMatchingInProgress] = useState(false);
@@ -350,11 +352,9 @@ export const BankReconciliation = ({
                 onChange={(e) => setBankType(e.target.value as any)}
                 className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] font-sans focus:outline-none focus:border-[var(--color-accent-cobalt)]"
               >
-                <option value="UBA">UBA Statement</option>
-                <option value="GTBank">GTBank Statement</option>
-                <option value="Access">Access Bank</option>
-                <option value="Zenith">Zenith Bank</option>
-                <option value="FirstBank">First Bank</option>
+                {banksWithFormat.map((b) => (
+                  <option key={b.csvFormat} value={b.csvFormat}>{b.name} Statement</option>
+                ))}
               </select>
             )}
           </div>

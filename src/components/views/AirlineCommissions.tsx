@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
 import { useConfirm } from '../../lib/ConfirmContext';
 import { BackButton } from '../BackButton';
+import { AIRLINES_CACHE_KEY } from '../../lib/airlines';
 
 const DEFAULT_COMMISSIONS: Record<string, string> = {
   'Arik Air':              '7',
@@ -53,10 +54,10 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
           setCommissions(asStr);
           setLoadedReal(true);
           loadedKeysRef.current = Object.keys(parsed);
-          localStorage.setItem('ehi_airline_commissions', JSON.stringify(parsed));
+          localStorage.setItem(AIRLINES_CACHE_KEY, JSON.stringify(parsed));
         } else {
           setUsingFallback(true);
-          const cached = localStorage.getItem('ehi_airline_commissions');
+          const cached = localStorage.getItem(AIRLINES_CACHE_KEY);
           if (cached) {
             const parsed = JSON.parse(cached);
             const asStr: Record<string, string> = {};
@@ -68,7 +69,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
         }
       } catch (err) {
         setUsingFallback(true);
-        const cached = localStorage.getItem('ehi_airline_commissions');
+        const cached = localStorage.getItem(AIRLINES_CACHE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
           const asStr: Record<string, string> = {};
@@ -125,7 +126,7 @@ export const AirlineCommissions = ({ onBack }: { onBack: () => void }) => {
       }
     }
 
-    localStorage.setItem('ehi_airline_commissions', JSON.stringify(numData));
+    localStorage.setItem(AIRLINES_CACHE_KEY, JSON.stringify(numData));
     const { error } = await supabase.from('pricing_config').upsert({
       config_key: 'airline_commissions',
       config_value: numData,

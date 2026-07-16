@@ -1,0 +1,99 @@
+import { useState, useEffect } from 'react';
+import { supabase } from './supabase.js';
+
+// Same key AirlineCommissions.tsx/CargoForm.tsx/AirlineLedger.tsx already
+// read/write today -- kept identical so existing devices' cached value
+// isn't orphaned when those files are refactored onto this shared helper.
+// Unlike hubRoutes.ts's cache (a plain string array), this key holds a
+// Record<airlineName, commissionPercent> JSONB blob -- getCachedAirlines
+// reads its keys.
+export const AIRLINES_CACHE_KEY = 'ehi_airline_commissions';
+
+// Cold-start fallback only -- used when both the network fetch and the
+// localStorage cache are empty (a device that has never gone online).
+const FALLBACK_AIRLINES = ['Arik Air', 'Green Africa Airways', 'United Nigeria Airlines'];
+
+export interface AirlinesOptions {
+  /** Append a synthetic 'Other' entry after the real airlines. Default true. */
+  includeOther?: boolean;
+  /** When both the network fetch and the localStorage cache are empty,
+   * fall back to FALLBACK_AIRLINES instead of an empty array. Default true. */
+  coldFallback?: boolean;
+}
+
+// The cache always stores the raw commissions blob only (no 'Other' baked
+// in) -- includeOther is applied at read time, per caller, same convention
+// hubRoutes.ts uses for its own cache key.
+export function getCachedAirlines(opts: AirlinesOptions = {}): string[] {
+  const { includeOther = true, coldFallback = true } = opts;
+  let names: string[] = [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(AIRLINES_CACHE_KEY) || 'null');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      names = Object.keys(parsed);
+    }
+  } catch {
+    // ignore -- treated the same as an empty cache
+  }
+  if (names.length === 0 && coldFallback) names = [...FALLBACK_AIRLINES];
+  return includeOther ? [...names, 'Other'] : names;
+}
+
+export async function fetchAirlines(opts: AirlinesOptions = {}): Promise<string[] | null> {
+  const { includeOther = true } = opts;
+  const { data, error } = await supabase.from('pricing_config')
+    .select('config_value')
+    .eq('config_key', 'airline_commissions')
+    .single();
+  if (!data?.config_value || error) return null;
+  const names = Object.keys(data.config_value as Record<string, number>);
+  if (names.length === 0) return null;
+  try {
+    localStorage.setItem(AIRLINES_CACHE_KEY, JSON.stringify(data.config_value));
+  } catch {
+    // localStorage unavailable -- nothing to persist to, the fetch result is still returned
+  }
+  return includeOther ? [...names, 'Other'] : names;
+}
+
+// Cached/fallback list on first render (instant paint, works offline);
+// swaps to the live Supabase list once the fetch resolves.
+export function useAirlines(opts: AirlinesOptions = {}): string[] {
+  const [airlines, setAirlines] = useState<string[]>(() => getCachedAirlines(opts));
+  useEffect(() => {
+    let cancelled = false;
+    fetchAirlines(opts).then(names => {
+      if (names && !cancelled) setAirlines(names);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return airlines;
+}
+
+// Adds a new airline to pricing_config.airline_commissions if it isn't
+// already present, with a default commission rate -- centralizes the
+// "typed a new airline into an 'Other' field" upsert that CargoForm.tsx
+// used to hand-roll inline, so every entry point for a brand-new airline
+// (Cargo intake, Airline Commissions' own add form) goes through one path.
+export async function addAirlineIfMissing(name: string, defaultCommission = 5): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const { data } = await supabase.from('pricing_config')
+    .select('config_value')
+    .eq('config_key', 'airline_commissions')
+    .single();
+  const current: Record<string, number> = (data?.config_value as any) || {};
+  if (trimmed in current) return;
+  const updated = { ...current, [trimmed]: defaultCommission };
+  await supabase.from('pricing_config').upsert({
+    config_key: 'airline_commissions',
+    config_value: updated,
+    description: 'Airline commission percentages',
+  }, { onConflict: 'config_key' });
+  try {
+    localStorage.setItem(AIRLINES_CACHE_KEY, JSON.stringify(updated));
+  } catch {
+    // ignore
+  }
+}

@@ -10,18 +10,9 @@ import {
 import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { User } from '../../lib/types';
-import { listAirlineLogos } from '../../lib/airlineLogos';
 import { fmt } from '../../lib/helpers';
 import { useToast } from '../../lib/ToastContext';
-
-const FALLBACK_AIRLINES = [
-  'Arik Air',
-  'Green Africa Airways',
-  'United Nigeria Airlines',
-  'ValueJet',
-  'Aero Contractors',
-  'Dana Air',
-];
+import { useAirlines } from '../../lib/airlines';
 
 type EntryType = 'Credit' | 'Debit' | 'Cheque Raise';
 
@@ -91,8 +82,17 @@ function computeSummary(rows: LedgerRow[]): BalanceSummary {
 
 export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void }) => {
   const { showToast } = useToast();
-  const [airlines, setAirlines] = useState<string[]>(FALLBACK_AIRLINES);
-  const [selectedAirline, setSelectedAirline] = useState<string>(FALLBACK_AIRLINES[0]);
+  // Was a static fallback list with no live fetch at all -- an airline added
+  // in Airline Commissions never appeared here. Now sources from the same
+  // pricing_config.airline_commissions row every other airline picker uses.
+  const airlines = useAirlines({ includeOther: false });
+  const [selectedAirline, setSelectedAirline] = useState<string>('');
+  useEffect(() => {
+    if (airlines.length > 0 && !airlines.includes(selectedAirline)) {
+      setSelectedAirline(airlines[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [airlines]);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -105,16 +105,6 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
   const [reference, setReference] = useState('');
 
   const [airlineBalances, setAirlineBalances] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    listAirlineLogos().then((logos) => {
-      if (logos.length > 0) {
-        const names = logos.map((l) => l.name);
-        setAirlines(names);
-        setSelectedAirline(names[0]);
-      }
-    });
-  }, []);
 
   // loadEntries is triggered both by the selectedAirline-change effect below
   // AND imperatively (the Refresh button, and handleSubmit's post-save
@@ -166,7 +156,7 @@ export const AirlineLedger = ({ user, onBack }: { user: User; onBack: () => void
   }, [airlines]);
 
   useEffect(() => {
-    loadEntries(selectedAirline);
+    if (selectedAirline) loadEntries(selectedAirline);
   }, [selectedAirline]);
 
   const rows: LedgerRow[] = useMemo(() => buildRunningLedger(entries), [entries]);

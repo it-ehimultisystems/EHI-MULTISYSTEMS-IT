@@ -2,7 +2,8 @@ import { useState, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow, isStandalonePWA } from "../../lib/helpers";
-import { CONTENT_TYPES } from "../../lib/constants";
+import { useContentTypes } from "../../lib/contentTypes";
+import { useBanks } from "../../lib/banks";
 import { BackButton } from "../BackButton";
 import {
   Edit2,
@@ -61,6 +62,8 @@ export const TransactionLedger = ({
   dateRange?: { start: string; end: string };
   onDateRangeChange?: (range: { start: string; end: string }) => void;
 }) => {
+  const contentTypes = useContentTypes();
+  const banks = useBanks();
   const [showPrintHistory, setShowPrintHistory] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   // Marketing entries store bag counts inside the composed `detail` string,
@@ -1688,11 +1691,11 @@ export const TransactionLedger = ({
                     <select
                       id="edit-tx-package-contents"
                       name="edit-tx-package-contents"
-                      value={editingTx.contents || CONTENT_TYPES[0]}
+                      value={editingTx.contents || contentTypes[0]}
                       onChange={(e) => setEditingTx({ ...editingTx, contents: e.target.value })}
                       className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                     >
-                      {CONTENT_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      {contentTypes.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                 </>
@@ -1748,11 +1751,7 @@ export const TransactionLedger = ({
                     className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                   >
                     <option value="">Select Bank</option>
-                    <option value="GTBank">GTBank</option>
-                    <option value="Access Bank">Access Bank</option>
-                    <option value="Zenith Bank">Zenith Bank</option>
-                    <option value="UBA">UBA</option>
-                    <option value="Other">Other</option>
+                    {banks.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
               )}

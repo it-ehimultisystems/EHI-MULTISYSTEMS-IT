@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { User, Transaction, Expense } from "../../lib/types";
-import { BANKS, EXPENSE_CATEGORIES, CONTENT_TYPES } from "../../lib/constants";
 import { fmt, uid, tnow, generatePaymentNarration, getHubCode, upperOnChange } from "../../lib/helpers";
-import { useHubRoutes } from "../../lib/hubRoutes";
+import { useHubRoutes, useValidatedRouteSelection } from "../../lib/hubRoutes";
+import { useContentTypes } from "../../lib/contentTypes";
+import { useExpenseCategories } from "../../lib/expenseCategories";
+import { useBanks } from "../../lib/banks";
 import { getNextTag } from "../../lib/tagPool";
 import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare, Bluetooth } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -37,9 +39,7 @@ export const PackageForm = ({
   const { showToast } = useToast();
   const confirm = useConfirm();
   const destinations = useHubRoutes({ includeOther: false, coldFallback: false });
-  useEffect(() => {
-    setDestination(prev => prev || destinations[0] || "");
-  }, [destinations]);
+  const contentTypes = useContentTypes();
 
   const [trackingRef, setTrackingRef] = useState<string>('');
   useEffect(() => {
@@ -65,18 +65,20 @@ export const PackageForm = ({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [destination, setDestination] = useState<string>(() => destinations[0] || "");
+  useValidatedRouteSelection(destinations, destination, setDestination);
   const [contentType, setContentType] = useState<'Package' | 'Parcel'>('Package');
   // Pieces/weight/contents were never captured for this stream at all --
   // every other business line (Cargo, Marketing, ValueJet) tracks these, and
-  // reuses the same shared CONTENT_TYPES list as Cargo rather than a new
+  // reuses the same shared content-types list as Cargo rather than a new
   // hardcoded one, so this scales the same way the rest of the app does.
   const [pcs, setPcs] = useState("1");
   const [kg, setKg] = useState("");
-  const [contents, setContents] = useState<string>(CONTENT_TYPES[0]);
+  const [contents, setContents] = useState<string>(contentTypes[0]);
   const [customContents, setCustomContents] = useState("");
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<string>("Cash");
-  const [bank, setBank] = useState<string>(BANKS[0]);
+  const banks = useBanks();
+  const [bank, setBank] = useState<string>(banks[0]);
   const [debtorName, setDebtorName] = useState("");
   const [narrationCode, setNarrationCode] = useState<string>("");
 
@@ -89,7 +91,12 @@ export const PackageForm = ({
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [expType, setExpType] = useState<string>(EXPENSE_CATEGORIES[0]);
+  const expenseCategoryNames = useExpenseCategories().map(c => c.name);
+  const [expType, setExpType] = useState<string>('');
+  useEffect(() => {
+    if (expenseCategoryNames.length > 0 && !expenseCategoryNames.includes(expType)) setExpType(expenseCategoryNames[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenseCategoryNames]);
   const [expAmount, setExpAmount] = useState("");
   const [expDesc, setExpDesc] = useState("");
 
@@ -192,7 +199,7 @@ export const PackageForm = ({
     setDebtorName("");
     setPcs("1");
     setKg("");
-    setContents(CONTENT_TYPES[0]);
+    setContents(contentTypes[0]);
     setCustomContents("");
     setAmount("");
     setMode("Cash");
@@ -539,7 +546,7 @@ export const PackageForm = ({
                   onChange={(e) => setContents(e.target.value)}
                   className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                 >
-                  {CONTENT_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {contentTypes.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {contents === "Other" && (
                   <input
@@ -569,7 +576,7 @@ export const PackageForm = ({
                     onChange={(e) => setBank(e.target.value)}
                     className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                   >
-                    {BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
+                    {banks.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
                 )}
 
@@ -627,7 +634,7 @@ export const PackageForm = ({
             </div>
             <div className="flex space-x-2">
               <select value={expType} onChange={(e) => setExpType(e.target.value)} className={`flex-1 h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}>
-                {EXPENSE_CATEGORIES.map((e) => <option key={e} value={e}>{e}</option>)}
+                {expenseCategoryNames.map((e) => <option key={e} value={e}>{e}</option>)}
               </select>
               <input id="pkg-exp-amount" name="exp-amount" type="number" min="0" placeholder="Amount" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={`w-[100px] h-11 px-3 text-[13px] rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`} />
             </div>
