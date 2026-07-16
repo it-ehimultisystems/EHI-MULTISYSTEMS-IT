@@ -571,6 +571,11 @@ export const ExcessBaggageForm = ({
                 </span>
               )}
             </div>
+            {ratePerKg === 0 && excessKg > 0 && (
+              <div className="text-[10px] text-[var(--color-accent-amber)] mt-1">
+                No rate configured for {airline.name} — this excess weight is auto-calculating as free. Set a rate per kg in Excess Baggage Airlines, or enter amount manually.
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

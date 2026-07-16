@@ -658,6 +658,19 @@ export const CargoForm = ({
   const [customRateOverwrite, setCustomRateOverwrite] = useState("");
   const [isWeighingSubmitting, setIsWeighingSubmitting] = useState(false);
 
+  // Negotiated contract rate for the intake currently on the scale, if one
+  // exists -- computed once here and reused by the rate display, the
+  // computed-bill display, and handleFinalizeWeighing, instead of each
+  // re-deriving it independently (previously three separate copies of the
+  // same lookup, one of which used a stale rate at submit time relative to
+  // what the screen displayed).
+  const contractRateForSelectedIntake = useMemo(() => {
+    if (!selectedIntake) return null;
+    const client = corpClients.find((c) => c.id === selectedIntake.corporate_client_id);
+    if (!client) return null;
+    return corpRates.find((r) => r.corporate_client_id === client.id && r.route_name === selectedIntake.route) || null;
+  }, [selectedIntake, corpClients, corpRates]);
+
   // --- SYSTEM HELPERS ---
   const isAuthorizedRole =
     user &&
@@ -763,22 +776,6 @@ export const CargoForm = ({
       return;
     }
 
-    // Dynamic Look-up Contract Rates or Fallback baseline (₦500/KG).
-    // Uses the stable client ID captured at intake time, not a re-match
-    // by company_name -- that name is editable, so a client renamed
-    // between intake and this finalize step would have silently broken
-    // the old name-based lookup.
-    const matchingClientObj = corpClients.find(
-      (c) => c.id === selectedIntake.corporate_client_id,
-    );
-    const contractRateRecord = matchingClientObj
-      ? corpRates.find(
-          (r) =>
-            r.corporate_client_id === matchingClientObj.id &&
-            r.route_name === selectedIntake.route,
-        )
-      : undefined;
-
     if (customRateOverwrite) {
       const overwriteNum = parseFloat(customRateOverwrite);
       if (isNaN(overwriteNum) || overwriteNum <= 0) {
@@ -788,11 +785,20 @@ export const CargoForm = ({
       }
     }
 
+    // No contract rate on file and no admin override typed -- previously
+    // this silently billed at a hardcoded ₦500/KG baseline with no warning
+    // anywhere, indistinguishable from an intentional ₦500 rate. Block and
+    // require an explicit override instead of guessing a number that could
+    // be wildly wrong for this client/route.
+    if (!customRateOverwrite && !contractRateForSelectedIntake) {
+      showToast({ message: "No negotiated rate on file for this client/route. Enter an admin rate overwrite before finalizing.", type: "warning" });
+      setIsWeighingSubmitting(false);
+      return;
+    }
+
     const rateToUse = customRateOverwrite
       ? parseFloat(customRateOverwrite)
-      : contractRateRecord
-        ? contractRateRecord.rate_per_kg
-        : 500;
+      : contractRateForSelectedIntake!.rate_per_kg;
 
     const computedCost = roundMoney(weightNum * rateToUse);
 
@@ -860,6 +866,7 @@ export const CargoForm = ({
     onAddTx(txEntry);
 
     // 2. Increment client's monthly accumulated debt balance
+    const matchingClientObj = corpClients.find((c) => c.id === selectedIntake.corporate_client_id);
     if (matchingClientObj) {
       // Atomic server-side increment (increment_corporate_debt RPC) instead
       // of reading accumulated_monthly_debt from the client-side cache,
@@ -2417,24 +2424,9 @@ export const CargoForm = ({
                             Negotiated Rate
                           </span>
                           <span className="font-bold text-[var(--color-foreground)]">
-                            ₦
-                            {(() => {
-                              const matchC = corpClients.find(
-                                (c) =>
-                                  c.id === selectedIntake.corporate_client_id,
-                              );
-                              const matchR = matchC
-                                ? corpRates.find(
-                                    (r) =>
-                                      r.corporate_client_id === matchC.id &&
-                                      r.route_name === selectedIntake.route,
-                                  )
-                                : null;
-                              return matchR
-                                ? matchR.rate_per_kg
-                                : "500.00 (Baseline)";
-                            })()}
-                            /KG
+                            {contractRateForSelectedIntake
+                              ? `₦${contractRateForSelectedIntake.rate_per_kg}/KG`
+                              : "None on file"}
                           </span>
                         </div>
 
@@ -2442,12 +2434,12 @@ export const CargoForm = ({
                         {isAuthorizedRole ? (
                           <div className="pt-2 border-t border-[var(--color-border)]">
                             <label htmlFor="cargo-custom-rate-overwrite" className="text-[10px] text-[var(--color-muted)] block mb-1.5">
-                              Admin Custom Rate Overwrite (₦/KG):
+                              Admin Custom Rate Overwrite (₦/KG){!contractRateForSelectedIntake ? ' -- required, no contract rate on file' : ''}:
                             </label>
                             <input
                               id="cargo-custom-rate-overwrite"
                               type="number"
-                              placeholder="Leave empty for default"
+                              placeholder={contractRateForSelectedIntake ? "Leave empty for default" : "Enter rate -- no contract on file"}
                               value={customRateOverwrite}
                               onChange={(e) =>
                                 setCustomRateOverwrite(e.target.value)
@@ -2462,40 +2454,31 @@ export const CargoForm = ({
                           </div>
                         )}
 
+                        {!contractRateForSelectedIntake && (
+                          <div className="text-[10px] text-[var(--color-accent-amber)]">
+                            No negotiated rate on file for this client/route -- {isAuthorizedRole ? 'an admin rate overwrite is required to finalize' : 'ask an admin or accountant to set one or finalize this invoice'}. Nothing will be guessed.
+                          </div>
+                        )}
+
                         <div className="pt-3 mt-1 border-t border-[var(--color-surface-2)] flex justify-between items-center">
                           <span className="text-[12px] font-sans text-[var(--color-muted)] font-medium uppercase tracking-wider">
                             Computed Bill
                           </span>
                           <span className="text-[18px] text-[var(--color-accent-amber)] font-bold">
-                            ₦
                             {(() => {
-                              const matchC = corpClients.find(
-                                (c) =>
-                                  c.id === selectedIntake.corporate_client_id,
-                              );
-                              const matchR = matchC
-                                ? corpRates.find(
-                                    (r) =>
-                                      r.corporate_client_id === matchC.id &&
-                                      r.route_name === selectedIntake.route,
-                                  )
-                                : null;
                               const rate = customRateOverwrite
                                 ? parseFloat(customRateOverwrite)
-                                : matchR
-                                  ? matchR.rate_per_kg
-                                  : 500;
+                                : contractRateForSelectedIntake?.rate_per_kg;
+                              if (rate == null) return "—";
                               const weight = Math.round(parseFloat(gateWeight)) || 0;
-                              return (weight * rate).toLocaleString("en-NG", {
-                                maximumFractionDigits: 2,
-                              });
+                              return `₦${(weight * rate).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
                             })()}
                           </span>
                         </div>
                       </div>
 
                       <div className="text-[11px] text-[var(--color-error)] bg-[rgba(239,68,68,0.03)] p-2 rounded border border-[rgba(239,68,68,0.1)] leading-snug flex items-start gap-1.5">
-                        <Zap size={14} className="shrink-0 mt-0.5" /> 
+                        <Zap size={14} className="shrink-0 mt-0.5" />
                         <span>
                           PL/pgSQL database trigger will automatically book
                           this finalized amount to the client's monthly master
@@ -2506,7 +2489,7 @@ export const CargoForm = ({
 
                     <button
                       onClick={handleFinalizeWeighing}
-                      disabled={!gateWeight || isWeighingSubmitting}
+                      disabled={!gateWeight || isWeighingSubmitting || (!contractRateForSelectedIntake && !customRateOverwrite)}
                       className="w-full h-12 mt-5 cursor-pointer bg-[var(--color-accent-amber)] text-[#030712] font-semibold text-[14px] rounded flex items-center justify-center gap-2 hover:bg-opacity-95 transition-all text-center"
                     >
                       {isWeighingSubmitting ? (

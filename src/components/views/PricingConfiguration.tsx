@@ -65,6 +65,61 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
     fetchRoutePricing();
   }, []);
 
+  // marketing_route_rates.route_name is an "Origin - Destination" pair
+  // (e.g. "LOS/Lagos - ABV/Abuja"), not a single hub -- before this, there
+  // was no admin UI to create a new pair at all short of a direct DB
+  // insert, so a newly added hub's Marketing pricing (and its very
+  // appearance in MarketingWorkspace.tsx's route picker, which only lists
+  // pairs that already have a rate row) had no path to get configured.
+  const pricedRouteNames = new Set(pricing.map((p: any) => p.route));
+  const nonOtherRoutes = routes.filter(r => r !== 'Other');
+  const [newRouteOrigin, setNewRouteOrigin] = useState('');
+  const [newRouteDest, setNewRouteDest] = useState('');
+  const [newRouteBb, setNewRouteBb] = useState('');
+  const [newRouteMb, setNewRouteMb] = useState('');
+  const [newRouteSb, setNewRouteSb] = useState('');
+  const [addingRoute, setAddingRoute] = useState(false);
+
+  useEffect(() => {
+    if (nonOtherRoutes.length === 0) return;
+    if (!newRouteOrigin) setNewRouteOrigin(nonOtherRoutes[0]);
+    if (!newRouteDest) setNewRouteDest(nonOtherRoutes[1] || nonOtherRoutes[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonOtherRoutes.join('|')]);
+
+  const newRoutePairName = newRouteOrigin && newRouteDest ? `${newRouteOrigin} - ${newRouteDest}` : '';
+  const newRoutePairExists = newRoutePairName !== '' && pricedRouteNames.has(newRoutePairName);
+
+  const handleAddRoutePricing = async () => {
+    if (!newRoutePairName || newRouteOrigin === newRouteDest || addingRoute) return;
+    setAddingRoute(true);
+    const bb = Number(newRouteBb) || 0;
+    const mb = Number(newRouteMb) || 0;
+    const sb = Number(newRouteSb) || 0;
+    const { data, error } = await supabase.from('marketing_route_rates').upsert({
+      route_name: newRoutePairName,
+      bb_rate: bb,
+      mb_rate: mb,
+      sb_rate: sb,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'route_name' }).select().single();
+    setAddingRoute(false);
+    if (error) {
+      showToast({ message: `Failed to save pricing for ${newRoutePairName}: ${error.message}`, type: 'error' });
+      return;
+    }
+    const saved = { id: data.id, route: data.route_name, bb: Number(data.bb_rate), mb: Number(data.mb_rate), sb: Number(data.sb_rate) };
+    const next = newRoutePairExists
+      ? pricing.map((p: any) => p.route === newRoutePairName ? saved : p)
+      : [...pricing, saved];
+    setPricing(next);
+    localStorage.setItem('ehi_setting_pricing', JSON.stringify(next));
+    setNewRouteBb('');
+    setNewRouteMb('');
+    setNewRouteSb('');
+    showToast({ message: `${newRoutePairName} pricing saved.`, type: 'success' });
+  };
+
   const handlePriceUpdate = async (id: string, field: 'bb'|'mb'|'sb', value: string) => {
     const numVal = Number(value);
     if (isNaN(numVal)) return;
@@ -289,6 +344,68 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
             </div>
           ))}
         </div>
+
+        {nonOtherRoutes.length > 1 && (
+          <div className="pt-3 mt-1 border-t border-[var(--color-border)] space-y-2">
+            <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
+              <Plus size={10} />
+              <span>Add / Update Route Pricing</span>
+            </div>
+            <div className="grid md:grid-cols-2 gap-2">
+              <select
+                value={newRouteOrigin}
+                onChange={(e) => setNewRouteOrigin(e.target.value)}
+                className="w-full h-9 px-2 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+              >
+                {nonOtherRoutes.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <select
+                value={newRouteDest}
+                onChange={(e) => setNewRouteDest(e.target.value)}
+                className="w-full h-9 px-2 text-[12px] font-mono rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+              >
+                {nonOtherRoutes.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            {newRouteOrigin === newRouteDest ? (
+              <div className="text-[10px] text-[var(--color-accent-amber)]">Origin and destination must be different hubs.</div>
+            ) : newRoutePairExists ? (
+              <div className="text-[10px] text-[var(--color-muted)]">Already configured — saving below will update the existing rate.</div>
+            ) : (
+              <div className="text-[10px] text-[var(--color-accent-amber)]">Not yet configured — this route won't be selectable in Marketing until saved.</div>
+            )}
+            <div className="grid grid-cols-3 gap-2">
+              <input
+                type="number"
+                placeholder="BB ₦"
+                value={newRouteBb}
+                onChange={(e) => setNewRouteBb(e.target.value)}
+                className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+              />
+              <input
+                type="number"
+                placeholder="MB ₦"
+                value={newRouteMb}
+                onChange={(e) => setNewRouteMb(e.target.value)}
+                className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+              />
+              <input
+                type="number"
+                placeholder="SB ₦"
+                value={newRouteSb}
+                onChange={(e) => setNewRouteSb(e.target.value)}
+                className="w-full bg-[var(--color-surface-1)] border border-[var(--color-surface-2)] rounded px-2 py-1 text-[11px] font-mono text-[var(--color-foreground)] text-center focus:outline-none focus:border-[var(--color-accent-amber)]"
+              />
+            </div>
+            <button
+              onClick={handleAddRoutePricing}
+              disabled={!newRoutePairName || newRouteOrigin === newRouteDest || addingRoute}
+              className="w-full h-9 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] rounded text-[11px] font-bold font-mono disabled:opacity-50 cursor-pointer"
+            >
+              {addingRoute ? 'SAVING…' : 'SAVE ROUTE PRICING'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
