@@ -64,7 +64,8 @@
       "Bash(tasklist)",
       "Bash(tee /tmp/tsc_full.log)",
       "Bash(wc -l /tmp/session_diff.patch)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(npx vite *)"
     ]
   }
 }

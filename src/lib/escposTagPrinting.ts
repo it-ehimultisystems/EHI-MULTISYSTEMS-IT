@@ -74,9 +74,21 @@ export async function compileSingleTag(
     chunks.push(encoder.encode(`CONSIGNEE: ${item.name}\n`));
     chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
   }
-  if (item.airline) chunks.push(encoder.encode(`AIRLINE: ${item.airline}\n`));
-  if (item.hubName) chunks.push(encoder.encode(`HUB: ${item.hubName}\n`));
-  if (item.date) chunks.push(encoder.encode(`DATE: ${item.date}\n`));
+  if (item.airline) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`AIRLINE: ${item.airline}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
+  if (item.hubName) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`HUB: ${item.hubName}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
+  if (item.date) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`DATE: ${item.date}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
   chunks.push(encoder.encode(divider(maxChars)));
 
   chunks.push(new Uint8Array(FEED_AND_CUT));
@@ -181,9 +193,19 @@ async function compileSingleMarketingTag(
   chunks.push(encoder.encode(divider(maxChars, '=')));
 
   chunks.push(new Uint8Array(LEFT));
+  chunks.push(new Uint8Array(BOLD_ON));
   chunks.push(encoder.encode(`CUSTOMER: ${item.customerName}\n`));
-  if (item.hubName) chunks.push(encoder.encode(`HUB: ${item.hubName}\n`));
-  if (item.date) chunks.push(encoder.encode(`DATE: ${item.date}\n`));
+  chunks.push(new Uint8Array(BOLD_OFF));
+  if (item.hubName) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`HUB: ${item.hubName}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
+  if (item.date) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`DATE: ${item.date}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
   chunks.push(encoder.encode(divider(maxChars)));
 
   chunks.push(new Uint8Array(FEED_AND_CUT));
@@ -313,9 +335,21 @@ export async function compileGapLabelTag(item: CargoTagData): Promise<Uint8Array
     chunks.push(encoder.encode(`CONSIGNEE: ${name}\n`));
     chunks.push(new Uint8Array(BOLD_OFF), new Uint8Array(TEXT_NORMAL));
   }
-  if (item.airline) chunks.push(encoder.encode(`AIRLINE: ${item.airline}\n`));
-  if (item.hubName) chunks.push(encoder.encode(`HUB: ${item.hubName}\n`));
-  if (item.date) chunks.push(encoder.encode(`DATE: ${item.date}\n`));
+  if (item.airline) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`AIRLINE: ${item.airline}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
+  if (item.hubName) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`HUB: ${item.hubName}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
+  if (item.date) {
+    chunks.push(new Uint8Array(BOLD_ON));
+    chunks.push(encoder.encode(`DATE: ${item.date}\n`));
+    chunks.push(new Uint8Array(BOLD_OFF));
+  }
   chunks.push(encoder.encode(divider(64)));
 
   chunks.push(new Uint8Array(FEED_ONLY));
