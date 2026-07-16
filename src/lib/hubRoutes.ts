@@ -36,15 +36,21 @@ export function getCachedHubRoutes(opts: HubRoutesOptions = {}): string[] {
 
 export async function fetchHubRoutes(opts: HubRoutesOptions = {}): Promise<string[] | null> {
   const { includeOther = true } = opts;
-  const { data, error } = await supabase.from('hubs').select('name, code').eq('active', true).order('name');
-  if (!data || error || data.length === 0) return null;
-  const formatted = data.map((h: any) => `${h.code}/${h.name}`);
   try {
-    localStorage.setItem(HUB_ROUTES_CACHE_KEY, JSON.stringify(formatted));
+    const { data, error } = await supabase.from('hubs').select('name, code').eq('active', true).order('name');
+    if (!data || error || data.length === 0) return null;
+    const formatted = data.map((h: any) => `${h.code}/${h.name}`);
+    try {
+      localStorage.setItem(HUB_ROUTES_CACHE_KEY, JSON.stringify(formatted));
+    } catch {
+      // localStorage unavailable -- nothing to persist to, the fetch result is still returned
+    }
+    return includeOther ? [...formatted, 'Other'] : formatted;
   } catch {
-    // localStorage unavailable -- nothing to persist to, the fetch result is still returned
+    // Network failure etc. -- caller (useHubRoutes) keeps showing the
+    // cached/fallback list rather than this becoming an unhandled rejection.
+    return null;
   }
-  return includeOther ? [...formatted, 'Other'] : formatted;
 }
 
 // Cached/fallback list on first render (instant paint, works offline);
@@ -60,4 +66,22 @@ export function useHubRoutes(opts: HubRoutesOptions = {}): string[] {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return routes;
+}
+
+// A selection seeded from routes[0] on first render (before the live fetch
+// resolves) never re-checks itself once `routes` later swaps to the live
+// list -- if that cache/fallback-era first entry was since renamed or
+// deactivated, the selection keeps holding a value that no longer matches
+// any real option, and a form can silently submit it. Callers that seed a
+// selection from useHubRoutes()'s result should also call this so the
+// selection snaps back to a valid option once the live list is in.
+export function useValidatedRouteSelection(
+  routes: string[],
+  selected: string,
+  setSelected: (v: string) => void,
+): void {
+  useEffect(() => {
+    if (routes.length > 0 && !routes.includes(selected)) setSelected(routes[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routes]);
 }

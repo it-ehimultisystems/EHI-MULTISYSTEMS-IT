@@ -9,7 +9,7 @@ import { sendReceiptWhatsApp, buildExcessBaggageWhatsApp } from '../../lib/notif
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
 import { BANKS } from '../../lib/constants';
 import { useToast } from '../../lib/ToastContext';
-import { useHubRoutes } from '../../lib/hubRoutes';
+import { useHubRoutes, useValidatedRouteSelection } from '../../lib/hubRoutes';
 
 export const ExcessBaggageForm = ({
   airline,
@@ -33,6 +33,7 @@ export const ExcessBaggageForm = ({
   const flightCode = flight ? `${airline.flight_prefix}${flight}` : '';
   const routes = useHubRoutes();
   const [dest, setDest] = useState(routes[0]);
+  useValidatedRouteSelection(routes, dest, setDest);
   const [kg, setKg] = useState('');
   const [pcs, setPcs] = useState('');
   const [phone, setPhone] = useState('');

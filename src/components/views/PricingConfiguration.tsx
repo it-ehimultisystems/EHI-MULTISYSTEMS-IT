@@ -4,7 +4,7 @@ import { BackButton } from '../BackButton';
 import { User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
-import { useHubRoutes, getCachedHubRoutes } from '../../lib/hubRoutes';
+import { useHubRoutes, getCachedHubRoutes, useValidatedRouteSelection } from '../../lib/hubRoutes';
 
 export interface CorporateClient {
   id: string;
@@ -31,6 +31,7 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   const [selectedRateClient, setSelectedRateClient] = useState<CorporateClient | null>(null);
   const routes = useHubRoutes();
   const [rateRoute, setRateRoute] = useState(routes[0]);
+  useValidatedRouteSelection(routes, rateRoute, setRateRoute);
   const [ratePrice, setRatePrice] = useState('');
   const { showToast } = useToast();
 
