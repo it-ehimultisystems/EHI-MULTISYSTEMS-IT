@@ -113,6 +113,7 @@ export const ExcessBaggageForm = ({
       pnr: pnr.trim().toUpperCase() || undefined,
       kg: excessKg,
       pieces: pcsVal,
+      enteredByName: user.name,
       // TODO: capture client_type at entry
     } as any;
     // Attach phone for EHIApp to write to passenger_phone column

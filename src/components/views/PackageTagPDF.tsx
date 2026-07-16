@@ -9,13 +9,14 @@ import {
 } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
-import { openPdfOrDownload } from "../../lib/helpers";
+import { openPdfOrDownload, getHubCode } from "../../lib/helpers";
 import { notifySilentError } from "../../lib/ToastContext";
 
 // Fixed 100mm x 80mm label -- same discrete, fixed-size tag format as
 // CargoTagPDF, for the XP-402B and similar gap/die-cut label printers.
 // 100mm = 283.46pt, 80mm = 226.77pt at 72pt/inch.
-const PAGE_WIDTH = 283;
+// Sized slightly wider for improved layout: 312pt.
+const PAGE_WIDTH = 312;
 const PAGE_HEIGHT = 227;
 
 export interface PackageTagPDFData {
@@ -48,6 +49,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
     marginBottom: 4,
   },
+  dateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    paddingBottom: 2,
+  },
+  dateText: {
+    fontSize: 7.5,
+    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
+    color: "#000000",
+  },
   body: {
     flexDirection: "row",
     flex: 1,
@@ -57,7 +73,7 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   rightCol: {
-    width: 92,
+    width: 96,
     alignItems: "center",
     justifyContent: "flex-start",
   },
@@ -112,13 +128,17 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#111827",
   },
-  // Consignee is the field a handler needs at a glance besides the
-  // destination -- same "large" treatment CargoTagPDF gives Consignee/
-  // Weight, instead of the regular fieldValue (9) used for Hub/Pcs/KG.
   fieldValueLarge: {
     fontSize: 13,
     fontFamily: "Helvetica-Bold",
     color: "#111827",
+  },
+  nameValue: {
+    fontSize: 16,
+    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
+    color: "#000000",
+    marginTop: 2,
   },
   typeBadge: {
     backgroundColor: "#FFFFFF",
@@ -138,11 +158,34 @@ const styles = StyleSheet.create({
   qrImage: {
     width: 82,
     height: 82,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   qrCaption: {
     fontSize: 5.5,
     color: "#6E7B8D",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  contentUnderQr: {
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    width: "100%",
+  },
+  contentLabelUnderQr: {
+    fontSize: 5.5,
+    color: "#4B5563",
+    textTransform: "uppercase",
+    fontFamily: "Helvetica",
+    marginBottom: 1.5,
+  },
+  contentValueUnderQr: {
+    fontSize: 9.5,
+    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
+    color: "#000000",
     textAlign: "center",
   },
   footer: {
@@ -180,6 +223,11 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
       </View>
       <View style={styles.divider} />
 
+      <View style={styles.dateRow}>
+        <Text style={styles.dateText}>DATE: {data.date || "—"}</Text>
+        <Text style={styles.dateText}>EHI LOGISTICS</Text>
+      </View>
+
       <View style={styles.body}>
         <View style={styles.leftCol}>
           <Text style={styles.destLabel}>Destination</Text>
@@ -210,19 +258,16 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
               <Text style={styles.fieldLabel}>KG</Text>
               <Text style={styles.fieldValue}>{data.kg || "—"}</Text>
             </View>
-          </View>
-
-          <View style={styles.fieldRow}>
             <View style={styles.fieldBlock}>
               <Text style={styles.fieldLabel}>Hub</Text>
-              <Text style={styles.fieldValue}>{data.hubName || "—"}</Text>
+              <Text style={styles.fieldValue}>{getHubCode(data.hubName) || "—"}</Text>
             </View>
           </View>
 
           <View style={styles.fieldRow}>
             <View style={styles.fieldBlock}>
               <Text style={styles.fieldLabel}>Consignee</Text>
-              <Text style={styles.fieldValueLarge}>{data.name || "—"}</Text>
+              <Text style={styles.nameValue}>{truncateForTag(data.name || "—", 30)}</Text>
             </View>
           </View>
         </View>
@@ -232,12 +277,16 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
             <Image src={data.qrCodeDataUrl} style={styles.qrImage} />
           ) : null}
           <Text style={styles.qrCaption}>Scan to track</Text>
+
+          <View style={styles.contentUnderQr}>
+            <Text style={styles.contentLabelUnderQr}>Content</Text>
+            <Text style={styles.contentValueUnderQr}>{truncateForTag(data.contentType || "—", 12)}</Text>
+          </View>
         </View>
       </View>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>EHI MULTISYSTEMS NIGERIA LIMITED</Text>
-        <Text style={styles.footerText}>{data.date || ""}</Text>
       </View>
     </Page>
   </Document>

@@ -3,6 +3,7 @@ import { User } from '../lib/types';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Theme } from '../lib/useTheme';
+import { getHubCode } from '../lib/helpers';
 
 import ehiLogo from '../assets/branding/ehi-logo.png';
 
@@ -95,7 +96,7 @@ export const Header = ({
               {user.name}
             </div>
             <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>
-              {user.hub}
+              {getHubCode(user.hub)}
             </div>
           </div>
 
@@ -181,7 +182,7 @@ export const Header = ({
                       {user.name}
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--color-accent-amber)', marginTop: 2 }}>
-                      {user.hub}
+                      {getHubCode(user.hub)}
                     </div>
                   </div>
                   <button

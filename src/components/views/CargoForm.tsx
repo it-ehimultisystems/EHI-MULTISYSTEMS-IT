@@ -457,11 +457,14 @@ export const CargoForm = ({
   // is needed here.
   useEffect(() => {
     if (!showCloseModal || !periodStart || !periodEnd) return;
+    const startD = new Date(periodStart);
+    const endD = new Date(periodEnd);
+    if (isNaN(startD.getTime()) || isNaN(endD.getTime())) return;
     let active = true;
     setCloseSummaryLoading(true);
     (async () => {
-      const startISO = new Date(periodStart).toISOString();
-      const endISO = new Date(periodEnd).toISOString();
+      const startISO = startD.toISOString();
+      const endISO = endD.toISOString();
       const [entriesRes, expRes] = await Promise.all([
         supabase.from('cargo_entries')
           .select('amount,receipt_mode,route,consignee_name,airline,awb_tag_number,total_pcs,total_kg,content_type,bank,created_at')
@@ -494,15 +497,21 @@ export const CargoForm = ({
 
   const handleCloseDay = async () => {
     if (closingDay) return;
-    const startISO = new Date(periodStart).toISOString();
-    const endISO = new Date(periodEnd).toISOString();
-    if (new Date(endISO) <= new Date(startISO)) {
+    const startD = new Date(periodStart);
+    const endD = new Date(periodEnd);
+    if (isNaN(startD.getTime()) || isNaN(endD.getTime())) {
+      showToast({ message: 'Please enter valid start and end times.', type: 'warning' });
+      return;
+    }
+    const startISO = startD.toISOString();
+    const endISO = endD.toISOString();
+    if (endD <= startD) {
       showToast({ message: 'End time must be after start time.', type: 'warning' });
       return;
     }
     const ok = await confirm({
       title: 'Close Cargo Desk period?',
-      message: `Close the cargo period from ${new Date(startISO).toLocaleString('en-GB')} to ${new Date(endISO).toLocaleString('en-GB')}? This cannot be undone.`,
+      message: `Close the cargo period from ${startD.toLocaleString('en-GB')} to ${endD.toLocaleString('en-GB')}? This cannot be undone.`,
       confirmLabel: 'Close Period',
       tone: 'danger',
     });
@@ -899,6 +908,7 @@ export const CargoForm = ({
       commissionRate: gateWeighCommissionRate,
       pieces: selectedIntake.pieces,
       kg: weightNum,
+      enteredByName: user.name,
     };
 
     // 1. Add to central transactions grid
@@ -1101,6 +1111,7 @@ export const CargoForm = ({
       // Corporate filter and the success-screen copy tell them apart
       // reliably instead of guessing from a hardcoded client-name list.
       clientType: "Individual",
+      enteredByName: user.name,
     } as Transaction;
 
     onAddTx(tx);
@@ -2595,7 +2606,7 @@ export const CargoForm = ({
                   <Calendar size={12} /> Closing Period
                 </div>
                 <div className="flex items-center gap-2">
-                  <input type="datetime-local" value={periodStart} onChange={e => setPeriodStart(e.target.value)} className="ehi-input text-[12px]" />
+                  <input type="datetime-local" value={periodStart} onChange={e => setPeriodStart(e.target.value)} disabled={!!lastCloseEnd} className="ehi-input text-[12px] disabled:opacity-60 disabled:cursor-not-allowed" />
                   <span className="text-[var(--color-muted)] text-[11px]">to</span>
                   <input type="datetime-local" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} className="ehi-input text-[12px]" />
                 </div>

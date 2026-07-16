@@ -186,7 +186,7 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
   // by ~30-50pt even in that minimal case, before any optional section or
   // wrapped text, so every receipt with a QR code (i.e. every real one)
   // was already silently spilling a mostly-blank second page.
-  let h = 430;
+  let h = 445;
   if (data.qrCodeDataUrl) h += 70;
   if (data.pickupPin) h += 70;
   if (data.bankName) h += 20;
@@ -250,6 +250,10 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
       <View style={styles.row}>
         <Text style={styles.label}>Date</Text>
         <Text style={styles.value}>{data.date}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.label}>Agent</Text>
+        <Text style={styles.value}>{data.agentName || 'System'}</Text>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Airline</Text>

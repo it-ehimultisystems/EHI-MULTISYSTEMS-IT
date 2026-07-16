@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
-import { fmt, tnow, isStandalonePWA } from "../../lib/helpers";
+import { fmt, tnow, isStandalonePWA, getHubCode } from "../../lib/helpers";
 import { useContentTypes } from "../../lib/contentTypes";
 import { useBanks } from "../../lib/banks";
 import { BackButton } from "../BackButton";
@@ -25,6 +25,7 @@ import { QRCode } from "../QRCode";
 import TagPrintHistory from "./TagPrintHistory";
 import { supabase } from "../../lib/supabase";
 import { useToast } from "../../lib/ToastContext";
+import { useConfirm } from "../../lib/ConfirmContext";
 
 type Entry = {
   id: string;
@@ -89,6 +90,7 @@ export const TransactionLedger = ({
   const [vjFlightFilter, setVjFlightFilter] = useState("All");
   const [vjDestFilter, setVjDestFilter] = useState("All");
   const { showToast } = useToast();
+  const confirm = useConfirm();
 
   const entries = useMemo(() => {
     const list: Entry[] = [
@@ -611,6 +613,50 @@ export const TransactionLedger = ({
     setPosCodeInput({ id: '', code: '' });
   };
 
+  const handleClearDebt = async (e: Entry, evt?: React.MouseEvent) => {
+    if (evt) evt.stopPropagation();
+    if (e.source !== 'transaction') return;
+    const tx = e.raw as Transaction;
+    const remaining = tx.amount - (tx.amountPaid || 0);
+    if (remaining <= 0) return;
+
+    const ok = await confirm({
+      title: 'Clear Outstanding Debt?',
+      message: `Are you sure you want to mark the remaining debt of ${fmt(remaining)} for ${tx.name} as fully paid?`,
+      confirmLabel: 'Clear Debt',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const historyEntry = {
+      amount: remaining,
+      mode: 'Cash' as const,
+      by: user.name || 'Unknown',
+      at: new Date().toISOString()
+    };
+    
+    const updated: Transaction = {
+      ...tx,
+      amountPaid: tx.amount,
+      paymentHistory: [...(tx.paymentHistory || []), historyEntry],
+      mode: 'Debt Paid',
+      ...(tx.type === 'package' ? {
+        debtPaid: true,
+        debtPaidAt: new Date().toISOString()
+      } : {})
+    };
+
+    onUpdateTx(updated);
+    showToast({ message: 'Debt cleared successfully', type: 'success' });
+    if (viewingDetail && viewingDetail.id === tx.id) {
+      setViewingDetail({
+        ...viewingDetail,
+        mode: 'Debt Paid',
+        raw: updated
+      });
+    }
+  };
+
   // Edit allowed only when not view-only AND user has can_print_ledger or is super_admin
   const canEdit = !viewOnly &&
     ['accountant', 'admin', 'super_admin'].includes(user.role) &&
@@ -1029,6 +1075,19 @@ export const TransactionLedger = ({
                             )}
                           </div>
                         )}
+                        {e.mode === 'Debt' && (
+                          <div onClick={(evt) => evt.stopPropagation()}>
+                            <button
+                              onClick={() => handleClearDebt(e)}
+                              className="flex items-center justify-center text-[var(--color-success)] hover:text-emerald-400"
+                              title="Clear Outstanding Debt"
+                            >
+                              <div className="w-4 h-4 border border-[var(--color-success)] rounded flex items-center justify-center">
+                                <span className="text-[10px] font-bold font-sans text-current leading-none">+</span>
+                              </div>
+                            </button>
+                          </div>
+                        )}
                       </td>
                     )}
                     {canSeePin && (
@@ -1066,6 +1125,11 @@ export const TransactionLedger = ({
                       <div className="text-[9px] text-[var(--color-muted)] mt-0.5 leading-snug line-clamp-2">
                         {e.detail}
                       </div>
+                      {e.raw.remarks && (
+                        <div className="text-[9px] text-[var(--color-success)] font-sans italic mt-1 leading-snug">
+                          Remarks: {e.raw.remarks}
+                        </div>
+                      )}
                     </td>
                     {/* Status */}
                     <td className="py-2.5 px-2 text-center">
@@ -1085,13 +1149,14 @@ export const TransactionLedger = ({
                           e.mode === "Transfer" ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]" :
                           e.mode === "POS" ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]" :
                           e.mode === "Expense" ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]" :
+                          e.mode === "Debt Paid" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
                           "border border-[var(--color-error)] text-[var(--color-error)]"
                         }`}>
-                          {e.mode === "Debt" ? "Credit" : e.mode}
-                          {e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && (
+                          {e.mode === "Debt" ? "Credit" : e.mode === "Debt Paid" ? "Debt Cleared" : e.mode}
+                          {e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && e.mode !== 'Debt Paid' && (
                             <Check size={10} strokeWidth={3} className="text-current opacity-80" />
                           )}
-                          {!e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && (
+                          {!e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && e.mode !== 'Debt Paid' && (
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-amber)] animate-pulse" />
                           )}
                         </span>
@@ -1181,6 +1246,12 @@ export const TransactionLedger = ({
                       📞 {viewingDetail.raw.phone}
                     </div>
                   )}
+                  {viewingDetail.raw.remarks && (
+                    <div className="mt-2 pt-2 border-t border-[var(--color-border)] flex flex-col gap-0.5">
+                      <span className="text-[10px] font-mono text-[var(--color-muted)] uppercase">Remarks</span>
+                      <span className="text-[12px] text-[var(--color-foreground)] italic font-sans">{viewingDetail.raw.remarks}</span>
+                    </div>
+                  )}
                 </div>
               </section>
 
@@ -1268,9 +1339,9 @@ export const TransactionLedger = ({
                     </div>
                     {(viewingDetail.raw.hub || viewingDetail.raw.destination) && (
                       <div className="text-[11px] text-[var(--color-muted)] flex items-center gap-1.5 mt-1 font-sans">
-                        <span>{viewingDetail.raw.hub || 'Origin'}</span>
+                        <span>{getHubCode(viewingDetail.raw.hub) || 'Origin'}</span>
                         <ChevronRight size={10} />
-                        <span>{viewingDetail.raw.destination || 'Destination'}</span>
+                        <span>{getHubCode(viewingDetail.raw.destination) || 'Destination'}</span>
                       </div>
                     )}
                   </div>
@@ -1279,7 +1350,7 @@ export const TransactionLedger = ({
 
               {/* Timestamps */}
               <section className="text-[10px] font-mono text-[var(--color-muted)] space-y-1 pb-4">
-                <div>Logged at: {viewingDetail.time} {viewingDetail.raw.loggedBy ? `by ${viewingDetail.raw.loggedBy}` : ''}</div>
+                <div>Logged at: {viewingDetail.time} {viewingDetail.raw.enteredByName ? `by ${viewingDetail.raw.enteredByName}` : (viewingDetail.raw.loggedBy ? `by ${viewingDetail.raw.loggedBy}` : '')}</div>
                 {viewingDetail.raw.paymentConfirmed && viewingDetail.raw.confirmedAt && (
                   <div>Confirmed at: {viewingDetail.raw.confirmedAt}</div>
                 )}
@@ -1297,6 +1368,14 @@ export const TransactionLedger = ({
                     >
                       <QrCode size={14} /> Scan
                     </button>
+                    {viewingDetail.mode === 'Debt' && isAccountantOrAdmin && (
+                      <button 
+                        onClick={(evt) => handleClearDebt(viewingDetail, evt)}
+                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold"
+                      >
+                        <CheckSquare size={14} /> Clear Debt
+                      </button>
+                    )}
                     {viewingDetail.mode !== 'Debt' && !viewingDetail.raw.paymentConfirmed && isAccountantOrAdmin && (
                       <button 
                         onClick={(evt) => toggleConfirm(viewingDetail, evt)}

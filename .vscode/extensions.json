@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "denizhandaklr.kimi-lm-provider",
-        "ollama.ollama"
+        "ollama.ollama",
+        "continue.continue"
     ]
 }

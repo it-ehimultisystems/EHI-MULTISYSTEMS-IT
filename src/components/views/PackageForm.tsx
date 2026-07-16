@@ -168,6 +168,7 @@ export const PackageForm = ({
       contents: actualContents,
       hub: user.hub,
       hub_id: user.hub_id,
+      enteredByName: user.name,
       debtPaid: mode === "Debt" ? false : undefined,
     };
 

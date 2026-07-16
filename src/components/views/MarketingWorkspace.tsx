@@ -339,6 +339,7 @@ export const MarketingWorkspace = ({
       status: "Intake",
       route,
       hub: user.hub,
+      enteredByName: user.name,
       // Explicit fields so EHIApp doesn't need to parse the detail string
       ...(bb > 0 || mb > 0 || sb > 0 ? { _bb: bb, _mb: mb, _sb: sb } as any : {}),
       ...(totalKg > 0 ? { _bbKg: parseFloat(bbKg) || 0, _mbKg: parseFloat(mbKg) || 0, _sbKg: parseFloat(sbKg) || 0 } as any : {}),
