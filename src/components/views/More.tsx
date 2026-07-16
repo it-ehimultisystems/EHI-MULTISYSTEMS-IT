@@ -20,6 +20,9 @@ import { CorporateBilling } from './CorporateBilling';
 import { ContentTypes } from './ContentTypes';
 import { ExpenseCategories } from './ExpenseCategories';
 import { Banks } from './Banks';
+import { SpecialGoodsRates } from './SpecialGoodsRates';
+import { MinimumCharges } from './MinimumCharges';
+import { RatesList } from './RatesList';
 
 import { useState } from 'react';
 import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../../lib/types';
@@ -53,6 +56,9 @@ import {
   ReceiptIcon,
   TagIcon,
   BankIcon,
+  ListBulletsIcon,
+  SparkleIcon,
+  ScalesIcon,
 } from '@phosphor-icons/react';
 import { ChevronRight } from 'lucide-react';
 
@@ -67,6 +73,10 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   const [contentTypesView, setContentTypesView] = useState(false);
   const [expenseCategoriesView, setExpenseCategoriesView] = useState(false);
   const [banksView, setBanksView] = useState(false);
+  const [specialGoodsRatesView, setSpecialGoodsRatesView] = useState(false);
+  const [specialGoodsPreset, setSpecialGoodsPreset] = useState<string | undefined>(undefined);
+  const [minimumChargesView, setMinimumChargesView] = useState(false);
+  const [ratesListView, setRatesListView] = useState(false);
 
   // Premium Enterprise modules views states
   const [bankReconView, setBankReconView] = useState(false);
@@ -168,7 +178,31 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (contentTypesView) {
-    return <ContentTypes onBack={() => setContentTypesView(false)} />;
+    return <ContentTypes onBack={() => setContentTypesView(false)} onManageRates={(contentTypeId) => { setContentTypesView(false); setSpecialGoodsPreset(contentTypeId); setSpecialGoodsRatesView(true); }} />;
+  }
+
+  if (specialGoodsRatesView) {
+    return <SpecialGoodsRates onBack={() => { setSpecialGoodsRatesView(false); setSpecialGoodsPreset(undefined); }} presetContentTypeId={specialGoodsPreset} />;
+  }
+
+  if (minimumChargesView) {
+    return <MinimumCharges onBack={() => setMinimumChargesView(false)} />;
+  }
+
+  if (ratesListView) {
+    return <RatesList
+      onBack={() => setRatesListView(false)}
+      onOpenConfig={(target) => {
+        setRatesListView(false);
+        if (target === 'pricing') setPricingView(true);
+        else if (target === 'hubRates') setHubCargoRatesView(true);
+        else if (target === 'excessBaggage') setExcessBaggageAirlinesView(true);
+        else if (target === 'contentTypes') setContentTypesView(true);
+        else if (target === 'specialGoods') setSpecialGoodsRatesView(true);
+        else if (target === 'minimumCharges') setMinimumChargesView(true);
+        else if (target === 'airlineCommissions') setAirlineCommissionsView(true);
+      }}
+    />;
   }
 
   if (expenseCategoriesView) {
@@ -288,6 +322,13 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
       {/* Finance */}
       <SectionLabel label="Finance" />
       <div>
+        <MenuItem
+          icon={ListBulletsIcon}
+          title="Rates Directory"
+          subtitle="View every configured rate — read-only, edit from each config screen"
+          onClick={() => { if (canAccessTab(user, 'More:RatesList', excessBaggageAirlines)) setRatesListView(true); }}
+          disabled={!canAccessTab(user, 'More:RatesList', excessBaggageAirlines)}
+        />
         <MenuItem
           icon={CreditCardIcon}
           title="Credit & Debit"
@@ -472,6 +513,20 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           subtitle="Cargo/package content categories staff pick from at intake"
           onClick={() => { if (canAccessTab(user, 'More:ContentTypes', excessBaggageAirlines)) setContentTypesView(true); }}
           disabled={!canAccessTab(user, 'More:ContentTypes', excessBaggageAirlines)}
+        />
+        <MenuItem
+          icon={SparkleIcon}
+          title="Special Goods Rates"
+          subtitle="Per-airline, weight-tiered rates for flagged content types"
+          onClick={() => { if (canAccessTab(user, 'More:SpecialGoodsRates', excessBaggageAirlines)) setSpecialGoodsRatesView(true); }}
+          disabled={!canAccessTab(user, 'More:SpecialGoodsRates', excessBaggageAirlines)}
+        />
+        <MenuItem
+          icon={ScalesIcon}
+          title="Minimum Charges"
+          subtitle="Flat weight-bracket floor per airline + route"
+          onClick={() => { if (canAccessTab(user, 'More:MinimumCharges', excessBaggageAirlines)) setMinimumChargesView(true); }}
+          disabled={!canAccessTab(user, 'More:MinimumCharges', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ReceiptIcon}

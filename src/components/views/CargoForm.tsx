@@ -4,6 +4,8 @@ import { fmt, roundMoney, tnow, generatePickupPin, normalizeAirlineName, getHubC
 import { useHubRoutes, useValidatedRouteSelection } from "../../lib/hubRoutes";
 import { useAirlines, addAirlineIfMissing } from "../../lib/airlines";
 import { useContentTypes } from "../../lib/contentTypes";
+import { useSpecialGoodsRates, resolveSpecialGoodsRate } from "../../lib/specialGoodsRates";
+import { useMinimumCharges, resolveMinimumCharge } from "../../lib/minimumCharges";
 import { useBanks } from "../../lib/banks";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { isTagAlreadyDelivered } from "../../lib/scanLogic";
@@ -302,15 +304,23 @@ export const CargoForm = ({
     };
   }, [user.hub_id]);
 
-  // Three-tier rate lookup for retail cargo pricing: exact hub+airline+route
-  // override, then this hub's default for the route (any airline), then the
+  const specialGoodsRates = useSpecialGoodsRates();
+  const minimumCharges = useMinimumCharges();
+
+  // Rate lookup for retail cargo pricing, highest priority first: a
+  // special-goods kg-tier rate for this content type + airline (set in
+  // Special Goods Rates, only applies when the content type is flagged),
+  // then the normal 3-tier cascade -- exact hub+airline+route override,
+  // then this hub's default for the route (any airline), then the
   // company-wide standard_cargo_rates value. Returns null (not a guessed
   // number) when nothing is configured at any tier -- staff must then price
   // the entry manually rather than the form silently assuming a rate no one
   // actually set (the previous `standardRates[route] || 500` behavior this
   // replaces could silently under/overcharge for any route/hub that simply
   // hadn't been configured yet).
-  const resolveRate = (forAirline: string, forRoute: string): number | null => {
+  const resolveRate = (forAirline: string, forRoute: string, forContentType: string, forKg: number): number | null => {
+    const special = resolveSpecialGoodsRate(specialGoodsRates, forContentType, forAirline, forKg);
+    if (special != null) return special;
     const exact = hubAirlineRouteRates[`${forAirline}|${forRoute}`];
     if (exact != null) return exact;
     const hubDefault = hubRouteRates[forRoute];
@@ -324,16 +334,45 @@ export const CargoForm = ({
   // used to live) so both the render-time price preview and the submit
   // handler agree on the same airline name used for the rate lookup.
   const actualAirline = airline === "Other" && customAirline.trim() ? customAirline.trim() : airline;
+  // Same reasoning as actualAirline above -- hoisted so the preview and
+  // submit paths (and the special-goods/minimum-charge lookups both use)
+  // agree on one value instead of each re-deriving it.
+  const actualContentType = contentType === "Other" ? customContentType : contentType;
 
-  // Compute auto-price from KG × rate — used to pre-fill the amount field.
-  // Derived without setState so there is no extra re-render on every keystroke.
+  // Compute auto-price from KG × rate, floored by any matching minimum
+  // charge bracket for this airline+route — used to pre-fill the amount
+  // field. Derived without setState so there is no extra re-render on every
+  // keystroke.
   const autoAmount = useMemo(() => {
     const w = Math.round(parseFloat(kg)) || 0;
-    const rate = resolveRate(actualAirline, route);
-    if (rate == null) return "";
-    return w > 0 ? roundMoney(w * rate).toString() : "";
+    if (w <= 0) return "";
+    const rate = resolveRate(actualAirline, route, actualContentType, w);
+    const minCharge = resolveMinimumCharge(minimumCharges, actualAirline, route, w);
+    if (rate == null && minCharge == null) return "";
+    const computed = rate != null ? roundMoney(w * rate) : 0;
+    const final = minCharge != null ? Math.max(computed, minCharge) : computed;
+    return final.toString();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kg, route, actualAirline, standardRates, hubRouteRates, hubAirlineRouteRates]);
+  }, [kg, route, actualContentType, actualAirline, standardRates, hubRouteRates, hubAirlineRouteRates, specialGoodsRates, minimumCharges]);
+
+  // Which of the two overrides (if any) determined autoAmount -- surfaced
+  // as a badge near the price preview so staff aren't confused by a number
+  // that doesn't match kg × the route rate they're used to seeing.
+  const priceOverrideInfo = useMemo(() => {
+    const w = Math.round(parseFloat(kg)) || 0;
+    if (w <= 0) return null;
+    const specialRate = resolveSpecialGoodsRate(specialGoodsRates, actualContentType, actualAirline, w);
+    const minCharge = resolveMinimumCharge(minimumCharges, actualAirline, route, w);
+    const perKgAmount = specialRate != null ? roundMoney(w * specialRate) : null;
+    if (minCharge != null && (perKgAmount == null || minCharge > perKgAmount)) {
+      return { type: 'minimum' as const, amount: minCharge };
+    }
+    if (specialRate != null) {
+      return { type: 'special' as const, rate: specialRate };
+    }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kg, route, actualContentType, actualAirline, specialGoodsRates, minimumCharges]);
 
   const availableAirlines = useAirlines();
 
@@ -933,14 +972,18 @@ export const CargoForm = ({
 
   // --- RETAIL BILLING SUBMIT ---
   const actualConsignee = consignee === "Other" ? customConsignee : consignee;
-  const actualContentType = contentType === "Other" ? customContentType : contentType;
   const w = Math.round(parseFloat(kg)) || 0;
-  const rate = resolveRate(actualAirline, route);
-  // null rate = nothing configured at any tier (hub+airline+route, hub
-  // default, or company-wide) -- minAmount of 0 here is not "free," it's
-  // "no computed floor," and isRetailFormValid below only enforces the
-  // >= minAmount check when a real rate was found.
-  const minAmount = rate != null ? roundMoney(w * rate) : 0;
+  const rate = resolveRate(actualAirline, route, actualContentType, w);
+  const minCharge = resolveMinimumCharge(minimumCharges, actualAirline, route, w);
+  // null rate/minCharge = nothing configured at any tier (special-goods,
+  // hub+airline+route, hub default, company-wide, or a minimum-charge
+  // bracket) -- minAmount of 0 here is not "free," it's "no computed
+  // floor," and isRetailFormValid below only enforces the >= minAmount
+  // check when a real rate or minimum charge was found. When both exist,
+  // the minimum charge floors the per-kg computed amount (see autoAmount
+  // above, which this mirrors).
+  const perKgAmount = rate != null ? roundMoney(w * rate) : null;
+  const minAmount = minCharge != null ? Math.max(perKgAmount ?? 0, minCharge) : (perKgAmount ?? 0);
   // Use manual amount if typed, else fall back to auto-computed price
   const effectiveAmount = amount || autoAmount;
   const parsedAmount = parseFloat(effectiveAmount) || 0;
@@ -959,8 +1002,8 @@ export const CargoForm = ({
       actualContentType.trim().length > 0 &&
       w > 0 &&
       Number.isInteger(piecesNum) && piecesNum > 0 &&
-      (rate == null ? parsedAmount > 0 : parsedAmount >= minAmount && parsedAmount > 0),
-    [actualConsignee, route, actualContentType, w, piecesNum, parsedAmount, minAmount, rate],
+      (rate == null && minCharge == null ? parsedAmount > 0 : parsedAmount >= minAmount && parsedAmount > 0),
+    [actualConsignee, route, actualContentType, w, piecesNum, parsedAmount, minAmount, rate, minCharge],
   );
 
   const handleRetailSubmit = async () => {
@@ -1732,12 +1775,19 @@ export const CargoForm = ({
                     className={`ehi-input pl-12 ${parsedAmount < minAmount ? 'border-[var(--color-error)]' : ''}`}
                   />
                 </div>
-                {rate == null ? (
+                {rate == null && minCharge == null ? (
                   <div className="text-[10px] text-[var(--color-accent-amber)] mt-1">No rate configured for this hub/airline/route — enter amount manually</div>
                 ) : (
                   parsedAmount > 0 && parsedAmount < minAmount && (
                     <div className="text-[10px] text-[var(--color-error)] mt-1">Amount cannot be less than ₦{minAmount.toLocaleString()}</div>
                   )
+                )}
+                {priceOverrideInfo && (
+                  <div className="text-[10px] text-[var(--color-accent-cobalt)] mt-1">
+                    {priceOverrideInfo.type === 'special'
+                      ? `Special Goods Rate applied: ${fmt(priceOverrideInfo.rate)}/kg`
+                      : `Minimum Charge applied: ${fmt(priceOverrideInfo.amount)}`}
+                  </div>
                 )}
               </div>
 

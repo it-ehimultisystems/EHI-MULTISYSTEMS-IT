@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tag, Plus, Trash2, Loader, Power } from 'lucide-react';
+import { Tag, Plus, Trash2, Loader, Power, Sparkles } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
@@ -9,9 +9,10 @@ interface ContentType {
   id: string;
   name: string;
   active: boolean;
+  is_special_goods: boolean;
 }
 
-export const ContentTypes = ({ onBack }: { onBack: () => void }) => {
+export const ContentTypes = ({ onBack, onManageRates }: { onBack: () => void; onManageRates?: (contentTypeId: string) => void }) => {
   const [types, setTypes] = useState<ContentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
@@ -55,6 +56,17 @@ export const ContentTypes = ({ onBack }: { onBack: () => void }) => {
     const prev = types;
     setTypes(cur => cur.map(x => x.id === t.id ? { ...x, active: !x.active } : x));
     const { error } = await supabase.from('content_types').update({ active: !t.active, updated_at: new Date().toISOString() }).eq('id', t.id);
+    if (error) {
+      setTypes(prev);
+      showToast({ message: `Failed to save change: ${error.message}`, type: 'error' });
+    }
+  };
+
+  // Same optimistic pattern as handleToggleActive above.
+  const handleToggleSpecialGoods = async (t: ContentType) => {
+    const prev = types;
+    setTypes(cur => cur.map(x => x.id === t.id ? { ...x, is_special_goods: !x.is_special_goods } : x));
+    const { error } = await supabase.from('content_types').update({ is_special_goods: !t.is_special_goods, updated_at: new Date().toISOString() }).eq('id', t.id);
     if (error) {
       setTypes(prev);
       showToast({ message: `Failed to save change: ${error.message}`, type: 'error' });
@@ -128,29 +140,52 @@ export const ContentTypes = ({ onBack }: { onBack: () => void }) => {
 
             <div className="space-y-2">
               {types.map(t => (
-                <div key={t.id} className="ehi-card p-3.5 flex items-center gap-3">
-                  <button
-                    onClick={() => handleDelete(t)}
-                    aria-label={`Remove ${t.name}`}
-                    className="p-1.5 bg-[rgba(239,68,68,0.08)] hover:bg-[rgba(239,68,68,0.18)] rounded-lg text-[var(--color-error)] transition-colors shrink-0"
-                  >
-                    <Trash2 size={13} strokeWidth={1.5} />
-                  </button>
-                  <div className="w-8 h-8 bg-[var(--color-surface-2)] rounded-lg flex items-center justify-center shrink-0">
-                    <Tag size={15} strokeWidth={1.5} className="text-[var(--color-muted)]" />
+                <div key={t.id} className="ehi-card p-3.5 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleDelete(t)}
+                      aria-label={`Remove ${t.name}`}
+                      className="p-1.5 bg-[rgba(239,68,68,0.08)] hover:bg-[rgba(239,68,68,0.18)] rounded-lg text-[var(--color-error)] transition-colors shrink-0"
+                    >
+                      <Trash2 size={13} strokeWidth={1.5} />
+                    </button>
+                    <div className="w-8 h-8 bg-[var(--color-surface-2)] rounded-lg flex items-center justify-center shrink-0">
+                      <Tag size={15} strokeWidth={1.5} className="text-[var(--color-muted)]" />
+                    </div>
+                    <span className="flex-1 font-sans font-semibold text-[13px] text-[var(--color-foreground)]">{t.name}</span>
+                    <button
+                      onClick={() => handleToggleActive(t)}
+                      aria-label={t.active ? `Deactivate ${t.name}` : `Activate ${t.name}`}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-colors ${
+                        t.active
+                          ? 'bg-[rgba(34,197,94,0.1)] text-[var(--color-success)]'
+                          : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
+                      }`}
+                    >
+                      <Power size={11} /> {t.active ? 'Active' : 'Inactive'}
+                    </button>
                   </div>
-                  <span className="flex-1 font-sans font-semibold text-[13px] text-[var(--color-foreground)]">{t.name}</span>
-                  <button
-                    onClick={() => handleToggleActive(t)}
-                    aria-label={t.active ? `Deactivate ${t.name}` : `Activate ${t.name}`}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-colors ${
-                      t.active
-                        ? 'bg-[rgba(34,197,94,0.1)] text-[var(--color-success)]'
-                        : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
-                    }`}
-                  >
-                    <Power size={11} /> {t.active ? 'Active' : 'Inactive'}
-                  </button>
+                  <div className="flex items-center gap-2 pl-11">
+                    <button
+                      onClick={() => handleToggleSpecialGoods(t)}
+                      aria-label={t.is_special_goods ? `Unflag ${t.name} as special goods` : `Flag ${t.name} as special goods`}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-colors ${
+                        t.is_special_goods
+                          ? 'bg-[rgba(245,158,11,0.12)] text-[var(--color-accent-amber)]'
+                          : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
+                      }`}
+                    >
+                      <Sparkles size={11} /> {t.is_special_goods ? 'Special Goods' : 'Mark Special Goods'}
+                    </button>
+                    {t.is_special_goods && onManageRates && (
+                      <button
+                        onClick={() => onManageRates(t.id)}
+                        className="text-[10px] font-bold text-[var(--color-accent-cobalt)] hover:opacity-80 transition-opacity"
+                      >
+                        Manage Rates →
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               {types.length === 0 && (
