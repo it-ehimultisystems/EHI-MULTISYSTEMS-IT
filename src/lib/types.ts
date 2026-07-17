@@ -225,7 +225,8 @@ export interface Transaction {
   // Partial debt repayment tracking (cargo/VJ/marketing debts)
   amountPaid?: number;
   paymentHistory?: { amount: number; mode: 'Cash' | 'Transfer'; by: string; at: string }[];
-  clientType?: 'Corporate' | 'Individual';
+  clientType?: 'Corporate' | 'Individual' | 'Office Work';
+  raw?: any;
   // Retail cargo debtor contact, for following up on an individual (not
   // corporate-monthly) debt -- captured at entry, optional.
   consigneePhone?: string;

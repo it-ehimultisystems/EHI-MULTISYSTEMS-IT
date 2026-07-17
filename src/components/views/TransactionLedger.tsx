@@ -1013,7 +1013,7 @@ export const TransactionLedger = ({
                     // Parse date and time safely from created_at or fallback to time string
                     let displayDate = '';
                     let displayTime = '';
-                    const dtStr = e.created_at || (e.raw && e.raw.created_at) || e.time;
+                    const dtStr = (e as any).created_at || (e.raw && e.raw.created_at) || e.time;
                     try {
                       const d = new Date(dtStr);
                       if (!isNaN(d.getTime())) {
