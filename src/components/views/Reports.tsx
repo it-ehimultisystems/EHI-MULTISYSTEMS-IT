@@ -13,6 +13,7 @@ const REPORT_TYPES = [
   { id: 'debtors',    label: 'Debtor Aging',        desc: 'Outstanding balances 0-30/31-60/61-90/90+' },
   { id: 'staff',      label: 'Staff Productivity',  desc: 'Entries and revenue per agent' },
   { id: 'hubs',       label: 'Hub Comparison',      desc: 'Per-hub revenue (admin only)' },
+  { id: 'b2b_sales',  label: 'Office Work (B2B) Sales', desc: 'All Office Work client transactions' },
 ];
 
 const PRESETS = [
@@ -35,6 +36,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
   const [hubNames, setHubNames] = useState<Record<string, string>>({});
   const [fetchedTx, setFetchedTx] = useState<Transaction[]>([]);
   const [isLoadingTx, setIsLoadingTx] = useState(false);
+  const [corpClientsMap, setCorpClientsMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     supabase.from('hubs').select('id, name, code').then(({ data }) => {
@@ -42,6 +44,13 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
         const map: Record<string, string> = {};
         data.forEach((h: any) => { map[h.id] = `${h.code}/${h.name}`; });
         setHubNames(map);
+      }
+    });
+    supabase.from('corporate_clients').select('id, company_name').then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((c: any) => { map[c.id] = c.company_name; });
+        setCorpClientsMap(map);
       }
     });
   }, []);
@@ -80,7 +89,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
 
       try {
         const [cargoRes, vjRes, mktRes, profilesRes] = await Promise.all([
-          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id').gte('created_at', fromISO).lte('created_at', toISO)),
+          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,corporate_client_id').gte('created_at', fromISO).lte('created_at', toISO)),
           addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', fromISO).lte('created_at', toISO)),
           addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by').gte('created_at', fromISO).lte('created_at', toISO)),
           supabase.from('user_profiles').select('id,name')
@@ -110,6 +119,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               bank: r.bank,
               hub_id: r.hub_id,
               route: r.route,
+              raw: { corporate_client_id: r.corporate_client_id }
             });
           });
         }
@@ -258,38 +268,121 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
   const hubReport = useMemo(() => {
     const byHub: Record<string, { revenue: number; entries: number }> = {};
     filteredTx.forEach(t => {
-      // Fall back to the viewing user's own hub only when a transaction has no hub_id
-      // (legacy rows created before hub_id was tracked)
-      const key = t.hub_id || `unassigned:${user.hub}`;
-      if (!byHub[key]) byHub[key] = { revenue: 0, entries: 0 };
-      byHub[key].revenue += t.amount;
-      byHub[key].entries += 1;
+      const hid = t.hub_id || 'Unknown';
+      if (!byHub[hid]) byHub[hid] = { revenue: 0, entries: 0 };
+      byHub[hid].revenue += t.amount;
+      byHub[hid].entries += 1;
     });
-    return Object.entries(byHub)
-      .map(([key, d]) => ({
-        hub: key.startsWith('unassigned:') ? key.replace('unassigned:', '') : (hubNames[key] || 'Unknown Hub'),
-        revenue: d.revenue,
-        entries: d.entries,
-      }))
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [filteredTx, user.hub, hubNames]);
+    return Object.entries(byHub).map(([id, d]) => ({
+      hub_id: id,
+      hub_name: hubNames[id] || id,
+      ...d
+    })).sort((a, b) => b.revenue - a.revenue);
+  }, [filteredTx, hubNames]);
+
+  const b2bReport = useMemo(() => {
+    const corporateClientNames = Object.values(corpClientsMap).map(n => n.toLowerCase());
+    const b2bTxs = filteredTx.filter(t => {
+      const isLinked = t.raw?.corporate_client_id != null;
+      const nameMatch = corporateClientNames.includes((t.name || '').toLowerCase());
+      return t.type === 'cargo' && (isLinked || nameMatch);
+    });
+
+    const byClient: Record<string, { revenue: number; entries: number; routeCount: Set<string> }> = {};
+    b2bTxs.forEach(t => {
+      const clientId = t.raw?.corporate_client_id;
+      const cName = clientId ? (corpClientsMap[clientId] || t.name) : t.name;
+      
+      if (!byClient[cName]) byClient[cName] = { revenue: 0, entries: 0, routeCount: new Set() };
+      byClient[cName].revenue += t.amount;
+      byClient[cName].entries += 1;
+      if (t.route) byClient[cName].routeCount.add(t.route);
+    });
+
+    return {
+      items: Object.entries(byClient)
+        .map(([name, d]) => ({ name, revenue: d.revenue, entries: d.entries, routes: d.routeCount.size }))
+        .sort((a, b) => b.revenue - a.revenue),
+      totalRevenue: b2bTxs.reduce((s, t) => s + t.amount, 0),
+      totalEntries: b2bTxs.length
+    };
+  }, [filteredTx, corpClientsMap]);
 
   // ── Export functions ─────────────────────────────
 
-  const exportToExcel = () => {
-    const wb = XLSX.utils.book_new();
+  const handleDownloadExcel = () => {
+    let wsData: any[][] = [];
     if (selectedReport === 'revenue') {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(revenueReport.streams), 'Streams');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(revenueReport.modes), 'Payment Modes');
+      wsData = [
+        ['EHI MULTISYSTEMS - REVENUE SUMMARY'],
+        ['Period:', dateRange.from.toLocaleDateString(), 'to', dateRange.to.toLocaleDateString()],
+        [],
+        ['Category', 'Count', 'Amount (NGN)'],
+        ...revenueReport.streams.map(s => [s.name, s.count, s.amount]),
+        [],
+        ['Payment Modes'],
+        ...revenueReport.modes.map(m => [m.name, '', m.amount]),
+        [],
+        ['TOTAL REVENUE', '', revenueReport.total]
+      ];
+    } else if (selectedReport === 'routes') {
+      wsData = [
+        ['EHI MULTISYSTEMS - ROUTE PROFITABILITY'],
+        ['Period:', dateRange.from.toLocaleDateString(), 'to', dateRange.to.toLocaleDateString()],
+        [],
+        ['Route', 'Transactions', 'Air Cargo (NGN)', 'Marketing (NGN)', 'Total Revenue (NGN)'],
+        ...routeReport.map(r => [r.route, r.count, r.cargo, r.mktg, r.revenue])
+      ];
+    } else if (selectedReport === 'customers') {
+      wsData = [
+        ['EHI MULTISYSTEMS - TOP CONSIGNEES'],
+        ['Period:', dateRange.from.toLocaleDateString(), 'to', dateRange.to.toLocaleDateString()],
+        [],
+        ['Customer Name', 'Transactions', 'Last Seen', 'Total Revenue (NGN)'],
+        ...customerReport.map(c => [c.name, c.transactions, c.lastSeen, c.revenue])
+      ];
+    } else if (selectedReport === 'debtors') {
+      wsData = [
+        ['EHI MULTISYSTEMS - DEBTOR AGING'],
+        ['Period:', dateRange.from.toLocaleDateString(), 'to', dateRange.to.toLocaleDateString()],
+        [],
+        ['Customer Name', 'Age (Days)', 'Bucket', 'Amount (NGN)'],
+        ...debtorReport.items.map(d => [d.name, d.age, d.bucket, d.amount])
+      ];
+    } else if (selectedReport === 'staff') {
+      wsData = [
+        ['EHI MULTISYSTEMS - STAFF PRODUCTIVITY'],
+        ['Period:', dateRange.from.toLocaleDateString(), 'to', dateRange.to.toLocaleDateString()],
+        [],
+        ['Agent Name', 'Entries', 'Cargo', 'Mktg', 'Baggage', 'Total Revenue (NGN)'],
+        ...staffReport.map(s => [s.role, s.entries, s.cargo, s.mktg, s.vj, s.revenue])
+      ];
+    } else if (selectedReport === 'hubs') {
+      wsData = [
+        ['EHI MULTISYSTEMS - HUB COMPARISON'],
+        ['Period:', dateRange.from.toLocaleDateString(), 'to', dateRange.to.toLocaleDateString()],
+        [],
+        ['Hub Code/Name', 'Entries', 'Total Revenue (NGN)'],
+        ...hubReport.map(h => [h.hub_name, h.entries, h.revenue])
+      ];
+    } else if (selectedReport === 'b2b_sales') {
+      wsData = [
+        ['EHI MULTISYSTEMS - OFFICE WORK (B2B) SALES'],
+        ['Period:', dateRange.from.toLocaleDateString(), 'to', dateRange.to.toLocaleDateString()],
+        [],
+        ['Office Work Client', 'Entries', 'Routes Used', 'Total Revenue (NGN)'],
+        ...b2bReport.items.map(b => [b.name, b.entries, b.routes, b.revenue]),
+        [],
+        ['TOTAL B2B REVENUE', '', '', b2bReport.totalRevenue]
+      ];
     }
-    if (selectedReport === 'routes')    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(routeReport),     'Routes');
-    if (selectedReport === 'customers') XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerReport),  'Top Customers');
-    if (selectedReport === 'debtors')   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(debtorReport.items), 'Debtors');
-    if (selectedReport === 'staff')     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(staffReport),     'Staff');
-    if (selectedReport === 'hubs')      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hubReport),       'Hubs');
-    const fromStr = dateRange.from.toISOString().split('T')[0];
-    const toStr   = dateRange.to.toISOString().split('T')[0];
-    XLSX.writeFile(wb, `EHI_${selectedReport}_${fromStr}_to_${toStr}.xlsx`);
+
+    if (wsData.length === 0) return;
+    
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Report");
+    XLSX.writeFile(wb, `EHI_Report_${selectedReport}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const exportToPdf = async () => {
@@ -363,11 +456,6 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               <Calendar size={13} className="text-[var(--color-accent-amber)]" />
               <span className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-accent-amber)] font-bold">Date Range</span>
             </div>
-            {/* auto-fit (not a viewport-width md: breakpoint) so column count
-                tracks the actually-available width next to SideNav, instead
-                of jumping to 4 columns whenever the viewport crosses 768px
-                regardless of how much room is really left -- that's what was
-                spilling the row out of the card. */}
             <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2">
               {PRESETS.map(p => (
                 <button
@@ -408,7 +496,59 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
                 {selectedReport === 'customers' && <CustomerReportView data={customerReport} />}
                 {selectedReport === 'debtors'   && <DebtorReportView data={debtorReport} />}
                 {selectedReport === 'staff'     && <StaffReportView data={staffReport} />}
-                {selectedReport === 'hubs'      && <HubReportView data={hubReport} />}
+                {selectedReport === 'hubs'      && (
+                  <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded overflow-hidden">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-[var(--color-surface-2)] font-mono text-[10px] text-[var(--color-muted)]">
+                        <tr><th className="p-3">Hub Code/Name</th><th className="p-3 text-right">Entries</th><th className="p-3 text-right">Revenue</th></tr>
+                      </thead>
+                      <tbody>
+                        {hubReport.map((h, i) => (
+                          <tr key={i} className="border-t border-[var(--color-border)]">
+                            <td className="p-3">{h.hub_name}</td>
+                            <td className="p-3 text-right font-mono text-[var(--color-muted)]">{h.entries}</td>
+                            <td className="p-3 text-right font-mono font-bold text-[var(--color-accent-cobalt)]">₦{h.revenue.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {selectedReport === 'b2b_sales' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded p-4">
+                        <p className="text-[10px] font-mono text-[var(--color-muted)] mb-1">TOTAL B2B REVENUE</p>
+                        <p className="text-xl font-bold font-mono text-[var(--color-accent-amber)]">₦{b2bReport.totalRevenue.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded p-4">
+                        <p className="text-[10px] font-mono text-[var(--color-muted)] mb-1">TOTAL B2B ENTRIES</p>
+                        <p className="text-xl font-bold font-mono text-[var(--color-foreground)]">{b2bReport.totalEntries}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded overflow-hidden">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-[var(--color-surface-2)] font-mono text-[10px] text-[var(--color-muted)]">
+                          <tr><th className="p-3">Client</th><th className="p-3 text-center">Routes</th><th className="p-3 text-center">Entries</th><th className="p-3 text-right">Revenue</th></tr>
+                        </thead>
+                        <tbody>
+                          {b2bReport.items.map((b, i) => (
+                            <tr key={i} className="border-t border-[var(--color-border)]">
+                              <td className="p-3 font-medium">{b.name}</td>
+                              <td className="p-3 text-center font-mono text-[var(--color-muted)]">{b.routes}</td>
+                              <td className="p-3 text-center font-mono text-[var(--color-muted)]">{b.entries}</td>
+                              <td className="p-3 text-right font-mono font-bold text-[var(--color-accent-amber)]">₦{b.revenue.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                          {b2bReport.items.length === 0 && (
+                            <tr><td colSpan={4} className="p-6 text-center text-[var(--color-muted)] text-sm">No Office Work transactions found for this period.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -416,7 +556,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
           {/* Export buttons */}
           <div className="flex gap-2">
             <button 
-              onClick={exportToExcel}
+              onClick={handleDownloadExcel}
               className="flex-1 p-3 bg-transparent border border-[var(--color-success)] text-[var(--color-success)] rounded-[var(--radius-md)] font-bold text-[12px] cursor-pointer flex items-center justify-center gap-1.5 hover:bg-[rgba(16,185,129,0.1)] transition-colors"
             >
               <Download size={14} /> EXCEL

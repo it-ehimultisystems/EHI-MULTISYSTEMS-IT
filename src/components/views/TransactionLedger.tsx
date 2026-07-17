@@ -106,7 +106,7 @@ export const TransactionLedger = ({
         time: e.time,
         type: "expense",
         name: e.type || 'Expense',
-        detail: e.description,
+        detail: e.logged_by ? `${e.description} (Logged by: ${e.logged_by})` : e.description,
         amount: e.amount,
         mode: e.mode || "Expense",
         status: e.status || "N/A",
@@ -949,7 +949,7 @@ export const TransactionLedger = ({
               <option value="Cash">Cash</option>
               <option value="Transfer">Transfer</option>
               <option value="POS">POS</option>
-              <option value="Debt">Debt (Credit)</option>
+              <option value="Debt">Debt</option>
               <option value="Unverified">Unverified</option>
             </select>
           </div>
@@ -1009,20 +1009,25 @@ export const TransactionLedger = ({
                   )}
                   {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                     const e = filteredEntries[virtualRow.index];
-                    // Parse date and time from e.time
-                  const timeParts = e.time ? e.time.split(/,?\s+/) : [];
-                  const rawDate = timeParts[0] || '';
-                  const rawTime = timeParts[1] || '';
-                  const ampm = timeParts[2] || '';
-                  // Format date more readably: "6/25/2026," → "25 Jun"
-                  let displayDate = rawDate.replace(',', '');
-                  try {
-                    const d = new Date(e.time);
-                    if (!isNaN(d.getTime())) {
-                      displayDate = d.toLocaleDateString('en-NG', { day: '2-digit', month: 'short' });
+                    
+                    // Parse date and time safely from created_at or fallback to time string
+                    let displayDate = '';
+                    let displayTime = '';
+                    const dtStr = e.created_at || (e.raw && e.raw.created_at) || e.time;
+                    try {
+                      const d = new Date(dtStr);
+                      if (!isNaN(d.getTime())) {
+                        displayDate = d.toLocaleDateString('en-NG', { day: '2-digit', month: 'short' });
+                        displayTime = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                      } else {
+                        // Fallback if it's just a raw time string like "05:14 PM"
+                        displayDate = 'Today'; // Default fallback
+                        displayTime = e.time;
+                      }
+                    } catch {
+                      displayDate = 'Unknown';
+                      displayTime = e.time;
                     }
-                  } catch { /* keep raw */ }
-                  const displayTime = rawTime ? `${rawTime.slice(0,5)}${ampm ? ' '+ampm : ''}` : e.time.slice(0,5);
 
                   // Status colour
                   const statusColor =
@@ -1161,7 +1166,7 @@ export const TransactionLedger = ({
                           e.mode === "Debt Paid" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
                           "border border-[var(--color-error)] text-[var(--color-error)]"
                         }`}>
-                          {e.mode === "Debt" ? "Credit" : e.mode === "Debt Paid" ? "Debt Cleared" : e.mode}
+                          {e.mode === "Debt" ? "Debt" : e.mode === "Debt Paid" ? "Debt Cleared" : e.mode}
                           {e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && e.mode !== 'Debt Paid' && (
                             <Check size={10} strokeWidth={3} className="text-current opacity-80" />
                           )}
@@ -1283,7 +1288,7 @@ export const TransactionLedger = ({
                       viewingDetail.mode === "Expense" ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]" : 
                       "border border-[var(--color-error)] text-[var(--color-error)]"
                     }`}>
-                      {viewingDetail.mode === "Debt" ? "Credit" : viewingDetail.mode}
+                      {viewingDetail.mode === "Debt" ? "Debt" : viewingDetail.mode}
                     </span>
                   </div>
                   
@@ -1851,7 +1856,7 @@ export const TransactionLedger = ({
                   <option value="Cash">Cash</option>
                   <option value="Transfer">Bank Transfer</option>
                   <option value="POS">POS / Card</option>
-                  <option value="Debt">On Credit (Debt)</option>
+                  <option value="Debt">Debt</option>
                 </select>
               </div>
 

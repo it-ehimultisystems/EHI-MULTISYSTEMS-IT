@@ -9,6 +9,7 @@ import { ExpensesTab } from './ExpensesTab';
 import { BankReconciliation } from './BankReconciliation';
 import { PaymentValidation } from './PaymentValidation';
 import { useToast } from '../../lib/ToastContext';
+import { B2BSalesTab } from './B2BSalesTab';
 
 export interface AccountingConsoleProps {
   user: User;
@@ -24,7 +25,7 @@ export interface AccountingConsoleProps {
 
 export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddExpense, onUpdateExpense, onUpdateTx, onOpenBankRecon, onFullUpdateTx }: AccountingConsoleProps) => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'Summary' | 'Cash Register' | 'Credit Sales' | 'Expenses' | 'Remittances' | 'Payment Validation'>('Summary');
+  const [activeTab, setActiveTab] = useState<'Summary' | 'Cash Register' | 'Credit Sales' | 'B2B Sales' | 'Expenses' | 'Remittances' | 'Payment Validation'>('Summary');
   const [period, setPeriod] = useState<'Today' | 'This Week' | 'This Month' | 'Custom'>('Today');
   const [customStart, setCustomStart] = useState(new Date().toISOString().split('T')[0]);
   const [customEnd, setCustomEnd] = useState(new Date().toISOString().split('T')[0]);
@@ -249,7 +250,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
       {/* TABS HEADER */}
       <div className="relative mb-4">
       <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
-        {['Summary', 'Cash Register', 'Credit Sales', 'Expenses', 'Payment Validation', 'Remittances'].map((t) => (
+        {['Summary', 'Cash Register', 'Credit Sales', 'B2B Sales', 'Expenses', 'Payment Validation', 'Remittances'].map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t as any)}
@@ -561,6 +562,12 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
               if (tx) onFullUpdateTx({ ...tx, ...update });
             }
           }}
+        />
+      )}
+      {activeTab === 'B2B Sales' && (
+        <B2BSalesTab
+          transactions={filteredTx}
+          user={user}
         />
       )}
       {activeTab === 'Expenses' && <ExpensesTab expenses={expenses} user={user} onAddExpense={onAddExpense} onUpdateExpense={onUpdateExpense} />}

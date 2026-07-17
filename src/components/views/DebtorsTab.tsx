@@ -236,9 +236,9 @@ export const DebtorsTab = ({ transactions = [], user, onUpdateTx }: { transactio
              <button
                key={f}
                onClick={() => setFilter(f as any)}
-               className={`px-3 py-1.5 text-[12px] font-sans font-medium rounded-lg transition-colors focus:outline-none ${filter === f ? 'bg-[var(--color-surface-2)] text-[var(--color-foreground)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+               className={`px-4 py-1.5 rounded-full text-[12px] font-sans font-semibold transition-colors ${filter === f ? 'bg-[var(--color-accent-amber)] text-[#030712]' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-[var(--color-border)]'}`}
              >
-               {f}
+               {f === 'Corporate' ? 'Office Work (B2B)' : f}
              </button>
            ))}
         </div>

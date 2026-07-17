@@ -183,9 +183,10 @@ export const CargoForm = ({
   const [contentType, setContentType] = useState(contentTypes[0] as string);
   const [customContentType, setCustomContentType] = useState("");
   const [amount, setAmount] = useState("");
-  const [mode, setMode] = useState<"Cash" | "Transfer" | "POS" | "Debt">(
+  const [mode, setMode] = useState<string>(
     "Cash",
   );
+  const [corporateMode, setCorporateMode] = useState<string>("Debt");
   const [bank, setBank] = useState(banks[0] as string);
   const [remark, setRemark] = useState("");
   const [senderPhone, setSenderPhone] = useState("");
@@ -905,7 +906,7 @@ export const CargoForm = ({
       clientType: "Corporate",
       detail: finalTxDetail,
       amount: computedCost,
-      mode: "Debt",
+      mode: corporateMode,
       remarks: `Gate Weight Finalized (${rateToUse} ₦/KG Contract). Ref Intake ID: ${selectedIntake.id}`,
       time: tnow(),
       type: "cargo",
@@ -921,31 +922,24 @@ export const CargoForm = ({
     // 1. Add to central transactions grid
     onAddTx(txEntry);
 
-    // 2. Increment client's monthly accumulated debt balance
-    const matchingClientObj = corpClients.find((c) => c.id === selectedIntake.corporate_client_id);
-    if (matchingClientObj) {
-      // Atomic server-side increment (increment_corporate_debt RPC) instead
-      // of reading accumulated_monthly_debt from the client-side cache,
-      // adding in JS, and writing back the absolute total -- that
-      // read-modify-write let two staff finalizing different shipments for
-      // the SAME corporate client near-simultaneously both read the same
-      // stale balance, and whichever write landed second silently
-      // overwrote the first's increment. The transaction itself (onAddTx
-      // above) already succeeded either way, so a failure here only warns
-      // rather than blocking.
-      try {
-        const { data: newDebtTotal, error: debtUpdateError } = await supabase.rpc(
-          'increment_corporate_debt',
-          { p_client_id: matchingClientObj.id, p_amount: computedCost },
-        );
-        if (debtUpdateError) throw debtUpdateError;
-        const updatedClients = corpClients.map((c) =>
-          c.id === matchingClientObj.id ? { ...c, accumulated_monthly_debt: newDebtTotal } : c,
-        );
-        updateLocalCorpClients(updatedClients);
-      } catch (err: any) {
-        console.error('Failed to persist corporate client debt to Supabase', err);
-        showToast({ message: `Transaction saved, but ${matchingClientObj.company_name}'s debt balance failed to update on the server: ${err.message || 'unknown error'}. Reconcile manually.`, type: 'error' });
+    // 2. Increment client's monthly accumulated debt balance (only if Debt)
+    if (corporateMode === "Debt") {
+      const matchingClientObj = corpClients.find((c) => c.id === selectedIntake.corporate_client_id);
+      if (matchingClientObj) {
+        try {
+          const { data: newDebtTotal, error: debtUpdateError } = await supabase.rpc(
+            'increment_corporate_debt',
+            { p_client_id: matchingClientObj.id, p_amount: computedCost },
+          );
+          if (debtUpdateError) throw debtUpdateError;
+          const updatedClients = corpClients.map((c) =>
+            c.id === matchingClientObj.id ? { ...c, accumulated_monthly_debt: newDebtTotal } : c,
+          );
+          updateLocalCorpClients(updatedClients);
+        } catch (err: any) {
+          console.error('Failed to persist corporate client debt to Supabase', err);
+          showToast({ message: `Transaction saved, but ${matchingClientObj.company_name}'s debt balance failed to update on the server: ${err.message || 'unknown error'}. Reconcile manually.`, type: 'error' });
+        }
       }
     }
 
@@ -976,7 +970,7 @@ export const CargoForm = ({
           kg: weightNum,
           pcs: selectedIntake.pieces,
           amount: computedCost,
-          mode: "Debt",
+          mode: corporateMode,
         }),
       });
     }
@@ -1337,8 +1331,8 @@ export const CargoForm = ({
           />
           <div className="text-[15px] font-semibold font-sans text-[var(--color-success)] mb-1">
             {successTx.mode === "Debt"
-              ? successTx.clientType === "Corporate"
-                ? "Corporate Debt Invoice Saved!"
+              ? successTx.clientType === "Office Work"
+                ? "Office Work Invoice Saved!"
                 : "Credit Sale Logged!"
               : "Cargo entry saved successfully!"}
           </div>
@@ -1431,7 +1425,7 @@ export const CargoForm = ({
                 className={`text-[13px] font-sans font-bold px-2 py-0.5 rounded ${successTx.mode === "Debt" ? "bg-[rgba(239,68,68,0.1)] text-[var(--color-error)]" : "bg-[rgba(16,185,129,0.1)] text-[var(--color-success)]"}`}
               >
                 {successTx.mode === "Debt"
-                  ? successTx.clientType === "Corporate"
+                  ? successTx.clientType === "Office Work"
                     ? "B2B MONTHLY DEBT"
                     : "INDIVIDUAL DEBT"
                   : successTx.mode}
@@ -1550,7 +1544,7 @@ export const CargoForm = ({
               : "text-[var(--color-light-muted)] hover:text-[var(--color-foreground)]"
           }`}
         >
-          <Users size={16} /> Corporate Contract (B2B)
+          <Users size={16} /> Office Work (B2B)
           {pendingIntakes.length > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-600 text-white font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-[var(--color-obsidian)] font-bold">
               {pendingIntakes.length}
@@ -2098,7 +2092,7 @@ export const CargoForm = ({
                     className="text-[var(--color-accent-amber)]"
                   />
                   <h3 className="text-[14px] font-sans font-bold text-[var(--color-foreground)] uppercase tracking-wider">
-                    Log Corporate Pick-Up (No Pricing)
+                    Log Office Work Pick-Up (No Pricing)
                   </h3>
                 </div>
 
@@ -2110,7 +2104,7 @@ export const CargoForm = ({
 
                 <div className="space-y-4">
                   <div>
-                    {renderLabel(UserIcon, "B2B Corporate Client")}
+                    {renderLabel(UserIcon, "Office Work (B2B) Client")}
                     {/* Deliberately a strict select, not a free-typed datalist
                         like the retail Consignee field below -- billing at
                         finalize looks up the client's contract rate by
@@ -2237,7 +2231,7 @@ export const CargoForm = ({
               <div className="space-y-4">
                 <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] p-4 rounded-[var(--radius-md)]">
                   <h4 className="text-[13px] font-sans font-bold text-[var(--color-foreground)] mb-3">
-                    Today's Registered Pick-ups ({pendingIntakes.length})
+                    Office Work Pick-up Intakes ({pendingIntakes.length})
                   </h4>
 
                   {pendingIntakes.length === 0 ? (
@@ -2272,9 +2266,30 @@ export const CargoForm = ({
                               </span>
                             </div>
                           </div>
-                          <span className="text-[11px] font-mono text-[var(--color-muted)]">
-                            {pi.time}
-                          </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-[11px] font-mono text-[var(--color-muted)]">
+                              {pi.time}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm("Delete this pending intake?")) {
+                                  const updated = pendingIntakes.filter(x => x.id !== pi.id);
+                                  updateLocalPendingIntakes(updated);
+                                  if (selectedIntake?.id === pi.id) {
+                                    setSelectedIntake(null);
+                                    setGateWeight("");
+                                    setCustomRateOverwrite("");
+                                  }
+                                }
+                              }}
+                              className="text-red-500/60 hover:text-red-500 transition-colors p-1"
+                              title="Delete pending intake"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2317,7 +2332,7 @@ export const CargoForm = ({
                       Scale Yard Queue Empty
                     </p>
                     <p className="max-w-md mx-auto text-[11px]">
-                      All corporate shipments have been weighed and routed.
+                      All Office Work shipments have been weighed and routed.
                       Check Phase 1 Logbook or the main Ledger.
                     </p>
                   </div>
@@ -2398,14 +2413,35 @@ export const CargoForm = ({
                                 ₦{finalRate}/KG
                               </div>
                             </div>
-                            <ArrowRight
-                              size={16}
-                              className={
-                                isSelected
-                                  ? "text-[var(--color-accent-amber)]"
-                                  : "text-[var(--color-muted)]"
-                              }
-                            />
+                            <div className="flex flex-col items-end gap-2">
+                              <ArrowRight
+                                size={16}
+                                className={
+                                  isSelected
+                                    ? "text-[var(--color-accent-amber)]"
+                                    : "text-[var(--color-muted)]"
+                                }
+                              />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm("Delete this pending intake?")) {
+                                    const updated = pendingIntakes.filter(x => x.id !== pi.id);
+                                    updateLocalPendingIntakes(updated);
+                                    if (selectedIntake?.id === pi.id) {
+                                      setSelectedIntake(null);
+                                      setGateWeight("");
+                                      setCustomRateOverwrite("");
+                                    }
+                                  }
+                                }}
+                                className="text-red-500/60 hover:text-red-500 transition-colors p-1"
+                                title="Delete pending intake"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -2555,11 +2591,25 @@ export const CargoForm = ({
                       <div className="text-[11px] text-[var(--color-error)] bg-[rgba(239,68,68,0.03)] p-2 rounded border border-[rgba(239,68,68,0.1)] leading-snug flex items-start gap-1.5">
                         <Zap size={14} className="shrink-0 mt-0.5" />
                         <span>
-                          PL/pgSQL database trigger will automatically book
+                          If "Debt" is selected, the database trigger will automatically book
                           this finalized amount to the client's monthly master
                           debt profile balance.
                         </span>
                       </div>
+                    </div>
+
+                    <div className="mt-4 space-y-1.5">
+                      <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Payment Mode</span>
+                      <select
+                        value={corporateMode}
+                        onChange={(e) => setCorporateMode(e.target.value)}
+                        className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans focus:outline-none focus:border-[var(--color-accent-amber)]`}
+                      >
+                        <option value="Cash">Cash (Paid)</option>
+                        <option value="POS">POS (Paid)</option>
+                        <option value="Transfer">Bank Transfer (Paid)</option>
+                        <option value="Debt">Debt (Add to Monthly Balance)</option>
+                      </select>
                     </div>
 
                     <button
@@ -2583,7 +2633,7 @@ export const CargoForm = ({
                       Scale Diagnostic Standby
                     </p>
                     <p className="text-[11px] font-sans max-w-xs mx-auto mt-1">
-                      Select any corporate pick-up booking from the left queue
+                      Select any Office Work pick-up booking from the left queue
                       to place items on the commercial yard scale.
                     </p>
                   </div>
@@ -2592,11 +2642,11 @@ export const CargoForm = ({
                 <div className="bg-[var(--color-surface-2)] p-4 rounded border border-[var(--color-border)] mt-4">
                   <h5 className="text-[12px] font-bold text-[var(--color-foreground)] mb-2 flex items-center gap-1">
                     <ShieldAlert size={14} className="text-[var(--color-accent-amber)]" />
-                    B2B Scaling Rules
+                    Office Work Scaling Rules
                   </h5>
                   <p className="text-[11px] text-[var(--color-light-muted)] leading-relaxed">
                     Weights verified on our gate scale are definitive (no manual
-                    estimation allowed). Payment modes on corporate custom
+                    estimation allowed). Debt payment modes on Office Work custom
                     accounts automatically bill monthly to prevent yard queuing
                     blocks.
                   </p>
