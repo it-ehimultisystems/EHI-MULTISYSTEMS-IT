@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Download,
   Printer,
+  HandCoins,
 } from "lucide-react";
 import { QRCode } from "../QRCode";
 import TagPrintHistory from "./TagPrintHistory";
@@ -1156,24 +1157,39 @@ export const TransactionLedger = ({
                       {e.source === "expense" ? "-" : ""}{fmt(e.amount)}
                     </td>
                     {/* Mode */}
-                    <td className="py-2.5 px-2 text-center">
+                    <td className="py-2.5 px-2 text-center" onClick={(evt) => evt.stopPropagation()}>
                       <div className="flex flex-col items-center gap-0.5">
-                        <span className={`px-1.5 py-0.5 rounded font-sans text-[9px] font-medium flex items-center gap-1 ${
-                          e.mode === "Cash" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
-                          e.mode === "Transfer" ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]" :
-                          e.mode === "POS" ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]" :
-                          e.mode === "Expense" ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]" :
-                          e.mode === "Debt Paid" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
-                          "border border-[var(--color-error)] text-[var(--color-error)]"
-                        }`}>
-                          {e.mode === "Debt" ? "Debt" : e.mode === "Debt Paid" ? "Debt Cleared" : e.mode}
-                          {e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && e.mode !== 'Debt Paid' && (
-                            <Check size={10} strokeWidth={3} className="text-current opacity-80" />
+                        <div className="flex items-center gap-1.5 justify-center">
+                          <span className={`px-1.5 py-0.5 rounded font-sans text-[9px] font-medium flex items-center gap-1 ${
+                            e.mode === "Cash" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
+                            e.mode === "Transfer" ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]" :
+                            e.mode === "POS" ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]" :
+                            e.mode === "Expense" ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]" :
+                            e.mode === "Debt Paid" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
+                            "border border-[var(--color-error)] text-[var(--color-error)]"
+                          }`}>
+                            {e.mode === "Debt" ? "Debt" : e.mode === "Debt Paid" ? "Debt Cleared" : e.mode}
+                            {e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && e.mode !== 'Debt Paid' && (
+                              <Check size={10} strokeWidth={3} className="text-current opacity-80" />
+                            )}
+                            {!e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && e.mode !== 'Debt Paid' && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-amber)] animate-pulse" />
+                            )}
+                          </span>
+
+                          {e.mode === "Debt" && (
+                            <button
+                              onClick={(evt) => {
+                                evt.stopPropagation();
+                                handleClearDebt(e, evt);
+                              }}
+                              className="p-1 rounded bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] hover:bg-[var(--color-success)] hover:text-[#030712] transition-colors focus:outline-none flex items-center gap-0.5"
+                              title="Clear Outstanding Debt"
+                            >
+                              <HandCoins size={13} />
+                            </button>
                           )}
-                          {!e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && e.mode !== 'Debt Paid' && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-amber)] animate-pulse" />
-                          )}
-                        </span>
+                        </div>
                         {e.mode === 'POS' && e.posApprovalCode && (
                           <span className="text-[8px] text-[var(--color-muted)]">**{e.posApprovalCode.slice(-4)}</span>
                         )}
