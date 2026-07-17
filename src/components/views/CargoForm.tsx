@@ -691,7 +691,14 @@ export const CargoForm = ({
     return () => { active = false; };
   }, []);
 
-  const [intakeAwb, setIntakeAwb] = useState(generateAwb());
+  const [intakeAwb, setIntakeAwb] = useState("");
+  const fetchIntakeAwbPreview = async () => {
+    const hubCode = getHubCode(user.hub_code || user.hub);
+    const poolKey = `${hubCode}-CG`;
+    const tag = await getNextTag(poolKey, `EHI-${hubCode}-CG`);
+    setIntakeAwb(tag || '');
+  };
+  useEffect(() => { fetchIntakeAwbPreview(); }, [user.hub_code, user.hub]);
   const [intakePcs, setIntakePcs] = useState("1");
   const [intakeRoute, setIntakeRoute] = useState(routes[0]);
   useValidatedRouteSelection(routes, intakeRoute, setIntakeRoute);
@@ -805,7 +812,7 @@ export const CargoForm = ({
     }
 
     // Clear and Toast
-    setIntakeAwb(generateAwb());
+    fetchIntakeAwbPreview();
     setIntakePcs("1");
     setIntakeSenderPhone("");
     setSuccessMessage(
@@ -859,7 +866,7 @@ export const CargoForm = ({
     }
 
     // Build central ledger transaction record (Debt contract)
-    const finalTxDetail = `${selectedIntake.airline} · ${selectedIntake.awb} · ${selectedIntake.pieces}pcs · ${weightNum}KG · ${selectedIntake.route} · ${selectedIntake.contentType}`;
+    const finalTxDetail = `${selectedIntake.sender} · ${selectedIntake.consignee} · ${selectedIntake.airline} · ${selectedIntake.awb} · ${selectedIntake.route} · ${selectedIntake.content_type} · ${weightNum}kg`;
 
     // Lock in the commission rate at entry time (see retail submit path for why).
     let gateWeighCommissionRate = 0;
@@ -911,7 +918,7 @@ export const CargoForm = ({
       time: tnow(),
       type: "cargo",
       status: "Intake",
-      awb_tag_number: selectedIntake.awb,
+      awb_tag_number: gateResolvedId,
       airline: selectedIntake.airline,
       commissionRate: gateWeighCommissionRate,
       pieces: selectedIntake.pieces,
@@ -1188,12 +1195,14 @@ export const CargoForm = ({
         date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
         hubName: user?.hub || "EHI Cargo Station",
         agentName: user?.name || "EHI Agent",
-        airline:
-          airline === "Green Africa"
+        airline: (() => {
+          const txAir = successTx.airline || airline;
+          return txAir === "Green Africa"
             ? "Green Africa Airways"
-            : airline === "United Nigeria"
+            : txAir === "United Nigeria"
               ? "United Nigeria Airlines"
-              : airline,
+              : txAir;
+        })(),
         consignee: successTx.name,
         awbTagNumber: successTx.awb_tag_number || awb,
         pieces: successTx.pieces || parseInt(pcs),
@@ -1239,15 +1248,17 @@ export const CargoForm = ({
           route: successTx.detail.split(" · ")[4] || route,
           pieces: successTx.pieces || parseInt(pcs) || 1,
           weight: successTx.kg || Math.round(parseFloat(kg)),
-          airline:
-            airline === "Green Africa"
+          airline: (() => {
+            const txAir = successTx.airline || airline;
+            return txAir === "Green Africa"
               ? "Green Africa Airways"
-              : airline === "United Nigeria"
+              : txAir === "United Nigeria"
                 ? "United Nigeria Airlines"
-                : airline,
+                : txAir;
+          })(),
           hubName: user?.hub || "EHI Cargo Station",
           date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
-          contentType: successTx.detail.split(" · ")[5] || contentType,
+          contentType: successTx.detail?.split(" · ")[5] || contentType,
         }, preOpenedWindow);
       } catch (err) {
         console.error('Failed to open tag PDF', err);
@@ -1296,12 +1307,14 @@ export const CargoForm = ({
       date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
       hubName: user?.hub || "EHI Cargo Station",
       agentName: user?.name || "EHI Agent",
-      airline:
-        airline === "Green Africa"
+      airline: (() => {
+        const txAir = successTx.airline || airline;
+        return txAir === "Green Africa"
           ? "Green Africa Airways"
-          : airline === "United Nigeria"
+          : txAir === "United Nigeria"
             ? "United Nigeria Airlines"
-            : airline,
+            : txAir;
+      })(),
       consignee: successTx.name,
       awbTagNumber: successTx.awb_tag_number || awb,
       pieces: successTx.pieces || parseInt(pcs),
@@ -2277,6 +2290,9 @@ export const CargoForm = ({
                                 if (window.confirm("Delete this pending intake?")) {
                                   const updated = pendingIntakes.filter(x => x.id !== pi.id);
                                   updateLocalPendingIntakes(updated);
+                                  if (pi.isCorporate) {
+                                    supabase.from('pending_corporate_intakes').delete().eq('id', pi.id).catch(console.error);
+                                  }
                                   if (selectedIntake?.id === pi.id) {
                                     setSelectedIntake(null);
                                     setGateWeight("");
@@ -2429,6 +2445,9 @@ export const CargoForm = ({
                                   if (window.confirm("Delete this pending intake?")) {
                                     const updated = pendingIntakes.filter(x => x.id !== pi.id);
                                     updateLocalPendingIntakes(updated);
+                                    if (pi.isCorporate) {
+                                      supabase.from('pending_corporate_intakes').delete().eq('id', pi.id).catch(console.error);
+                                    }
                                     if (selectedIntake?.id === pi.id) {
                                       setSelectedIntake(null);
                                       setGateWeight("");
