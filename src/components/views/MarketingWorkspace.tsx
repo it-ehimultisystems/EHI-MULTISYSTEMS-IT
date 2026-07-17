@@ -992,8 +992,8 @@ export const MarketingWorkspace = ({
                 )}
                 {debtSales > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-[var(--color-muted)]">Debt / Credit</span>
-                    <span className="text-orange-400" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(debtSales)}</span>
+                    <span className="text-orange-400">Unpaid Credit Sales (Owed)</span>
+                    <span className="text-orange-400 font-bold" style={{ fontFamily: 'JetBrains Mono' }}>{fmt(debtSales)}</span>
                   </div>
                 )}
 

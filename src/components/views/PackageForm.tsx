@@ -127,8 +127,18 @@ export const PackageForm = ({
   const posSales = packageTxs.reduce((sum, t) => sum + (t.mode === "POS" ? t.amount : 0), 0);
   const transferSales = packageTxs.reduce((sum, t) => sum + (t.mode === "Transfer" ? t.amount : 0), 0);
   const debtSales = packageTxs.reduce((sum, t) => sum + (t.mode === "Debt" ? t.amount : 0), 0);
+  const debtCashRecoveredToday = packageTxs.reduce((sum, t) => {
+    if (!t.paymentHistory) return sum;
+    const todays = t.paymentHistory.filter(p => p.mode === 'Cash' && p.at && isToday(p.at));
+    return sum + todays.reduce((s, p) => s + p.amount, 0);
+  }, 0);
+  const debtTotalRecoveredToday = packageTxs.reduce((sum, t) => {
+    if (!t.paymentHistory) return sum;
+    const todays = t.paymentHistory.filter(p => p.at && isToday(p.at));
+    return sum + todays.reduce((s, p) => s + p.amount, 0);
+  }, 0);
   const totalExpenses = expenses.filter(e => isToday(e.created_at)).reduce((sum, e) => sum + e.amount, 0);
-  const physicalCash = cashSales;
+  const physicalCash = cashSales + debtCashRecoveredToday;
   const balanceCash = physicalCash - totalExpenses;
 
   const destinationCounts: Record<string, number> = {};
@@ -702,15 +712,17 @@ export const PackageForm = ({
               </div>
               <div className="px-4 py-3 space-y-2 text-[12px] font-mono">
                 <div className="flex justify-between"><span className="text-[var(--color-muted)]">Total Sales</span><span className="font-bold text-[var(--color-foreground)]">{fmt(totalSales)}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--color-muted)]">Cash</span><span className="text-[var(--color-foreground)]">{fmt(cashSales)}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--color-muted)]">Cash Sales</span><span className="text-[var(--color-foreground)]">{fmt(cashSales)}</span></div>
+                {debtCashRecoveredToday > 0 && <div className="flex justify-between text-emerald-400"><span>Debt Recovered (Cash)</span><span>+ {fmt(debtCashRecoveredToday)}</span></div>}
                 <div className="flex justify-between"><span className="text-[var(--color-muted)]">POS</span><span className="text-[var(--color-foreground)]">{fmt(posSales)}</span></div>
                 <div className="flex justify-between"><span className="text-[var(--color-muted)]">Bank Transfer</span><span className="text-[var(--color-foreground)]">{fmt(transferSales)}</span></div>
-                {debtSales > 0 && <div className="flex justify-between"><span className="text-orange-400">Debt / Credit</span><span className="text-orange-400">{fmt(debtSales)}</span></div>}
+                {debtSales > 0 && <div className="flex justify-between border-t border-[var(--color-border)] pt-1.5 mt-1"><span className="text-orange-400 font-sans">Unpaid Credit Sales (Owed)</span><span className="text-orange-400 font-bold">{fmt(debtSales)}</span></div>}
+                {debtTotalRecoveredToday > 0 && <div className="flex justify-between"><span className="text-emerald-400 font-sans">Debt Collected Today</span><span className="text-emerald-400 font-bold">{fmt(debtTotalRecoveredToday)}</span></div>}
               </div>
             </div>
 
             <div className="bg-[rgba(59,130,246,0.05)] rounded-xl border border-[rgba(59,130,246,0.2)] px-4 py-3 space-y-1 text-[12px] font-mono">
-              <div className="flex justify-between text-[var(--color-muted)]"><span>Cash on Hand</span><span>{fmt(physicalCash)}</span></div>
+              <div className="flex justify-between text-[var(--color-muted)]"><span>Cash in Hand (Sales + Recovered)</span><span>{fmt(physicalCash)}</span></div>
               <div className="flex justify-between text-red-400"><span>Expenses</span><span>− {fmt(totalExpenses)}</span></div>
               <div className="flex justify-between font-bold text-[15px] border-t border-[rgba(59,130,246,0.2)] pt-2 mt-1">
                 <span className="text-[var(--color-accent-cobalt)]">Balance Cash</span>
@@ -782,17 +794,19 @@ export const PackageForm = ({
             </div>
             <div className="space-y-1.5 text-[13px] font-mono border-t border-[var(--color-border)] pt-4 mb-4">
               <div className="flex justify-between"><span className="text-[var(--color-muted)]">Total Sales</span><span className="font-bold text-[var(--color-foreground)]">{fmt(totalSales)}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--color-muted)]">Cash</span><span className="text-[var(--color-foreground)]">{fmt(cashSales)}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--color-muted)]">Cash Sales</span><span className="text-[var(--color-foreground)]">{fmt(cashSales)}</span></div>
+              {debtCashRecoveredToday > 0 && <div className="flex justify-between text-emerald-400"><span>Debt Recovered (Cash)</span><span>+ {fmt(debtCashRecoveredToday)}</span></div>}
               <div className="flex justify-between"><span className="text-[var(--color-muted)]">POS</span><span className="text-[var(--color-foreground)]">{fmt(posSales)}</span></div>
               <div className="flex justify-between"><span className="text-[var(--color-muted)]">Bank Transfer</span><span className="text-[var(--color-foreground)]">{fmt(transferSales)}</span></div>
-              {debtSales > 0 && <div className="flex justify-between"><span className="text-orange-400">Debt / Credit</span><span className="text-orange-400">{fmt(debtSales)}</span></div>}
+              {debtSales > 0 && <div className="flex justify-between border-t border-[var(--color-border)] pt-1 mt-1"><span className="text-orange-400 font-sans">Unpaid Credit Sales (Owed)</span><span className="text-orange-400 font-bold">{fmt(debtSales)}</span></div>}
+              {debtTotalRecoveredToday > 0 && <div className="flex justify-between"><span className="text-emerald-400 font-sans">Debt Collected Today</span><span className="text-emerald-400 font-bold">{fmt(debtTotalRecoveredToday)}</span></div>}
             </div>
             <div className="bg-[rgba(59,130,246,0.1)] border border-[var(--color-accent-cobalt)] rounded-xl p-4 mb-6">
               <div className="flex justify-between items-center">
                 <span className="text-[14px] text-[var(--color-accent-cobalt)] font-bold font-mono">BAL. CASH</span>
                 <span className={`text-[22px] font-bold font-mono ${balanceCash >= 0 ? 'text-[var(--color-accent-cobalt)]' : 'text-red-400'}`}>{fmt(Math.abs(balanceCash))}</span>
               </div>
-              <div className="text-[11px] text-[rgba(59,130,246,0.7)] mt-1">({fmt(cashSales)} cash-in-hand − {fmt(totalExpenses)} expenses)</div>
+              <div className="text-[11px] text-[rgba(59,130,246,0.7)] mt-1">({fmt(physicalCash)} cash-in-hand − {fmt(totalExpenses)} expenses)</div>
             </div>
             </div>{/* end scrollable body */}
             <div className="flex gap-3" style={{ paddingTop: 16, paddingBottom: 24, flexShrink: 0 }}>

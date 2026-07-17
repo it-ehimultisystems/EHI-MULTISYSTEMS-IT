@@ -495,8 +495,19 @@ export const CargoForm = ({
   const closePosSales = closeEntries.reduce((s, t) => s + (t.receipt_mode === 'POS' ? t.amount : 0), 0);
   const closeTransferSales = closeEntries.reduce((s, t) => s + (t.receipt_mode === 'Transfer' ? t.amount : 0), 0);
   const closeDebtSales = closeEntries.reduce((s, t) => s + (t.receipt_mode === 'Debt' ? t.amount : 0), 0);
+  const closeDebtCashRecoveredToday = closeEntries.reduce((sum: number, t: any) => {
+    if (!t.payment_history || !Array.isArray(t.payment_history)) return sum;
+    const todays = t.payment_history.filter((p: any) => p.mode === 'Cash' && p.at && new Date(p.at) >= new Date(periodStart) && new Date(p.at) <= new Date(periodEnd));
+    return sum + todays.reduce((s: number, p: any) => s + (p.amount || 0), 0);
+  }, 0);
+  const closeDebtTotalRecoveredToday = closeEntries.reduce((sum: number, t: any) => {
+    if (!t.payment_history || !Array.isArray(t.payment_history)) return sum;
+    const todays = t.payment_history.filter((p: any) => p.at && new Date(p.at) >= new Date(periodStart) && new Date(p.at) <= new Date(periodEnd));
+    return sum + todays.reduce((s: number, p: any) => s + (p.amount || 0), 0);
+  }, 0);
   const closeTotalExpenses = closeExpenses.reduce((s, e) => s + e.amount, 0);
-  const closeBalanceCash = closeCashSales - closeTotalExpenses;
+  const closePhysicalCash = closeCashSales + closeDebtCashRecoveredToday;
+  const closeBalanceCash = closePhysicalCash - closeTotalExpenses;
   const closeRouteCounts: Record<string, number> = {};
   closeEntries.forEach(t => { const r = t.route || 'Unknown'; closeRouteCounts[r] = (closeRouteCounts[r] || 0) + 1; });
 
@@ -2710,17 +2721,19 @@ export const CargoForm = ({
                 <>
                   <div className="space-y-1.5 text-[13px] font-mono pt-1 mb-4">
                     <div className="flex justify-between"><span className="text-[var(--color-muted)]">Total Sales</span><span className="font-bold text-[var(--color-foreground)]">{fmt(closeTotalSales)}</span></div>
-                    <div className="flex justify-between"><span className="text-[var(--color-muted)]">Cash</span><span className="text-[var(--color-foreground)]">{fmt(closeCashSales)}</span></div>
+                    <div className="flex justify-between"><span className="text-[var(--color-muted)]">Cash Sales</span><span className="text-[var(--color-foreground)]">{fmt(closeCashSales)}</span></div>
+                    {closeDebtCashRecoveredToday > 0 && <div className="flex justify-between text-emerald-400"><span>Debt Recovered (Cash)</span><span>+ {fmt(closeDebtCashRecoveredToday)}</span></div>}
                     <div className="flex justify-between"><span className="text-[var(--color-muted)]">POS</span><span className="text-[var(--color-foreground)]">{fmt(closePosSales)}</span></div>
                     <div className="flex justify-between"><span className="text-[var(--color-muted)]">Bank Transfer</span><span className="text-[var(--color-foreground)]">{fmt(closeTransferSales)}</span></div>
-                    {closeDebtSales > 0 && <div className="flex justify-between"><span className="text-orange-400">Debt / Credit</span><span className="text-orange-400">{fmt(closeDebtSales)}</span></div>}
+                    {closeDebtSales > 0 && <div className="flex justify-between border-t border-[var(--color-border)] pt-1 mt-1"><span className="text-orange-400 font-sans">Unpaid Credit Sales (Owed)</span><span className="text-orange-400 font-bold">{fmt(closeDebtSales)}</span></div>}
+                    {closeDebtTotalRecoveredToday > 0 && <div className="flex justify-between"><span className="text-emerald-400 font-sans">Debt Collected Today</span><span className="text-emerald-400 font-bold">{fmt(closeDebtTotalRecoveredToday)}</span></div>}
                   </div>
                   <div className="bg-[rgba(245,158,11,0.1)] border border-[var(--color-accent-amber)] rounded-xl p-4 mb-6">
                     <div className="flex justify-between items-center">
                       <span className="text-[14px] text-[var(--color-accent-amber)] font-bold font-mono">BAL. CASH</span>
                       <span className={`text-[22px] font-bold font-mono ${closeBalanceCash >= 0 ? 'text-[var(--color-accent-amber)]' : 'text-red-400'}`}>{fmt(Math.abs(closeBalanceCash))}</span>
                     </div>
-                    <div className="text-[11px] mt-1 text-[rgba(245,158,11,0.7)]">({fmt(closeCashSales)} cash-in-hand − {fmt(closeTotalExpenses)} expenses)</div>
+                    <div className="text-[11px] mt-1 text-[rgba(245,158,11,0.7)]">({fmt(closePhysicalCash)} cash-in-hand − {fmt(closeTotalExpenses)} expenses)</div>
                   </div>
                 </>
               )}

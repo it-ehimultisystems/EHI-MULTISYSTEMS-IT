@@ -512,7 +512,7 @@ const CargoDailySummaryPDF = ({ data }: { data: CargoDailySummaryData }) => (
             <Text style={{ fontSize: 9, marginBottom: 3 }}>Cash: NGN {data.cashSales.toLocaleString("en-NG")}</Text>
             <Text style={{ fontSize: 9, marginBottom: 3 }}>POS: NGN {data.posSales.toLocaleString("en-NG")}</Text>
             <Text style={{ fontSize: 9, marginBottom: 3 }}>Transfer: NGN {data.transferSales.toLocaleString("en-NG")}</Text>
-            {data.debtSales > 0 && <Text style={{ fontSize: 9 }}>Debt: NGN {data.debtSales.toLocaleString("en-NG")}</Text>}
+            {data.debtSales > 0 && <Text style={{ fontSize: 9, color: "#9A3412" }}>Unpaid Credit Sales (Owed): NGN {data.debtSales.toLocaleString("en-NG")}</Text>}
           </View>
         </View>
 
@@ -533,7 +533,7 @@ const CargoDailySummaryPDF = ({ data }: { data: CargoDailySummaryData }) => (
 
       <View style={summaryStyles.balanceBox}>
         <Text style={summaryStyles.balanceText}>BALANCE CASH: NGN {data.balanceCash.toLocaleString("en-NG")}</Text>
-        <Text style={{ fontSize: 8, color: "#92400E", marginTop: 2 }}>(Cash Sales minus Total Expenses)</Text>
+        <Text style={{ fontSize: 8, color: "#92400E", marginTop: 2 }}>(Cash in Hand minus Total Expenses)</Text>
       </View>
 
       <View style={summaryStyles.signatures}>
