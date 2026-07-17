@@ -1090,19 +1090,6 @@ export const TransactionLedger = ({
                             )}
                           </div>
                         )}
-                        {e.mode === 'Debt' && (
-                          <div onClick={(evt) => evt.stopPropagation()}>
-                            <button
-                              onClick={() => handleClearDebt(e)}
-                              className="flex items-center justify-center text-[var(--color-success)] hover:text-emerald-400"
-                              title="Clear Outstanding Debt"
-                            >
-                              <div className="w-4 h-4 border border-[var(--color-success)] rounded flex items-center justify-center">
-                                <span className="text-[10px] font-bold font-sans text-current leading-none">+</span>
-                              </div>
-                            </button>
-                          </div>
-                        )}
                       </td>
                     )}
                     {canSeePin && (
