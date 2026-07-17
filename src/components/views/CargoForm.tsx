@@ -685,6 +685,7 @@ export const CargoForm = ({
             created_at: r.created_at,
             sender_phone: r.sender_phone || undefined,
             time: new Date(r.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            isCorporate: true,
           }));
           setPendingIntakes(mapped);
           localStorage.setItem("ehi_pending_intakes_v2", JSON.stringify(mapped));
@@ -781,6 +782,7 @@ export const CargoForm = ({
       created_at: new Date().toISOString(),
       sender_phone: intakeSenderPhone.trim() || undefined,
       time: tnow(),
+      isCorporate: true,
     };
 
     const updated = [newIntake, ...pendingIntakes];
@@ -2293,9 +2295,7 @@ export const CargoForm = ({
                                 if (window.confirm("Delete this pending intake?")) {
                                   const updated = pendingIntakes.filter(x => x.id !== pi.id);
                                   updateLocalPendingIntakes(updated);
-                                  if (pi.isCorporate) {
-                                    Promise.resolve(supabase.from('pending_corporate_intakes').delete().eq('id', pi.id)).catch(console.error);
-                                  }
+                                  Promise.resolve(supabase.from('pending_corporate_intakes').delete().eq('id', pi.id)).catch(console.error);
                                   if (selectedIntake?.id === pi.id) {
                                     setSelectedIntake(null);
                                     setGateWeight("");
@@ -2448,9 +2448,7 @@ export const CargoForm = ({
                                   if (window.confirm("Delete this pending intake?")) {
                                     const updated = pendingIntakes.filter(x => x.id !== pi.id);
                                     updateLocalPendingIntakes(updated);
-                                    if (pi.isCorporate) {
-                                      Promise.resolve(supabase.from('pending_corporate_intakes').delete().eq('id', pi.id)).catch(console.error);
-                                    }
+                                    Promise.resolve(supabase.from('pending_corporate_intakes').delete().eq('id', pi.id)).catch(console.error);
                                     if (selectedIntake?.id === pi.id) {
                                       setSelectedIntake(null);
                                       setGateWeight("");
