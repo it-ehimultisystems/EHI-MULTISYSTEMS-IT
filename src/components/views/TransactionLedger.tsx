@@ -229,7 +229,7 @@ export const TransactionLedger = ({
   const handleReprintReceipt = async (width: '58mm' | '80mm') => {
     if (!viewingDetail || !viewingDetail.raw) return;
     const tx = viewingDetail.raw;
-    if (tx.type !== 'cargo' && tx.type !== 'baggage' && tx.type !== 'marketing') return;
+    if (tx.type !== 'cargo' && tx.type !== 'baggage' && tx.type !== 'marketing' && tx.type !== 'package') return;
 
     try {
       // printViaBluetooth connects to the printer FIRST, before this
@@ -277,6 +277,25 @@ export const TransactionLedger = ({
             ratePerKg: (tx.excessKg || 0) > 0 ? Math.round(tx.amount / tx.excessKg!) : 0,
             amount: tx.amount,
             paymentMode: tx.mode,
+            trackingUrl: `https://app.ehimultisystems.com/track/${tx.id}`,
+          }, width);
+        } else if (tx.type === 'package') {
+          const { compilePackageReceiptStream } = await import('../../lib/escposPackagePrinting');
+          return await compilePackageReceiptStream({
+            entryRef: tx.entryRef || tx.id,
+            date: tx.time,
+            agentName: tx.enteredByName || user.name,
+            customerName: tx.name,
+            phone: tx.consigneePhone || tx.phone,
+            destination: tx.destination || tx.route || 'Destination',
+            contentType: tx.contentType || 'Package',
+            pieces: tx.pieces || 1,
+            kg: tx.kg || 0,
+            contents: (tx as any).contents,
+            amount: tx.amount,
+            paymentMode: tx.mode,
+            paymentNarration: tx.paymentNarration,
+            bankName: tx.bank,
             trackingUrl: `https://app.ehimultisystems.com/track/${tx.id}`,
           }, width);
         } else {
@@ -417,6 +436,39 @@ export const TransactionLedger = ({
     const preOpenedWindow = isStandalonePWA() ? null : window.open('', '_blank');
     try {
       const tx = { ...viewingDetail.raw };
+
+      if (tx.type === 'package') {
+        const { printPackageTagPDF } = await import('./PackageTagPDF');
+        const data = {
+          id: tx.awb_tag_number || tx.entryRef || tx.id,
+          name: tx.name,
+          destination: tx.destination || tx.route || 'Destination',
+          contentType: tx.contentType || 'Package',
+          pieces: tx.pieces || 1,
+          kg: tx.kg || 0,
+          contents: (tx as any).contents,
+          hubName: user?.hub || 'EHI Station',
+          date: `${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')} ${tx.time || tnow()}`,
+        };
+
+        await printPackageTagPDF(data, preOpenedWindow);
+
+        try {
+          await supabase.from('tag_print_log').insert({
+            cargo_ref: tx.id,
+            awb_tag_number: data.id,
+            printed_by: user.id,
+            printed_by_name: user.name,
+            hub_id: user.hub_id,
+            hub_name: user.hub || 'Unknown',
+            print_method: 'pdf',
+            pieces_printed: tx.pieces || 1,
+          });
+        } catch (err) {
+          console.error('Failed to log tag print', err);
+        }
+        return;
+      }
 
       // Marketing entries print one bag-aware tag per bag (BB/MB/SB
       // badges), matching what MarketingWorkspace's own "TAGS" buttons
