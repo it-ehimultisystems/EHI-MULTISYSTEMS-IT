@@ -22,6 +22,7 @@ import {
   Download,
   Printer,
   HandCoins,
+  Clock,
 } from "lucide-react";
 import { QRCode } from "../QRCode";
 import TagPrintHistory from "./TagPrintHistory";
@@ -88,6 +89,9 @@ export const TransactionLedger = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState(defaultTypeFilter || "All");
   const [modeFilter, setModeFilter] = useState("All");
+  const [timeFilter, setTimeFilter] = useState<"All" | "Morning" | "Afternoon" | "Evening" | "Custom">("All");
+  const [timeStart, setTimeStart] = useState("");
+  const [timeEnd, setTimeEnd] = useState("");
   const [posCodeInput, setPosCodeInput] = useState<{ id: string; code: string }>({ id: '', code: '' });
   const [vjFlightFilter, setVjFlightFilter] = useState("All");
   const [vjDestFilter, setVjDestFilter] = useState("All");
@@ -150,11 +154,59 @@ export const TransactionLedger = ({
       } else if (modeFilter === "Expense") {
         if (e.source !== "expense") return false;
       } else if (modeFilter === "Unverified") {
-        // Mirrors unverifiedCash/unconfirmedTransfer below: Cash or Transfer
-        // entries that haven't had their payment_confirmed flag set.
         if (!((e.mode === 'Cash' || e.mode === 'Transfer') && !e.raw.paymentConfirmed)) return false;
       } else {
         if (e.mode.toLowerCase() !== modeFilter.toLowerCase()) return false;
+      }
+    }
+
+    if (timeFilter !== "All") {
+      const tm = ((): { hour: number; minute: number } | null => {
+        if (e.raw?.created_at) {
+          const d = new Date(e.raw.created_at);
+          if (!isNaN(d.getTime())) return { hour: d.getHours(), minute: d.getMinutes() };
+        }
+        if ((e as any)._sortTime && (e as any)._sortTime > 0) {
+          const d = new Date((e as any)._sortTime);
+          if (!isNaN(d.getTime())) return { hour: d.getHours(), minute: d.getMinutes() };
+        }
+        if (e.time) {
+          const match = e.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+          if (match) {
+            let h = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            const ampm = match[3]?.toUpperCase();
+            if (ampm === 'PM' && h < 12) h += 12;
+            if (ampm === 'AM' && h === 12) h = 0;
+            return { hour: h, minute: m };
+          }
+        }
+        return null;
+      })();
+
+      if (tm) {
+        const totalMins = tm.hour * 60 + tm.minute;
+        if (timeFilter === "Morning") {
+          // 06:00 to 11:59 (360 to 719 mins)
+          if (totalMins < 360 || totalMins >= 720) return false;
+        } else if (timeFilter === "Afternoon") {
+          // 12:00 to 16:59 (720 to 1019 mins)
+          if (totalMins < 720 || totalMins >= 1020) return false;
+        } else if (timeFilter === "Evening") {
+          // 17:00 to 23:59 (1020 to 1439 mins)
+          if (totalMins < 1020) return false;
+        } else if (timeFilter === "Custom") {
+          if (timeStart) {
+            const [sh, sm] = timeStart.split(':').map(Number);
+            const startMins = (sh || 0) * 60 + (sm || 0);
+            if (totalMins < startMins) return false;
+          }
+          if (timeEnd) {
+            const [eh, em] = timeEnd.split(':').map(Number);
+            const endMins = (eh || 0) * 60 + (em || 0);
+            if (totalMins > endMins) return false;
+          }
+        }
       }
     }
 
@@ -167,7 +219,7 @@ export const TransactionLedger = ({
     }
 
     return true;
-  }), [entries, typeFilter, modeFilter, searchQuery]);
+  }), [entries, typeFilter, modeFilter, timeFilter, timeStart, timeEnd, searchQuery]);
 
   const handleEditClick = (e: Entry, evt: React.MouseEvent) => {
     evt.stopPropagation();
@@ -1055,6 +1107,43 @@ export const TransactionLedger = ({
               <option value="Unverified">Unverified</option>
             </select>
           </div>
+
+          <div className="flex items-center ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
+            <Clock size={10} className="text-[var(--color-muted)] mr-1 shrink-0" />
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value as any)}
+              className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
+            >
+              <option value="All">All Time</option>
+              <option value="Morning">Morning (06:00 - 12:00)</option>
+              <option value="Afternoon">Afternoon (12:00 - 17:00)</option>
+              <option value="Evening">Evening (17:00 - 24:00)</option>
+              <option value="Custom">Custom Time</option>
+            </select>
+          </div>
+
+          {timeFilter === "Custom" && (
+            <div className="flex items-center gap-1 ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
+              <input
+                id="ledger-time-start"
+                name="time-start"
+                type="time"
+                value={timeStart}
+                onChange={(e) => setTimeStart(e.target.value)}
+                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[80px]"
+              />
+              <span className="text-[var(--color-muted)]">to</span>
+              <input
+                id="ledger-time-end"
+                name="time-end"
+                type="time"
+                value={timeEnd}
+                onChange={(e) => setTimeEnd(e.target.value)}
+                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[80px]"
+              />
+            </div>
+          )}
         </div>
       </div>
 

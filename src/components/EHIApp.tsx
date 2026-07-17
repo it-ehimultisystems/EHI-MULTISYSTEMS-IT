@@ -1,6 +1,8 @@
 import { useState, useEffect, lazy, Suspense, useRef, useCallback, memo, useMemo } from 'react';
 import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport, cleanupOldQueue } from '../lib/sync';
+import { db } from '../lib/db';
+import Dexie from 'dexie';
 import { refillPoolIfLow } from '../lib/tagPool';
 import { getHubCode } from '../lib/helpers';
 import { useTheme } from '../lib/useTheme';
@@ -915,17 +917,24 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       updatePayload.total_kg = tx.kg;
       updatePayload.content_type = tx.contentType;
       updatePayload.airline = tx.airline;
+      if ((tx as any).remarks !== undefined) updatePayload.remark = (tx as any).remarks;
+      if ((tx as any).pickupPin !== undefined) updatePayload.pickup_pin = (tx as any).pickupPin;
+      if (tx.consigneePhone !== undefined) updatePayload.consignee_phone = tx.consigneePhone;
     } else if (tx.type === 'baggage') {
       updatePayload.passenger_name = tx.name;
       updatePayload.flight_no = tx.flight;
       updatePayload.destination = tx.destination;
+      updatePayload.total_pcs = tx.pieces || 1;
+      const excess = Math.round(tx.excessKg || (tx as any).excessKg || tx.kg || 0);
+      updatePayload.excess_kg = excess;
+      updatePayload.total_kg = Math.round(tx.totalKg || (tx as any).totalKg || excess);
+      if (tx.pnr !== undefined) updatePayload.pnr = tx.pnr;
+      if ((tx as any).phone !== undefined || tx.consigneePhone !== undefined) {
+        updatePayload.passenger_phone = (tx as any).phone || tx.consigneePhone;
+      }
     } else if (tx.type === 'marketing') {
       updatePayload.customer_name = tx.name;
       updatePayload.route = tx.route;
-      // Set directly by TransactionLedger's edit modal (parsed from the
-      // composed `detail` string there, since bag counts aren't discrete
-      // fields on Transaction) -- undefined for calls that aren't editing
-      // details (e.g. toggling payment confirmation), so left untouched.
       const bb = (tx as any)._bb;
       const mb = (tx as any)._mb;
       const sb = (tx as any)._sb;
@@ -939,10 +948,37 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       updatePayload.total_pcs = tx.pieces || 1;
       updatePayload.total_kg = tx.kg || 0;
       updatePayload.contents = (tx as any).contents || null;
+      if (tx.paymentNarration !== undefined) updatePayload.payment_narration = tx.paymentNarration;
+    }
+
+    // Update local IndexedDB mirror table so offline queries adopt changes immediately
+    try {
+      const existingRecord = await (db[table] as Dexie.Table).get(tx.id);
+      if (existingRecord) {
+        existingRecord.data = { ...existingRecord.data, ...updatePayload };
+        await (db[table] as Dexie.Table).put(existingRecord);
+      }
+    } catch (err) {
+      console.warn('Failed local DB update', err);
     }
 
     const { error } = await supabase.from(table).update(updatePayload).eq(idCol, tx.id);
-    if (error) showToast({ message: `Update failed: ${error.message}`, type: 'error' });
+    if (error) {
+      showToast({ message: `Saved offline — update queued: ${error.message}`, type: 'warning' });
+      try {
+        await db.sync_queue.add({
+          table_name: table,
+          record_id: tx.id,
+          action: 'UPDATE',
+          payload: { ...updatePayload, id: tx.id },
+          synced: 0,
+          created_at: new Date().toISOString(),
+        });
+        setPendingSyncCount(prev => prev + 1);
+      } catch (qErr) {
+        console.error('Failed to queue update', qErr);
+      }
+    }
     // A B2B corporate shipment's debt being paid down (via DebtorsTab,
     // the only place that happens today) should reduce the client's
     // monthly aggregate the same way finalizing a new shipment increments
