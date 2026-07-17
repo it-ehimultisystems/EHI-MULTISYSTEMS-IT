@@ -74,3 +74,5 @@ export const EXPENSE_CATEGORIES = [
 
 export const PAYMENT_MODES = ['Cash', 'POS', 'Transfer', 'Debt'] as const;
 export const BANKS = ['UBA', 'GTBank', 'Access', 'Zenith', 'First Bank', 'Polaris', 'Keystone', 'Fidelity', 'Sterling', 'Other'] as const;
+
+export const MIN_PACKAGE_AMOUNT = 4000;

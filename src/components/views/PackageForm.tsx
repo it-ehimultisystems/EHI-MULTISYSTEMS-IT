@@ -6,6 +6,7 @@ import { useHubRoutes, useValidatedRouteSelection } from "../../lib/hubRoutes";
 import { useContentTypes } from "../../lib/contentTypes";
 import { useExpenseCategories } from "../../lib/expenseCategories";
 import { useBanks } from "../../lib/banks";
+import { MIN_PACKAGE_AMOUNT } from "../../lib/constants";
 import { getNextTag } from "../../lib/tagPool";
 import { Plus, CheckCircle, Loader2, ClipboardList, BarChart2, Printer, MessageSquare, Bluetooth } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -109,7 +110,7 @@ export const PackageForm = ({
   const pcsNum = parseInt(pcs) || 0;
   const kgNum = parseFloat(kg) || 0;
   const isValid = (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0 && phone.trim().length > 0)
-    && parsedAmount > 0 && destination.trim().length > 0 && !!trackingRef && pcsNum > 0;
+    && parsedAmount >= MIN_PACKAGE_AMOUNT && destination.trim().length > 0 && !!trackingRef && pcsNum > 0;
 
   // "Today" here means the actual calendar day, not whatever the app-wide
   // date-range picker (globalDateRange, defaults to a trailing 7 days) is
@@ -146,6 +147,10 @@ export const PackageForm = ({
   const [closingDay, setClosingDay] = useState(false);
 
   const handleAddEntry = () => {
+    if (parsedAmount < MIN_PACKAGE_AMOUNT) {
+      showToast({ message: `Amount must be at least ₦${MIN_PACKAGE_AMOUNT.toLocaleString()}`, type: 'warning' });
+      return;
+    }
     if (!isValid || submitting) return;
     setSubmitting(true);
 
@@ -609,6 +614,11 @@ export const PackageForm = ({
                     />
                   </div>
                 </div>
+                {amount !== "" && parsedAmount < MIN_PACKAGE_AMOUNT && (
+                  <p className="text-[11px] text-red-500 font-mono -mt-2">
+                    ⚠ Minimum amount is ₦{MIN_PACKAGE_AMOUNT.toLocaleString()}
+                  </p>
+                )}
 
                 <button
                   onClick={handleAddEntry}

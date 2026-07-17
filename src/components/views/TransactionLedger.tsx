@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow, isStandalonePWA, getHubCode } from "../../lib/helpers";
+import { MIN_PACKAGE_AMOUNT } from "../../lib/constants";
 import { useContentTypes } from "../../lib/contentTypes";
 import { useBanks } from "../../lib/banks";
 import { BackButton } from "../BackButton";
@@ -196,6 +197,10 @@ export const TransactionLedger = ({
     const sb = parseInt(editBagCounts.sb) || 0;
     if (amount < 0 || pieces < 0 || kg < 0 || bb < 0 || mb < 0 || sb < 0) {
       showToast({ message: 'Amount, pieces, weight, and bag counts cannot be negative.', type: 'warning' });
+      return;
+    }
+    if (editingTx.type === 'package' && amount < MIN_PACKAGE_AMOUNT) {
+      showToast({ message: `Package/Parcel transactions must have an amount of at least ₦${MIN_PACKAGE_AMOUNT.toLocaleString()}`, type: 'warning' });
       return;
     }
     // Details fields (name, route, pieces, weight, etc.) are edited as
