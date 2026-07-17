@@ -355,6 +355,10 @@ export function createApp() {
       return res.status(403).json({ error: 'Only a super_admin can edit view access.' });
     }
 
+    if ('can_edit_remarks' in updates && adminCtx.callerRole !== 'super_admin') {
+      return res.status(403).json({ error: 'Only a super_admin can edit remarks editing permission.' });
+    }
+
     try {
       const { error } = await adminClient.from('user_profiles').update(updates).eq('id', userId);
       if (error) return res.status(400).json({ error: error.message });

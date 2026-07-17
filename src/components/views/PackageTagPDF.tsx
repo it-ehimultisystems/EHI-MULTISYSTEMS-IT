@@ -9,7 +9,7 @@ import {
 } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
-import { openPdfOrDownload, getHubCode } from "../../lib/helpers";
+import { openPdfOrDownload, getHubCode, cleanRoute } from "../../lib/helpers";
 import { notifySilentError } from "../../lib/ToastContext";
 
 // Fixed 100mm x 80mm label -- same discrete, fixed-size tag format as
@@ -128,6 +128,12 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#111827",
   },
+  hubValue: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
+    color: "#000000",
+  },
   fieldValueLarge: {
     fontSize: 13,
     fontFamily: "Helvetica-Bold",
@@ -182,7 +188,7 @@ const styles = StyleSheet.create({
     marginBottom: 1.5,
   },
   contentValueUnderQr: {
-    fontSize: 9.5,
+    fontSize: 11,
     fontFamily: "Helvetica-Bold",
     fontWeight: "bold",
     color: "#000000",
@@ -225,13 +231,12 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
 
       <View style={styles.dateRow}>
         <Text style={styles.dateText}>DATE: {data.date || "—"}</Text>
-        <Text style={styles.dateText}>EHI LOGISTICS</Text>
       </View>
 
       <View style={styles.body}>
         <View style={styles.leftCol}>
           <Text style={styles.destLabel}>Destination</Text>
-          <Text style={styles.destValue}>{data.destination?.toUpperCase() || "—"}</Text>
+          <Text style={styles.destValue}>{cleanRoute(data.destination)}</Text>
 
           <View style={styles.refBand}>
             <Text style={styles.refLabel}>Tracking Ref</Text>
@@ -260,7 +265,7 @@ const PackageTagOnlyPDF = ({ data }: { data: PackageTagPDFData }) => (
             </View>
             <View style={styles.fieldBlock}>
               <Text style={styles.fieldLabel}>Hub</Text>
-              <Text style={styles.fieldValue}>{getHubCode(data.hubName) || "—"}</Text>
+              <Text style={styles.hubValue}>{getHubCode(data.hubName) || "—"}</Text>
             </View>
           </View>
 

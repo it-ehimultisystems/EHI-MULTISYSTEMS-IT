@@ -20,6 +20,7 @@ interface StaffMember {
   active: boolean;
   phone?: string;
   can_print_ledger?: boolean;
+  can_edit_remarks?: boolean;
   assigned_airline?: string | null;
   view_overrides?: string[] | null;
   hub?: { name: string; code: string };
@@ -88,7 +89,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
       if (hubData) setHubs(hubData as Hub[]);
 
       let q = supabase.from('user_profiles')
-        .select('id, email, name, role, hub_id, hub_type, active, phone, can_print_ledger, assigned_airline, view_overrides, hubs(name, code)')
+        .select('id, email, name, role, hub_id, hub_type, active, phone, can_print_ledger, can_edit_remarks, assigned_airline, view_overrides, hubs(name, code)')
         .order('name');
 
       if (!isSuperAdmin && user.hub_id) {
@@ -103,6 +104,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
           ...s,
           hub: Array.isArray(s.hubs) ? s.hubs[0] : s.hubs,
           can_print_ledger: s.can_print_ledger ?? false,
+          can_edit_remarks: s.can_edit_remarks ?? false,
         })));
       } else {
          setError('Query returned no data');
@@ -564,6 +566,36 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                   )}
                 </div>
 
+                {/* Remarks Edit Permission — super_admin only */}
+                <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Shield size={12} className="text-[var(--color-accent-amber)]" />
+                        <span className="text-[12px] font-bold text-[var(--color-foreground)]">Edit Remarks Permission</span>
+                      </div>
+                      <p className="text-[10px] text-[var(--color-muted)] leading-snug">
+                        Allows this staff member to edit transaction remarks in the ledger.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setEditingStaff(s => s ? {...s, can_edit_remarks: !s.can_edit_remarks} : null)}
+                      role="switch"
+                      aria-checked={editingStaff.can_edit_remarks}
+                      aria-label="Edit remarks permission"
+                      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors ml-3 ${
+                        editingStaff.can_edit_remarks
+                          ? 'bg-[var(--color-accent-amber)] border-[var(--color-accent-amber)]'
+                          : 'bg-[var(--color-surface-2)] border-[var(--color-border)]'
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow transition-transform ${
+                        editingStaff.can_edit_remarks ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                </div>
+
                 {/* View Access Override — master control: only super_admin
                     can edit any staff member's view access, regardless of
                     who is being edited. When off, this person's access
@@ -645,6 +677,7 @@ export const StaffManagement = ({ user, onBack }: { user: User; onBack: () => vo
                     role: editingStaff.role,
                     hub_id: editingStaff.hub_id,
                     can_print_ledger: editingStaff.can_print_ledger,
+                    can_edit_remarks: editingStaff.can_edit_remarks,
                     assigned_airline: editingStaff.role === 'baggage_agent' ? (editingStaff.assigned_airline || null) : null,
                     ...(isSuperAdmin ? { view_overrides: editingStaff.view_overrides ?? null } : {}),
                   })}

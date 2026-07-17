@@ -640,6 +640,9 @@ export const TransactionLedger = ({
       amountPaid: tx.amount,
       paymentHistory: [...(tx.paymentHistory || []), historyEntry],
       mode: 'Debt Paid',
+      paymentConfirmed: true,
+      confirmedBy: user.name || 'Unknown',
+      confirmedAt: new Date().toISOString(),
       ...(tx.type === 'package' ? {
         debtPaid: true,
         debtPaidAt: new Date().toISOString()
@@ -663,6 +666,7 @@ export const TransactionLedger = ({
     (user.role === 'super_admin' || user.can_print_ledger === true);
 
   const isAccountantOrAdmin = canEdit;
+  const canEditRemarks = user.role === 'super_admin' || user.can_edit_remarks === true;
   // Separate from canEdit -- PIN visibility is admin/super_admin/
   // accountant regardless of the can_print_ledger flag, which is a
   // different, edit-specific permission.
@@ -970,7 +974,7 @@ export const TransactionLedger = ({
           <table className="w-full min-w-[720px] text-left font-mono text-[10px]">
             <thead className="bg-[var(--color-surface-card)]">
               <tr className="text-[var(--color-muted)] border-b border-[var(--color-border)] uppercase">
-                {isAccountantOrAdmin && <th className="py-3 px-3 w-[36px]"></th>}
+                {(isAccountantOrAdmin || !viewOnly) && <th className="py-3 px-3 w-[36px]"></th>}
                 {canSeePin && <th className="py-3 px-2 w-[64px] font-medium">PIN</th>}
                 <th className="py-3 px-2 w-[150px] font-medium">ID</th>
                 <th className="py-3 px-2 w-[72px] font-medium">Date</th>
@@ -985,7 +989,7 @@ export const TransactionLedger = ({
               {filteredEntries.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={isAccountantOrAdmin ? (canSeePin ? 9 : 8) : (canSeePin ? 8 : 7)}
+                    colSpan={(isAccountantOrAdmin || !viewOnly) ? (canSeePin ? 9 : 8) : (canSeePin ? 8 : 7)}
                     className="py-8 text-center text-[var(--color-muted)]"
                   >
                     No entries found matching filters.
@@ -995,7 +999,7 @@ export const TransactionLedger = ({
                 <>
                   {rowVirtualizer.getVirtualItems().length > 0 && (
                     <tr style={{ height: rowVirtualizer.getVirtualItems()[0].start }}>
-                      <td colSpan={isAccountantOrAdmin ? (canSeePin ? 9 : 8) : (canSeePin ? 8 : 7)} />
+                      <td colSpan={(isAccountantOrAdmin || !viewOnly) ? (canSeePin ? 9 : 8) : (canSeePin ? 8 : 7)} />
                     </tr>
                   )}
                   {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -1031,9 +1035,9 @@ export const TransactionLedger = ({
                     onClick={() => setViewingDetail(e)}
                     className="border-b border-[var(--color-border)] hover:bg-[var(--color-border)] transition-colors cursor-pointer group"
                   >
-                    {isAccountantOrAdmin && (
+                    {(isAccountantOrAdmin || !viewOnly) && (
                       <td className="py-2.5 px-3">
-                        {(e.mode === 'Cash' || e.mode === 'POS' || e.mode === 'Transfer') && (
+                        {(e.mode === 'Cash' || e.mode === 'POS' || e.mode === 'Transfer') && isAccountantOrAdmin && (
                           <div onClick={(evt) => evt.stopPropagation()}>
                             {e.mode === 'POS' && !e.posApprovalCode ? (
                               posCodeInput.id === e.id ? (
@@ -1177,7 +1181,7 @@ export const TransactionLedger = ({
                     const lastItem = items[items.length - 1];
                     const paddingBottom = rowVirtualizer.getTotalSize() - (lastItem ? lastItem.end : 0);
                     return paddingBottom > 0 ? (
-                      <tr style={{ height: paddingBottom }}><td colSpan={isAccountantOrAdmin ? (canSeePin ? 9 : 8) : (canSeePin ? 8 : 7)} /></tr>
+                      <tr style={{ height: paddingBottom }}><td colSpan={(isAccountantOrAdmin || !viewOnly) ? (canSeePin ? 9 : 8) : (canSeePin ? 8 : 7)} /></tr>
                     ) : null;
                   })()}
                 </>
@@ -1299,12 +1303,17 @@ export const TransactionLedger = ({
 
                   <div className="mt-2 pt-3 border-t border-[var(--color-border)]">
                     {viewingDetail.mode === 'Debt' ? (
-                      <div className="text-[11px] text-[var(--color-error)] flex items-center gap-1.5">
+                      <div className="text-[11px] text-[var(--color-error)] flex items-center gap-1.5 font-sans">
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-error)]" />
                         Outstanding — not yet paid
                       </div>
+                    ) : viewingDetail.mode === 'Debt Paid' ? (
+                      <div className="text-[11px] text-[var(--color-success)] flex items-center gap-1.5 font-medium font-sans">
+                        <Check size={14} />
+                        Debt Cleared by {viewingDetail.raw.confirmedBy || (viewingDetail.raw.paymentHistory && viewingDetail.raw.paymentHistory[viewingDetail.raw.paymentHistory.length - 1]?.by) || 'System'}
+                      </div>
                     ) : viewingDetail.raw.paymentConfirmed ? (
-                      <div className="text-[11px] text-[var(--color-success)] flex items-center gap-1.5 font-medium">
+                      <div className="text-[11px] text-[var(--color-success)] flex items-center gap-1.5 font-medium font-sans">
                         <Check size={14} />
                         {viewingDetail.mode === 'Transfer' && viewingDetail.raw.bankReference
                           ? `Confirmed via bank alert at ${viewingDetail.raw.confirmedAt || ''}`
@@ -1351,7 +1360,10 @@ export const TransactionLedger = ({
               {/* Timestamps */}
               <section className="text-[10px] font-mono text-[var(--color-muted)] space-y-1 pb-4">
                 <div>Logged at: {viewingDetail.time} {viewingDetail.raw.enteredByName ? `by ${viewingDetail.raw.enteredByName}` : (viewingDetail.raw.loggedBy ? `by ${viewingDetail.raw.loggedBy}` : '')}</div>
-                {viewingDetail.raw.paymentConfirmed && viewingDetail.raw.confirmedAt && (
+                {viewingDetail.mode === 'Debt Paid' && (
+                  <div>Cleared by: {viewingDetail.raw.confirmedBy || (viewingDetail.raw.paymentHistory && viewingDetail.raw.paymentHistory[viewingDetail.raw.paymentHistory.length - 1]?.by) || 'System'} {viewingDetail.raw.confirmedAt ? `at ${new Date(viewingDetail.raw.confirmedAt).toLocaleString('en-NG')}` : ''}</div>
+                )}
+                {viewingDetail.raw.paymentConfirmed && viewingDetail.raw.confirmedAt && viewingDetail.mode !== 'Debt Paid' && (
                   <div>Confirmed at: {viewingDetail.raw.confirmedAt}</div>
                 )}
               </section>
@@ -1368,7 +1380,7 @@ export const TransactionLedger = ({
                     >
                       <QrCode size={14} /> Scan
                     </button>
-                    {viewingDetail.mode === 'Debt' && isAccountantOrAdmin && (
+                    {viewingDetail.mode === 'Debt' && !viewOnly && (
                       <button 
                         onClick={(evt) => handleClearDebt(viewingDetail, evt)}
                         className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold"
@@ -1384,7 +1396,7 @@ export const TransactionLedger = ({
                         <CheckSquare size={14} /> Confirm
                       </button>
                     )}
-                    {isAccountantOrAdmin && (
+                    {(canEdit || canEditRemarks) && (
                       <button
                         onClick={(evt) => handleEditClick(viewingDetail, evt)}
                         className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
@@ -1482,9 +1494,10 @@ export const TransactionLedger = ({
                       id="edit-tx-cargo-name"
                       name="edit-tx-cargo-name"
                       type="text"
+                      disabled={!canEdit}
                       value={editingTx.name}
                       onChange={(e) => setEditingTx({ ...editingTx, name: e.target.value })}
-                      className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                      className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1495,9 +1508,10 @@ export const TransactionLedger = ({
                       id="edit-tx-airline"
                       name="edit-tx-airline"
                       type="text"
+                      disabled={!canEdit}
                       value={editingTx.airline || ''}
                       onChange={(e) => setEditingTx({ ...editingTx, airline: e.target.value })}
-                      className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                      className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1509,9 +1523,10 @@ export const TransactionLedger = ({
                         id="edit-tx-cargo-route"
                         name="edit-tx-cargo-route"
                         type="text"
+                        disabled={!canEdit}
                         value={editingTx.route || ''}
                         onChange={(e) => setEditingTx({ ...editingTx, route: e.target.value })}
-                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
                       />
                     </div>
                     <div className="space-y-1">
@@ -1522,9 +1537,10 @@ export const TransactionLedger = ({
                         id="edit-tx-content-type"
                         name="edit-tx-content-type"
                         type="text"
+                        disabled={!canEdit}
                         value={editingTx.contentType || ''}
                         onChange={(e) => setEditingTx({ ...editingTx, contentType: e.target.value })}
-                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
                       />
                     </div>
                   </div>
@@ -1538,9 +1554,10 @@ export const TransactionLedger = ({
                         name="edit-tx-pieces"
                         type="number"
                         min="0"
+                        disabled={!canEdit}
                         value={pieceInput}
                         onChange={(e) => setPieceInput(e.target.value)}
-                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
                       />
                     </div>
                     <div className="space-y-1">
@@ -1552,11 +1569,27 @@ export const TransactionLedger = ({
                         name="edit-tx-kg"
                         type="number"
                         min="0"
+                        disabled={!canEdit}
                         value={kgInput}
                         onChange={(e) => setKgInput(e.target.value)}
-                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                        className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-mono text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
+                      Remarks
+                    </label>
+                    <textarea
+                      id="edit-tx-remarks"
+                      name="edit-tx-remarks"
+                      rows={2}
+                      disabled={!(canEdit || canEditRemarks)}
+                      value={editingTx.remarks || ''}
+                      onChange={(e) => setEditingTx({ ...editingTx, remarks: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)] resize-none disabled:opacity-60"
+                      placeholder="E.G. SENT BY ROAD"
+                    />
                   </div>
                   {editingTx.awb_tag_number && (
                     <div className="text-[11px] font-mono text-[var(--color-muted)] bg-[var(--color-border)] p-2 rounded">

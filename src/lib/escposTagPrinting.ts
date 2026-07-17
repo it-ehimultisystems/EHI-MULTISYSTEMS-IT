@@ -4,7 +4,7 @@ import {
   concatChunks, brandingHeader, brandingHeaderWithAirline, fieldRow, divider, qrAsRaster
 } from './escposShared';
 import { printViaBluetooth } from './escpos';
-import { getHubCode } from './helpers';
+import { getHubCode, cleanRoute } from './helpers';
 
 export interface CargoTagData {
   id: string; // AWB Tag number / Ref
@@ -38,7 +38,7 @@ export async function compileSingleTag(
   
   if (item.route) {
     chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT));
-    chunks.push(encoder.encode(`${item.route.toUpperCase()}\n`));
+    chunks.push(encoder.encode(`${cleanRoute(item.route)}\n`));
     chunks.push(new Uint8Array(TEXT_NORMAL));
   }
   
@@ -166,7 +166,7 @@ async function compileSingleMarketingTag(
 
   if (item.route) {
     chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT));
-    chunks.push(encoder.encode(`${item.route.toUpperCase()}\n`));
+    chunks.push(encoder.encode(`${cleanRoute(item.route)}\n`));
     chunks.push(new Uint8Array(TEXT_NORMAL));
   }
 
@@ -304,7 +304,7 @@ export async function compileGapLabelTag(item: CargoTagData): Promise<Uint8Array
 
   if (item.route) {
     chunks.push(new Uint8Array(TEXT_DOUBLE_HEIGHT));
-    chunks.push(encoder.encode(`${item.route.toUpperCase()}\n`));
+    chunks.push(encoder.encode(`${cleanRoute(item.route)}\n`));
     chunks.push(new Uint8Array(TEXT_NORMAL));
   }
 

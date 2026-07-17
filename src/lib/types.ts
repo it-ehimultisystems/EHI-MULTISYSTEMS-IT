@@ -44,6 +44,7 @@ export interface User {
   hub_id?: string;
   active?: boolean;
   can_print_ledger?: boolean;   // Super admin grants this per user
+  can_edit_remarks?: boolean;   // Super admin grants this per user to edit cargo remarks
   // Which excess_baggage_airlines.name this user tickets for -- only
   // meaningful when role === 'baggage_agent'.
   assigned_airline?: string;

@@ -352,3 +352,8 @@ export function normalizeAirlineName(raw: string | null | undefined): string {
   const key = raw.trim().toLowerCase();
   return AIRLINE_NAME_MAP[key] || raw.trim();
 }
+
+export function cleanRoute(route: string | null | undefined): string {
+  if (!route) return '—';
+  return route.replace(/\s*(Air\s+)?Cargo\s+Station/gi, '').trim().toUpperCase();
+}

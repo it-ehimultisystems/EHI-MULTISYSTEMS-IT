@@ -13,7 +13,7 @@ import { AirlineLogoPDF } from "../AirlineLogoPDF";
 import { resolveAirlineLogoUrl } from "../../lib/airlineLogos";
 import { printPdfSmart } from "../../lib/qzPrint";
 import { notifySilentError } from "../../lib/ToastContext";
-import { getHubCode } from "../../lib/helpers";
+import { getHubCode, cleanRoute } from "../../lib/helpers";
 
 // Fixed 100mm x 80mm label -- same discrete, fixed-size tag format as
 // CargoTagPDF, for the XP-402B and similar gap/die-cut label printers.
@@ -165,6 +165,12 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#111827",
   },
+  hubValue: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
+    color: "#000000",
+  },
   fieldValueLarge: {
     fontSize: 13,
     fontFamily: "Helvetica-Bold",
@@ -219,7 +225,7 @@ const styles = StyleSheet.create({
     marginBottom: 1.5,
   },
   contentValueUnderQr: {
-    fontSize: 9.5,
+    fontSize: 11,
     fontFamily: "Helvetica-Bold",
     fontWeight: "bold",
     color: "#000000",
@@ -263,13 +269,12 @@ const MarketingTagPage = ({
 
     <View style={styles.dateRow}>
       <Text style={styles.dateText}>DATE: {data.date || "—"}</Text>
-      <Text style={styles.dateText}>EHI LOGISTICS</Text>
     </View>
 
     <View style={styles.body}>
       <View style={styles.leftCol}>
         <Text style={styles.routeLabel}>Route</Text>
-        <Text style={styles.routeValue}>{data.route?.toUpperCase() || "—"}</Text>
+        <Text style={styles.routeValue}>{cleanRoute(data.route)}</Text>
 
         <View style={styles.refBand}>
           <Text style={styles.refLabel}>AWB / Tag</Text>
@@ -291,7 +296,7 @@ const MarketingTagPage = ({
           </View>
           <View style={styles.fieldBlock}>
             <Text style={styles.fieldLabel}>Hub</Text>
-            <Text style={styles.fieldValue}>{getHubCode(data.hubName) || "—"}</Text>
+            <Text style={styles.hubValue}>{getHubCode(data.hubName) || "—"}</Text>
           </View>
         </View>
 
