@@ -88,10 +88,11 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
       const addHubFilter = (q: any) => (!isAdmin && user.hub_id) ? q.eq('hub_id', user.hub_id) : q;
 
       try {
-        const [cargoRes, vjRes, mktRes, profilesRes] = await Promise.all([
+        const [cargoRes, vjRes, mktRes, pkgRes, profilesRes] = await Promise.all([
           addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,corporate_client_id').gte('created_at', fromISO).lte('created_at', toISO)),
           addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', fromISO).lte('created_at', toISO)),
           addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by').gte('created_at', fromISO).lte('created_at', toISO)),
+          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,amount,payment_mode,created_at,hub_id,bank,entered_by,status').gte('created_at', fromISO).lte('created_at', toISO)),
           supabase.from('user_profiles').select('id,name')
         ]);
 
@@ -158,6 +159,27 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               bank: r.bank,
               hub_id: r.hub_id,
               route: r.route,
+              enteredByName: enteredByName || undefined,
+            });
+          });
+        }
+
+        if (pkgRes.data) {
+          pkgRes.data.forEach((r: any) => {
+            const enteredByName = r.entered_by ? (profileLookup[r.entered_by] || r.entered_by) : undefined;
+            allTx.push({
+              id: r.entry_ref || r.id,
+              name: r.customer_name || 'Customer',
+              detail: `${r.destination || 'Destination'} · ${r.content_type || 'Package'} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg`,
+              amount: r.amount || 0,
+              mode: r.payment_mode || 'Cash',
+              time: new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+              type: 'package',
+              status: r.status || 'Received',
+              created_at: r.created_at,
+              bank: r.bank,
+              hub_id: r.hub_id,
+              route: r.destination,
               enteredByName: enteredByName || undefined,
             });
           });

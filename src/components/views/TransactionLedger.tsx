@@ -747,7 +747,7 @@ export const TransactionLedger = ({
   }, [entries, defaultTypeFilter]);
 
   return (
-    <div className="flex flex-col h-full pb-24 bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
+    <div className="flex flex-col h-full pb-4 bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shrink-0">
         <div className="flex items-center space-x-4">
@@ -974,7 +974,7 @@ export const TransactionLedger = ({
       )}
 
       {/* Table Container */}
-      <div ref={tableRef} className="flex-1 overflow-auto p-4 pb-20 relative">
+      <div ref={tableRef} className="flex-1 overflow-auto p-4 pb-4 relative">
         <div className="ehi-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left font-mono text-[10px]">

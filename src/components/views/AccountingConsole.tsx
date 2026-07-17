@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
-import { Box, Plane, TrendingUp, Lock, Unlock, AlertCircle, FileDown } from 'lucide-react';
+import { Box, Plane, TrendingUp, Package, Lock, Unlock, AlertCircle, FileDown } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { DebtorsTab } from './DebtorsTab';
 import { ExpensesTab } from './ExpensesTab';
@@ -74,16 +74,17 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
     return { filteredTx: fTx, filteredExp: fExp };
   }, [transactions, expenses, period, customStart, customEnd]);
 
-  // ==== SUMMARY TAB CALCULATIONS ====
   const cargoTx = filteredTx.filter(t => t.type === 'cargo');
   const vjTx = filteredTx.filter(t => t.type === 'baggage');
   const mktgTx = filteredTx.filter(t => t.type === 'marketing');
+  const pkgTx = filteredTx.filter(t => t.type === 'package');
 
   const cargoTotal = cargoTx.reduce((sum, t) => sum + t.amount, 0);
   const vjTotal = vjTx.reduce((sum, t) => sum + t.amount, 0);
   const mktgTotal = mktgTx.reduce((sum, t) => sum + t.amount, 0);
+  const pkgTotal = pkgTx.reduce((sum, t) => sum + t.amount, 0);
 
-  const grandRevenue = cargoTotal + vjTotal + mktgTotal;
+  const grandRevenue = cargoTotal + vjTotal + mktgTotal + pkgTotal;
   // Only approved spend counts as real outflow. Pending/rejected expenses
   // must not distort Net Revenue.
   const approvedExp = filteredExp.filter(e => (e.status || 'approved') === 'approved');
@@ -318,6 +319,7 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                     { name: 'Cargo Station', amount: cargoTotal, count: cargoTx.length },
                     { name: 'Excess Baggage', amount: vjTotal, count: vjTx.length },
                     { name: 'Field Marketing', amount: mktgTotal, count: mktgTx.length },
+                    { name: 'Package Desk', amount: pkgTotal, count: pkgTx.length },
                   ],
                   grandRevenue,
                   totalExpenses,
@@ -364,6 +366,16 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
                 </div>
                 <div className="text-[20px] font-bold font-mono text-[var(--color-success)] ml-2 mb-1">{fmt(mktgTotal)}</div>
                 <div className="text-[12px] font-sans text-[var(--color-light-muted)] ml-2 mb-3">{mktgTx.length} Customers</div>
+             </div>
+
+             <div className="min-w-[200px] flex-1 bg-[var(--color-surface-card)] rounded-xl border border-[var(--color-border)] p-4 relative overflow-hidden snap-start">
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-purple-500" />
+                <div className="flex items-center space-x-2 mb-2 ml-2">
+                  <Package size={16} className="text-purple-400" />
+                  <span className="text-[13px] font-sans font-medium text-[var(--color-muted)]">Package Desk</span>
+                </div>
+                <div className="text-[20px] font-bold font-mono text-purple-400 ml-2 mb-1">{fmt(pkgTotal)}</div>
+                <div className="text-[12px] font-sans text-[var(--color-light-muted)] ml-2 mb-3">{pkgTx.length} Packages</div>
              </div>
           </div>
 

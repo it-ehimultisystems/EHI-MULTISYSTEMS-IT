@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
 const VALUE_COL_WIDTH = 136;
 
 const PackageReceiptPDF = ({ data }: { data: PackageReceiptData }) => {
-  let h = 250;
+  let h = 360;
   if (data.phone) h += 14;
   if (data.bankName) h += 14;
   if (data.paymentMode === "Transfer" && data.paymentNarration) h += 14;

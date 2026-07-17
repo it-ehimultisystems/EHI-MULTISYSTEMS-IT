@@ -109,7 +109,7 @@ export const PackageForm = ({
   const parsedAmount = parseFloat(amount) || 0;
   const pcsNum = parseInt(pcs) || 0;
   const kgNum = parseFloat(kg) || 0;
-  const isValid = (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0 && phone.trim().length > 0)
+  const isValid = (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0)
     && parsedAmount >= MIN_PACKAGE_AMOUNT && destination.trim().length > 0 && !!trackingRef && pcsNum > 0;
 
   // "Today" here means the actual calendar day, not whatever the app-wide
