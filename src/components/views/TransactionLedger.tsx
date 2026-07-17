@@ -331,7 +331,7 @@ export const TransactionLedger = ({
   const handleReprintReceiptPDF = async () => {
     if (!viewingDetail || !viewingDetail.raw) return;
     const tx = viewingDetail.raw;
-    if (tx.type !== 'cargo' && tx.type !== 'baggage') return;
+    if (tx.type !== 'cargo' && tx.type !== 'baggage' && tx.type !== 'package') return;
 
     try {
       if (tx.type === 'cargo') {
@@ -355,6 +355,24 @@ export const TransactionLedger = ({
           paymentNarration: tx.paymentNarration,
           remark: tx.remarks,
           pickupPin: tx.pickupPin,
+        });
+      } else if (tx.type === 'package') {
+        const { downloadPackageReceipt } = await import('./PackageReceipt');
+        await downloadPackageReceipt({
+          entryRef: tx.entryRef || tx.id,
+          date: `${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')} ${tx.time || tnow()}`,
+          agentName: tx.enteredByName || user.name,
+          customerName: tx.name,
+          phone: tx.consigneePhone || tx.phone,
+          destination: tx.destination || tx.route || 'Destination',
+          contentType: tx.contentType || 'Package',
+          pieces: tx.pieces || 1,
+          kg: tx.kg || 0,
+          contents: (tx as any).contents,
+          amount: tx.amount,
+          paymentMode: tx.mode,
+          paymentNarration: tx.paymentNarration,
+          bankName: tx.bank,
         });
       } else {
         const { printBaggageReceipt } = await import('./ExcessBaggageReceipt');
@@ -491,15 +509,46 @@ export const TransactionLedger = ({
 
   const handleReprintTagPDF = async () => {
     if (!viewingDetail || !viewingDetail.raw) return;
-    if (viewingDetail.raw.type !== 'cargo' && viewingDetail.raw.type !== 'marketing') {
-      showToast({ message: 'PDF Tag only available for cargo and marketing entries', type: 'info' });
+    if (viewingDetail.raw.type !== 'cargo' && viewingDetail.raw.type !== 'marketing' && viewingDetail.raw.type !== 'package') {
+      showToast({ message: 'PDF Tag only available for cargo, marketing, and package entries', type: 'info' });
       return;
     }
-    // Open the tab synchronously, in direct response to the click -- see
-    // the note in handleReprintTag above.
     const preOpenedWindow = isStandalonePWA() ? null : window.open('', '_blank');
     try {
       const tx = { ...viewingDetail.raw };
+
+      if (tx.type === 'package') {
+        const { printPackageTagPDF } = await import('./PackageTagPDF');
+        const data = {
+          id: tx.awb_tag_number || tx.entryRef || tx.id,
+          name: tx.name,
+          destination: tx.destination || tx.route || 'Destination',
+          contentType: tx.contentType || 'Package',
+          pieces: tx.pieces || 1,
+          kg: tx.kg || 0,
+          contents: (tx as any).contents,
+          hubName: user?.hub || 'EHI Station',
+          date: `${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')} ${tx.time || tnow()}`,
+        };
+
+        await printPackageTagPDF(data, preOpenedWindow);
+
+        try {
+          await supabase.from('tag_print_log').insert({
+            cargo_ref: tx.id,
+            awb_tag_number: data.id,
+            printed_by: user.id,
+            printed_by_name: user.name,
+            hub_id: user.hub_id,
+            hub_name: user.hub || 'Unknown',
+            print_method: 'pdf',
+            pieces_printed: tx.pieces || 1,
+          });
+        } catch (err) {
+          console.error('Failed to log tag print', err);
+        }
+        return;
+      }
 
       // Same bag-aware format as handleReprintTag above -- see its comment
       // for why marketing entries can't use the generic CargoTagPDF.
@@ -1432,7 +1481,7 @@ export const TransactionLedger = ({
                       >
                         <Printer size={14} /> Receipt (58)
                       </button>
-                      {(viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing') && (
+                      {(viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing' || viewingDetail.raw.type === 'package') && (
                         <>
                           <button
                             onClick={() => handleReprintTag('80mm')}
@@ -1451,7 +1500,7 @@ export const TransactionLedger = ({
                       )}
                     </div>
                   )}
-                  {(user.can_print_ledger || user.role === 'super_admin') && (viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'baggage') && (
+                  {(user.can_print_ledger || user.role === 'super_admin') && (viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'baggage' || viewingDetail.raw.type === 'package') && (
                     <div className="flex gap-2 mt-2">
                       <button
                         onClick={() => handleReprintReceiptPDF()}

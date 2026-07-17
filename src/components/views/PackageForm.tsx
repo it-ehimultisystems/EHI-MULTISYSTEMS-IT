@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { User, Transaction, Expense } from "../../lib/types";
-import { fmt, uid, tnow, generatePaymentNarration, getHubCode, upperOnChange } from "../../lib/helpers";
+import { fmt, uid, tnow, generatePaymentNarration, getHubCode, upperOnChange, isStandalonePWA } from "../../lib/helpers";
 import { useHubRoutes, useValidatedRouteSelection } from "../../lib/hubRoutes";
 import { useContentTypes } from "../../lib/contentTypes";
 import { useExpenseCategories } from "../../lib/expenseCategories";
@@ -447,23 +447,32 @@ export const PackageForm = ({
               </button>
 
               <button
-                onClick={() => {
-                  import('./PackageTagPDF').then(m => m.downloadPackageTagPDF({
-                    id: successTx.id,
-                    name: successTx.name,
-                    destination,
-                    contentType,
-                    pieces: successTx.pieces,
-                    kg: successTx.kg,
-                    contents: successTx.contents,
-                    hubName: user?.hub || "EHI Cargo Station",
-                    date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
-                  }));
+                onClick={async () => {
+                  const preOpenedWindow = isStandalonePWA() ? null : window.open('', '_blank');
+                  showToast({ message: 'Generating tag PDF…', type: 'info' });
+                  try {
+                    const { printPackageTagPDF } = await import('./PackageTagPDF');
+                    await printPackageTagPDF({
+                      id: successTx.id,
+                      name: successTx.name,
+                      destination,
+                      contentType,
+                      pieces: successTx.pieces,
+                      kg: successTx.kg,
+                      contents: successTx.contents,
+                      hubName: user?.hub || "EHI Station",
+                      date: `${new Date().toLocaleDateString("en-GB")} ${tnow()}`,
+                    }, preOpenedWindow);
+                  } catch (err) {
+                    console.error('Failed to open tag PDF', err);
+                    preOpenedWindow?.close();
+                    showToast({ message: 'Failed to open tag PDF', type: 'error' });
+                  }
                 }}
-                className="w-full mt-2 py-3 bg-transparent border border-[rgba(59,130,246,0.3)] rounded-lg cursor-pointer text-[11px] font-bold font-mono text-[var(--color-accent-cobalt)] flex items-center justify-center gap-2"
-                title="Fixed 100mm x 80mm label -- for the XP-402B and similar gap/die-cut label printers"
+                className="w-full mt-2 py-3 bg-transparent border border-[rgba(59,130,246,0.3)] rounded-lg cursor-pointer text-[11px] font-bold font-mono text-[var(--color-accent-cobalt)] flex items-center justify-center gap-2 hover:bg-[rgba(59,130,246,0.05)]"
+                title="Fixed 100mm x 80mm label -- for thermal label printers or browser print"
               >
-                <Printer size={14} /> TAG PDF (100×80mm LABEL)
+                <Printer size={14} /> PRINT TAG (PDF)
               </button>
             </div>
           ) : (

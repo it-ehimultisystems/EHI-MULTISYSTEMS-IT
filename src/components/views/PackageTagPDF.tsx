@@ -10,6 +10,7 @@ import {
 import QRCode from "qrcode";
 import { EHILogoPDF } from "../EHILogoPDF";
 import { openPdfOrDownload, getHubCode, cleanRoute } from "../../lib/helpers";
+import { printPdfSmart } from "../../lib/qzPrint";
 import { notifySilentError } from "../../lib/ToastContext";
 
 // Fixed 100mm x 80mm label -- same discrete, fixed-size tag format as
@@ -310,11 +311,10 @@ async function buildTagData(data: PackageTagPDFData): Promise<PackageTagPDFData>
   }
 }
 
-export const printPackageTagPDF = async (data: PackageTagPDFData) => {
+export const printPackageTagPDF = async (data: PackageTagPDFData, preOpenedWindow?: Window | null) => {
   const withQr = await buildTagData(data);
   const blob = await pdf(<PackageTagOnlyPDF data={withQr} />).toBlob();
-  const url = URL.createObjectURL(blob);
-  openPdfOrDownload(url, `EHI-Tag-${data.id}.pdf`);
+  await printPdfSmart(blob, `EHI-Tag-${data.id}.pdf`, 'tag', preOpenedWindow);
 };
 
 export const downloadPackageTagPDF = async (data: PackageTagPDFData) => {
