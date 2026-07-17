@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
 const VALUE_COL_WIDTH = 136;
 
 const PackageReceiptPDF = ({ data }: { data: PackageReceiptData }) => {
-  let h = 280;
+  let h = 360;
   if (data.phone) h += 14;
   if (data.bankName) h += 14;
   if (data.paymentMode === "Transfer" && data.paymentNarration) h += 14;
@@ -156,7 +156,7 @@ const PackageReceiptPDF = ({ data }: { data: PackageReceiptData }) => {
   for (const field of [data.customerName, data.destination, data.contents, data.agentName, data.paymentNarration, data.bankName]) {
     if (!field) continue;
     const lines = estimateWrappedLines(field, VALUE_COL_WIDTH, 8);
-    if (lines > 1) h += (lines - 1) * 12;
+    if (lines > 1) h += (lines - 1) * 14;
   }
 
   return (
