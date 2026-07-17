@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
 const VALUE_COL_WIDTH = 136;
 
 const PackageReceiptPDF = ({ data }: { data: PackageReceiptData }) => {
-  let h = 360;
+  let h = 280;
   if (data.phone) h += 14;
   if (data.bankName) h += 14;
   if (data.paymentMode === "Transfer" && data.paymentNarration) h += 14;
@@ -153,13 +153,7 @@ const PackageReceiptPDF = ({ data }: { data: PackageReceiptData }) => {
   if (data.kg) h += 14;
   if (data.contents) h += 14;
 
-  // Customer name and "Other"-typed contents are free text with no length
-  // cap in the Package form -- the fixed per-field bumps above only account
-  // for whether a section is present, not how much text it holds. Same bug
-  // class fixed in CargoReceipt.tsx/MarketingReceipt.tsx/
-  // ExcessBaggageReceipt.tsx: an underestimate here doesn't clip text, it
-  // silently pushes content onto an unwanted, near-empty second page.
-  for (const field of [data.customerName, data.destination, data.contents, data.agentName]) {
+  for (const field of [data.customerName, data.destination, data.contents, data.agentName, data.paymentNarration, data.bankName]) {
     if (!field) continue;
     const lines = estimateWrappedLines(field, VALUE_COL_WIDTH, 8);
     if (lines > 1) h += (lines - 1) * 12;
@@ -320,7 +314,7 @@ const summaryStyles = StyleSheet.create({
   },
   tableRow: { flexDirection: "row" },
   tableColSmall: {
-    width: "8%",
+    width: "6%",
     borderStyle: "solid",
     borderWidth: 1,
     borderLeftWidth: 0,
@@ -330,7 +324,7 @@ const summaryStyles = StyleSheet.create({
     padding: 5,
   },
   tableColLarge: {
-    width: "27%",
+    width: "22%",
     borderStyle: "solid",
     borderWidth: 1,
     borderLeftWidth: 0,
@@ -340,7 +334,7 @@ const summaryStyles = StyleSheet.create({
     padding: 5,
   },
   tableCol: {
-    width: "19%",
+    width: "15%",
     borderStyle: "solid",
     borderWidth: 1,
     borderLeftWidth: 0,
