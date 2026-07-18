@@ -1192,7 +1192,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               )}
               {currentTab === 'Tower' && (
                 (user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant') ? (
-                  <Analytics user={user} transactions={transactions} expenses={expenses} />
+                  <Analytics user={user} transactions={transactions} expenses={expenses} dateRange={globalDateRange} setDateRange={setGlobalDateRange} />
                 ) : (
                   <Dashboard user={user} transactions={transactions} />
                 )

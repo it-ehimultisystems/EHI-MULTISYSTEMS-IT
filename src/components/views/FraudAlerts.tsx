@@ -7,7 +7,7 @@ import { useConfirm } from '../../lib/ConfirmContext';
 
 interface FraudAlert {
   id: string;
-  type: 'duplicate_awb' | 'unusual_amount' | 'debt_spike' | 'rapid_entries' | 'suspicious_pattern';
+  type: 'duplicate_awb' | 'unusual_amount' | 'debt_spike' | 'rapid_entries' | 'suspicious_pattern' | 'corporate_overcharge' | 'underpriced_leakage';
   severity: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   description: string;
@@ -41,7 +41,7 @@ export const FraudAlerts = ({
         // Rule 1: Duplicate AWB detection (last 24 hours)
         const { data: cargoData } = await supabase
           .from('cargo_entries')
-          .select('awb_tag_number, consignee_name, amount, logged_by, created_at')
+          .select('id, awb_tag_number, consignee_name, amount, route, total_kg, logged_by, created_at, receipt_mode')
           .gte('created_at', last24h);
 
         if (cargoData && cargoData.length > 0) {
@@ -93,6 +93,65 @@ export const FraudAlerts = ({
               });
             });
           }
+          
+          // Fetch corporate clients & rates for Rules 5 and 6
+          const { data: corpClients } = await supabase.from('corporate_clients').select('id, company_name');
+          const { data: corpRates } = await supabase.from('corporate_route_rates').select('corporate_client_id, route_name, rate_per_kg, minimum_amount');
+          
+          let standardRates: Record<string, number> = {};
+          try {
+            standardRates = JSON.parse(localStorage.getItem("ehi_standard_cargo_rates") || "{}");
+          } catch (e) {}
+
+          // Rule 5: Corporate Billed at Retail (Overcharge)
+          // Rule 6: Underpriced Leakage (Below Floor)
+          cargoData.forEach((e: any) => {
+            const kg = Number(e.total_kg) || 0;
+            const amount = Number(e.amount) || 0;
+            if (kg <= 0 || amount <= 0) return;
+
+            const q = (e.consignee_name || '').trim().toLowerCase();
+            if (q.length < 3) return;
+
+            // Check if this is a corporate client
+            let corpClient = corpClients?.find((c: any) => c.company_name.toLowerCase() === q);
+            if (!corpClient) {
+              corpClient = corpClients?.find((c: any) => c.company_name.toLowerCase().startsWith(q));
+            }
+
+            if (corpClient) {
+              // Corporate Client: Check for overcharge
+              const contractRate = corpRates?.find((r: any) => r.corporate_client_id === corpClient.id && r.route_name === e.route);
+              if (contractRate) {
+                const correctAmount = Math.max(kg * contractRate.rate_per_kg, contractRate.minimum_amount || 0);
+                if (amount > correctAmount + 10) { // Small buffer for rounding
+                  liveAlerts.push({
+                    id: `FR-CORPOVER-${e.id}`, type: 'corporate_overcharge', severity: 'medium',
+                    title: 'Corporate Retail Overcharge',
+                    description: `Client ${corpClient.company_name} was billed ₦${fmt(amount)} at retail rate instead of contract rate ₦${fmt(correctAmount)} for ${kg}KG to ${e.route}.`,
+                    relatedId: e.id, time: 'Live', reviewed: false,
+                    rawEntry: e, correctAmount, overcharge: amount - correctAmount, corpClient
+                  } as any);
+                }
+              }
+            } else {
+              // Retail Client: Check for underpricing
+              const stdRate = standardRates[e.route];
+              if (stdRate) {
+                const floorAmount = kg * stdRate;
+                // Exclude 'Debt' and corporate entries
+                if (amount < floorAmount - 10 && e.receipt_mode !== 'Debt') {
+                  liveAlerts.push({
+                    id: `FR-UNDER-${e.id}`, type: 'underpriced_leakage', severity: 'high',
+                    title: 'Underpriced Tariff Leakage',
+                    description: `Retail entry for ${kg}KG to ${e.route} was billed at ₦${fmt(amount)}. Minimum standard floor is ₦${fmt(floorAmount)}.`,
+                    relatedId: e.id, time: 'Live', reviewed: false,
+                    rawEntry: e, floorAmount, shortfall: floorAmount - amount
+                  } as any);
+                }
+              }
+            }
+          });
         }
 
         // Rule 4: Debt spike — consignees with total outstanding debt > ₦50,000
@@ -161,6 +220,86 @@ export const FraudAlerts = ({
     if (ok) {
       setAlerts(prev => prev.map(a => ({ ...a, reviewed: true, resolution: 'Batch resolved by Super Administrator' })));
     }
+  };
+
+  const handleResolveOvercharge = async (alert: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const ok = await confirm({
+      title: 'Resolve Overcharge & Refund?',
+      message: `Adjust transaction amount to ₦${fmt(alert.correctAmount)} and refund the ₦${fmt(alert.overcharge)} difference into ${alert.corpClient.company_name}'s credit wallet?`,
+      confirmLabel: 'Refund & Resolve',
+      tone: 'danger'
+    });
+    if (!ok) return;
+
+    setLoading(true);
+    try {
+      // 1. Get or create wallet
+      let { data: wallets } = await supabase.from('customer_wallets').select('*').ilike('customer_name', alert.corpClient.company_name);
+      let wallet = wallets?.[0];
+      if (!wallet) {
+        const { data: newWallet } = await supabase.from('customer_wallets').insert({
+          customer_name: alert.corpClient.company_name,
+          phone: '',
+          balance: 0
+        }).select().single();
+        wallet = newWallet;
+      }
+
+      // 2. Add refund to wallet
+      await supabase.from('wallet_transactions').insert({
+        wallet_id: wallet.id,
+        type: 'credit',
+        amount: alert.overcharge,
+        description: `Overcharge refund for AWB ${alert.rawEntry.awb_tag_number}`,
+        logged_by: 'IT Auto-Audit'
+      });
+
+      // 3. Update wallet balance
+      await supabase.rpc('increment_wallet_balance', {
+        w_id: wallet.id,
+        amount: alert.overcharge
+      });
+
+      // 4. Update transaction
+      await supabase.from('cargo_entries').update({
+        amount: alert.correctAmount,
+        receipt_mode: 'Wallet'
+      }).eq('id', alert.rawEntry.id);
+
+      // 5. Mark alert resolved
+      setAlerts(prev => prev.map(a => a.id === alert.id ? {
+        ...a, reviewed: true, resolution: `Auto-resolved. ₦${fmt(alert.overcharge)} refunded to wallet.`
+      } : a));
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  };
+
+  const handleResolveUnderprice = async (alert: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const ok = await confirm({
+      title: 'Auto-Correct Tariff Leakage?',
+      message: `Adjust transaction amount UP to the standard floor of ₦${fmt(alert.floorAmount)}?`,
+      confirmLabel: 'Adjust Amount',
+      tone: 'danger'
+    });
+    if (!ok) return;
+
+    setLoading(true);
+    try {
+      await supabase.from('cargo_entries').update({
+        amount: alert.floorAmount,
+      }).eq('id', alert.rawEntry.id);
+
+      setAlerts(prev => prev.map(a => a.id === alert.id ? {
+        ...a, reviewed: true, resolution: `Auto-resolved. Amount adjusted up to ₦${fmt(alert.floorAmount)}.`
+      } : a));
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
   };
 
   const pendingAlerts = alerts.filter(a => !a.reviewed);
@@ -295,6 +434,22 @@ export const FraudAlerts = ({
                 >
                   <Eye size={12} />
                   <span>Log Resolution</span>
+                </button>
+              )}
+              {!alert.reviewed && alert.type === 'corporate_overcharge' && (
+                <button 
+                  onClick={(e) => handleResolveOvercharge(alert, e)}
+                  className="bg-[var(--color-accent-amber)] hover:opacity-90 text-[var(--color-obsidian)] font-mono text-[9px] uppercase font-bold px-3 py-2 rounded flex items-center space-x-1 cursor-pointer self-start sm:self-center"
+                >
+                  <span>Refund to Wallet</span>
+                </button>
+              )}
+              {!alert.reviewed && alert.type === 'underpriced_leakage' && (
+                <button 
+                  onClick={(e) => handleResolveUnderprice(alert, e)}
+                  className="bg-[var(--color-error)] hover:opacity-90 text-[var(--color-obsidian)] font-mono text-[9px] uppercase font-bold px-3 py-2 rounded flex items-center space-x-1 cursor-pointer self-start sm:self-center"
+                >
+                  <span>Enforce Floor Price</span>
                 </button>
               )}
             </div>

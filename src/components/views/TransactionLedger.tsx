@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow, isStandalonePWA, getHubCode, getShiftBoundary } from "../../lib/helpers";
+import { useHubRoutes } from "../../lib/hubRoutes";
 import { MIN_PACKAGE_AMOUNT } from "../../lib/constants";
 import { useContentTypes } from "../../lib/contentTypes";
 import { useBanks } from "../../lib/banks";
@@ -69,6 +70,7 @@ export const TransactionLedger = ({
   onDateRangeChange?: (range: { start: string; end: string }) => void;
 }) => {
   const contentTypes = useContentTypes();
+  const routes = useHubRoutes();
   const banks = useBanks();
   const [showPrintHistory, setShowPrintHistory] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -95,6 +97,23 @@ export const TransactionLedger = ({
   const [timeStart, setTimeStart] = useState("");
   const [timeEnd, setTimeEnd] = useState("");
   const [posCodeInput, setPosCodeInput] = useState<{ id: string; code: string }>({ id: '', code: '' });
+  
+  // Auto-calculate amount for cargo edits
+  useEffect(() => {
+    if (editingTx && editingTx.type === 'cargo') {
+      const kg = parseFloat(kgInput) || 0;
+      try {
+        const standardRates = JSON.parse(localStorage.getItem("ehi_standard_cargo_rates") || "{}");
+        const rate = standardRates[editingTx.route || ''] || 0;
+        const computedFloor = rate * kg;
+        const currentAmount = parseFloat(amountInput) || 0;
+        if (computedFloor > 0 && currentAmount < computedFloor) {
+            setAmountInput(String(computedFloor));
+        }
+      } catch (e) {}
+    }
+  }, [editingTx?.route, kgInput, editingTx?.type, amountInput]);
+
   const [vjFlightFilter, setVjFlightFilter] = useState("All");
   const [vjDestFilter, setVjDestFilter] = useState("All");
   // 'current' = only entries within the current operational shift (7PM–7PM).
@@ -305,6 +324,19 @@ export const TransactionLedger = ({
       showToast({ message: `Package/Parcel transactions must have an amount of at least ₦${MIN_PACKAGE_AMOUNT.toLocaleString()}`, type: 'warning' });
       return;
     }
+    
+    if (editingTx.type === 'cargo') {
+      try {
+        const standardRates = JSON.parse(localStorage.getItem("ehi_standard_cargo_rates") || "{}");
+        const rate = standardRates[editingTx.route || ''] || 0;
+        const computedFloor = rate * kg;
+        if (amount < computedFloor) {
+          showToast({ message: `Amount cannot be lower than the calculated price (₦${computedFloor.toLocaleString()})`, type: 'warning' });
+          return;
+        }
+      } catch (e) {}
+    }
+
     // Details fields (name, route, pieces, weight, etc.) are edited as
     // discrete fields, but `detail` is the composed string the rest of the
     // app (ledger rows, receipts) displays -- rebuild it here so the
@@ -1935,15 +1967,17 @@ export const TransactionLedger = ({
                       <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
                         Route
                       </label>
-                      <input
+                      <select
                         id="edit-tx-cargo-route"
                         name="edit-tx-cargo-route"
-                        type="text"
                         disabled={!canEdit}
                         value={editingTx.route || ''}
                         onChange={(e) => setEditingTx({ ...editingTx, route: e.target.value })}
                         className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
-                      />
+                      >
+                        <option value="">Select Route</option>
+                        {routes.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">

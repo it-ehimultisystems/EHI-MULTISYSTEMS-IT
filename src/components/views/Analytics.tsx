@@ -53,11 +53,15 @@ interface GeminiInsight {
 export const Analytics = ({ 
   user, 
   transactions,
-  expenses = []
+  expenses = [],
+  dateRange,
+  setDateRange
 }: { 
   user: User; 
   transactions: Transaction[];
   expenses?: Expense[];
+  dateRange: { start: string; end: string };
+  setDateRange: (range: { start: string; end: string }) => void;
 }) => {
   const [period, setPeriod] = useState<'shift' | 'today' | '7days' | 'month' | 'custom'>('shift');
   const [selectedHub, setSelectedHub] = useState<string>('all');
@@ -74,6 +78,32 @@ export const Analytics = ({
   }, []);
   const [customStart, setCustomStart] = useState(defaultShift.start);
   const [customEnd, setCustomEnd] = useState(defaultShift.end);
+
+  const handlePeriodChange = (newPeriod: typeof period) => {
+    setPeriod(newPeriod);
+    const now = new Date();
+    
+    // Ensure parent EHIApp fetches enough data to satisfy our internal exact filters
+    if (newPeriod === 'today' || newPeriod === 'shift') {
+      const start = new Date(now.getTime() - 86400000 * 2).toISOString().split('T')[0]; // fetch extra day to cover 6pm boundary
+      const end = new Date().toISOString().split('T')[0];
+      setDateRange({ start, end });
+    } else if (newPeriod === '7days') {
+      const start = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
+      const end = new Date().toISOString().split('T')[0];
+      setDateRange({ start, end });
+    } else if (newPeriod === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      setDateRange({ start, end });
+    }
+  };
+
+  const handleCustomRangeApply = () => {
+    const start = customStart.split('T')[0];
+    const end = customEnd.split('T')[0];
+    setDateRange({ start, end });
+  };
 
   const { showToast } = useToast();
 
@@ -552,31 +582,31 @@ export const Analytics = ({
         {/* Period Buttons */}
         <div className="flex items-center gap-1 bg-[var(--color-surface-1)] p-1 rounded-lg border border-[var(--color-border)] flex-wrap">
           <button
-            onClick={() => setPeriod('shift')}
+            onClick={() => handlePeriodChange('shift')}
             className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === 'shift' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
             Current Shift
           </button>
           <button
-            onClick={() => setPeriod('today')}
+            onClick={() => handlePeriodChange('today')}
             className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === 'today' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
             Today
           </button>
           <button
-            onClick={() => setPeriod('7days')}
+            onClick={() => handlePeriodChange('7days')}
             className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === '7days' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
             7 Days
           </button>
           <button
-            onClick={() => setPeriod('month')}
+            onClick={() => handlePeriodChange('month')}
             className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === 'month' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
             This Month
           </button>
           <button
-            onClick={() => setPeriod('custom')}
+            onClick={() => handlePeriodChange('custom')}
             className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === 'custom' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
             Custom Range
@@ -596,9 +626,18 @@ export const Analytics = ({
             <input
               type="datetime-local"
               value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
+              onChange={(e) => {
+                setCustomEnd(e.target.value);
+                handleCustomRangeApply();
+              }}
               className="bg-[var(--color-surface-1)] text-[var(--color-foreground)] px-2 py-1 rounded border border-[var(--color-border)] text-[10px]"
             />
+            <button 
+              onClick={handleCustomRangeApply}
+              className="ml-2 px-3 py-1 bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-4)] text-[10px] font-bold cursor-pointer"
+            >
+              Apply Range
+            </button>
           </div>
         )}
 

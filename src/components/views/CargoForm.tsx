@@ -1890,6 +1890,21 @@ export const CargoForm = ({
               </div>
 
               <div>
+                {renderLabel(MapPin, "Route")}
+                <select
+                  value={route}
+                  onChange={(e) => { setRoute(e.target.value); setAmount(""); }}
+                  className={formInputClass}
+                >
+                  {routes.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 {renderLabel(Hash, "AWB / Tag No (Auto-generated)")}
                 <input
                   id="retail-awb"
@@ -1934,45 +1949,29 @@ export const CargoForm = ({
                 </div>
               </div>
 
-              <div className="flex space-x-3">
-                <div className="flex-1">
-                  {renderLabel(MapPin, "Route")}
-                  <select
-                    value={route}
-                    onChange={(e) => { setRoute(e.target.value); setAmount(""); }}
-                    className={formInputClass}
-                  >
-                    {routes.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1">
-                  {renderLabel(Layers, "Content")}
-                  <select
-                    value={contentType}
-                    onChange={(e) => setContentType(e.target.value)}
-                    className={formInputClass}
-                  >
-                    {contentTypes.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                  {contentType === "Other" && (
-                    <input
-                      id="retail-custom-content"
-                      name="custom-content"
-                      placeholder="Enter content type"
-                      value={customContentType}
-                      onChange={upperOnChange(setCustomContentType)}
-                      className={`${formInputClass} mt-2`}
-                    />
-                  )}
-                </div>
+              <div>
+                {renderLabel(Layers, "Content")}
+                <select
+                  value={contentType}
+                  onChange={(e) => setContentType(e.target.value)}
+                  className={formInputClass}
+                >
+                  {contentTypes.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                {contentType === "Other" && (
+                  <input
+                    id="retail-custom-content"
+                    name="custom-content"
+                    placeholder="Enter content type"
+                    value={customContentType}
+                    onChange={upperOnChange(setCustomContentType)}
+                    className={`${formInputClass} mt-2`}
+                  />
+                )}
               </div>
             </div>
 
