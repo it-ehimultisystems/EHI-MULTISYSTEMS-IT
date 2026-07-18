@@ -369,6 +369,13 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           disabled={!canAccessTab(user, 'More:Reports', excessBaggageAirlines)}
         />
         <MenuItem
+          icon={AirplaneIcon}
+          title="Airline Sales & Weight Breakdown"
+          subtitle="View total sales (₦) and total weight (KG) per airline by date & time range"
+          onClick={() => onChangeTab('AirlinePerformance')}
+          disabled={!canAccessTab(user, 'More:AirlinePerformance', excessBaggageAirlines)}
+        />
+        <MenuItem
           icon={PercentIcon}
           title="Airline Commissions"
           subtitle="Set percentage cuts for partner airlines"

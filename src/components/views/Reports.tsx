@@ -7,13 +7,14 @@ import { BackButton } from '../BackButton';
 import * as XLSX from 'xlsx';
 
 const REPORT_TYPES = [
-  { id: 'revenue',    label: 'Revenue Summary',     desc: 'Stream, mode, and total breakdown' },
-  { id: 'routes',     label: 'Route Profitability', desc: 'Cargo + marketing by destination' },
-  { id: 'customers',  label: 'Top Consignees',      desc: 'Highest revenue customers' },
-  { id: 'debtors',    label: 'Debtor Aging',        desc: 'Outstanding balances 0-30/31-60/61-90/90+' },
-  { id: 'staff',      label: 'Staff Productivity',  desc: 'Entries and revenue per agent' },
-  { id: 'hubs',       label: 'Hub Comparison',      desc: 'Per-hub revenue (admin only)' },
-  { id: 'b2b_sales',  label: 'Office Work (B2B) Sales', desc: 'All Office Work client transactions' },
+  { id: 'revenue',       label: 'Revenue Summary',                  desc: 'Stream, mode, and total breakdown' },
+  { id: 'airline_sales', label: 'Airline Performance (Sales & KG)', desc: 'Total Sales (₦) and Total Weight (KG) per Airline' },
+  { id: 'routes',        label: 'Route Profitability',              desc: 'Cargo + marketing by destination' },
+  { id: 'customers',     label: 'Top Consignees',                   desc: 'Highest revenue customers' },
+  { id: 'debtors',       label: 'Debtor Aging',                     desc: 'Outstanding balances 0-30/31-60/61-90/90+' },
+  { id: 'staff',         label: 'Staff Productivity',               desc: 'Entries and revenue per agent' },
+  { id: 'hubs',          label: 'Hub Comparison',                   desc: 'Per-hub revenue (admin only)' },
+  { id: 'b2b_sales',     label: 'Office Work (B2B) Sales',          desc: 'All Office Work client transactions' },
 ];
 
 const PRESETS = [
@@ -320,6 +321,33 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
     })).sort((a, b) => b.revenue - a.revenue);
   }, [filteredTx, hubNames]);
 
+  const airlineReport = useMemo(() => {
+    const map: Record<string, { cargoSales: number; cargoKg: number; baggageSales: number; baggageKg: number; totalSales: number; totalKg: number; count: number }> = {};
+    filteredTx.forEach(t => {
+      const air = (t.airline || (t.type === 'baggage' ? 'ValueJet' : t.type === 'marketing' ? 'Marketing Desk' : 'Unassigned')).trim();
+      if (!map[air]) map[air] = { cargoSales: 0, cargoKg: 0, baggageSales: 0, baggageKg: 0, totalSales: 0, totalKg: 0, count: 0 };
+      const st = map[air];
+      st.totalSales += t.amount || 0;
+      st.count += 1;
+
+      if (t.type === 'cargo') {
+        st.cargoSales += t.amount || 0;
+        st.cargoKg += (t as any).totalKg || (t as any).kg || 0;
+        st.totalKg += (t as any).totalKg || (t as any).kg || 0;
+      } else if (t.type === 'baggage') {
+        st.baggageSales += t.amount || 0;
+        st.baggageKg += (t as any).excessKg || (t as any).kg || 0;
+        st.totalKg += (t as any).excessKg || (t as any).kg || 0;
+      } else if (t.type === 'package') {
+        st.totalKg += (t as any).kg || 0;
+      }
+    });
+
+    return Object.entries(map)
+      .map(([airline, d]) => ({ airline, ...d }))
+      .sort((a, b) => b.totalSales - a.totalSales);
+  }, [filteredTx]);
+
   const b2bReport = useMemo(() => {
     const corporateClientNames = Object.values(corpClientsMap).map(n => n.toLowerCase());
     const b2bTxs = filteredTx.filter(t => {
@@ -532,6 +560,41 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
             ) : (
               <>
                 {selectedReport === 'revenue' && <RevenueReportView data={revenueReport} />}
+                {selectedReport === 'airline_sales' && (
+                  <div className="space-y-4">
+                    <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded overflow-hidden">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-[var(--color-surface-2)] font-mono text-[10px] text-[var(--color-muted)] uppercase">
+                          <tr>
+                            <th className="p-3">Airline / Carrier</th>
+                            <th className="p-3 text-right">Cargo Sales (₦)</th>
+                            <th className="p-3 text-right">Cargo KG</th>
+                            <th className="p-3 text-right">Baggage Sales (₦)</th>
+                            <th className="p-3 text-right">Baggage KG</th>
+                            <th className="p-3 text-right">Total Sales (₦)</th>
+                            <th className="p-3 text-right">Total Weight (KG)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--color-border)] font-mono text-[12px]">
+                          {airlineReport.map((a, i) => (
+                            <tr key={i} className="hover:bg-[var(--color-surface-2)]">
+                              <td className="p-3 font-bold text-[var(--color-foreground)]">{a.airline}</td>
+                              <td className="p-3 text-right text-[var(--color-light-muted)]">₦{fmt(a.cargoSales)}</td>
+                              <td className="p-3 text-right text-[var(--color-light-muted)]">{fmt(a.cargoKg)} kg</td>
+                              <td className="p-3 text-right text-[var(--color-light-muted)]">₦{fmt(a.baggageSales)}</td>
+                              <td className="p-3 text-right text-[var(--color-light-muted)]">{fmt(a.baggageKg)} kg</td>
+                              <td className="p-3 text-right font-bold text-[var(--color-success)]">₦{fmt(a.totalSales)}</td>
+                              <td className="p-3 text-right font-bold text-[var(--color-accent-amber)]">{fmt(a.totalKg)} kg</td>
+                            </tr>
+                          ))}
+                          {airlineReport.length === 0 && (
+                            <tr><td colSpan={7} className="p-6 text-center text-[var(--color-muted)]">No airline transactions found for this period.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
                 {selectedReport === 'routes'    && <RouteReportView data={routeReport} />}
                 {selectedReport === 'customers' && <CustomerReportView data={customerReport} />}
                 {selectedReport === 'debtors'   && <DebtorReportView data={debtorReport} />}
