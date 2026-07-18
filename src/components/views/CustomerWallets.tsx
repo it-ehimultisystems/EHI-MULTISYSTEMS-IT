@@ -89,8 +89,11 @@ export const CustomerWallets = ({
   const [formNote, setFormNote] = useState('');
   const [savingTopUp, setSavingTopUp] = useState(false);
 
+  const [tableMissing, setTableMissing] = useState(false);
+
   const fetchWallets = useCallback(async () => {
     setLoading(true);
+    setTableMissing(false);
     try {
       let query = supabase
         .from('customer_wallets')
@@ -102,7 +105,13 @@ export const CustomerWallets = ({
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('customer_wallets') || error.message?.includes('schema cache') || error.code === '42P01' || error.code === 'PGRST301') {
+          setTableMissing(true);
+          return;
+        }
+        throw error;
+      }
       setWallets((data as CustomerWallet[]) || []);
     } catch (err: any) {
       console.error('Error fetching customer wallets:', err);
@@ -350,6 +359,79 @@ export const CustomerWallets = ({
           className="w-full h-10 pl-9 pr-3 text-[12px] font-mono rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
         />
       </div>
+
+      {/* Database Table Missing Setup Banner */}
+      {tableMissing && (
+        <div className="p-4 bg-[rgba(245,158,11,0.08)] border border-[var(--color-accent-amber)] rounded-xl space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={20} className="text-[var(--color-accent-amber)] shrink-0" />
+            <div>
+              <div className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">
+                DATABASE SETUP REQUIRED (One-Time Setup)
+              </div>
+              <div className="text-[11px] font-mono text-[var(--color-muted)]">
+                The <code className="text-[var(--color-foreground)] bg-[var(--color-surface-2)] px-1 rounded">customer_wallets</code> table has not been created on your Supabase database yet.
+              </div>
+            </div>
+          </div>
+          <div className="text-[11px] font-mono text-[var(--color-foreground)] leading-relaxed space-y-1 bg-[var(--color-surface-2)] p-3 rounded-lg border border-[var(--color-border)]">
+            <div>1. Open your <b>Supabase Dashboard</b> → <b>SQL Editor</b></div>
+            <div>2. Copy and run the migration script: <code className="text-[var(--color-accent-amber)] font-bold">supabase/migrations/20260717_cargo_workflow_overhaul.sql</code></div>
+            <div>3. Click "Run" in Supabase, then refresh this page.</div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const sql = `CREATE TABLE IF NOT EXISTS customer_wallets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hub_id UUID REFERENCES hubs(id),
+  customer_name TEXT NOT NULL,
+  customer_phone TEXT,
+  opening_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+  balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+  total_topped_up NUMERIC(12,2) NOT NULL DEFAULT 0,
+  total_used NUMERIC(12,2) NOT NULL DEFAULT 0,
+  source_type TEXT NOT NULL,
+  source_ref TEXT,
+  source_note TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_id UUID NOT NULL REFERENCES customer_wallets(id),
+  hub_id UUID REFERENCES hubs(id),
+  type TEXT NOT NULL,
+  amount NUMERIC(12,2) NOT NULL,
+  balance_before NUMERIC(12,2) NOT NULL,
+  balance_after NUMERIC(12,2) NOT NULL,
+  cargo_ref TEXT,
+  description TEXT,
+  logged_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE cargo_entries ADD COLUMN IF NOT EXISTS wallet_id UUID REFERENCES customer_wallets(id);
+ALTER TABLE cargo_entries ADD COLUMN IF NOT EXISTS wallet_deduction_amount NUMERIC(12,2);`;
+                navigator.clipboard.writeText(sql);
+                showToast({ message: 'Migration SQL copied to clipboard!', type: 'success' });
+              }}
+              className="px-3 py-1.5 bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] text-[11px] font-mono font-bold rounded-lg cursor-pointer hover:opacity-90"
+            >
+              Copy SQL Migration Query
+            </button>
+            <button
+              onClick={fetchWallets}
+              className="px-3 py-1.5 bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[var(--color-border)] text-[11px] font-mono font-bold rounded-lg cursor-pointer hover:bg-[var(--color-border)]"
+            >
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Wallet List */}
       {loading ? (
