@@ -103,6 +103,18 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
   created_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
+-- RLS policies for customer_wallets & wallet_transactions
+ALTER TABLE customer_wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wallet_transactions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow full access to customer_wallets" ON customer_wallets;
+CREATE POLICY "Allow full access to customer_wallets" ON customer_wallets
+  FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow full access to wallet_transactions" ON wallet_transactions;
+CREATE POLICY "Allow full access to wallet_transactions" ON wallet_transactions
+  FOR ALL TO public USING (true) WITH CHECK (true);
+
 -- ─── 8. CARGO ENTRIES: wallet payment tracking & constraint update ───
 -- When a cargo entry is paid wholly or partly from a wallet.
 ALTER TABLE cargo_entries

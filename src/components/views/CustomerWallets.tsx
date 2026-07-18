@@ -414,6 +414,13 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE customer_wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wallet_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow full access to customer_wallets" ON customer_wallets;
+CREATE POLICY "Allow full access to customer_wallets" ON customer_wallets FOR ALL TO public USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow full access to wallet_transactions" ON wallet_transactions;
+CREATE POLICY "Allow full access to wallet_transactions" ON wallet_transactions FOR ALL TO public USING (true) WITH CHECK (true);
+
 ALTER TABLE cargo_entries ADD COLUMN IF NOT EXISTS wallet_id UUID REFERENCES customer_wallets(id);
 ALTER TABLE cargo_entries ADD COLUMN IF NOT EXISTS wallet_deduction_amount NUMERIC(12,2);
 
