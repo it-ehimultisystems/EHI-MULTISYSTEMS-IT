@@ -10,6 +10,7 @@ import { useBanks } from "../../lib/banks";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
 import { isTagAlreadyDelivered } from "../../lib/scanLogic";
 import { getNextTag } from "../../lib/tagPool";
+import { CustomerWalletPicker } from "../CustomerWalletPicker";
 import {
   CheckCircle,
   Loader2,
@@ -676,12 +677,14 @@ export const CargoForm = ({
 
   const [linkedAsOfficeWork, setLinkedAsOfficeWork] = useState(false);
 
-  // Active Customer Wallet matching the typed consignee name
+  const [selectedWalletOverride, setSelectedWalletOverride] = useState<any>(null);
+  // Active Customer Wallet matching the typed consignee name or manual selection
   const activeWallet = useMemo(() => {
+    if (selectedWalletOverride) return selectedWalletOverride;
     const q = (consignee === 'Other' ? customConsignee : consignee).trim().toLowerCase();
     if (q.length < 2) return null;
     return customerWallets.find(w => w.customer_name.trim().toLowerCase() === q && w.balance > 0) || null;
-  }, [consignee, customConsignee, customerWallets]);
+  }, [consignee, customConsignee, customerWallets, selectedWalletOverride]);
 
   // When the consignee changes, reset the link flag so the banner appears
   // fresh for each new consignee.
@@ -2013,7 +2016,7 @@ export const CargoForm = ({
               <div>
                 {renderLabel(CreditCard, "Receipt / Payment Mode")}
                 <div className="flex bg-[var(--color-surface-3)] rounded-[var(--radius-sm)] p-1 border border-[var(--color-border)] mb-3">
-                  {["Cash", "Transfer", "POS", ...(activeWallet ? ["Wallet"] : [])].map((m) => (
+                  {["Cash", "Transfer", "POS", "Wallet"].map((m) => (
                     <button
                       key={m}
                       type="button"
@@ -2034,13 +2037,19 @@ export const CargoForm = ({
                   ))}
                 </div>
 
-                {mode === "Wallet" && activeWallet && (
-                  <div className="mb-3 text-[11px] font-mono text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.08)] p-2.5 rounded-[var(--radius-sm)] border border-[rgba(245,158,11,0.2)] flex items-center justify-between">
-                    <span>Available Wallet Balance: <b>₦{fmt(activeWallet.balance)}</b></span>
-                    {parsedAmount > activeWallet.balance && (
-                      <span className="text-[var(--color-error)] font-bold">
-                        (₦{fmt(parsedAmount - activeWallet.balance)} Shortfall)
-                      </span>
+                {mode === "Wallet" && (
+                  <div className="mb-3 space-y-2">
+                    <CustomerWalletPicker
+                      wallets={customerWallets}
+                      selectedWallet={activeWallet}
+                      onSelectWallet={(w) => setSelectedWalletOverride(w)}
+                      currentCustomerName={consignee === 'Other' ? customConsignee : consignee}
+                    />
+                    {activeWallet && parsedAmount > activeWallet.balance && (
+                      <div className="text-[11px] font-mono text-[var(--color-error)] bg-[rgba(239,68,68,0.08)] p-2.5 rounded-[var(--radius-sm)] border border-[rgba(239,68,68,0.2)] flex items-center justify-between">
+                        <span>Shortfall to collect via secondary mode:</span>
+                        <span className="font-bold text-[13px]">₦{fmt(parsedAmount - activeWallet.balance)}</span>
+                      </div>
                     )}
                   </div>
                 )}

@@ -728,13 +728,14 @@ export const MarketingWorkspace = ({
                   </select>
                   <select
                     value={mode}
-                    onChange={(e) => setMode(e.target.value)}
+                    onChange={(e) => setMode(e.target.value as any)}
                     className={`flex-1 h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans min-w-0 ${mktgFocusClasses}`}
                   >
                     <option value="Cash">Cash</option>
                     <option value="Transfer">Transfer (Bank)</option>
                     <option value="TransferCash">Transfer → Cash</option>
                     <option value="POS">POS</option>
+                    <option value="Wallet">💰 Customer Credit Wallet</option>
                     <option value="Debt">Debt / Credit</option>
                   </select>
                 </div>

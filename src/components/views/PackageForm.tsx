@@ -586,12 +586,13 @@ export const PackageForm = ({
 
                 <select
                   value={mode}
-                  onChange={(e) => setMode(e.target.value)}
+                  onChange={(e) => setMode(e.target.value as any)}
                   className={`w-full h-11 px-3 text-sm rounded bg-[var(--color-surface-1)] border border-[var(--color-border)] text-[var(--color-foreground)] font-sans ${focusClasses}`}
                 >
                   <option value="Cash">Cash</option>
                   <option value="POS">POS</option>
                   <option value="Transfer">Bank Transfer</option>
+                  <option value="Wallet">💰 Customer Credit Wallet</option>
                   <option value="Debt">Debt / Credit</option>
                 </select>
 

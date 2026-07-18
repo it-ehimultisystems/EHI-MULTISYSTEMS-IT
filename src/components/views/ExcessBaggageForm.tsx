@@ -582,7 +582,7 @@ export const ExcessBaggageForm = ({
           <div className="space-y-1.5">
             <span className="text-[12px] font-sans font-semibold text-[var(--color-light-muted)]">Payment Mode</span>
             <div className="flex bg-[var(--color-surface-3)] rounded-[var(--radius-sm)] p-1 border border-[var(--color-border)]">
-              {['Cash', 'POS', 'Transfer'].map(m => (
+              {['Cash', 'POS', 'Transfer', 'Wallet'].map(m => (
                 <button
                   key={m}
                   type="button"
@@ -592,9 +592,9 @@ export const ExcessBaggageForm = ({
                     color: mode === m ? 'var(--color-accent-cobalt)' : 'var(--color-muted)',
                     border: 'none',
                   }}
-                  className={`flex-1 py-2 text-[13px] font-sans font-semibold rounded-[var(--radius-xs)] shadow-sm transition-all focus:outline-none cursor-pointer`}
+                  className={`flex-1 py-2 text-[13px] font-sans font-semibold rounded-[var(--radius-xs)] shadow-sm transition-all focus:outline-none cursor-pointer flex items-center justify-center gap-1`}
                 >
-                  {m}
+                  {m === 'Wallet' ? '💰 Wallet' : m}
                 </button>
               ))}
             </div>

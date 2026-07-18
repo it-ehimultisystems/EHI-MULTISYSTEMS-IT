@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow, isStandalonePWA, getHubCode, getShiftBoundary } from "../../lib/helpers";
@@ -29,6 +29,8 @@ import TagPrintHistory from "./TagPrintHistory";
 import { supabase } from "../../lib/supabase";
 import { useToast } from "../../lib/ToastContext";
 import { useConfirm } from "../../lib/ConfirmContext";
+import { LiveCreditFeed } from "../LiveCreditFeed";
+import { CustomerWallet } from "../../lib/types";
 
 type Entry = {
   id: string;
@@ -100,6 +102,18 @@ export const TransactionLedger = ({
   const [shiftFilter, setShiftFilter] = useState<'current' | 'all'>('current');
   const { showToast } = useToast();
   const confirm = useConfirm();
+
+  const [wallets, setWallets] = useState<CustomerWallet[]>([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await supabase.from('customer_wallets').select('*').order('updated_at', { ascending: false });
+        if (active && data) setWallets(data as CustomerWallet[]);
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, []);
 
   // Current shift boundary — hub shift_start_hour from user object, default 19
   const shiftHour: number = (user as any).shift_start_hour ?? 19;
@@ -920,8 +934,9 @@ export const TransactionLedger = ({
   }, [entries, defaultTypeFilter]);
 
   return (
-    <div className="flex flex-col h-full pb-4 bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
-      {/* Header */}
+    <div className="flex flex-row h-full pb-4 bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shrink-0">
         <div className="flex items-center space-x-4">
           <BackButton onClick={onBack} label="Back" />
@@ -2207,6 +2222,12 @@ export const TransactionLedger = ({
           </div>
         </div>
       )}
+      </div>
+      <LiveCreditFeed
+        wallets={wallets}
+        transactions={transactions}
+        onFilterByCustomer={(name) => setSearchQuery(name)}
+      />
     </div>
   );
 };
