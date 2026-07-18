@@ -148,3 +148,12 @@ WHERE (total_kg = 0 OR total_kg IS NULL)
 UPDATE cargo_entries
 SET awb_tag_number = entry_ref
 WHERE awb_tag_number = consignee_name OR awb_tag_number IS NULL OR awb_tag_number = '';
+
+-- ─── 11. RECLASSIFY MANUAL RETRIEVAL ENTRIES TO WALLET ───────
+-- Converts entries where staff manually typed 'RETRIVAL' in remarks from Cash to Wallet mode,
+-- so they no longer falsely inflate today's cash-in-hand tally.
+UPDATE cargo_entries
+SET receipt_mode = 'Wallet',
+    wallet_deduction_amount = amount
+WHERE receipt_mode = 'Cash'
+  AND (remark LIKE '%RETRIVAL%' OR remark LIKE '%RETRIEVAL%');
