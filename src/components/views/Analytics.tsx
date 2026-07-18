@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { User, Transaction, Expense } from '../../lib/types';
-import { fmt, uid, roundMoney } from '../../lib/helpers';
+import { fmt, getShiftBoundary, normalizeAirlineName } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
-import { normalizeAirlineName } from '../../lib/helpers';
 import { AnimatedNumber } from '../ui/AnimatedNumber';
 import { useToast } from '../../lib/ToastContext';
 import { 
@@ -15,9 +14,18 @@ import {
   Loader2, 
   Calendar,
   Layers,
-  MapPin,
   Users,
-  Download
+  Download,
+  Scale,
+  DollarSign,
+  AlertTriangle,
+  PieChart as PieIcon,
+  BarChart3,
+  Clock,
+  Filter,
+  FileSpreadsheet,
+  CheckCircle2,
+  HelpCircle
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -30,8 +38,11 @@ import {
   Bar, 
   Cell, 
   PieChart, 
-  Pie 
+  Pie,
+  ComposedChart,
+  Line
 } from 'recharts';
+import * as XLSX from 'xlsx';
 
 interface GeminiInsight {
   title: string;
@@ -48,15 +59,29 @@ export const Analytics = ({
   transactions: Transaction[];
   expenses?: Expense[];
 }) => {
-  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'quarter'>('today');
+  const [period, setPeriod] = useState<'shift' | 'today' | '7days' | 'month' | 'custom'>('shift');
   const [selectedHub, setSelectedHub] = useState<string>('all');
-  const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState<'overview' | 'pareto' | 'cargo_types' | 'terminal_shifts' | 'cash_flow'>('overview');
+  const [searchQuery, setSearchQuery] = useState('');
   
+  // Custom Date Range State
+  const defaultShift = useMemo(() => {
+    const b = getShiftBoundary(19);
+    return {
+      start: b.start.toISOString().slice(0, 16),
+      end: b.end.toISOString().slice(0, 16)
+    };
+  }, []);
+  const [customStart, setCustomStart] = useState(defaultShift.start);
+  const [customEnd, setCustomEnd] = useState(defaultShift.end);
+
+  const { showToast } = useToast();
+
   // AI Insights State
   const [insights, setInsights] = useState<GeminiInsight[]>([
     {
-      title: "AI Insights Ready",
-      insight: "Tap ↻ REFRESH to load AI-powered analysis for the current data period.",
+      title: "Yield & Leakage Scanner Active",
+      insight: "Tap REFRESH AI to generate real-time revenue leakage signals & Pareto client breakdowns.",
       priority: "low"
     }
   ]);
@@ -64,22 +89,22 @@ export const Analytics = ({
   const [insightError, setInsightError] = useState<string | null>(null);
 
   // Load real hub list from Supabase
-  const [activeHubs, setActiveHubs] = useState<{ id: string; name: string; code: string; region: string }[]>([
-    { id: 'all', name: 'All Hubs', code: 'ALL', region: 'Nigeria' }
+  const [activeHubs, setActiveHubs] = useState<{ id: string; name: string; code: string; state: string }[]>([
+    { id: 'all', name: 'All Hubs & Terminals', code: 'ALL', state: 'Nigeria' }
   ]);
 
   useEffect(() => {
     supabase.from('hubs').select('id, name, code, state').order('name').then(({ data }) => {
       if (data) {
         setActiveHubs([
-          { id: 'all', name: 'All Hubs', code: 'ALL', region: 'Nigeria' },
-          ...data.map((h: any) => ({ id: h.id, name: h.name, code: h.code, region: h.state }))
+          { id: 'all', name: 'All Hubs & Terminals', code: 'ALL', state: 'Nigeria' },
+          ...data.map((h: any) => ({ id: h.id, name: h.name, code: h.code, state: h.state }))
         ]);
       }
     });
   }, []);
 
-  // Airline commission rates — used to compute real airline payables (not general expenses)
+  // Airline commission rates
   const [airlineCommissions, setAirlineCommissions] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -94,266 +119,323 @@ export const Analytics = ({
     });
   }, []);
 
-  // Filtered transactions based on selected Hub using real hub_id
+  // Filtered transactions by Hub
   const hubFilteredTxs = useMemo(() => {
     if (selectedHub === 'all') return transactions;
-    // Match against real hub_id UUID stored on each transaction
-    return transactions.filter(t => {
-      if (t.hub_id) return t.hub_id === selectedHub;
-      // Fallback: match hub_code in transaction detail if hub_id not set
-      return false;
-    });
+    return transactions.filter(t => t.hub_id === selectedHub);
   }, [transactions, selectedHub]);
 
-  // Grouped Period Filtered Transactions
+  // Date/Time Filtered Transactions
   const periodFilteredTxs = useMemo(() => {
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-    const quarterAgo = new Date(today);
-    quarterAgo.setMonth(quarterAgo.getMonth() - 3);
+    const shiftBoundary = getShiftBoundary(19);
 
     return hubFilteredTxs.filter(t => {
-      let txDate = new Date();
-      if (t.created_at) {
-        txDate = new Date(t.created_at);
+      const txDate = t.created_at ? new Date(t.created_at) : new Date();
+
+      if (period === 'shift') {
+        return txDate >= shiftBoundary.start && txDate <= shiftBoundary.end;
       }
-      
-      if (period === 'today') return txDate >= today;
-      if (period === 'week') return txDate >= weekAgo;
-      if (period === 'month') return txDate >= monthAgo;
-      if (period === 'quarter') return txDate >= quarterAgo;
-      return true;
-    });
-  }, [hubFilteredTxs, period]);
-
-  const periodFilteredExpenses = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-    const quarterAgo = new Date(today);
-    quarterAgo.setMonth(quarterAgo.getMonth() - 3);
-
-    return expenses.filter(e => {
-      let expDate = new Date();
-      if (e.time) {
-        if (/^\d{4}-\d{2}-\d{2}/.test(e.time)) {
-          expDate = new Date(e.time);
-        }
+      if (period === 'today') {
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        return txDate >= todayStart;
       }
-      
-      if (period === 'today') return expDate >= today;
-      if (period === 'week') return expDate >= weekAgo;
-      if (period === 'month') return expDate >= monthAgo;
-      if (period === 'quarter') return expDate >= quarterAgo;
+      if (period === '7days') {
+        const weekAgo = new Date(now.getTime() - 7 * 86400000);
+        return txDate >= weekAgo;
+      }
+      if (period === 'month') {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        return txDate >= monthStart;
+      }
+      if (period === 'custom') {
+        const start = new Date(customStart);
+        const end = new Date(customEnd);
+        return txDate >= start && txDate <= end;
+      }
       return true;
+    }).filter(t => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      const text = `${t.id} ${t.name} ${t.detail} ${t.mode} ${t.airline || ''} ${t.route || ''} ${t.awb_tag_number || ''}`.toLowerCase();
+      return text.includes(q);
     });
-  }, [expenses, period]);
+  }, [hubFilteredTxs, period, customStart, customEnd, searchQuery]);
 
-  // Calculations for current period (Today state is live)
-  const stats = useMemo(() => {
+  // Core Cargo & Revenue Metrics
+  const metrics = useMemo(() => {
     const cargo = periodFilteredTxs.filter(t => t.type === 'cargo');
+    const baggage = periodFilteredTxs.filter(t => t.type === 'baggage');
     const marketing = periodFilteredTxs.filter(t => t.type === 'marketing');
-    const vj = periodFilteredTxs.filter(t => t.type === 'baggage');
+    const packages = periodFilteredTxs.filter(t => t.type === 'package');
 
-    const cargoRev = cargo.reduce((sum, t) => sum + t.amount, 0);
-    const mktgRev = marketing.reduce((sum, t) => sum + t.amount, 0);
-    const vjRev = vj.reduce((sum, t) => sum + t.amount, 0);
-    const totalRev = cargoRev + mktgRev + vjRev;
+    const totalRevenue = periodFilteredTxs.reduce((sum, t) => sum + t.amount, 0);
+    const cargoRevenue = cargo.reduce((sum, t) => sum + t.amount, 0);
+    const baggageRevenue = baggage.reduce((sum, t) => sum + t.amount, 0);
+    const marketingRevenue = marketing.reduce((sum, t) => sum + t.amount, 0);
+    const packagesRevenue = packages.reduce((sum, t) => sum + t.amount, 0);
 
+    const totalKg = periodFilteredTxs.reduce((sum, t) => sum + (t.kg || 0), 0);
     const cargoKg = cargo.reduce((sum, t) => sum + (t.kg || 0), 0);
-    const vjExcessKg = vj.reduce((sum, t) => sum + (t.kg || 0), 0);
+    const baggageKg = baggage.reduce((sum, t) => sum + (t.kg || 0), 0);
 
-    const cash = periodFilteredTxs.reduce((sum, t) => sum + (t.mode === 'Cash' ? t.amount : 0), 0);
-    const transfer = periodFilteredTxs.reduce((sum, t) => sum + (t.mode === 'Transfer' || t.mode === 'POS' ? t.amount : 0), 0);
-    const debt = periodFilteredTxs.reduce((sum, t) => sum + (t.mode === 'Debt' ? t.amount : 0), 0);
-    
-    const totalExpenses = periodFilteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalPcs = periodFilteredTxs.reduce((sum, t) => sum + (t.pieces || 1), 0);
+    const totalWaybills = periodFilteredTxs.length;
 
-    // Real airline payables: for each cargo entry with an airline, we owe the
-    // airline (100% - our commission %) of the amount. This is the same
-    // calculation CreditDebit.tsx uses for "Total Due to Airlines".
-    // Rate is the one locked in on the transaction at entry time -- only
-    // transactions logged before that field existed fall back to the
-    // current live config, since they have no other rate on record.
+    // Unit Economics Metrics
+    const avgYieldPerKg = totalKg > 0 ? totalRevenue / totalKg : 0;
+    const avgRevenuePerShipment = totalWaybills > 0 ? totalRevenue / totalWaybills : 0;
+
+    // Payment Collection Breakdown
+    const cashRevenue = periodFilteredTxs.filter(t => t.mode === 'Cash').reduce((sum, t) => sum + t.amount, 0);
+    const transferRevenue = periodFilteredTxs.filter(t => t.mode === 'Transfer').reduce((sum, t) => sum + t.amount, 0);
+    const posRevenue = periodFilteredTxs.filter(t => t.mode === 'POS').reduce((sum, t) => sum + t.amount, 0);
+    const walletDeductions = periodFilteredTxs.reduce((sum, t) => sum + (t.wallet_deduction_amount || (t.mode === 'Wallet' ? t.amount : 0)), 0);
+    const debtOutstanding = periodFilteredTxs.filter(t => t.mode === 'Debt').reduce((sum, t) => sum + t.amount, 0);
+
+    const unconfirmedTransfers = periodFilteredTxs.filter(t => t.mode === 'Transfer' && !t.paymentConfirmed).reduce((sum, t) => sum + t.amount, 0);
+    const unverifiedCash = periodFilteredTxs.filter(t => t.mode === 'Cash' && !t.paymentConfirmed).reduce((sum, t) => sum + t.amount, 0);
+
+    const totalCollected = cashRevenue + transferRevenue + posRevenue + walletDeductions - unconfirmedTransfers - unverifiedCash;
+    const collectionEfficiency = totalRevenue > 0 ? Math.min(100, Math.round((totalCollected / totalRevenue) * 100)) : 100;
+
+    // Airline Payables (remittance)
     const airlinePayables = cargo.reduce((sum, t) => {
       if (!t.airline) return sum;
       const normalizedAirline = normalizeAirlineName(t.airline);
       const commRate = t.commissionRate ?? airlineCommissions[normalizedAirline] ?? 0;
-      return sum + roundMoney(t.amount * (1 - commRate / 100));
+      return sum + (t.amount * (1 - commRate / 100));
     }, 0);
 
-    // Find top route in today's transactions
-    const routesMap: Record<string, number> = {};
-    periodFilteredTxs.forEach(t => {
-      let r = t.route || '';
-      if (!r && t.detail) {
-        // extract route from detail (usually airline · details or route)
-        const parts = t.detail.split('·');
-        if (parts.length >= 4) {
-          r = parts[3].trim();
-        } else {
-          r = parts[0].trim();
-        }
-      }
-      if (r) routesMap[r] = (routesMap[r] || 0) + t.amount;
-    });
-
-    let topRoute = 'ABV (Abuja)';
-    let maxRouteAmount = 0;
-    Object.entries(routesMap).forEach(([r, amt]) => {
-      if (amt > maxRouteAmount) {
-        maxRouteAmount = amt;
-        topRoute = r;
-      }
-    });
-
     return {
-      cargoRev,
-      mktgRev,
-      vjRev,
-      totalRev,
-      cargoCount: cargo.length,
+      totalRevenue,
+      cargoRevenue,
+      baggageRevenue,
+      marketingRevenue,
+      packagesRevenue,
+      totalKg,
       cargoKg,
-      mktgCount: marketing.length,
-      vjCount: vj.length,
-      vjExcessKg,
-      cash,
-      transfer,
-      debt,
-      topRoute,
-      totalExpenses,
+      baggageKg,
+      totalPcs,
+      totalWaybills,
+      avgYieldPerKg,
+      avgRevenuePerShipment,
+      cashRevenue,
+      transferRevenue,
+      posRevenue,
+      walletDeductions,
+      debtOutstanding,
+      unconfirmedTransfers,
+      unverifiedCash,
+      totalCollected,
+      collectionEfficiency,
       airlinePayables
     };
-  }, [periodFilteredTxs, periodFilteredExpenses, airlineCommissions]);
+  }, [periodFilteredTxs, airlineCommissions]);
 
-  // Real hourly revenue chart based on actual created_at timestamps
-  const revenueChartData = useMemo(() => {
-    const hours = Array.from({ length: 12 }, (_, i) => {
-      const h = 7 + i; // 7am to 7pm
-      const label = h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
-      const txInHour = periodFilteredTxs.filter(t => {
-        if (!t.created_at) return false;
-        const txHour = new Date(t.created_at).getHours();
-        return txHour === h;
-      });
+  // Client Pareto 80/20 Analysis
+  const clientParetoData = useMemo(() => {
+    const map: Record<string, { clientName: string; category: string; count: number; weightKg: number; revenue: number; debt: number }> = {};
+
+    periodFilteredTxs.forEach(t => {
+      const clientName = t.name?.trim() || 'Walk-in Customer';
+      const category = t.type === 'cargo' ? (t.clientType || 'Cargo Consignee') : t.type === 'baggage' ? 'Baggage Pax' : t.type === 'marketing' ? 'Field Agent Client' : 'Package Sender';
+
+      if (!map[clientName]) {
+        map[clientName] = { clientName, category, count: 0, weightKg: 0, revenue: 0, debt: 0 };
+      }
+      map[clientName].count++;
+      map[clientName].weightKg += t.kg || 0;
+      map[clientName].revenue += t.amount;
+      if (t.mode === 'Debt') map[clientName].debt += t.amount;
+    });
+
+    const sorted = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+    const grandTotal = sorted.reduce((sum, c) => sum + c.revenue, 0) || 1;
+
+    let runningTotal = 0;
+    return sorted.map((c, idx) => {
+      runningTotal += c.revenue;
+      const cumulativePct = Math.round((runningTotal / grandTotal) * 100);
+      const isTop20 = cumulativePct <= 80 || idx < Math.max(1, Math.ceil(sorted.length * 0.2));
+      const yieldPerKg = c.weightKg > 0 ? c.revenue / c.weightKg : 0;
       return {
-        time: label,
-        cargo:     txInHour.filter(t => t.type === 'cargo').reduce((s, t) => s + t.amount, 0),
-        marketing: txInHour.filter(t => t.type === 'marketing').reduce((s, t) => s + t.amount, 0),
-        excessBaggage: txInHour.filter(t => t.type === 'baggage').reduce((s, t) => s + t.amount, 0),
+        ...c,
+        sharePct: Math.round((c.revenue / grandTotal) * 100),
+        cumulativePct,
+        isTop20,
+        yieldPerKg
       };
     });
-    return hours;
   }, [periodFilteredTxs]);
 
-  // Top Routes data
-  const routeChartData = useMemo(() => {
-    const routeMap: Record<string, number> = {};
+  // Top 80/20 Summary
+  const top20ClientsCount = useMemo(() => clientParetoData.filter(c => c.isTop20).length, [clientParetoData]);
+  const top20RevenueShare = useMemo(() => {
+    const top20Rev = clientParetoData.filter(c => c.isTop20).reduce((sum, c) => sum + c.revenue, 0);
+    return metrics.totalRevenue > 0 ? Math.round((top20Rev / metrics.totalRevenue) * 100) : 0;
+  }, [clientParetoData, metrics.totalRevenue]);
+
+  // Cargo Category & Content Type Yield Matrix
+  const cargoCategoryData = useMemo(() => {
+    const map: Record<string, { category: string; count: number; weightKg: number; revenue: number }> = {};
+
     periodFilteredTxs.forEach(t => {
-      const route = t.route || t.detail?.split('·')[0]?.trim() || 'Unknown';
-      routeMap[route] = (routeMap[route] || 0) + t.amount;
-    });
-    return Object.entries(routeMap)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 8)
-      .map(([name, value]) => ({ name, value }));
-  }, [periodFilteredTxs]);
+      let category = 'General Package';
+      if (t.contentType) category = t.contentType;
+      else if (t.type === 'baggage') category = 'Excess Passenger Baggage';
+      else if (t.type === 'marketing') category = 'Field Bags (BB/MB/SB)';
+      else if (t.type === 'package') category = 'Express Parcel';
+      else if (t.detail?.toLowerCase().includes('electrical')) category = 'Electrical Parts';
+      else if (t.detail?.toLowerCase().includes('spares')) category = 'Automotive Spares';
 
-  // Pie chart data for payment break
-  const paymentChartData = useMemo(() => {
-    const cash = periodFilteredTxs.filter(t => t.mode === 'Cash').reduce((s, t) => s + t.amount, 0);
-    const transfer = periodFilteredTxs.filter(t => t.mode === 'Transfer').reduce((s, t) => s + t.amount, 0);
-    const pos = periodFilteredTxs.filter(t => t.mode === 'POS').reduce((s, t) => s + t.amount, 0);
-    const debt = periodFilteredTxs.filter(t => t.mode === 'Debt').reduce((s, t) => s + t.amount, 0);
-    return [
-      { name: 'Cash',     value: cash,     color: 'var(--color-success)' },
-      { name: 'Transfer', value: transfer,  color: 'var(--color-accent-cobalt)' },
-      { name: 'POS',      value: pos,       color: 'var(--color-accent-amber)' },
-      { name: 'Debt',     value: debt,      color: 'var(--color-error)' },
-    ].filter(d => d.value > 0);
-  }, [periodFilteredTxs]);
-
-  // Top consignees computed from real transaction data
-  const topConsignees = useMemo(() => {
-    const map: Record<string, { entries: number; weight: number; revenue: number }> = {};
-    periodFilteredTxs.filter(t => t.type === 'cargo').forEach(t => {
-      const key = t.name || 'Unknown';
-      if (!map[key]) map[key] = { entries: 0, weight: 0, revenue: 0 };
-      map[key].entries++;
-      map[key].weight += t.kg || 0;
-      map[key].revenue += t.amount;
-    });
-    const total = Object.values(map).reduce((s, v) => s + v.revenue, 0) || 1;
-    return Object.entries(map)
-      .map(([name, v]) => ({ name, ...v, pct: Math.round((v.revenue / total) * 100) }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 8);
-  }, [periodFilteredTxs]);
-
-  // Marketing agents performance computed from real data
-  const marketingAgentsData = useMemo(() => {
-    const map: Record<string, { entries: number; revenue: number; expenses: number }> = {};
-
-    // Process marketing revenues — grouped by the real agent name resolved
-    // from entered_by via the user_profiles join, not a field that was never fetched
-    periodFilteredTxs.filter(t => t.type === 'marketing').forEach(t => {
-      const agentName = t.enteredByName || 'Unassigned';
-      if (!map[agentName]) map[agentName] = { entries: 0, revenue: 0, expenses: 0 };
-      map[agentName].entries++;
-      map[agentName].revenue += t.amount;
+      if (!map[category]) map[category] = { category, count: 0, weightKg: 0, revenue: 0 };
+      map[category].count++;
+      map[category].weightKg += t.kg || 0;
+      map[category].revenue += t.amount;
     });
 
-    // Process expenses by agent — logged_by is the agent's real name,
-    // written directly at expense-creation time
-    periodFilteredExpenses.forEach(e => {
-      const agentName = e.logged_by || 'Unassigned';
-      if (map[agentName]) {
-        map[agentName].expenses += e.amount;
-      } else {
-        // If they only have expenses but no revenue in this period
-        map[agentName] = { entries: 0, revenue: 0, expenses: e.amount };
-      }
-    });
-
-    return Object.entries(map)
-      .map(([name, data]) => ({
-        name,
-        entries: data.entries,
-        revenue: data.revenue,
-        expenses: data.expenses,
-        remit: data.revenue - data.expenses
+    const grandTotal = metrics.totalRevenue || 1;
+    return Object.values(map)
+      .map(c => ({
+        ...c,
+        pctShare: Math.round((c.revenue / grandTotal) * 100),
+        yieldPerKg: c.weightKg > 0 ? c.revenue / c.weightKg : 0
       }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-  }, [periodFilteredTxs, periodFilteredExpenses]);
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [periodFilteredTxs, metrics.totalRevenue]);
 
-  // Top airlines computed from real transaction data
-  const topAirlines = useMemo(() => {
-    const map: Record<string, number> = {};
-    const cargoTxs = periodFilteredTxs.filter(t => t.type === 'cargo');
-    let totalRevenue = 0;
-    
-    cargoTxs.forEach(t => {
-      const airline = normalizeAirlineName(t.airline);
-      if (!map[airline]) map[airline] = 0;
-      map[airline] += t.amount;
-      totalRevenue += t.amount;
+  // Shift & Terminal Distribution
+  const shiftDistributionData = useMemo(() => {
+    const morning = { shift: 'Morning Shift (06:00 - 12:00)', revenue: 0, weightKg: 0, count: 0 };
+    const afternoon = { shift: 'Afternoon Shift (12:00 - 17:00)', revenue: 0, weightKg: 0, count: 0 };
+    const eveningNight = { shift: 'Evening / Night Shift (17:00 - 06:00)', revenue: 0, weightKg: 0, count: 0 };
+
+    periodFilteredTxs.forEach(t => {
+      const hour = t.created_at ? new Date(t.created_at).getHours() : 12;
+      let target = afternoon;
+      if (hour >= 6 && hour < 12) target = morning;
+      else if (hour >= 12 && hour < 17) target = afternoon;
+      else target = eveningNight;
+
+      target.revenue += t.amount;
+      target.weightKg += t.kg || 0;
+      target.count++;
     });
-    
-    return Object.entries(map)
-      .map(([name, revenue]) => ({ name, revenue, pct: totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0 }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 3);
+
+    return [morning, afternoon, eveningNight];
   }, [periodFilteredTxs]);
 
-  // Trigger Gemini AI Insights from server proxy
+  // Dual-Axis Volume (KG) vs Revenue Trend Chart Data (24-hour / Multi-day)
+  const dualAxisTrendData = useMemo(() => {
+    if (period === 'shift' || period === 'today') {
+      // 24 Hourly Bins
+      const bins = Array.from({ length: 24 }, (_, i) => {
+        const hourLabel = `${i < 10 ? '0' : ''}${i}:00`;
+        const txInHour = periodFilteredTxs.filter(t => {
+          if (!t.created_at) return false;
+          return new Date(t.created_at).getHours() === i;
+        });
+        const revenue = txInHour.reduce((s, t) => s + t.amount, 0);
+        const weightKg = txInHour.reduce((s, t) => s + (t.kg || 0), 0);
+        const yieldPerKg = weightKg > 0 ? Math.round(revenue / weightKg) : 0;
+        return { label: hourLabel, revenue, weightKg, yieldPerKg };
+      });
+      return bins;
+    } else {
+      // Daily Bins
+      const dateMap: Record<string, { label: string; revenue: number; weightKg: number }> = {};
+      periodFilteredTxs.forEach(t => {
+        const dateStr = t.created_at ? new Date(t.created_at).toISOString().slice(5, 10) : 'Today';
+        if (!dateMap[dateStr]) dateMap[dateStr] = { label: dateStr, revenue: 0, weightKg: 0 };
+        dateMap[dateStr].revenue += t.amount;
+        dateMap[dateStr].weightKg += t.kg || 0;
+      });
+
+      return Object.values(dateMap).map(d => ({
+        ...d,
+        yieldPerKg: d.weightKg > 0 ? Math.round(d.revenue / d.weightKg) : 0
+      }));
+    }
+  }, [periodFilteredTxs, period]);
+
+  // Potential Revenue Leakage Anomaly Warning Signal
+  const leakageWarningSignal = useMemo(() => {
+    if (dualAxisTrendData.length < 2) return null;
+    const avgYield = metrics.avgYieldPerKg;
+    if (avgYield === 0) return null;
+
+    // Find any bin where Weight is > 1.5x average weight but yield drops below 60% of average yield
+    const anomalyBin = dualAxisTrendData.find(d => d.weightKg > 50 && d.yieldPerKg < avgYield * 0.6);
+    if (anomalyBin) {
+      return {
+        label: anomalyBin.label,
+        weightKg: anomalyBin.weightKg,
+        yieldPerKg: anomalyBin.yieldPerKg,
+        expectedYield: Math.round(avgYield)
+      };
+    }
+    return null;
+  }, [dualAxisTrendData, metrics.avgYieldPerKg]);
+
+  // Excel Export Handler
+  const exportExcelReport = useCallback(() => {
+    try {
+      const summaryRows = [
+        { Metric: 'Total Handling Revenue', Value: `₦${metrics.totalRevenue.toLocaleString()}` },
+        { Metric: 'Total Handling Tonnage', Value: `${metrics.totalKg.toLocaleString()} KG` },
+        { Metric: 'Total Waybills Processed', Value: metrics.totalWaybills },
+        { Metric: 'Average Revenue per KG (Yield)', Value: `₦${metrics.avgYieldPerKg.toFixed(2)}/KG` },
+        { Metric: 'Average Revenue per Shipment', Value: `₦${metrics.avgRevenuePerShipment.toFixed(2)}` },
+        { Metric: 'Collection Efficiency Rate', Value: `${metrics.collectionEfficiency}%` },
+        { Metric: 'Outstanding Debt', Value: `₦${metrics.debtOutstanding.toLocaleString()}` },
+        { Metric: 'Owed to Airlines (Net Payables)', Value: `₦${metrics.airlinePayables.toLocaleString()}` },
+      ];
+
+      const clientRows = clientParetoData.map(c => ({
+        'Client / Airline': c.clientName,
+        'Category': c.category,
+        'Shipments': c.count,
+        'Tonnage (KG)': c.weightKg,
+        'Revenue (NGN)': c.revenue,
+        'Yield (NGN/KG)': Math.round(c.yieldPerKg),
+        'Share %': `${c.sharePct}%`,
+        'Top 20% Driver': c.isTop20 ? 'YES' : 'NO',
+        'Outstanding Debt': c.debt
+      }));
+
+      const entryRows = periodFilteredTxs.map(t => ({
+        'Entry Ref': t.id,
+        'Type': t.type,
+        'Client / Consignee': t.name,
+        'Airline': t.airline || '',
+        'Route': t.route || '',
+        'AWB Tag': t.awb_tag_number || '',
+        'Weight (KG)': t.kg || 0,
+        'Pieces': t.pieces || 1,
+        'Amount (NGN)': t.amount,
+        'Payment Mode': t.mode,
+        'Confirmed': t.paymentConfirmed ? 'YES' : 'NO',
+        'Date Time': t.created_at ? new Date(t.created_at).toLocaleString() : ''
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+      const wsClients = XLSX.utils.json_to_sheet(clientRows);
+      const wsEntries = XLSX.utils.json_to_sheet(entryRows);
+
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Sales Summary');
+      XLSX.utils.book_append_sheet(wb, wsClients, 'Top Clients & Pareto');
+      XLSX.utils.book_append_sheet(wb, wsEntries, 'Raw Handling Entries');
+
+      XLSX.writeFile(wb, `EHI_Sales_Revenue_Analysis_${period}_${new Date().toISOString().slice(0,10)}.xlsx`);
+      showToast({ message: 'Sales analysis exported to Excel successfully!', type: 'success' });
+    } catch (err: any) {
+      showToast({ message: 'Failed to export Excel report: ' + err.message, type: 'error' });
+    }
+  }, [metrics, clientParetoData, periodFilteredTxs, period, showToast]);
+
+  // AI Insights Trigger
   const fetchAIInsights = useCallback(async () => {
     setLoadingInsights(true);
     setInsightError(null);
@@ -364,13 +446,14 @@ export const Analytics = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          cargoRevenue: stats.cargoRev,
-          marketingRevenue: stats.mktgRev,
-          vjRevenue: stats.vjRev,
-          topRoute: stats.topRoute,
-          totalDebt: stats.debt,
-          cargoCount: stats.cargoCount,
-          marketingCount: stats.mktgCount
+          cargoRevenue: metrics.cargoRevenue,
+          marketingRevenue: metrics.marketingRevenue,
+          vjRevenue: metrics.baggageRevenue,
+          totalRevenue: metrics.totalRevenue,
+          avgYieldPerKg: metrics.avgYieldPerKg,
+          topClient: clientParetoData[0]?.clientName || 'N/A',
+          top20Share: top20RevenueShare,
+          outstandingDebt: metrics.debtOutstanding
         })
       });
       let data: any = {};
@@ -382,15 +465,14 @@ export const Analytics = ({
       if (data.success && Array.isArray(data.insights)) {
         setInsights(data.insights);
       } else {
-        setInsightError(data.error || "Failed to retrieve analytical parsing.");
+        setInsightError(data.error || "Could not retrieve analytical parsing.");
       }
     } catch (err: any) {
-      console.error(err);
       setInsightError("Connection offline / insight server unavailable.");
     } finally {
       setLoadingInsights(false);
     }
-  }, [stats.cargoRev, stats.mktgRev, stats.vjRev, stats.topRoute, stats.debt, stats.cargoCount, stats.mktgCount]);
+  }, [metrics, clientParetoData, top20RevenueShare]);
 
   const handleDownloadPDF = async () => {
     try {
@@ -398,7 +480,6 @@ export const Analytics = ({
         showToast({ message: "No transactions available to download for this period.", type: "warning" });
         return;
       }
-
       const { downloadAnalyticsPDF } = await import('./AnalyticsPDF');
       await downloadAnalyticsPDF({
         period,
@@ -410,470 +491,627 @@ export const Analytics = ({
   };
 
   return (
-    <div className="flex flex-col p-4 space-y-6 pb-20 select-none animate-in fade-in duration-300">
+    <div className="flex flex-col p-4 md:p-6 space-y-6 pb-24 select-none animate-in fade-in duration-300">
       
-      {/* Page Title */}
-      <div className="flex justify-between items-center border-b border-[var(--color-border)] pb-2">
-        <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] tracking-[0.15em] uppercase font-bold ehi-desktop-only-inline">▸ ANALYTICS INTELLIGENCE</span>
-        <span className="text-[10px] font-mono text-[var(--color-accent-cobalt)] tracking-[0.15em] uppercase font-bold ehi-mobile-only-inline">▸ ANALYTICS</span>
+      {/* ── Zone 1: Header & Control Bar ─────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-[0.15em] uppercase font-bold">
+              ▸ CARGO SALES & REVENUE INTELLIGENCE
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.3)] text-[var(--color-accent-amber)] text-[10px] font-mono font-bold">
+              EHI PRO 2
+            </span>
+          </div>
+          <h2 className="text-[18px] font-bold font-sans text-[var(--color-foreground)] tracking-tight mt-0.5">
+            Handling Revenue & Yield Analytics
+          </h2>
+        </div>
         
-        <div className="flex items-center space-x-2">
-          {/* Hub Selector */}
+        {/* Controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Hub Filter */}
           <div className="relative">
             <select 
               value={selectedHub}
               onChange={(e) => setSelectedHub(e.target.value)}
-              style={{ maxWidth: '160px' }}
-              className="bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[10px] font-mono h-7 pl-2 pr-6 rounded border border-[rgba(255,255,255,0.15)] appearance-none cursor-pointer"
+              className="bg-[var(--color-surface-1)] text-[var(--color-foreground)] text-[11px] font-mono h-8 pl-3 pr-7 rounded-lg border border-[var(--color-border)] focus:outline-none focus:border-[var(--color-accent-amber)] appearance-none cursor-pointer"
             >
               {activeHubs.map(hub => (
                 <option key={hub.id} value={hub.id}>{hub.name}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-1.5 top-1.5 text-[var(--color-muted)] pointer-events-none" size={10} />
+            <ChevronDown className="absolute right-2 top-2.5 text-[var(--color-muted)] pointer-events-none" size={12} />
           </div>
-          
+
+          {/* Excel Export */}
+          <button
+            onClick={exportExcelReport}
+            className="h-8 px-3 bg-[rgba(16,185,129,0.15)] hover:bg-[rgba(16,185,129,0.25)] text-[var(--color-success)] border border-[rgba(16,185,129,0.3)] rounded-lg text-[11px] font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            title="Export Excel Worksheet"
+          >
+            <FileSpreadsheet size={14} />
+            <span className="hidden sm:inline">Excel Export</span>
+          </button>
+
+          {/* PDF Export */}
           <button
             onClick={handleDownloadPDF}
-            className="flex items-center justify-center bg-[var(--color-surface-1)] hover:bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[var(--color-border)] h-7 px-2 rounded transition-colors"
-            title="Download PDF"
-            aria-label="Download PDF"
+            className="h-8 px-3 bg-[var(--color-surface-1)] hover:bg-[var(--color-surface-2)] text-[var(--color-foreground)] border border-[var(--color-border)] rounded-lg text-[11px] font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            title="Export PDF Report"
           >
             <Download size={14} className="text-[var(--color-accent-amber)]" />
+            <span className="hidden sm:inline">PDF</span>
           </button>
         </div>
       </div>
 
-      {/* Date Range Selector Tabs */}
-      <div className="flex bg-[var(--color-surface-1)] p-0.5 rounded border border-[var(--color-border)] w-full">
-        {(['today', 'week', 'month', 'quarter'] as const).map((tab) => (
-          <button 
-            key={tab}
-            onClick={() => setPeriod(tab)}
-            className={`flex-1 text-center py-1.5 text-[9px] font-mono uppercase tracking-wider rounded transition-all ${period === tab ? 'bg-[var(--color-accent-cobalt)] text-white font-bold' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+      {/* ── Zone 2: Time Range & Search Controls ─────────────────────── */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3">
+        {/* Period Buttons */}
+        <div className="flex items-center gap-1 bg-[var(--color-surface-1)] p-1 rounded-lg border border-[var(--color-border)] flex-wrap">
+          <button
+            onClick={() => setPeriod('shift')}
+            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === 'shift' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
           >
-            {tab}
+            Current Shift
           </button>
-        ))}
+          <button
+            onClick={() => setPeriod('today')}
+            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === 'today' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setPeriod('7days')}
+            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === '7days' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+          >
+            7 Days
+          </button>
+          <button
+            onClick={() => setPeriod('month')}
+            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === 'month' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+          >
+            This Month
+          </button>
+          <button
+            onClick={() => setPeriod('custom')}
+            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md transition-all cursor-pointer ${period === 'custom' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+          >
+            Custom Range
+          </button>
+        </div>
+
+        {/* Custom Range Inputs if Active */}
+        {period === 'custom' && (
+          <div className="flex items-center gap-2 text-[11px] font-mono text-[var(--color-muted)]">
+            <input
+              type="datetime-local"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="bg-[var(--color-surface-1)] text-[var(--color-foreground)] px-2 py-1 rounded border border-[var(--color-border)] text-[10px]"
+            />
+            <span>to</span>
+            <input
+              type="datetime-local"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="bg-[var(--color-surface-1)] text-[var(--color-foreground)] px-2 py-1 rounded border border-[var(--color-border)] text-[10px]"
+            />
+          </div>
+        )}
+
+        {/* Search */}
+        <div className="relative flex-1 max-w-xs">
+          <input
+            type="text"
+            placeholder="Search client, route, waybill..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-8 pl-8 pr-3 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[11px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+          />
+          <Filter size={12} className="absolute left-2.5 top-2.5 text-[var(--color-muted)]" />
+        </div>
       </div>
 
-      {/* Revenue Stream KPI Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {/* KPI 1 : Cargo Revenue */}
-        <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
-          <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-accent-amber)]" />
-          <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Cargo Stream</div>
-          <div className="text-[17px] font-bold font-mono text-[var(--color-accent-amber)] pl-1">
-            {fmt(stats.cargoRev)}
+      {/* ── Zone 3: Executive Yield & Handling KPI Cards ─────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {/* KPI 1: Handling Revenue */}
+        <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3.5 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-accent-amber)]" />
+          <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Total Handling Revenue</div>
+          <div className="text-[20px] font-bold font-mono text-[var(--color-foreground)] my-1">
+            <AnimatedNumber value={metrics.totalRevenue} format={fmt} />
           </div>
-          <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
-            {stats.cargoCount} waybills · {stats.cargoKg.toLocaleString()} KG
-          </div>
-        </div>
-
-        {/* KPI 2 : Marketing Revenue */}
-        <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
-          <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-success)]" />
-          <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Field Marketing</div>
-          <div className="text-[17px] font-bold font-mono text-[var(--color-success)] pl-1">
-            {fmt(stats.mktgRev)}
-          </div>
-          <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
-            {stats.mktgCount} entries log
+          <div className="text-[10px] font-mono text-[var(--color-accent-amber)] flex items-center justify-between">
+            <span>{metrics.totalWaybills} waybills</span>
+            <span>{metrics.totalPcs} pcs</span>
           </div>
         </div>
 
-        {/* KPI 3 : Excess Baggage */}
-        <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
-          <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-accent-cobalt)]" />
-          <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1">Excess Baggage</div>
-          <div className="text-[17px] font-bold font-mono text-[var(--color-accent-cobalt)] pl-1">
-            {fmt(stats.vjRev)}
+        {/* KPI 2: Total Tonnage Handled */}
+        <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3.5 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-accent-cobalt)]" />
+          <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Handling Tonnage</div>
+          <div className="text-[20px] font-bold font-mono text-[var(--color-accent-cobalt)] my-1">
+            {metrics.totalKg.toLocaleString()} <span className="text-[12px] font-normal">KG</span>
           </div>
-          <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1 mt-1 truncate">
-            {stats.vjCount} Pax · {stats.vjExcessKg.toLocaleString()} Excess KG
+          <div className="text-[10px] font-mono text-[var(--color-muted)]">
+            {(metrics.totalKg / 1000).toFixed(2)} Metric Tons
           </div>
         </div>
 
-        {/* Dynamic Top Route Card */}
-        <div className="ehi-card p-3 relative overflow-hidden flex flex-col justify-between h-[85px]">
-          <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-[var(--color-purple)]" />
-          <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase tracking-wider pl-1 font-bold">Leading Location</div>
-          <div className="text-[13px] font-bold font-mono text-[var(--color-purple)] pl-1 py-1 uppercase truncate">{stats.topRoute}</div>
-          <div className="text-[8px] font-mono text-[var(--color-light-muted)] pl-1">highest volume density</div>
+        {/* KPI 3: Unit Yield per KG (Revenue/KG) */}
+        <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3.5 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-success)]" />
+          <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Unit Yield Rate</div>
+          <div className="text-[20px] font-bold font-mono text-[var(--color-success)] my-1">
+            ₦{metrics.avgYieldPerKg.toFixed(1)} <span className="text-[11px] font-normal text-[var(--color-muted)]">/KG</span>
+          </div>
+          <div className="text-[10px] font-mono text-[var(--color-muted)]">
+            Avg Ticket: ₦{Math.round(metrics.avgRevenuePerShipment).toLocaleString()}
+          </div>
+        </div>
+
+        {/* KPI 4: Collection Efficiency */}
+        <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3.5 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-purple)]" />
+          <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Collection Efficiency</div>
+          <div className="text-[20px] font-bold font-mono text-[var(--color-purple)] my-1">
+            {metrics.collectionEfficiency}%
+          </div>
+          <div className="text-[10px] font-mono text-[var(--color-muted)]">
+            Collected: ₦{metrics.totalCollected.toLocaleString()}
+          </div>
+        </div>
+
+        {/* KPI 5: Outstanding Debt & Receivables */}
+        <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-3.5 relative overflow-hidden flex flex-col justify-between col-span-2 lg:col-span-1">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-error)]" />
+          <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Outstanding Receivables</div>
+          <div className="text-[20px] font-bold font-mono text-[var(--color-error)] my-1">
+            ₦{metrics.debtOutstanding.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[var(--color-muted)]">
+            Net Airline Payable: ₦{metrics.airlinePayables.toLocaleString()}
+          </div>
         </div>
       </div>
 
-      {/* Grand Combined Revenue Card */}
-      <div className="w-full bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.25)] rounded p-4 text-center">
-        <div className="flex justify-between items-center px-2 md:px-8">
-          <div className="flex flex-col items-start">
-            <span className="text-[8px] font-mono text-[var(--color-error)] uppercase tracking-widest font-bold">● PAYABLES</span>
-            <span className="text-[16px] md:text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">
-              <AnimatedNumber value={stats.airlinePayables} format={fmt} />
-            </span>
-            <span className="text-[7px] font-mono text-[var(--color-light-muted)] mt-0.5 uppercase ehi-desktop-only">Owed to airlines</span>
-          </div>
-
-          <div className="flex flex-col items-center">
-            <div className="text-[8px] font-mono text-[var(--color-success)] uppercase tracking-widest font-bold">● COMBINED PORTFOLIO REVENUE</div>
-            <div className="text-[20px] md:text-[26px] font-bold font-mono text-[var(--color-foreground)] mt-1.5">
-              <AnimatedNumber value={stats.totalRev} format={fmt} />
+      {/* ── Zone 4: Revenue Leakage Anomaly Warning Banner (if triggered) ─ */}
+      {leakageWarningSignal && (
+        <div className="bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.3)] rounded-xl p-4 flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
+          <AlertTriangle size={18} className="text-[var(--color-accent-amber)] shrink-0 mt-0.5" />
+          <div className="flex-1 text-[12px]">
+            <div className="font-bold text-[var(--color-accent-amber)] font-mono uppercase tracking-wider mb-0.5">
+              ⚠️ Revenue Leakage Anomaly Detected ({leakageWarningSignal.label})
             </div>
-            <div className="text-[8px] font-mono text-[var(--color-light-muted)] mt-1 uppercase ehi-desktop-only">
-              Consolidated across all 3 streams for {period}
+            <div className="text-[var(--color-foreground)]">
+              Tonnage peaked at <span className="font-bold font-mono">{leakageWarningSignal.weightKg.toLocaleString()} KG</span>, but unit yield dropped to <span className="font-bold font-mono text-[var(--color-error)]">₦{leakageWarningSignal.yieldPerKg}/KG</span> (baseline average is ₦{leakageWarningSignal.expectedYield}/KG). Verify underbilled demurrage, uncaptured handling surcharges, or manual tariff overrides for this period.
             </div>
           </div>
-
-          <div className="flex flex-col items-end">
-            <span className="text-[8px] font-mono text-[var(--color-accent-amber)] uppercase tracking-widest font-bold">● RECEIVABLES</span>
-            <span className="text-[16px] md:text-[20px] font-bold font-mono text-[var(--color-foreground)] mt-1">
-              <AnimatedNumber value={stats.debt} format={fmt} />
-            </span>
-          </div>
         </div>
+      )}
+
+      {/* ── Zone 5: Analysis Navigation Tabs ─────────────────────────── */}
+      <div className="flex border-b border-[var(--color-border)] overflow-x-auto no-scrollbar gap-2">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`pb-2.5 px-3 text-[12px] font-sans font-bold flex items-center gap-1.5 cursor-pointer transition-colors border-b-2 ${activeTab === 'overview' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+        >
+          <BarChart3 size={14} />
+          <span>Revenue vs Volume Trend</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('pareto')}
+          className={`pb-2.5 px-3 text-[12px] font-sans font-bold flex items-center gap-1.5 cursor-pointer transition-colors border-b-2 ${activeTab === 'pareto' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+        >
+          <Users size={14} />
+          <span>Client Pareto 80/20</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('cargo_types')}
+          className={`pb-2.5 px-3 text-[12px] font-sans font-bold flex items-center gap-1.5 cursor-pointer transition-colors border-b-2 ${activeTab === 'cargo_types' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+        >
+          <Layers size={14} />
+          <span>Cargo Categories & Yield</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('terminal_shifts')}
+          className={`pb-2.5 px-3 text-[12px] font-sans font-bold flex items-center gap-1.5 cursor-pointer transition-colors border-b-2 ${activeTab === 'terminal_shifts' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+        >
+          <Clock size={14} />
+          <span>Terminal Shift Matrix</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('cash_flow')}
+          className={`pb-2.5 px-3 text-[12px] font-sans font-bold flex items-center gap-1.5 cursor-pointer transition-colors border-b-2 ${activeTab === 'cash_flow' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+        >
+          <DollarSign size={14} />
+          <span>Cash Capture & Debts</span>
+        </button>
       </div>
 
-      {/* Revenue Trend Chart Section */}
-      <div className="ehi-card p-4 space-y-3">
-        <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-1.5">
-          <TrendingUp size={11} className="text-[var(--color-accent-cobalt)]" />
-          <span>REVENUE PERFORMANCE TREND (Last 7 Days)</span>
-        </div>
-        <div className="w-full text-[9px] font-mono">
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={revenueChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-              <XAxis dataKey="time" stroke="var(--color-muted)" strokeWidth={0.5} tickLine={false} />
-              <YAxis
-                stroke="var(--color-muted)"
-                strokeWidth={0.5}
-                tickLine={false}
-                tickFormatter={(val) => `₦${(val/1000)}k`}
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: 'var(--color-surface-card)', borderColor: 'var(--color-surface-2)', color: 'var(--color-foreground)', fontSize: '10px' }}
-                formatter={(value: any) => [fmt(Number(value)), '']}
-              />
-              <Area type="monotone" dataKey="cargo" stroke="var(--color-accent-amber)" fill="rgba(245,158,11,0.05)" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="marketing" stroke="var(--color-success)" fill="rgba(16,185,129,0.05)" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="excessBaggage" stroke="var(--color-accent-cobalt)" fill="rgba(59,130,246,0.05)" strokeWidth={1.5} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex justify-center space-x-4 text-[8px] font-mono text-[var(--color-muted)]">
-          <div className="flex items-center space-x-1">
-            <span className="w-2 h-2 rounded-full bg-[var(--color-accent-amber)]" />
-            <span>Cargo</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <span className="w-2 h-2 rounded-full bg-[var(--color-success)]" />
-            <span>Marketing</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <span className="w-2 h-2 rounded-full bg-[var(--color-accent-cobalt)]" />
-            <span>Excess Baggage</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Route Performance & Payment Breakdown */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Horizontal Top Routes Table */}
-        <div className="ehi-card p-4 space-y-3">
-          <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-2">
-            <Layers size={11} className="text-[var(--color-purple)]" />
-            <span>RANKED ROUTES BY REVENUE VOLUME</span>
-          </div>
-          <div className="space-y-2.5">
-            {routeChartData.slice(0, 5).map((r, i) => {
-              const maxVal = routeChartData[0]?.value || 1;
-              const ratio = Math.max(8, Math.min(100, (r.value / maxVal) * 100));
-              return (
-                <div key={i} className="space-y-1">
-                  <div className="flex justify-between text-[11px] font-mono">
-                    <span className="text-[var(--color-light-muted)]">{r.name}</span>
-                    <span className="text-[var(--color-foreground)] font-bold">{fmt(r.value)}</span>
-                  </div>
-                  <div className="w-full bg-[var(--color-border)] h-1.5 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-[var(--color-accent-amber)] h-full rounded-full" 
-                      style={{ width: `${ratio}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Payment breakdown Donut style mapping */}
-        <div className="ehi-card p-4 space-y-3">
-          <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider">PAYMENT INSTRUMENT BREAKDOWN</div>
-          <div className="flex items-center justify-between">
-            {/* Legend Left */}
-            <div className="space-y-3 w-[150px]">
-              {paymentChartData.map((p, i) => {
-                const total = paymentChartData.reduce((s, it) => s + it.value, 0);
-                const pct = total > 0 ? Math.round((p.value / total) * 100) : 0;
-                return (
-                <div key={i} className="flex flex-col">
-                  <div className="flex items-center space-x-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />
-                    <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)]">{p.name}</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-[var(--color-muted)] pl-3">
-                    {fmt(p.value)} ({pct}%)
-                  </span>
-                </div>
-              )})}
+      {/* ── Tab 1: Overview Dual-Axis Trend ──────────────────────────── */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Dual Axis Chart */}
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 md:p-5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
+              <div>
+                <h3 className="text-[14px] font-bold font-sans text-[var(--color-foreground)]">
+                  Dual-Axis Revenue (₦) vs Handling Volume (KG) Trend
+                </h3>
+                <p className="text-[11px] text-[var(--color-muted)] font-mono">
+                  Compares revenue captured against actual physical weight processed to isolate rate deviations.
+                </p>
+              </div>
+              <div className="flex items-center gap-4 text-[10px] font-mono text-[var(--color-muted)]">
+                <span className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded bg-[var(--color-accent-amber)]" /> Revenue (₦)
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded bg-[var(--color-accent-cobalt)]" /> Weight (KG)
+                </span>
+              </div>
             </div>
 
-            {/* Micro Pie representation layout */}
-            <div style={{ width: 100, height: 100 }} className="text-[9px] font-mono shrink-0 relative flex items-center justify-center">
-              <ResponsiveContainer width={100} height={100}>
-                <PieChart>
-                  <Pie
-                    data={paymentChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={28}
-                    outerRadius={45}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {paymentChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
+            <div className="w-full h-[260px] text-[10px] font-mono">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dualAxisTrendData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                  <XAxis dataKey="label" stroke="var(--color-muted)" strokeWidth={0.5} tickLine={false} />
+                  <YAxis yAxisId="left" stroke="var(--color-accent-amber)" strokeWidth={0.5} tickLine={false} tickFormatter={(val) => `₦${val/1000}k`} />
+                  <YAxis yAxisId="right" orientation="right" stroke="var(--color-accent-cobalt)" strokeWidth={0.5} tickLine={false} tickFormatter={(val) => `${val}kg`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'var(--color-surface-card)', borderColor: 'var(--color-surface-2)', color: 'var(--color-foreground)', fontSize: '11px', borderRadius: '8px' }}
+                    formatter={(val: any, name: any) => [
+                      name === 'revenue' ? `₦${Number(val).toLocaleString()}` : `${Number(val).toLocaleString()} KG`,
+                      name === 'revenue' ? 'Revenue' : 'Handling Weight'
+                    ]}
+                  />
+                  <Bar yAxisId="left" dataKey="revenue" fill="rgba(245,158,11,0.2)" stroke="var(--color-accent-amber)" radius={[4, 4, 0, 0]} />
+                  <Line yAxisId="right" type="monotone" dataKey="weightKg" stroke="var(--color-accent-cobalt)" strokeWidth={2} dot={{ r: 3, fill: 'var(--color-accent-cobalt)' }} />
+                </ComposedChart>
               </ResponsiveContainer>
-              <div className="absolute text-[8px] font-sans font-bold text-center text-[var(--color-muted)]">
-                PAYMENT<br/>DIVIDE
+            </div>
+          </div>
+
+          {/* Revenue Stream Breakdown Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Cargo Stream */}
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono text-[var(--color-muted)] uppercase">Air Cargo Stream</span>
+                <Package size={16} className="text-[var(--color-accent-amber)]" />
+              </div>
+              <div className="text-[22px] font-bold font-mono text-[var(--color-accent-amber)] my-2">
+                ₦{metrics.cargoRevenue.toLocaleString()}
+              </div>
+              <div className="text-[11px] font-mono text-[var(--color-muted)] space-y-0.5">
+                <div>Weight: {metrics.cargoKg.toLocaleString()} KG</div>
+                <div>Yield: ₦{metrics.cargoKg > 0 ? (metrics.cargoRevenue / metrics.cargoKg).toFixed(1) : 0}/KG</div>
+              </div>
+            </div>
+
+            {/* Field Marketing Stream */}
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono text-[var(--color-muted)] uppercase">Field Marketing</span>
+                <TrendingUp size={16} className="text-[var(--color-success)]" />
+              </div>
+              <div className="text-[22px] font-bold font-mono text-[var(--color-success)] my-2">
+                ₦{metrics.marketingRevenue.toLocaleString()}
+              </div>
+              <div className="text-[11px] font-mono text-[var(--color-muted)] space-y-0.5">
+                <div>Bag Sales (BB/MB/SB)</div>
+                <div>{periodFilteredTxs.filter(t => t.type === 'marketing').length} Entries</div>
+              </div>
+            </div>
+
+            {/* Excess Baggage Stream */}
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono text-[var(--color-muted)] uppercase">Excess Baggage</span>
+                <Plane size={16} className="text-[var(--color-accent-cobalt)]" />
+              </div>
+              <div className="text-[22px] font-bold font-mono text-[var(--color-accent-cobalt)] my-2">
+                ₦{metrics.baggageRevenue.toLocaleString()}
+              </div>
+              <div className="text-[11px] font-mono text-[var(--color-muted)] space-y-0.5">
+                <div>Weight: {metrics.baggageKg.toLocaleString()} KG</div>
+                <div>Pax Manifests: {periodFilteredTxs.filter(t => t.type === 'baggage').length}</div>
+              </div>
+            </div>
+
+            {/* Express Packages Stream */}
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono text-[var(--color-muted)] uppercase">Express Packages</span>
+                <Sparkles size={16} className="text-[var(--color-purple)]" />
+              </div>
+              <div className="text-[22px] font-bold font-mono text-[var(--color-purple)] my-2">
+                ₦{metrics.packagesRevenue.toLocaleString()}
+              </div>
+              <div className="text-[11px] font-mono text-[var(--color-muted)] space-y-0.5">
+                <div>Parcels & Envelopes</div>
+                <div>{periodFilteredTxs.filter(t => t.type === 'package').length} Waybills</div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Intelligence & Matrix */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Cargo Intelligence Deep Dive */}
-        <div className="ehi-card p-4 space-y-3 h-full">
-        <div className="text-[9px] font-mono text-[var(--color-accent-amber)] uppercase tracking-wider flex items-center space-x-1.5 font-bold">
-          <Package size={11} />
-          <span>CARGO DESK REVENUE INTELLIGENCE</span>
-        </div>
-        
-        <div className="text-[10px] font-mono text-[var(--color-muted)] uppercase border-b border-[var(--color-border)] pb-1">
-          Top Consignee Partnerships
-        </div>
-        
-        <div className="space-y-2 overflow-x-auto pr-1">
-          <table className="w-full text-left font-mono text-[10px]">
-            <thead>
-              <tr className="text-[var(--color-muted)] border-b border-[var(--color-border)] pb-1">
-                <th className="py-1">Client</th>
-                <th className="text-center py-1">Shipments</th>
-                <th className="text-right py-1">Revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topConsignees.map((c, i) => (
-                <tr key={i} className="border-b border-[var(--color-border)] hover:bg-[rgba(255,255,255,0.02)]">
-                  <td className="py-2 text-[var(--color-foreground)] truncate max-w-[125px]">{c.name}</td>
-                  <td className="text-center text-[var(--color-muted)] py-2">{c.entries}</td>
-                  <td className={`text-right py-2 font-bold ${i === 0 ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-foreground)]'}`}>{fmt(c.revenue)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--color-border)]">
-          {topAirlines.length > 0 ? topAirlines.map((item, index) => {
-            const colors = [
-              { color: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
-              { color: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
-              { color: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.2)' }
-            ];
-            const theme = colors[index % colors.length];
-            return (
-            <div 
-              key={index} 
-              style={{ backgroundColor: theme.color, borderColor: theme.border }}
-              className="border rounded p-2 text-center"
-            >
-              <div className="text-[8px] font-mono text-[var(--color-muted)] uppercase truncate">{item.name}</div>
-              <div className="text-[12px] font-bold font-mono text-[var(--color-foreground)] mt-1">
-                {item.pct}%
+      {/* ── Tab 2: Client Pareto 80/20 Analysis ──────────────────────── */}
+      {activeTab === 'pareto' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-[10px] font-mono text-[var(--color-accent-amber)] uppercase font-bold tracking-wider mb-0.5">
+                ● PARETO REVENUE PRINCIPLE (80/20 RULE)
               </div>
+              <div className="text-[15px] font-bold font-sans text-[var(--color-foreground)]">
+                <span className="text-[var(--color-accent-amber)] font-mono">{top20ClientsCount} key clients</span> drive <span className="text-[var(--color-success)] font-mono">{top20RevenueShare}%</span> of total handling revenue.
+              </div>
+              <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
+                Focus commercial priority and account relationship management on these top 20% accounts.
+              </p>
             </div>
-            );
-          }) : (
-            <div className="col-span-3 text-center text-[10px] text-[var(--color-muted)] py-2">No airline data for this period</div>
-          )}
-        </div>
-      </div>
-
-      {/* Field Marketing intelligence deep dive */}
-      <div className="ehi-card p-4 space-y-3 h-full">
-        <div className="text-[9px] font-mono text-[var(--color-success)] uppercase tracking-wider flex items-center space-x-1.5 font-bold">
-          <TrendingUp size={11} />
-          <span>FIELD MARKETING AGENT RECORD</span>
-        </div>
-
-        <div className="space-y-2.5 overflow-x-auto">
-          <table className="w-full text-left font-mono text-[10px]">
-            <thead>
-              <tr className="text-[var(--color-muted)] border-b border-[var(--color-border)]">
-                <th className="py-1">Agent</th>
-                <th className="text-center py-1">Entries</th>
-                <th className="text-right py-1">Gross Rev</th>
-                <th className="text-right py-1">Remit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {marketingAgentsData.length > 0 ? marketingAgentsData.map((agent, i) => (
-                <tr key={i} className="border-b border-[var(--color-border)] text-[10px]">
-                  <td className="py-2 text-[var(--color-foreground)] font-bold truncate max-w-[125px]">{agent.name}</td>
-                  <td className="text-center py-2 text-[var(--color-light-muted)]">{agent.entries}</td>
-                  <td className="text-right py-2 text-[var(--color-foreground)]">{fmt(agent.revenue)}</td>
-                  <td className={`text-right py-2 font-bold ${agent.remit >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'}`}>
-                    {fmt(agent.remit)}
-                  </td>
-                </tr>
-              )) : (
-                <tr><td colSpan={4} className="text-center text-[10px] text-[var(--color-muted)] py-4">No field marketing activity for this period</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Multi-Hub Performance Matrix Section */}
-        <div className="ehi-card p-4 space-y-3 h-full">
-        <div className="text-[9px] font-mono text-[var(--color-foreground)] uppercase tracking-wider flex items-center space-x-1.5 font-bold">
-          <MapPin size={11} className="text-[var(--color-purple)]" />
-          <span>MULTI-HUB LOGISTICS DISTRIBUTION</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {activeHubs.slice(1).map((hub) => {
-            // Compute real hub revenue from periodFilteredTxs based on hub_id
-            const hubRevenue = periodFilteredTxs
-              .filter(t => t.hub_id === hub.id)
-              .reduce((sum, t) => sum + t.amount, 0);
-            
-            return (
-              <div 
-                key={hub.id} 
-                onClick={() => setSelectedHub(hub.id)}
-                className={`bg-[rgba(255,255,255,0.02)] p-2.5 rounded border border-[var(--color-border)] flex flex-col justify-between cursor-pointer hover:border-[var(--color-accent-cobalt)] transition-colors ${selectedHub === hub.id ? 'border-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.05)]' : ''}`}
-              >
-                <div>
-                  <div className="text-[10px] font-sans font-bold text-[var(--color-foreground)] truncate">{hub.name}</div>
-                  <div className="text-[8px] font-mono text-[var(--color-muted)] truncate">{hub.region}</div>
-                </div>
-                <div className="mt-2 flex justify-between items-end border-t border-[var(--color-border)] pt-1.5">
-                  <span className="text-[7.5px] font-mono text-[var(--color-success)] uppercase">● Active</span>
-                  <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)]">{fmt(hubRevenue)}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* AI Insights panel Powered by Gemini */}
-      <div className="ehi-card overflow-hidden h-full flex flex-col">
-        {/* Header bar */}
-        <div className="bg-[rgba(16,185,129,0.08)] border-b border-[var(--color-border)] p-3 flex justify-between items-center">
-          <div className="flex items-center space-x-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-success)]"></span>
-            </span>
-            <span className="text-[10px] font-mono text-[var(--color-foreground)] tracking-[0.05em] uppercase font-bold flex items-center gap-1.5">
-              <Sparkles size={11} className="text-[var(--color-success)]" />
-              AI INSIGHTS & AUDIT LOG
-            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchAIInsights}
-              disabled={loadingInsights}
-              style={{
-                fontSize: 9, fontFamily: 'monospace',
-                color: 'var(--color-success)',
-                background: 'rgba(16,185,129,0.1)',
-                border: '1px solid rgba(16,185,129,0.2)',
-                borderRadius: 4, padding: '3px 8px',
-                cursor: loadingInsights ? 'wait' : 'pointer',
-                opacity: loadingInsights ? 0.6 : 1,
-              }}
-            >
-              {loadingInsights ? 'LOADING...' : '↻ REFRESH'}
-            </button>
-            <span className="text-[8px] font-mono text-[var(--color-success)] px-1.5 py-0.5 bg-[rgba(16,185,129,0.15)] rounded uppercase font-bold">
-              Gemini 2.0
-            </span>
+
+          {/* Pareto Client Table */}
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left font-mono text-[11px]">
+                <thead>
+                  <tr className="bg-[var(--color-surface-1)] text-[var(--color-muted)] border-b border-[var(--color-border)]">
+                    <th className="py-2.5 px-3">Rank & Client / Airline</th>
+                    <th className="py-2.5 px-3">Segment</th>
+                    <th className="py-2.5 px-3 text-center">Shipments</th>
+                    <th className="py-2.5 px-3 text-right">Tonnage (KG)</th>
+                    <th className="py-2.5 px-3 text-right">Revenue (₦)</th>
+                    <th className="py-2.5 px-3 text-right">Yield (₦/KG)</th>
+                    <th className="py-2.5 px-3 text-center">Share %</th>
+                    <th className="py-2.5 px-3 text-right">Outstanding Debt</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {clientParetoData.map((c, i) => (
+                    <tr key={i} className={`hover:bg-[rgba(255,255,255,0.02)] ${c.isTop20 ? 'bg-[rgba(245,158,11,0.03)]' : ''}`}>
+                      <td className="py-2.5 px-3 font-sans font-medium text-[var(--color-foreground)]">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold ${i < 3 ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)]' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'}`}>
+                            {i + 1}
+                          </span>
+                          <span className="truncate max-w-[180px]">{c.clientName}</span>
+                          {c.isTop20 && (
+                            <span className="px-1.5 py-0.2 rounded bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)] text-[9px] font-mono font-bold">
+                              TOP 20%
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-[var(--color-muted)] font-mono text-[10px]">{c.category}</td>
+                      <td className="py-2.5 px-3 text-center text-[var(--color-foreground)]">{c.count}</td>
+                      <td className="py-2.5 px-3 text-right text-[var(--color-foreground)]">{c.weightKg.toLocaleString()} KG</td>
+                      <td className="py-2.5 px-3 text-right font-bold text-[var(--color-accent-amber)]">₦{fmt(c.revenue)}</td>
+                      <td className="py-2.5 px-3 text-right text-[var(--color-success)] font-bold">₦{Math.round(c.yieldPerKg)}/KG</td>
+                      <td className="py-2.5 px-3 text-center font-bold text-[var(--color-foreground)]">{c.sharePct}%</td>
+                      <td className={`py-2.5 px-3 text-right font-bold ${c.debt > 0 ? 'text-[var(--color-error)]' : 'text-[var(--color-muted)]'}`}>
+                        {c.debt > 0 ? `₦${fmt(c.debt)}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Content body */}
-        <div className="p-3 space-y-3">
-          {loadingInsights ? (
-            <div className="py-8 flex flex-col justify-center items-center space-y-2">
-              <Loader2 className="animate-spin text-[var(--color-success)]" size={20} />
-              <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider">
-                Consulting Logistic Analyst models...
-              </div>
-            </div>
-          ) : insightError ? (
-            <div className="py-4 px-2 border border-dashed border-[rgba(239,68,68,0.2)] rounded bg-[rgba(239,68,68,0.03)] text-center text-xs">
-              <AlertCircle size={14} className="mx-auto text-[var(--color-error)] mb-1" />
-              <div className="text-[9px] font-mono text-[var(--color-error)] uppercase mb-1">Audit Stream Blocked</div>
-              <p className="text-[10px] text-[var(--color-muted)]">{insightError}</p>
-              <button 
-                onClick={fetchAIInsights}
-                className="mt-2 text-[9px] text-[var(--color-success)] font-mono border border-[rgba(16,185,129,0.3)] bg-transparent px-2.5 py-1 rounded hover:bg-[rgba(16,185,129,0.05)] text-center"
-              >
-                Retry Request
-              </button>
-            </div>
-          ) : insights.length === 0 ? (
-            <div className="text-center py-6 text-[10px] font-mono text-[var(--color-muted)]">
-              No insights compiled for current stats.
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {insights.map((ins, i) => (
-                <div 
-                  key={i} 
-                  className="p-2.5 rounded bg-[rgba(255,255,255,0.015)] border border-[var(--color-border)] space-y-1.5"
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-sans font-bold text-[var(--color-foreground)] uppercase">{ins.title}</span>
-                    <span className={`text-[7px] font-mono px-1.5 py-0.5 rounded font-bold uppercase ${
-                      ins.priority === 'high' ? 'bg-[rgba(239,68,68,0.15)] text-[var(--color-error)] border border-[rgba(239,68,68,0.3)]' :
-                      ins.priority === 'medium' ? 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)] border border-[rgba(245,158,11,0.3)]' :
-                      'bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] border border-[rgba(16,185,129,0.3)]'
-                    }`}>
-                      {ins.priority} priority
-                    </span>
+      {/* ── Tab 3: Cargo Categories & Yield Matrix ──────────────────── */}
+      {activeTab === 'cargo_types' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Cargo Category Table */}
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+              <h3 className="text-[13px] font-bold font-sans text-[var(--color-foreground)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+                <Layers size={14} className="text-[var(--color-accent-amber)]" />
+                <span>Cargo Category Yield Breakdown</span>
+              </h3>
+
+              <div className="space-y-3">
+                {cargoCategoryData.map((cat, i) => (
+                  <div key={i} className="space-y-1 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-3">
+                    <div className="flex items-center justify-between text-[12px] font-sans font-bold text-[var(--color-foreground)]">
+                      <span>{cat.category}</span>
+                      <span className="text-[var(--color-accent-amber)] font-mono">₦{fmt(cat.revenue)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-mono text-[var(--color-muted)]">
+                      <span>{cat.count} shipments · {cat.weightKg.toLocaleString()} KG</span>
+                      <span className="text-[var(--color-success)] font-bold">Yield: ₦{Math.round(cat.yieldPerKg)}/KG ({cat.pctShare}%)</span>
+                    </div>
+                    <div className="w-full bg-[var(--color-border)] h-1.5 rounded-full overflow-hidden mt-1">
+                      <div className="bg-[var(--color-accent-amber)] h-full rounded-full" style={{ width: `${cat.pctShare}%` }} />
+                    </div>
                   </div>
-                  <p className="text-[11px] text-[var(--color-light-muted)] leading-relaxed font-sans mt-1">
-                    {ins.insight}
-                  </p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          )}
+
+            {/* Cargo Category Distribution Pie Chart */}
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between">
+              <h3 className="text-[13px] font-bold font-sans text-[var(--color-foreground)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+                <PieIcon size={14} className="text-[var(--color-accent-cobalt)]" />
+                <span>Revenue Share by Content Category</span>
+              </h3>
+
+              <div className="h-[240px] w-full flex items-center justify-center text-[10px] font-mono">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={cargoCategoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="revenue"
+                      nameKey="category"
+                    >
+                      {cargoCategoryData.map((_, idx) => (
+                        <Cell key={idx} fill={['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#14b8a6'][idx % 6]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(val: any) => [`₦${fmt(Number(val))}`, 'Revenue']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono pt-2 border-t border-[var(--color-border)]">
+                {cargoCategoryData.slice(0, 4).map((cat, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 truncate">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#14b8a6'][idx % 6] }} />
+                    <span className="truncate text-[var(--color-muted)]">{cat.category} ({cat.pctShare}%)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab 4: Terminal & Operational Shift Matrix ──────────────── */}
+      {activeTab === 'terminal_shifts' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {shiftDistributionData.map((s, i) => (
+              <div key={i} className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
+                  <span className="text-[12px] font-bold font-sans text-[var(--color-foreground)]">{s.shift}</span>
+                  <Clock size={16} className="text-[var(--color-accent-amber)]" />
+                </div>
+                <div className="text-[24px] font-bold font-mono text-[var(--color-accent-amber)] my-3">
+                  ₦{fmt(s.revenue)}
+                </div>
+                <div className="text-[11px] font-mono text-[var(--color-muted)] space-y-1">
+                  <div className="flex justify-between">
+                    <span>Handled Weight:</span>
+                    <span className="text-[var(--color-foreground)] font-bold">{s.weightKg.toLocaleString()} KG</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Transactions:</span>
+                    <span className="text-[var(--color-foreground)] font-bold">{s.count} entries</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Average Yield:</span>
+                    <span className="text-[var(--color-success)] font-bold">₦{s.weightKg > 0 ? Math.round(s.revenue / s.weightKg) : 0}/KG</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab 5: Cash Capture & Debt Breakdown ───────────────────── */}
+      {activeTab === 'cash_flow' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-200">
+          {/* Collected Cash Flow */}
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+            <h3 className="text-[13px] font-bold font-sans text-[var(--color-foreground)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-[var(--color-success)]" />
+              <span>Collected & Settlement Instruments</span>
+            </h3>
+
+            <div className="space-y-2 font-mono text-[11px]">
+              <div className="flex justify-between p-2.5 bg-[var(--color-surface-1)] rounded-lg border border-[var(--color-border)]">
+                <span className="text-[var(--color-muted)]">Cash Receipts:</span>
+                <span className="text-[var(--color-success)] font-bold">₦{fmt(metrics.cashRevenue)}</span>
+              </div>
+              <div className="flex justify-between p-2.5 bg-[var(--color-surface-1)] rounded-lg border border-[var(--color-border)]">
+                <span className="text-[var(--color-muted)]">Bank Transfers (Confirmed):</span>
+                <span className="text-[var(--color-accent-cobalt)] font-bold">₦{fmt(metrics.transferRevenue)}</span>
+              </div>
+              <div className="flex justify-between p-2.5 bg-[var(--color-surface-1)] rounded-lg border border-[var(--color-border)]">
+                <span className="text-[var(--color-muted)]">POS Terminal Payments:</span>
+                <span className="text-[var(--color-accent-amber)] font-bold">₦{fmt(metrics.posRevenue)}</span>
+              </div>
+              <div className="flex justify-between p-2.5 bg-[var(--color-surface-1)] rounded-lg border border-[var(--color-border)]">
+                <span className="text-[var(--color-muted)]">Customer Wallet Deductions:</span>
+                <span className="text-[var(--color-purple)] font-bold">₦{fmt(metrics.walletDeductions)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Uncollected & Outstanding Debt */}
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+            <h3 className="text-[13px] font-bold font-sans text-[var(--color-foreground)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+              <AlertCircle size={16} className="text-[var(--color-error)]" />
+              <span>Outstanding Debt & Pending Verification</span>
+            </h3>
+
+            <div className="space-y-2 font-mono text-[11px]">
+              <div className="flex justify-between p-2.5 bg-[var(--color-surface-1)] rounded-lg border border-[var(--color-border)]">
+                <span className="text-[var(--color-muted)]">Active Corporate / Waybill Debt:</span>
+                <span className="text-[var(--color-error)] font-bold">₦{fmt(metrics.debtOutstanding)}</span>
+              </div>
+              <div className="flex justify-between p-2.5 bg-[var(--color-surface-1)] rounded-lg border border-[var(--color-border)]">
+                <span className="text-[var(--color-muted)]">Unconfirmed Bank Transfers:</span>
+                <span className="text-[var(--color-accent-amber)] font-bold">₦{fmt(metrics.unconfirmedTransfers)}</span>
+              </div>
+              <div className="flex justify-between p-2.5 bg-[var(--color-surface-1)] rounded-lg border border-[var(--color-border)]">
+                <span className="text-[var(--color-muted)]">Unverified Cash Entries:</span>
+                <span className="text-[var(--color-accent-amber)] font-bold">₦{fmt(metrics.unverifiedCash)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Zone 6: AI Automated Revenue Insights ──────────────────── */}
+      <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-[var(--color-accent-amber)]" />
+            <span className="text-[13px] font-bold font-sans text-[var(--color-foreground)]">AI Revenue & Anomaly Intelligence</span>
+          </div>
+          <button
+            onClick={fetchAIInsights}
+            disabled={loadingInsights}
+            className="px-3 py-1 bg-[rgba(245,158,11,0.15)] hover:bg-[rgba(245,158,11,0.25)] text-[var(--color-accent-amber)] border border-[rgba(245,158,11,0.3)] rounded-lg text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            {loadingInsights ? <Loader2 size={12} className="animate-spin" /> : <span>↻ REFRESH AI</span>}
+          </button>
+        </div>
+
+        {insightError && (
+          <div className="text-[11px] font-mono text-[var(--color-error)] bg-[rgba(239,68,68,0.1)] p-2 rounded border border-[rgba(239,68,68,0.2)]">
+            {insightError}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {insights.map((ins, idx) => (
+            <div key={idx} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg p-3 space-y-1">
+              <div className="text-[11px] font-bold font-sans text-[var(--color-foreground)] flex items-center justify-between">
+                <span>{ins.title}</span>
+                <span className={`px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase ${ins.priority === 'high' ? 'bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]' : ins.priority === 'medium' ? 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]' : 'bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]'}`}>
+                  {ins.priority}
+                </span>
+              </div>
+              <p className="text-[10px] font-mono text-[var(--color-muted)] leading-relaxed">
+                {ins.insight}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
-      </div>
     </div>
   );
 };
