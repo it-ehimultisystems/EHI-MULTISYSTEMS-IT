@@ -254,6 +254,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         // specifically admin/super_admin/accountant, not auditor.
         const canSeePin = ['admin', 'super_admin', 'accountant'].includes(user.role);
 
+        // Admins see all hubs; all other staff see their own hub's entries
+        // (all streams — cargo, baggage, marketing — within that hub).
         const addHubFilter = (q: any) =>
           (!isAdmin && user.hub_id) ? q.eq('hub_id', user.hub_id) : q;
 
@@ -521,35 +523,22 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
     const isAdmin = ['super_admin','admin','accountant','auditor'].includes(user.role);
     const canSeePin = ['admin', 'super_admin', 'accountant'].includes(user.role);
-    // Postgres changes filter — non-admins only receive their own hub's rows
+    // Realtime row filter — non-admins receive all streams for their hub;
+    // admins receive all hubs unfiltered.
     const hubFilter = (!isAdmin && user.hub_id) ? `hub_id=eq.${user.hub_id}` : undefined;
 
-    // Only open the channels this role actually has a use for. Every user
-    // was previously opening all 3 channels regardless of role, which at
-    // scale (Supabase Pro includes 500 concurrent Realtime connections)
-    // means a driver or single-stream agent spends 3 connections for data
-    // Dashboard.tsx's own showCargo/showVJ/showMktg logic already hides
-    // from them. Mirrors that exact same gating so nobody's visible data
-    // changes — this only removes waste, not functionality.
-
-    // perf(realtime): To reduce Postgres connection count on a Nano-tier project 
-    // close to its connection ceiling, admin-tier users now only subscribe to 
-    // channels relevant to their active tab (currentTab). Aggregate views like 
-    // Tower, Scan, and More hold all channels, while type-specific views hold one.
-    // Non-admin roles retain their original scale-readiness behavior.
-    let needsCargo = ['cargo_agent', 'office_work', 'auditor'].includes(user.role);
-    let needsBaggage = user.role === 'baggage_agent';
-    let needsMarketing = user.role === 'marketing_agent';
+    // All staff at a hub subscribe to all three streams so every role sees
+    // every entry type (cargo + baggage + marketing) made at their hub in
+    // real time. Admins use tab-aware gating to keep connection counts low.
+    let needsCargo = true;
+    let needsBaggage = true;
+    let needsMarketing = true;
 
     if (isAdmin) {
       const isAggregateView = ['Tower', 'Scan', 'More'].includes(currentTab);
       needsCargo = isAggregateView || currentTab === 'Cargo';
       needsBaggage = isAggregateView || currentTab.startsWith('Baggage:');
       needsMarketing = isAggregateView || currentTab === 'Marketing';
-    } else {
-      // Preserve the exact existing logic for non-admins if they weren't explicitly matched above
-      // (Actually, the previous code was `isAdmin || user.role === '...'`)
-      // So this matches the exact previous logic for non-admins.
     }
 
     // Guard against pushing a row that already exists locally (e.g. our own insert)

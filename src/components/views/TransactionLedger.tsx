@@ -1033,296 +1033,311 @@ export const TransactionLedger = ({
   }, [entries, defaultTypeFilter]);
 
   return (
-    <div className="flex flex-row h-full pb-4 bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
+    <div className="flex flex-row h-full bg-[var(--color-obsidian)] text-[var(--color-foreground)] relative animate-in slide-in-from-right overflow-hidden">
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        {/* Header */}
-      <div className="p-4 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shrink-0">
-        <div className="flex items-center space-x-4">
-          <BackButton onClick={onBack} label="Back" />
-          <span className="text-[10px] font-mono text-[var(--color-accent-amber)] tracking-widest font-bold">
-            {defaultTypeFilter === 'cargo' ? '● CARGO LEDGER'
-             : defaultTypeFilter === 'baggage' ? '● EXCESS BAGGAGE LEDGER'
-             : defaultTypeFilter === 'marketing' ? '● MARKETING LEDGER'
-             : '● MASTER LEDGER'}
-            {viewOnly && <span className="ml-2 text-[var(--color-muted)] tracking-normal normal-case">view only</span>}
-          </span>
-        </div>
-        
-        <div className="flex items-center flex-wrap gap-3">
-          {defaultTypeFilter === 'baggage' && (
-            <div className="flex items-center gap-2">
-              <select
-                value={vjFlightFilter}
-                onChange={e => setVjFlightFilter(e.target.value)}
-                className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-md text-[10px] font-mono text-[var(--color-foreground)] px-2 py-1.5 focus:outline-none focus:border-[var(--color-accent-amber)]"
-              >
-                <option value="All">All Flights</option>
-                {vjFlights.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-              <select
-                value={vjDestFilter}
-                onChange={e => setVjDestFilter(e.target.value)}
-                className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-md text-[10px] font-mono text-[var(--color-foreground)] px-2 py-1.5 focus:outline-none focus:border-[var(--color-accent-amber)]"
-              >
-                <option value="All">All Dests</option>
-                {vjDests.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+
+        {/* ── Top Bar ─────────────────────────────────────── */}
+        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 bg-[var(--color-surface-card)]">
+          <div className="flex items-center gap-3 min-w-0">
+            <BackButton onClick={onBack} label="Back" />
+            <div className="min-w-0">
+              <div className="text-[11px] font-mono font-bold text-[var(--color-accent-amber)] tracking-widest uppercase leading-tight">
+                {defaultTypeFilter === 'cargo' ? 'Cargo Ledger'
+                 : defaultTypeFilter === 'baggage' ? 'Excess Baggage Ledger'
+                 : defaultTypeFilter === 'marketing' ? 'Marketing Ledger'
+                 : 'Master Ledger'}
+              </div>
+              <div className="text-[10px] font-mono text-[var(--color-muted)] leading-tight mt-0.5">
+                {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
+                {viewOnly && <span className="ml-1.5 text-[var(--color-muted)] opacity-60">· read only</span>}
+              </div>
             </div>
-          )}
+          </div>
 
-          {/* Download entries currently in view -- respects whatever
-              date range / type / mode / search filters are active
-              (filteredEntries), not just "today". Always rendered, so the
-              Master Ledger (opened with no defaultTypeFilter) gets an
-              export option too, not just the per-stream ledgers. */}
-          <button
-            onClick={() => {
-              if (defaultTypeFilter === 'baggage') {
-                import('./ExcessBaggageLedgerPDF').then(({ downloadBaggageLedgerPDF }) => {
-                  const txs = filteredEntries
-                    .filter(e => e.source === 'transaction')
-                    .map(e => e.raw as Transaction);
-                  // This is the aggregate master ledger across every
-                  // configured airline (unlike the per-airline "Daily PDF"
-                  // button on the ticketing form itself), so it uses a
-                  // generic title/no single airline logo rather than
-                  // whichever airline happens to be first in the list.
-                  downloadBaggageLedgerPDF({
-                    airlineName: 'Excess Baggage',
-                    date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
-                    hubName: user.hub || 'EHI Hub',
-                    transactions: txs,
-                    filters: {
-                      flight: vjFlightFilter === 'All' ? '' : vjFlightFilter,
-                      destination: vjDestFilter === 'All' ? '' : vjDestFilter
-                    }
-                  });
-                });
-              } else {
-                import('../../lib/helpers').then(({ downloadDailyCSV }) => {
-                  // Whatever is currently filtered/date-scoped in the ledger
-                  // UI, not a re-derived "today" slice -- downloadDailyCSV no
-                  // longer re-filters internally.
-                  const txs = filteredEntries
-                    .filter(e => e.source === 'transaction')
-                    .map(e => e.raw as Transaction);
-                  // Master Ledger (no defaultTypeFilter) can contain a mix
-                  // of cargo/baggage/marketing/package entries at once, so
-                  // it falls back to the generic 'mixed' column layout.
-                  downloadDailyCSV(defaultTypeFilter || 'mixed', txs, user.hub || 'EHI Hub');
-                });
-              }
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-lg text-[10px] font-mono text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors"
-          >
-            <Download size={11} /> {defaultTypeFilter === 'baggage' ? 'Download PDF' : 'Download CSV'}
-          </button>
+          <div className="flex items-center gap-2">
+            {defaultTypeFilter === 'baggage' && (
+              <>
+                <select
+                  value={vjFlightFilter}
+                  onChange={e => setVjFlightFilter(e.target.value)}
+                  className="h-8 px-2 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[10px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                >
+                  <option value="All">All Flights</option>
+                  {vjFlights.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+                <select
+                  value={vjDestFilter}
+                  onChange={e => setVjDestFilter(e.target.value)}
+                  className="h-8 px-2 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[10px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)]"
+                >
+                  <option value="All">All Dests</option>
+                  {vjDests.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </>
+            )}
 
-          {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant' || user.role === 'auditor') && (
+            {/* Download */}
             <button
-              onClick={() => setShowPrintHistory(!showPrintHistory)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[10px] font-mono transition-colors ${
-                showPrintHistory 
-                  ? 'bg-[var(--color-accent-amber)] border-[var(--color-accent-amber)] text-black'
-                  : 'bg-[var(--color-surface-card)] border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)]'
-              }`}
+              title={defaultTypeFilter === 'baggage' ? 'Download PDF' : 'Download CSV'}
+              onClick={() => {
+                if (defaultTypeFilter === 'baggage') {
+                  import('./ExcessBaggageLedgerPDF').then(({ downloadBaggageLedgerPDF }) => {
+                    const txs = filteredEntries
+                      .filter(e => e.source === 'transaction')
+                      .map(e => e.raw as Transaction);
+                    downloadBaggageLedgerPDF({
+                      airlineName: 'Excess Baggage',
+                      date: `${new Date().toLocaleDateString('en-GB')} ${tnow()}`,
+                      hubName: user.hub || 'EHI Hub',
+                      transactions: txs,
+                      filters: {
+                        flight: vjFlightFilter === 'All' ? '' : vjFlightFilter,
+                        destination: vjDestFilter === 'All' ? '' : vjDestFilter
+                      }
+                    });
+                  });
+                } else {
+                  import('../../lib/helpers').then(({ downloadDailyCSV }) => {
+                    const txs = filteredEntries
+                      .filter(e => e.source === 'transaction')
+                      .map(e => e.raw as Transaction);
+                    downloadDailyCSV(defaultTypeFilter || 'mixed', txs, user.hub || 'EHI Hub');
+                  });
+                }
+              }}
+              className="h-8 w-8 flex items-center justify-center bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors"
             >
-              <Printer size={11} /> {showPrintHistory ? 'Close Print Logs' : 'Print Logs'}
+              <Download size={13} />
             </button>
-          )}
-        </div>
-      </div>
 
-      {showPrintHistory ? (
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar relative z-10">
-          <TagPrintHistory user={user} />
-        </div>
-      ) : (
-        <>
-          {/* Shift scope toggle — Current Shift (7PM–7PM) vs All Time */}
-          <div className="px-4 pt-2 flex gap-2 shrink-0">
-            {(['current', 'all'] as const).map((scope) => (
+            {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant' || user.role === 'auditor') && (
               <button
-                key={scope}
-                onClick={() => setShiftFilter(scope)}
-                className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold transition-all border ${
-                  shiftFilter === scope
-                    ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] border-[var(--color-accent-amber)]'
-                    : 'bg-transparent text-[var(--color-muted)] border-[var(--color-border)] hover:border-[var(--color-accent-amber)] hover:text-[var(--color-accent-amber)]'
+                title={showPrintHistory ? 'Close Print Logs' : 'Print Logs'}
+                onClick={() => setShowPrintHistory(!showPrintHistory)}
+                className={`h-8 w-8 flex items-center justify-center border rounded-lg transition-colors ${
+                  showPrintHistory
+                    ? 'bg-[var(--color-accent-amber)] border-[var(--color-accent-amber)] text-black'
+                    : 'bg-[var(--color-surface-1)] border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)]'
                 }`}
               >
-                {scope === 'current' ? 'Current Shift' : 'All Time'}
+                <Printer size={13} />
               </button>
-            ))}
-            {shiftFilter === 'current' && (
-              <span className="text-[9px] font-mono text-[var(--color-muted)] self-center">
-                {new Date(shiftBoundary.start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase()}
-                {' → '}
-                {new Date(shiftBoundary.end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase()}
-              </span>
             )}
           </div>
-
-          {/* Summary Strip */}
-          <div className="px-4 py-2 bg-[var(--color-surface-card)] border-b border-[var(--color-border)] flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0">
-        <div className="px-2 py-1 rounded-full bg-[var(--color-border)] text-[10px] font-mono border border-[var(--color-border)] text-[var(--color-foreground)]">
-          Total: <span className="font-bold">{fmt(totalAmount)}</span>
-        </div>
-        <div 
-          className="px-2 py-1 rounded-full bg-[rgba(16,185,129,0.1)] text-[10px] font-mono border border-[rgba(16,185,129,0.2)] text-[var(--color-success)] cursor-pointer"
-          onClick={() => setModeFilter("Cash")}
-        >
-          Cash: <span className="font-bold">{fmt(cashAmount)}</span>
-          {isAccountantOrAdmin && unverifiedCash.length > 0 && (
-            <span className="text-[var(--color-accent-amber)] ml-1">({unverifiedCash.length} unverified)</span>
-          )}
-        </div>
-        <div 
-          className="px-2 py-1 rounded-full bg-[rgba(59,130,246,0.1)] text-[10px] font-mono border border-[rgba(59,130,246,0.2)] text-[var(--color-accent-cobalt)] cursor-pointer"
-          onClick={() => setModeFilter("Transfer")}
-        >
-          Transfer: <span className="font-bold">{fmt(transferAmount)}</span>
-          {isAccountantOrAdmin && unconfirmedTransfer.length > 0 && (
-            <span className="text-[var(--color-accent-amber)] ml-1">({unconfirmedTransfer.length} unconfirmed)</span>
-          )}
-        </div>
-        <div 
-          className="px-2 py-1 rounded-full bg-[rgba(245,158,11,0.1)] text-[10px] font-mono border border-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] cursor-pointer"
-          onClick={() => setModeFilter("POS")}
-        >
-          POS: <span className="font-bold">{fmt(posAmount)}</span>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="p-2.5 md:p-3 border-b border-[var(--color-border)] flex flex-col md:flex-row gap-2 shrink-0">
-        <div className="flex-1 relative">
-          <Search
-            size={12}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
-          />
-          <input
-            id="ledger-search"
-            name="search"
-            type="text"
-            placeholder="Search entries, dates, amounts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-8 pl-7 pr-3 ehi-card text-[11px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-blue)]"
-          />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {dateRange && onDateRangeChange && (
-            <div className="flex items-center gap-1 ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
-              <input
-                id="ledger-date-start"
-                name="date-start"
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
-                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[126px]"
-              />
-              <span className="text-[var(--color-muted)]">to</span>
-              <input
-                id="ledger-date-end"
-                name="date-end"
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
-                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[126px]"
-              />
+        {showPrintHistory ? (
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar relative z-10">
+            <TagPrintHistory user={user} />
+          </div>
+        ) : (
+          <>
+            {/* ── KPI Summary Cards ───────────────────────────── */}
+            <div className="px-4 py-3 border-b border-[var(--color-border)] shrink-0 bg-[var(--color-surface-card)]">
+              <div className="grid grid-cols-4 gap-2">
+                {/* Total */}
+                <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl px-3 py-2.5">
+                  <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">Total</div>
+                  <div className="text-[15px] font-bold font-mono text-[var(--color-foreground)] leading-none">₦{fmt(totalAmount)}</div>
+                </div>
+                {/* Cash */}
+                <button
+                  onClick={() => setModeFilter(modeFilter === 'Cash' ? 'All' : 'Cash')}
+                  className={`rounded-xl px-3 py-2.5 border text-left transition-all ${
+                    modeFilter === 'Cash'
+                      ? 'bg-[rgba(16,185,129,0.15)] border-[var(--color-success)]'
+                      : 'bg-[var(--color-surface-1)] border-[var(--color-border)] hover:border-[var(--color-success)]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Cash</div>
+                    {isAccountantOrAdmin && unverifiedCash.length > 0 && (
+                      <span className="text-[8px] font-mono font-bold bg-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] px-1 py-0.5 rounded">!{unverifiedCash.length}</span>
+                    )}
+                  </div>
+                  <div className="text-[15px] font-bold font-mono text-[var(--color-success)] leading-none">₦{fmt(cashAmount)}</div>
+                </button>
+                {/* Transfer */}
+                <button
+                  onClick={() => setModeFilter(modeFilter === 'Transfer' ? 'All' : 'Transfer')}
+                  className={`rounded-xl px-3 py-2.5 border text-left transition-all ${
+                    modeFilter === 'Transfer'
+                      ? 'bg-[rgba(59,130,246,0.15)] border-[var(--color-accent-cobalt)]'
+                      : 'bg-[var(--color-surface-1)] border-[var(--color-border)] hover:border-[var(--color-accent-cobalt)]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Transfer</div>
+                    {isAccountantOrAdmin && unconfirmedTransfer.length > 0 && (
+                      <span className="text-[8px] font-mono font-bold bg-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] px-1 py-0.5 rounded">!{unconfirmedTransfer.length}</span>
+                    )}
+                  </div>
+                  <div className="text-[15px] font-bold font-mono text-[var(--color-accent-cobalt)] leading-none">₦{fmt(transferAmount)}</div>
+                </button>
+                {/* POS */}
+                <button
+                  onClick={() => setModeFilter(modeFilter === 'POS' ? 'All' : 'POS')}
+                  className={`rounded-xl px-3 py-2.5 border text-left transition-all ${
+                    modeFilter === 'POS'
+                      ? 'bg-[rgba(245,158,11,0.15)] border-[var(--color-accent-amber)]'
+                      : 'bg-[var(--color-surface-1)] border-[var(--color-border)] hover:border-[var(--color-accent-amber)]'
+                  }`}
+                >
+                  <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">POS</div>
+                  <div className="text-[15px] font-bold font-mono text-[var(--color-accent-amber)] leading-none">₦{fmt(posAmount)}</div>
+                </button>
+              </div>
             </div>
-          )}
-          <div className="flex items-center ehi-card overflow-hidden h-8 px-1 font-mono text-[10px]">
-            <Filter size={10} className="text-[var(--color-muted)] mx-1.5 shrink-0" />
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
-            >
-              <option value="All">All Types</option>
-              <option value="Cargo">Cargo</option>
-              <option value="Baggage">Baggage</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Expense">Expense</option>
-            </select>
-          </div>
 
-          <div className="flex items-center ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
-            <select
-              value={modeFilter}
-              onChange={(e) => setModeFilter(e.target.value)}
-              className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
-            >
-              <option value="All">All Modes</option>
-              <option value="Revenue">Revenue Only</option>
-              <option value="Expense">Expense Only</option>
-              <option value="Cash">Cash</option>
-              <option value="Transfer">Transfer</option>
-              <option value="POS">POS</option>
-              <option value="Debt">Debt</option>
-              <option value="Unverified">Unverified</option>
-            </select>
-          </div>
+            {/* ── Filter Strip ─────────────────────────────────── */}
+            <div className="px-4 py-2.5 border-b border-[var(--color-border)] space-y-2 shrink-0">
+              {/* Row 1: Search + Shift Scope */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
+                  <input
+                    id="ledger-search"
+                    name="search"
+                    type="text"
+                    placeholder="Search name, amount, reference..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-8 pl-7 pr-3 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[11px] font-sans text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-amber)] transition-colors"
+                  />
+                </div>
+                {/* Shift scope pills */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {(['current', 'all'] as const).map((scope) => (
+                    <button
+                      key={scope}
+                      onClick={() => setShiftFilter(scope)}
+                      className={`h-8 px-2.5 rounded-lg text-[10px] font-mono font-bold transition-all border ${
+                        shiftFilter === scope
+                          ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] border-[var(--color-accent-amber)]'
+                          : 'bg-[var(--color-surface-1)] text-[var(--color-muted)] border-[var(--color-border)] hover:border-[var(--color-accent-amber)] hover:text-[var(--color-accent-amber)]'
+                      }`}
+                    >
+                      {scope === 'current' ? 'Current Shift' : 'All Time'}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div className="flex items-center ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
-            <Clock size={10} className="text-[var(--color-muted)] mr-1 shrink-0" />
-            <select
-              value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value as any)}
-              className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
-            >
-              <option value="All">All Time</option>
-              <option value="Morning">Morning (06:00 - 12:00)</option>
-              <option value="Afternoon">Afternoon (12:00 - 17:00)</option>
-              <option value="Evening">Evening (17:00 - 24:00)</option>
-              <option value="Custom">Custom Time</option>
-            </select>
-          </div>
+              {/* Row 2: Filter dropdowns */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Date range */}
+                {dateRange && onDateRangeChange && (
+                  <div className="flex items-center gap-1 h-8 px-2 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg font-mono text-[10px]">
+                    <input
+                      id="ledger-date-start"
+                      name="date-start"
+                      type="date"
+                      value={dateRange.start}
+                      onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
+                      className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[110px]"
+                    />
+                    <span className="text-[var(--color-border)]">→</span>
+                    <input
+                      id="ledger-date-end"
+                      name="date-end"
+                      type="date"
+                      value={dateRange.end}
+                      onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
+                      className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[110px]"
+                    />
+                  </div>
+                )}
 
-          {timeFilter === "Custom" && (
-            <div className="flex items-center gap-1 ehi-card overflow-hidden h-8 px-1.5 font-mono text-[10px]">
-              <input
-                id="ledger-time-start"
-                name="time-start"
-                type="time"
-                value={timeStart}
-                onChange={(e) => setTimeStart(e.target.value)}
-                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[80px]"
-              />
-              <span className="text-[var(--color-muted)]">to</span>
-              <input
-                id="ledger-time-end"
-                name="time-end"
-                type="time"
-                value={timeEnd}
-                onChange={(e) => setTimeEnd(e.target.value)}
-                className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[80px]"
-              />
+                {/* Type filter */}
+                <div className="flex items-center h-8 px-2 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg font-mono text-[10px]">
+                  <Filter size={9} className="text-[var(--color-muted)] mr-1.5 shrink-0" />
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
+                  >
+                    <option value="All">All Types</option>
+                    <option value="Cargo">Cargo</option>
+                    <option value="Baggage">Baggage</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Expense">Expense</option>
+                  </select>
+                </div>
+
+                {/* Mode filter */}
+                <div className="flex items-center h-8 px-2 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg font-mono text-[10px]">
+                  <select
+                    value={modeFilter}
+                    onChange={(e) => setModeFilter(e.target.value)}
+                    className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
+                  >
+                    <option value="All">All Modes</option>
+                    <option value="Revenue">Revenue Only</option>
+                    <option value="Expense">Expense Only</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="POS">POS</option>
+                    <option value="Debt">Debt</option>
+                    <option value="Unverified">Unverified</option>
+                  </select>
+                </div>
+
+                {/* Time filter */}
+                <div className="flex items-center h-8 px-2 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg font-mono text-[10px]">
+                  <Clock size={9} className="text-[var(--color-muted)] mr-1.5 shrink-0" />
+                  <select
+                    value={timeFilter}
+                    onChange={(e) => setTimeFilter(e.target.value as any)}
+                    className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full"
+                  >
+                    <option value="All">All Time</option>
+                    <option value="Morning">Morning (06–12)</option>
+                    <option value="Afternoon">Afternoon (12–17)</option>
+                    <option value="Evening">Evening (17–24)</option>
+                    <option value="Custom">Custom…</option>
+                  </select>
+                </div>
+
+                {timeFilter === "Custom" && (
+                  <div className="flex items-center gap-1 h-8 px-2 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg font-mono text-[10px]">
+                    <input
+                      id="ledger-time-start"
+                      name="time-start"
+                      type="time"
+                      value={timeStart}
+                      onChange={(e) => setTimeStart(e.target.value)}
+                      className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[72px]"
+                    />
+                    <span className="text-[var(--color-muted)]">–</span>
+                    <input
+                      id="ledger-time-end"
+                      name="time-end"
+                      type="time"
+                      value={timeEnd}
+                      onChange={(e) => setTimeEnd(e.target.value)}
+                      className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none h-full w-[72px]"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Bulk Cash Verification Header */}
-      {modeFilter === 'Cash' && unverifiedCash.length > 0 && isAccountantOrAdmin && (
-        <div className="px-4 py-3 bg-[rgba(245,158,11,0.05)] border-b border-[rgba(245,158,11,0.2)] flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 text-[11px] font-sans text-[var(--color-accent-amber)]">
-            <CheckSquare size={14} className="cursor-pointer" onClick={selectAllCash} />
-            <span>Select all Cash entries for today —</span>
-            <button 
-              onClick={selectAllCash}
-              className="ml-2 bg-[var(--color-success)] text-[var(--color-obsidian)] px-2 py-1 rounded font-bold hover:bg-emerald-600 transition-colors"
-            >
-              CONFIRM SELECTED
-            </button>
-          </div>
-        </div>
-      )}
+            {/* ── Bulk Cash Verification Banner ─────────────── */}
+            {modeFilter === 'Cash' && unverifiedCash.length > 0 && isAccountantOrAdmin && (
+              <div className="px-4 py-2.5 bg-[rgba(245,158,11,0.05)] border-b border-[rgba(245,158,11,0.15)] flex items-center gap-3 shrink-0">
+                <CheckSquare size={13} className="cursor-pointer text-[var(--color-accent-amber)]" onClick={selectAllCash} />
+                <span className="text-[10px] font-mono text-[var(--color-accent-amber)] flex-1">{unverifiedCash.length} unverified cash {unverifiedCash.length === 1 ? 'entry' : 'entries'}</span>
+                <button
+                  onClick={selectAllCash}
+                  className="bg-[var(--color-success)] text-[var(--color-obsidian)] px-3 py-1 rounded-lg text-[10px] font-mono font-bold hover:bg-emerald-500 transition-colors"
+                >
+                  Confirm All
+                </button>
+              </div>
+            )}
 
-      {/* Table Container */}
-      <div ref={tableRef} className="flex-1 overflow-auto p-4 pb-4 relative">
+            {/* Table Container */}
+            <div ref={tableRef} className="flex-1 overflow-auto p-4 pb-4 relative">
         <div className="ehi-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left font-mono text-[10px]">
