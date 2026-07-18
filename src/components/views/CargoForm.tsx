@@ -1238,8 +1238,8 @@ export const CargoForm = ({
 
       setCustomerWallets(prev => prev.map(w => w.id === activeWallet.id ? { ...w, balance: newBalance } : w));
       showToast({ 
-        message: `💰 ₦${fmt(deductAmt)} deducted from ${activeWallet.customer_name}'s Credit Wallet. Remaining Balance: ₦${fmt(newBalance)}`, 
-        type: 'success' 
+        message: `👜 ₦${fmt(deductAmt)} deducted from ${activeWallet.customer_name}'s wallet. Remaining: ₦${fmt(newBalance)}`, 
+        type: "success" 
       });
     }
 

@@ -26,8 +26,8 @@ export const LiveCreditFeed: React.FC<LiveCreditFeedProps> = ({
 
   // Extract recent retrieval and wallet deduction activities from transactions
   const walletActivities = transactions
-    .filter((t) => t.mode === 'Wallet' || t.detail?.includes('RETRIVAL') || t.detail?.includes('RETRIEVAL') || (t as any).retrieved)
-    .slice(0, 15);
+    .filter((t) => (t as any).wallet_id || (t as any).wallet_deduction_amount > 0 || t.mode === 'Wallet' || t.detail?.toUpperCase().includes('RETRIVAL') || t.detail?.toUpperCase().includes('RETRIEVAL') || t.detail?.toUpperCase().includes('REFUND') || (t as any).retrieved)
+    .slice(0, 25);
 
   if (collapsed) {
     return (
@@ -56,7 +56,7 @@ export const LiveCreditFeed: React.FC<LiveCreditFeedProps> = ({
           <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent-amber)] animate-ping shrink-0" />
           <div>
             <div className="text-[12px] font-mono font-bold text-[var(--color-accent-amber)] flex items-center gap-1.5">
-              LIVE CREDIT FEED
+              LIVE CREDIT & RETRIEVAL FEED
               <Sparkles size={12} className="text-[var(--color-accent-amber)]" />
             </div>
             <div className="text-[10px] font-mono text-[var(--color-muted)]">
@@ -108,7 +108,7 @@ export const LiveCreditFeed: React.FC<LiveCreditFeedProps> = ({
               : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
           }`}
         >
-          <History size={13} /> Live Stream
+          <History size={13} /> Live Stream ({walletActivities.length})
         </button>
       </div>
 
@@ -141,7 +141,7 @@ export const LiveCreditFeed: React.FC<LiveCreditFeedProps> = ({
                       ₦{fmt(w.balance)}
                     </div>
                     <div className="text-[9px] font-mono text-[var(--color-success)] uppercase">
-                      Available
+                      Available Credit
                     </div>
                   </div>
                 </div>
@@ -187,40 +187,50 @@ export const LiveCreditFeed: React.FC<LiveCreditFeedProps> = ({
           /* Live Stream Activity Feed */
           walletActivities.length > 0 ? (
             walletActivities.map((tx) => {
-              const isDeduction = tx.mode === 'Wallet';
+              const deductionAmt = (tx as any).wallet_deduction_amount || (tx.mode === 'Wallet' ? tx.amount : 0);
+              const isRetrieval = tx.detail?.toUpperCase().includes('RETRIVAL') || tx.detail?.toUpperCase().includes('RETRIEVAL') || tx.detail?.toUpperCase().includes('REFUND') || (tx as any).retrieved;
+
               return (
                 <div
                   key={tx.id}
-                  className={`p-2.5 rounded-xl border space-y-1 transition-all ${
-                    isDeduction
-                      ? 'bg-[rgba(245,158,11,0.06)] border-[rgba(245,158,11,0.2)]'
-                      : 'bg-[rgba(16,185,129,0.06)] border-[rgba(16,185,129,0.2)]'
+                  className={`p-2.5 rounded-xl border space-y-1.5 transition-all ${
+                    isRetrieval
+                      ? 'bg-[rgba(16,185,129,0.06)] border-[rgba(16,185,129,0.25)]'
+                      : 'bg-[rgba(245,158,11,0.06)] border-[rgba(245,158,11,0.25)]'
                   }`}
                 >
                   <div className="flex items-center justify-between text-[11px] font-mono">
                     <span className="font-bold flex items-center gap-1">
-                      {isDeduction ? (
+                      {isRetrieval ? (
                         <>
-                          <ArrowUpRight size={13} className="text-[var(--color-accent-amber)]" />
-                          <span className="text-[var(--color-accent-amber)]">WALLET DEDUCTION</span>
+                          <ArrowDownLeft size={13} className="text-[var(--color-success)]" />
+                          <span className="text-[var(--color-success)]">RETRIEVAL REFUND</span>
                         </>
                       ) : (
                         <>
-                          <ArrowDownLeft size={13} className="text-[var(--color-success)]" />
-                          <span className="text-[var(--color-success)]">RETRIEVAL CREDIT</span>
+                          <ArrowUpRight size={13} className="text-[var(--color-accent-amber)]" />
+                          <span className="text-[var(--color-accent-amber)]">WALLET DEDUCTION</span>
                         </>
                       )}
                     </span>
                     <span className="text-[var(--color-muted)]">{tx.time || tnow()}</span>
                   </div>
+
                   <div className="text-[12px] font-bold font-sans text-[var(--color-foreground)] truncate">
                     {tx.name}
                   </div>
+
                   <div className="text-[10px] font-mono text-[var(--color-muted)] truncate">
-                    Ref: {tx.id} · {tx.detail}
+                    Waybill: {tx.awb_tag_number || tx.id} · {tx.detail}
                   </div>
-                  <div className="text-right text-[12px] font-mono font-bold text-[var(--color-foreground)]">
-                    {fmt(tx.amount)}
+
+                  <div className="flex items-center justify-between pt-1 border-t border-[rgba(255,255,255,0.05)] text-[11px] font-mono font-bold">
+                    <span className="text-[var(--color-muted)] text-[10px]">
+                      {isRetrieval ? 'Credited to Wallet:' : 'Deducted from Wallet:'}
+                    </span>
+                    <span className={isRetrieval ? 'text-[var(--color-success)]' : 'text-[var(--color-accent-amber)]'}>
+                      {isRetrieval ? `+₦${fmt(tx.amount)}` : `-₦${fmt(deductionAmt)}`}
+                    </span>
                   </div>
                 </div>
               );

@@ -1528,8 +1528,13 @@ export const TransactionLedger = ({
                       </span>
                     </td>
                     {/* Amount */}
-                    <td className={`py-2.5 px-2 text-right font-bold font-mono text-[11px] whitespace-nowrap ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-success)]"}`}>
-                      {e.source === "expense" ? "-" : ""}{fmt(e.amount)}
+                    <td className={`py-2.5 px-2 text-right font-mono text-[11px] whitespace-nowrap ${e.source === "expense" ? "text-[var(--color-error)] font-bold" : "text-[var(--color-success)] font-bold"}`}>
+                      <div>{e.source === "expense" ? "-" : ""}{fmt(e.amount)}</div>
+                      {e.raw?.wallet_deduction_amount > 0 && (
+                        <div className="text-[9px] text-[var(--color-accent-amber)] font-normal">
+                          -₦{fmt(e.raw.wallet_deduction_amount)} (Wallet)
+                        </div>
+                      )}
                     </td>
                     {/* Mode */}
                     <td className="py-2.5 px-2 text-center" onClick={(evt) => evt.stopPropagation()}>
@@ -1544,7 +1549,7 @@ export const TransactionLedger = ({
                             e.mode === "Wallet" ? "bg-[rgba(245,158,11,0.12)] text-[var(--color-accent-amber)] border border-[rgba(245,158,11,0.3)]" :
                             "border border-[var(--color-error)] text-[var(--color-error)]"
                           }`}>
-                            {e.mode === "Debt" ? "Debt" : e.mode === "Debt Paid" ? "Debt Cleared" : e.mode === "Wallet" ? "💰 Wallet" : e.mode}
+                            {e.mode === "Debt" ? "Debt" : e.mode === "Debt Paid" ? "Debt Cleared" : e.mode === "Wallet" ? "💰 Wallet" : e.raw?.wallet_deduction_amount > 0 ? `${e.mode} + Wallet` : e.mode}
                             {e.raw.paymentConfirmed && e.mode !== 'Debt' && e.mode !== 'Expense' && e.mode !== 'Debt Paid' && (
                               <Check size={10} strokeWidth={3} className="text-current opacity-80" />
                             )}
