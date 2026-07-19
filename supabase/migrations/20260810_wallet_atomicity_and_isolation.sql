@@ -247,6 +247,7 @@ ALTER TABLE public.customer_wallets ADD CONSTRAINT customer_wallets_balance_nonn
 -- scoping themselves.
 DROP POLICY IF EXISTS "Allow full access to customer_wallets"   ON public.customer_wallets;
 DROP POLICY IF EXISTS "Allow public access to customer_wallets" ON public.customer_wallets;
+DROP POLICY IF EXISTS "Hub-scoped read customer_wallets" ON public.customer_wallets;
 CREATE POLICY "Hub-scoped read customer_wallets"   ON public.customer_wallets FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 DROP POLICY IF EXISTS "Hub-scoped insert customer_wallets" ON public.customer_wallets;
@@ -258,6 +259,7 @@ CREATE POLICY "Hub-scoped update customer_wallets" ON public.customer_wallets FO
 
 DROP POLICY IF EXISTS "Allow full access to wallet_transactions"   ON public.wallet_transactions;
 DROP POLICY IF EXISTS "Allow public access to wallet_transactions" ON public.wallet_transactions;
+DROP POLICY IF EXISTS "Hub-scoped read wallet_transactions" ON public.wallet_transactions;
 CREATE POLICY "Hub-scoped read wallet_transactions"   ON public.wallet_transactions FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 DROP POLICY IF EXISTS "Hub-scoped insert wallet_transactions" ON public.wallet_transactions;

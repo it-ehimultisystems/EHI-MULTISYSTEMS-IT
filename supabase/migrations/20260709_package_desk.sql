@@ -69,6 +69,7 @@ GRANT EXECUTE ON FUNCTION public.allocate_package_tracking() TO authenticated;
 ALTER TABLE public.package_entries   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.package_day_close ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Hub-scoped read package_entries" ON public.package_entries;
 CREATE POLICY "Hub-scoped read package_entries"   ON public.package_entries FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 DROP POLICY IF EXISTS "Hub-scoped insert package_entries" ON public.package_entries;
@@ -78,6 +79,7 @@ DROP POLICY IF EXISTS "Hub-scoped update package_entries" ON public.package_entr
 CREATE POLICY "Hub-scoped update package_entries" ON public.package_entries FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
+DROP POLICY IF EXISTS "Hub-scoped read package_day_close" ON public.package_day_close;
 CREATE POLICY "Hub-scoped read package_day_close"   ON public.package_day_close FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 DROP POLICY IF EXISTS "Hub-scoped upsert package_day_close" ON public.package_day_close;
