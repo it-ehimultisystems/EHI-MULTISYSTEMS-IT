@@ -350,6 +350,7 @@ export const TransactionLedger = ({
     // optimistic local update stays consistent with what a refetch from
     // Supabase will later reconstruct (see EHIApp.tsx's fetchInitial).
     const finalTx: Transaction = { ...editingTx, pieces, kg, amount };
+    finalTx.editedBy = user.name;
     if (finalTx.type === 'cargo') {
       finalTx.detail = `${finalTx.airline || ''} · ${finalTx.awb_tag_number || ''} · ${pieces}pcs · ${kg}kg · ${finalTx.route || ''} · ${finalTx.contentType || ''}`;
     } else if (finalTx.type === 'baggage') {

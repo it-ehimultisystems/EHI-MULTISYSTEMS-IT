@@ -119,7 +119,8 @@ export const DebtorsTab = ({
       onUpdateTx(id, {
         amountPaid: newAmountPaid,
         paymentHistory: newHistory,
-        mode: remaining <= 0 ? 'Debt Paid' : 'Debt'
+        mode: remaining <= 0 ? 'Debt Paid' : 'Debt',
+        debtClearedBy: user?.name
       } as any);
     }
 
