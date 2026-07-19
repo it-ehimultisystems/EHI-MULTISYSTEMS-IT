@@ -31,6 +31,7 @@ import { supabase } from "../../lib/supabase";
 import { useToast } from "../../lib/ToastContext";
 import { useConfirm } from "../../lib/ConfirmContext";
 import { LiveCreditFeed } from "../LiveCreditFeed";
+import { PartialRetrievalModal } from "./PartialRetrievalModal";
 import { CustomerWallet } from "../../lib/types";
 
 type Entry = {
@@ -90,6 +91,7 @@ export const TransactionLedger = ({
   const [amountInput, setAmountInput] = useState('');
   const [viewingQrTx, setViewingQrTx] = useState<Entry | null>(null);
   const [viewingDetail, setViewingDetail] = useState<Entry | null>(null);
+  const [retrievalModalEntry, setRetrievalModalEntry] = useState<Entry | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState(defaultTypeFilter || "All");
   const [modeFilter, setModeFilter] = useState("All");
@@ -905,31 +907,53 @@ export const TransactionLedger = ({
     }
   };
 
-  const handleMarkRetrievedAndDeposit = async (entry: Entry) => {
+  const handleMarkRetrievedAndDeposit = (entry: Entry) => {
+    setRetrievalModalEntry(entry);
+  };
+
+  const executeRetrieval = async (data: { isPartial: boolean, refundAmount: number, retrievedPieces: number, retrievedKg: number }) => {
+    if (!retrievalModalEntry) return;
+    const entry = retrievalModalEntry;
     const customerName = entry.name;
-    const amount = entry.amount;
-    const ok = await confirm({
-      title: 'Refund Retrieved Cargo to Customer Credit Wallet?',
-      message: `Deposit ₦${fmt(amount)} to ${customerName}'s Customer Credit Wallet for retrieved entry ${entry.id}?`,
-      confirmLabel: 'Deposit to Wallet & Mark Retrieved',
-      tone: 'danger',
-    });
-    if (!ok) return;
+    const amount = data.refundAmount;
 
     try {
-      // 1. Mark cargo retrieved in cargo_entries
-      const { error: cargoErr } = await supabase
-        .from('cargo_entries')
-        .update({
-          retrieved: true,
-          retrieved_at: new Date().toISOString(),
-          retrieved_by: user.name,
-          retrieval_note: `Retrieved goods refund ₦${amount} credited to wallet`,
-          status: 'Retrieved',
-        })
-        .eq('entry_ref', entry.id);
+      if (!data.isPartial) {
+        // 1. Mark cargo retrieved in cargo_entries
+        const { error: cargoErr } = await supabase
+          .from('cargo_entries')
+          .update({
+            retrieved: true,
+            retrieved_at: new Date().toISOString(),
+            retrieved_by: user.name,
+            retrieval_note: `Retrieved goods refund ₦${amount} credited to wallet`,
+            status: 'Retrieved',
+          })
+          .eq('entry_ref', entry.id);
 
-      if (cargoErr) console.warn('Cargo update warning:', cargoErr);
+        if (cargoErr) console.warn('Cargo update warning:', cargoErr);
+      } else {
+        // Log partial retrieval shadow transaction in cargo_entries
+        const partialId = `RET-${Date.now()}-${entry.id.slice(-6)}`;
+        const { error: cargoErr } = await supabase
+          .from('cargo_entries')
+          .insert({
+            entry_ref: partialId,
+            hub_id: user.hub_id,
+            client_name: customerName,
+            content_type: 'Partial Retrieval',
+            pieces: data.retrievedPieces,
+            kg: data.retrievedKg,
+            amount: amount,
+            mode: 'Wallet',
+            status: 'Retrieved',
+            retrieved: true,
+            retrieved_at: new Date().toISOString(),
+            retrieved_by: user.name,
+            retrieval_note: `Partial retrieval of ${data.retrievedPieces}pcs (${data.retrievedKg}kg) from ${entry.id}`,
+            entered_by: user.id
+          });
+      }
 
       // 2. Find or create customer wallet
       const { data: existingWallets } = await supabase
@@ -958,7 +982,7 @@ export const TransactionLedger = ({
           total_used: 0,
           source_type: 'airline_retrieval',
           source_ref: entry.id,
-          source_note: `Credit from retrieved cargo ${entry.id}`,
+          source_note: `Credit from ${data.isPartial ? 'partial ' : ''}retrieved cargo ${entry.id}`,
           status: 'active',
           created_by: user.name,
         }).select('id').single();
@@ -975,15 +999,20 @@ export const TransactionLedger = ({
         balance_before: balBefore,
         balance_after: balAfter,
         cargo_ref: entry.id,
-        description: `Airline retrieval refund for ${entry.id}`,
+        description: `Airline ${data.isPartial ? 'partial ' : ''}retrieval refund for ${entry.id}`,
         logged_by: user.name,
       });
 
       // 4. Update optimistic local transaction
-      const updatedTx = { ...entry.raw, retrieved: true, status: 'Retrieved' };
-      onUpdateTx(updatedTx);
+      if (!data.isPartial) {
+        const updatedTx = { ...entry.raw, retrieved: true, status: 'Retrieved' };
+        onUpdateTx(updatedTx);
+      } else {
+        // Since we don't modify the original, we just show toast and maybe close details
+      }
       showToast({ message: `Successfully deposited ₦${fmt(amount)} to ${customerName}'s wallet!`, type: 'success' });
       setViewingDetail(null);
+      setRetrievalModalEntry(null);
     } catch (err: any) {
       showToast({ message: 'Failed to complete retrieval deposit: ' + err.message, type: 'error' });
     }
@@ -2360,6 +2389,14 @@ export const TransactionLedger = ({
       )}
 
       {/* QR Code Modal Dialog */}
+      {retrievalModalEntry && (
+        <PartialRetrievalModal
+          entry={retrievalModalEntry.raw}
+          onClose={() => setRetrievalModalEntry(null)}
+          onConfirm={executeRetrieval}
+        />
+      )}
+
       {viewingQrTx && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in" onClick={() => setViewingQrTx(null)}>
           <div className="bg-[var(--color-surface-card)] border border-[var(--color-surface-2)] rounded-xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
