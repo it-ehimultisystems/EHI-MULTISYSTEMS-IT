@@ -14,6 +14,7 @@ import { useHubRoutes, useValidatedRouteSelection } from '../../lib/hubRoutes';
 import { supabase } from '../../lib/supabase';
 import { CustomerWalletPicker } from '../CustomerWalletPicker';
 import { CustomerWallet } from '../../lib/types';
+import { ReviewEntryModal } from './ReviewEntryModal';
 
 export const ExcessBaggageForm = ({
   airline,
@@ -61,6 +62,7 @@ export const ExcessBaggageForm = ({
 
   const [successTx, setSuccessTx] = useState<{ tx: Transaction, kgs: number, exc: number, pcs: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showBaggageReview, setShowBaggageReview] = useState(false);
 
   useEffect(() => {
     if (successTx) {
@@ -710,6 +712,23 @@ export const ExcessBaggageForm = ({
               {submitting && <Loader2 size={18} className="animate-spin" />}
               {submitting ? 'COMMITTING...' : 'COMMIT TRANSACTION'}
             </button>
+            {showBaggageReview && (
+              <ReviewEntryModal
+                title="Review Excess Baggage Entry"
+                details={[
+                  { label: 'Customer', value: name },
+                  { label: 'Flight', value: flightCode },
+                  { label: 'Destination', value: dest },
+                  { label: 'Weight', value: `${kgVal} KG` },
+                  { label: 'Amount', value: totalAmount },
+                  { label: 'Payment Mode', value: mode },
+                ]}
+                onConfirm={() => { setShowBaggageReview(false); handleSubmit(); }}
+                onCancel={() => setShowBaggageReview(false)}
+                confirmText="Commit Transaction"
+                isSubmitting={submitting}
+              />
+            )}
           </div>
         </div>
 

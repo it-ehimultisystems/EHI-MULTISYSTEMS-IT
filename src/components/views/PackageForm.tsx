@@ -16,6 +16,7 @@ import { useConfirm } from "../../lib/ConfirmContext";
 import { EmptyState } from "./EmptyState";
 import { CustomerWalletPicker } from "../CustomerWalletPicker";
 import { CustomerWallet } from "../../lib/types";
+import { ReviewEntryModal } from "./ReviewEntryModal";
 
 export const PackageForm = ({
   user: propUser,
@@ -101,6 +102,7 @@ export const PackageForm = ({
 
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPackageReview, setShowPackageReview] = useState(false);
 
   const expenseCategoryNames = useExpenseCategories().map(c => c.name);
   const [expType, setExpType] = useState<string>('');
@@ -737,29 +739,27 @@ export const PackageForm = ({
                     : "bg-[var(--color-accent-cobalt)] text-white cursor-pointer hover:bg-opacity-90"
                   }`}
                 >
-                  
-      {showPackageReview && (
-        <ReviewEntryModal
-          title="Review Package/Mail Entry"
-          details={[
-            { label: 'Customer', value: name },
-            { label: 'Content', value: contentType === 'Other' ? customContents : contentType },
-            { label: 'Amount', value: parseFloat(amount) || 0 },
-            { label: 'Payment Mode', value: mode === 'Debt' ? `Debt (${debtorName})` : mode }
-          ]}
-          onConfirm={() => {
-            setShowPackageReview(false);
-            handleAddEntry();
-          }}
-          onCancel={() => setShowPackageReview(false)}
-          confirmText="Log Package"
-          isSubmitting={submitting}
-        />
-      )}
-
                   {submitting && <Loader2 size={16} className="animate-spin" />}
                   {submitting ? "ADDING ENTRY..." : (<><Plus size={16} /> ADD ENTRY</>)}
                 </button>
+                {showPackageReview && (
+                  <ReviewEntryModal
+                    title="Review Package/Mail Entry"
+                    details={[
+                      { label: 'Customer', value: name },
+                      { label: 'Content', value: actualContents },
+                      { label: 'Amount', value: parseFloat(amount) || 0 },
+                      { label: 'Payment Mode', value: mode === 'Debt' ? `Debt (${debtorName})` : mode }
+                    ]}
+                    onConfirm={() => {
+                      setShowPackageReview(false);
+                      handleAddEntry();
+                    }}
+                    onCancel={() => setShowPackageReview(false)}
+                    confirmText="Log Package"
+                    isSubmitting={submitting}
+                  />
+                )}
               </div>
             </div>
           )}

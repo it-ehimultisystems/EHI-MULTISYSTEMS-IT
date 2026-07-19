@@ -21,6 +21,7 @@ import { useConfirm } from "../../lib/ConfirmContext";
 import { EmptyState } from "./EmptyState";
 import { CustomerWalletPicker } from "../CustomerWalletPicker";
 import { CustomerWallet } from "../../lib/types";
+import { ReviewEntryModal } from "./ReviewEntryModal";
 
 export const MarketingWorkspace = ({
   user: propUser,
@@ -151,6 +152,7 @@ export const MarketingWorkspace = ({
 
   const [successTx, setSuccessTx] = useState<Transaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showMarketingReview, setShowMarketingReview] = useState(false);
 
   useEffect(() => {
     if (successTx) {
@@ -953,27 +955,6 @@ export const MarketingWorkspace = ({
                         : "bg-[var(--color-success)] text-[var(--color-obsidian)] cursor-pointer hover:bg-opacity-90"
                   }`}
                 >
-                  
-      {showMarketingReview && (
-        <ReviewEntryModal
-          title="Review Marketing Entry"
-          details={[
-            { label: 'Customer', value: name },
-            { label: 'Content', value: contentType === 'Other' ? customContents : contentType },
-            { label: 'Weight', value: `${totalKg} KG (${totalPieces} pieces)` },
-            { label: 'Amount', value: parseFloat(amountOverride) || minAmount },
-            { label: 'Payment Mode', value: mode === 'Debt' ? `Debt (${debtorName})` : mode }
-          ]}
-          onConfirm={() => {
-            setShowMarketingReview(false);
-            handleAddEntry();
-          }}
-          onCancel={() => setShowMarketingReview(false)}
-          confirmText="Add Entry"
-          isSubmitting={submitting}
-        />
-      )}
-
                   {submitting && <Loader2 size={16} className="animate-spin" />}
                   {submitting ? "ADDING ENTRY..." : (
                     <>
@@ -981,6 +962,26 @@ export const MarketingWorkspace = ({
                     </>
                   )}
                 </button>
+                {showMarketingReview && (
+                  <ReviewEntryModal
+                    title="Review Marketing Entry"
+                    details={[
+                      { label: 'Customer', value: name },
+                      { label: 'Airline', value: airline },
+                      { label: 'Route', value: route },
+                      { label: 'Weight', value: `${totalKg} KG` },
+                      { label: 'Amount', value: parseFloat(amountOverride) || minAmount },
+                      { label: 'Payment Mode', value: mode === 'Debt' ? `Debt (${debtorName})` : mode }
+                    ]}
+                    onConfirm={() => {
+                      setShowMarketingReview(false);
+                      handleAddEntry();
+                    }}
+                    onCancel={() => setShowMarketingReview(false)}
+                    confirmText="Add Entry"
+                    isSubmitting={submitting}
+                  />
+                )}
               </div>
             </div>
           )}

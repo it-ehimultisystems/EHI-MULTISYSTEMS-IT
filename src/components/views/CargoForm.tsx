@@ -87,10 +87,6 @@ interface PendingWeighingIntake {
 }
 
 const LOCAL_SERIAL_KEY = () => {
-  const isAdmin = ['super_admin', 'admin', 'accountant'].includes(propUser.role);
-  const [adminSelectedHub, setAdminSelectedHub] = useState(propUser.hub_id || 'LOS/Lagos');
-  const user = isAdmin ? { ...propUser, hub_id: adminSelectedHub, hub: adminSelectedHub } : propUser;
-
   const today = new Date().toISOString().split("T")[0];
   return `ehi_cargo_serial_${today}`;
 };
@@ -140,6 +136,10 @@ export const CargoForm = ({
   customerWallets?: CustomerWallet[];
   setCustomerWallets?: React.Dispatch<React.SetStateAction<CustomerWallet[]>>;
 }) => {
+  const isAdmin = ['super_admin', 'admin', 'accountant'].includes(propUser.role);
+  const [adminSelectedHub, setAdminSelectedHub] = useState(propUser.hub_id || 'LOS/Lagos');
+  const user = isAdmin ? { ...propUser, hub_id: adminSelectedHub, hub: adminSelectedHub } : propUser;
+
   // Navigation tabs between Regular & Corporate Billing
   const [activePortal, setActivePortal] = useState<"retail" | "corporate">(
     "retail",
@@ -192,6 +192,7 @@ export const CargoForm = ({
 
   const [pcs, setPcs] = useState("1");
   const [kg, setKg] = useState("");
+  const [showRetailReview, setShowRetailReview] = useState(false);
   const [route, setRoute] = useState(routes[0]);
   useValidatedRouteSelection(routes, route, setRoute);
   const [contentType, setContentType] = useState(contentTypes[0] as string);
@@ -2186,6 +2187,23 @@ export const CargoForm = ({
                 {submitting && <Loader2 size={18} className="animate-spin" />}
                 {submitting ? "LOGGING..." : "LOG CARGO ENTRY"}
               </button>
+              {showRetailReview && (
+                <ReviewEntryModal
+                  title="Review Cargo Entry"
+                  details={[
+                    { label: 'Consignee', value: actualConsignee },
+                    { label: 'Route', value: route },
+                    { label: 'Content', value: actualContentType },
+                    { label: 'Weight', value: `${kg} KG` },
+                    { label: 'Amount', value: parsedAmount },
+                    { label: 'Payment Mode', value: mode },
+                  ]}
+                  onConfirm={() => { setShowRetailReview(false); handleRetailSubmit(); }}
+                  onCancel={() => setShowRetailReview(false)}
+                  confirmText="Log Cargo Entry"
+                  isSubmitting={submitting}
+                />
+              )}
             </div>
           </div>
 

@@ -85,13 +85,13 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
           <div className="flex p-1 bg-[var(--color-surface-2)] rounded-lg">
             <button
               onClick={() => setRetrievalType('full')}
-              className={\`flex-1 py-2 text-[12px] font-bold rounded-md transition-colors \${retrievalType === 'full' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)]'}\`}
+              className={`flex-1 py-2 text-[12px] font-bold rounded-md transition-colors ${retrievalType === 'full' ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] shadow-sm' : 'text-[var(--color-muted)]'}`}
             >
               Full Retrieval
             </button>
             <button
               onClick={() => setRetrievalType('partial')}
-              className={\`flex-1 py-2 text-[12px] font-bold rounded-md transition-colors \${retrievalType === 'partial' ? 'bg-[var(--color-accent-cobalt)] text-white shadow-sm' : 'text-[var(--color-muted)]'}\`}
+              className={`flex-1 py-2 text-[12px] font-bold rounded-md transition-colors ${retrievalType === 'partial' ? 'bg-[var(--color-accent-cobalt)] text-white shadow-sm' : 'text-[var(--color-muted)]'}`}
             >
               Partial Retrieval
             </button>
@@ -111,7 +111,7 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
                     value={retrievedPieces}
                     onChange={(e) => setRetrievedPieces(e.target.value)}
                     className="w-full h-10 pl-9 pr-3 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[13px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-cobalt)]"
-                    placeholder={\`Max \${totalPieces}\`}
+                    placeholder={`Max ${totalPieces}`}
                   />
                 </div>
               </div>
@@ -127,7 +127,7 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
                     value={retrievedKg}
                     onChange={(e) => setRetrievedKg(e.target.value)}
                     className="w-full h-10 pl-9 pr-3 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[13px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-cobalt)]"
-                    placeholder={\`Max \${totalKg}\`}
+                    placeholder={`Max ${totalKg}`}
                   />
                 </div>
               </div>
@@ -135,11 +135,11 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
           )}
 
           {/* Refund Calculation */}
-          <div className={\`p-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-colors \${retrievalType === 'full' ? 'bg-[rgba(245,158,11,0.05)] border-[rgba(245,158,11,0.2)]' : 'bg-[rgba(59,130,246,0.05)] border-[rgba(59,130,246,0.2)]'}\`}>
+          <div className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-colors ${retrievalType === 'full' ? 'bg-[rgba(245,158,11,0.05)] border-[rgba(245,158,11,0.2)]' : 'bg-[rgba(59,130,246,0.05)] border-[rgba(59,130,246,0.2)]'}`}>
             <div className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
               <Wallet size={12} /> Pro-Rated Refund Amount
             </div>
-            <div className={\`text-[28px] font-mono font-bold \${retrievalType === 'full' ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-accent-cobalt)]'}\`}>
+            <div className={`text-[28px] font-mono font-bold ${retrievalType === 'full' ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-accent-cobalt)]'}`}>
               ₦{fmt(refundAmount)}
             </div>
             {retrievalType === 'partial' && (
@@ -154,11 +154,11 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
         <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-card)]">
           <button
             onClick={handleConfirm}
-            className={\`w-full h-12 flex items-center justify-center gap-2 rounded-lg text-[13px] font-bold transition-colors \${
-              retrievalType === 'full' 
-                ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] hover:bg-amber-400' 
+            className={`w-full h-12 flex items-center justify-center gap-2 rounded-lg text-[13px] font-bold transition-colors ${
+              retrievalType === 'full'
+                ? 'bg-[var(--color-accent-amber)] text-[var(--color-obsidian)] hover:bg-amber-400'
                 : 'bg-[var(--color-accent-cobalt)] text-white hover:bg-blue-500'
-            }\`}
+            }`}
           >
             <CheckCircle2 size={16} />
             {retrievalType === 'full' ? 'Refund Full Amount to Wallet' : 'Process Partial Refund to Wallet'}

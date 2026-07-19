@@ -38,8 +38,8 @@ export const ReviewEntryModal: React.FC<ReviewEntryModalProps> = ({
             {details.map((detail, idx) => (
               <div key={idx} className="flex justify-between items-center py-2 border-b border-[var(--color-border)] last:border-0">
                 <span className="text-[12px] font-mono text-[var(--color-muted)] uppercase tracking-wider">{detail.label}</span>
-                <span className={\`text-[13px] font-sans font-bold \${detail.label.toLowerCase().includes('amount') ? 'text-[var(--color-success)]' : 'text-[var(--color-foreground)]'}\`}>
-                  {detail.label.toLowerCase().includes('amount') && typeof detail.value === 'number' ? \`₦\${fmt(detail.value)}\` : detail.value}
+                <span className={`text-[13px] font-sans font-bold ${detail.label.toLowerCase().includes('amount') ? 'text-[var(--color-success)]' : 'text-[var(--color-foreground)]'}`}>
+                  {detail.label.toLowerCase().includes('amount') && typeof detail.value === 'number' ? `₦${fmt(detail.value)}` : detail.value}
                 </span>
               </div>
             ))}
