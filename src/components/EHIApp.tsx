@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense, useRef, useCallback, memo, useMemo } from 'react';
-import { User, TabView, Transaction, Expense, ExcessBaggageAirline, CustomerWallet } from '../lib/types';
+import { User, TabView, Transaction, Expense, ExcessBaggageAirline, CustomerWallet, HubShift } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport, cleanupOldQueue, getUnsyncedLocalTransactions } from '../lib/sync';
 import { db } from '../lib/db';
 import Dexie from 'dexie';
@@ -126,6 +126,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
   // Global Customer Wallets state and real-time synchronization
   const [customerWallets, setCustomerWallets] = useState<CustomerWallet[]>([]);
+  const [activeShift, setActiveShift] = useState<HubShift | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -188,21 +189,33 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         // specifically admin/super_admin/accountant, not auditor.
         const canSeePin = ['admin', 'super_admin', 'accountant'].includes(user.role);
 
-        // Admins see all hubs; all other staff see their own hub's entries
-        // (all streams — cargo, baggage, marketing — within that hub).
-        const addHubFilter = (q: any) =>
-          (!isAdmin && user.hub_id) ? q.eq('hub_id', user.hub_id) : q;
-
+        // Admins see all hubs. All other staff now see transactions from all hubs in
+        // their state (e.g. Lagos HQ + Lagos Cargo) via the backend RLS policies.
+        // We remove the strict frontend .eq('hub_id', user.hub_id) filter so Supabase
+        // can return the full state-wide ledger.
+        const addHubFilter = (q: any) => q;
         const startDate = new Date(globalDateRange.start);
         startDate.setHours(0,0,0,0);
         const endDate = new Date(globalDateRange.end);
         endDate.setHours(23,59,59,999);
-        
         const startISO = startDate.toISOString();
         const endISO = endDate.toISOString();
 
-        const [cargoRes, baggageRes, mktRes, packageRes, expRes, profilesRes] = await Promise.all([
-          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,pickup_pin,status,created_at,commission_rate,bank,hub_id,remark,amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,consignee_phone,client_type,corporate_client_id,bank_reference,bank_sender,bank_alert_text,entered_by,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
+        const fetchShift = async () => {
+          if (!user.hub_id) return null;
+          const { data } = await supabase
+            .from('hub_shifts')
+            .select('*')
+            .eq('hub_id', user.hub_id)
+            .eq('status', 'open')
+            .order('started_at', { ascending: false })
+            .limit(1);
+          return data && data.length > 0 ? (data[0] as HubShift) : null;
+        };
+
+        const [shift, cargoRes, baggageRes, mktRes, packageRes, expRes, profilesRes] = await Promise.all([
+          fetchShift(),
+          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,pickup_pin,status,created_at,commission_rate,bank,hub_id,remark,amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,consignee_phone,client_type,corporate_client_id,bank_reference,bank_sender,bank_alert_text,entered_by,wallet_id,wallet_deduction_amount,retrieved,retrieved_amount,retrieved_pieces,retrieved_kg,retrieval_note,retrieved_at,retrieved_by').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
           addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history,airline,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text,entered_by,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
           addHubFilter(supabase.from('marketing_entries').select('entry_ref,awb_tag_number,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,bb_kg,mb_kg,sb_kg,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,debt_amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
           addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,status,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,amount_paid,payment_history,created_at,hub_id,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,entered_by,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
@@ -211,10 +224,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         ]);
 
         if (fetchEpochRef.current !== myEpoch) return;
-        if (cargoRes.error) console.error('Cargo fetch error:', cargoRes.error);
-        if (baggageRes.error) console.error('Baggage fetch error:', baggageRes.error);
-        if (mktRes.error) console.error('Marketing fetch error:', mktRes.error);
-        if (packageRes.error) console.error('Package fetch error:', packageRes.error);
+        setActiveShift(shift);
 
         const profileLookup: Record<string, string> = {};
         if (profilesRes.data) {
@@ -225,7 +235,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
         const allTx: Transaction[] = [];
 
-        // Load unsynced entries from local Dexie DB so locally saved records are immediately visible
         const { transactions: localUnsyncedTxs } = await getUnsyncedLocalTransactions();
         localUnsyncedTxs.forEach(t => allTx.push(t));
 
@@ -268,6 +277,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               bankAlertText: r.bank_alert_text || undefined,
               wallet_id: r.wallet_id || undefined,
               wallet_deduction_amount: r.wallet_deduction_amount ?? undefined,
+              retrieved: r.retrieved ?? undefined,
+              retrievalNote: r.retrieval_note ?? undefined,
+              retrievedAt: r.retrieved_at ?? undefined,
+              retrievedBy: r.retrieved_by ?? undefined,
+              raw: r,
             });
           });
         }
@@ -396,10 +410,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             rejectedAt: e.rejected_at || undefined,
           }));
           setExpenses(prev => {
-            // Same reasoning as the transactions merge below: a date-range
-            // change can refire this fetch before an optimistically-added
-            // expense (handleAddExpense) has actually landed in Supabase.
-            // Without this, that expense would silently vanish from the UI.
             const stillPending = pendingExpenseRef.current.filter(
               p => !fetchedExpenses.some((f: any) => f.id === p.id)
             );
@@ -413,7 +423,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         allTx.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
         
         setTransactions(prev => {
-          // Respect the date filter while keeping locally pending transactions.
           const localOnly = pendingTxRef.current.filter(p => !allTx.some(t => t.id === p.id));
           const combined = [...localOnly, ...allTx];
           const unique = combined.filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
@@ -425,6 +434,63 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         setInitError(true);
       }
   }, [globalDateRange, user.role, user.hub_id]);
+
+  const handleStartShift = useCallback(async () => {
+    if (!user.hub_id) return;
+    try {
+      const { data, error } = await supabase
+        .from('hub_shifts')
+        .insert({
+          hub_id: user.hub_id,
+          opened_by: user.name,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      setActiveShift(data as HubShift);
+      showToast({ message: 'Shift started successfully!', type: 'success' });
+    } catch (e: any) {
+      showToast({ message: `Failed to start shift: ${e.message}`, type: 'error' });
+    }
+  }, [user.hub_id, user.name, showToast]);
+
+  const handleEndShift = useCallback(async () => {
+    if (!activeShift) return;
+    try {
+      // Calculate sales summary since shift start
+      const shiftTx = transactionsRef.current.filter(t => 
+        new Date(t.created_at || t.time) >= new Date(activeShift.started_at)
+      );
+      
+      const salesSummary = {
+        totalTxCount: shiftTx.length,
+        totalSales: shiftTx.reduce((acc, t) => acc + t.amount, 0),
+        cashSales: shiftTx.filter(t => t.mode === 'Cash').reduce((acc, t) => acc + t.amount, 0),
+        transferSales: shiftTx.filter(t => t.mode === 'Transfer').reduce((acc, t) => acc + t.amount, 0),
+        posSales: shiftTx.filter(t => t.mode === 'POS').reduce((acc, t) => acc + t.amount, 0),
+        debtSales: shiftTx.filter(t => t.mode === 'Debt').reduce((acc, t) => acc + t.amount, 0)
+      };
+
+      const { data, error } = await supabase
+        .from('hub_shifts')
+        .update({
+          status: 'closed',
+          ended_at: new Date().toISOString(),
+          closed_by: user.name,
+          sales_summary: salesSummary
+        })
+        .eq('id', activeShift.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      setActiveShift(null);
+      showToast({ message: 'Shift ended and sales summary generated!', type: 'success' });
+    } catch (e: any) {
+      showToast({ message: `Failed to end shift: ${e.message}`, type: 'error' });
+    }
+  }, [activeShift, user.name, showToast]);
 
   const handleForceSync = useCallback(async () => {
     setIsOffline(false);
@@ -493,14 +559,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     fetchInitial();
   }, [isOffline, retryTrigger, fetchInitial]);
 
-  // The realtime channels below (cargoChannel/baggageChannel/marketingChannel)
-  // are only subscribed while currentTab actually needs them, and
-  // package_entries has no realtime channel at all -- so an entry inserted
-  // elsewhere while its channel wasn't open is otherwise never pushed into
-  // local state until a manual reload or a date-range change re-runs
-  // fetchInitial. Refetch when navigating into a tab that needs fresh data,
-  // so anything missed while on an unrelated tab shows up immediately,
-  // without refetching on every single tab click (e.g. Settings, Profile).
   const prevTabRef = useRef(currentTab);
   useEffect(() => {
     const prevTab = prevTabRef.current;
@@ -517,19 +575,13 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     if (isDataTab) fetchInitial();
   }, [currentTab, isOffline, fetchInitial]);
 
-  // Supabase real-time
   useEffect(() => {
     if (isOffline) return;
 
     const isAdmin = ['super_admin','admin','accountant','auditor'].includes(user.role);
     const canSeePin = ['admin', 'super_admin', 'accountant'].includes(user.role);
-    // Realtime row filter — non-admins receive all streams for their hub;
-    // admins receive all hubs unfiltered.
     const hubFilter = (!isAdmin && user.hub_id) ? `hub_id=eq.${user.hub_id}` : undefined;
 
-    // All staff at a hub subscribe to all three streams so every role sees
-    // every entry type (cargo + baggage + marketing) made at their hub in
-    // real time. Admins use tab-aware gating to keep connection counts low.
     let needsCargo = true;
     let needsBaggage = true;
     let needsMarketing = true;
@@ -541,7 +593,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       needsMarketing = isAggregateView || currentTab === 'Marketing';
     }
 
-    // Guard against pushing a row that already exists locally (e.g. our own insert)
     const pushUnique = (tx: Transaction) => {
       const exists =
         pendingTxRef.current.some(p => p.id === tx.id) ||
@@ -574,9 +625,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             hub_id: r.hub_id,
             route: r.route,
             airline: r.airline,
-            // Realtime sends the full row regardless of the original
-            // query's column list, so gate this client-side too --
-            // canSeePin is already in scope from the fetchInitial closure.
             pickupPin: canSeePin ? (r.pickup_pin || undefined) : undefined,
             consigneePhone: r.consignee_phone || undefined,
             clientType: r.client_type || undefined,
@@ -710,21 +758,18 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     
     let hubId = user.hub_id;
     if (!hubId) {
-      // Fallback: fetch hub_id from db based on user.hub
       const { data: hubData } = await supabase.from('hubs').select('id').eq('name', user.hub).single();
       if (hubData) {
         hubId = hubData.id;
       }
     }
 
-    // Map internal Transaction type to Supabase table schema
     let payload: any = { id: tx.id };
     
     if (tx.type === 'marketing') {
       const parts = tx.detail.split(' · ');
       const route = (tx as any).route || parts[0] || '';
       const bagsStr = parts[1] || '';
-      // Read direct fields first (faster, no regex needed)
       const bb = (tx as any)._bb ?? parseInt(bagsStr.match(/(\d+)\s*BB/)?.[1] || '0');
       const mb = (tx as any)._mb ?? parseInt(bagsStr.match(/(\d+)\s*MB/)?.[1] || '0');
       const sb = (tx as any)._sb ?? parseInt(bagsStr.match(/(\d+)\s*SB/)?.[1] || '0');
@@ -732,10 +777,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       payload = {
         id: tx.id,
         entry_ref: tx.id,
-        // The tag/AWB number printed on the physical bag and encoded in its
-        // QR code -- distinct from entry_ref (an internal id the customer
-        // never sees). Without this, the public tracking page had no
-        // column to look it up by at all.
         awb_tag_number: (tx as any).awb_tag_number || undefined,
         customer_name: tx.name,
         route: route,
@@ -749,12 +790,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         payment_mode: tx.mode,
         bank: tx.bank,
         hub_id: hubId,
-        entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined, // Ensure valid UUID
+        entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
         created_at: new Date().toISOString()
       };
     } else if (tx.type === 'cargo') {
       const parts = tx.detail.split(' · ');
-      // parts[0] = airline (already in tx.airline, skip)
       const awbFromDetail = parts[1] || '';
       const pcsStr = parts[2] || '';
       const kgStr = parts[3] || '';
@@ -823,10 +863,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         contents: (tx as any).contents || null,
         status: tx.status || 'Intake',
         amount: tx.amount,
-        // payment_mode's CHECK constraint doesn't allow 'Debt Paid' (that's
-        // an in-app-only completion label, same as handleUpdateTx already
-        // handles for cargo/manifests/marketing) -- write the base 'Debt'
-        // value instead so a debt marked paid here doesn't fail this upsert.
         payment_mode: tx.mode === 'Debt Paid' ? 'Debt' : tx.mode,
         bank: tx.bank,
         payment_narration: tx.paymentNarration,
@@ -837,13 +873,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         hub_id: hubId,
         hub: user.hub,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
-        // This upserts on entry_ref, so a debt-paid update (which spreads the
-        // existing tx and calls onAddTx again) must not stamp a fresh
-        // timestamp here -- that would move the row's created_at to the
-        // payment date, making it vanish from the day it was actually
-        // created in any day-scoped query. tx.created_at is always already
-        // set (PackageForm stamps it once at creation), so just carry it
-        // through instead of regenerating it.
         created_at: tx.created_at || new Date().toISOString()
       };
     } else {
@@ -856,7 +885,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       setPendingSyncCount(prev => prev + 1);
       showToast({ message: error ? `Error: ${error}` : 'Saved offline — syncs when reconnected', type: 'warning' });
     }
-    // Write audit log
     writeAuditLog({
       user_id: user.id,
       user_name: user.name,
@@ -871,11 +899,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   }, [user.hub_id, user.id, showToast]);
 
   const handleUpdateTx = useCallback(async (tx: Transaction) => {
-    // Captured before the optimistic update below so a corporate debt
-    // payment (see decrement_corporate_debt call further down) can compute
-    // the actual delta just paid, not the whole entry's amount -- payments
-    // are recorded one at a time via DebtorsTab, so this only decrements the
-    // client's aggregate balance by what was newly paid in this update.
     const prevAmountPaid = transactionsRef.current.find(t => t.id === tx.id)?.amountPaid || 0;
     setTransactions(prev => prev.map(t => t.id === tx.id ? tx : t));
 
@@ -884,19 +907,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                 : tx.type === 'package' ? 'package_entries'
                 : 'marketing_entries';
 
-    // Each table uses different column names — cargo_entries uses receipt_mode,
-    // manifests and marketing_entries use payment_mode. Do not unify these.
     const idCol      = table === 'manifests' ? 'transaction_id' : 'entry_ref';
     const modeCol    = table === 'cargo_entries' ? 'receipt_mode' : 'payment_mode';
 
-    // cargo_entries.receipt_mode / manifests.payment_mode / marketing_entries.payment_mode
-    // all have a CHECK constraint limited to the base payment methods --
-    // none of them allow 'Debt Paid'. DebtorsTab sets tx.mode to 'Debt Paid'
-    // as a client-side completion label when a debt is fully settled, which
-    // made every full debt payoff across all three entry types fail this
-    // update with a constraint-violation 400. The payoff itself is already
-    // captured by amountPaid below, so write the base 'Debt' mode to the DB
-    // column and keep 'Debt Paid' as the in-app label only.
     const dbMode = tx.mode === 'Debt Paid' ? 'Debt' : tx.mode;
     const updatePayload: Record<string, any> = {
       [modeCol]: dbMode,
@@ -907,34 +920,19 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     if (tx.posApprovalCode)               updatePayload.pos_approval_code  = tx.posApprovalCode;
     if (tx.confirmedBy)                   updatePayload.confirmed_by        = tx.confirmedBy;
     if (tx.confirmedAt)                   updatePayload.confirmed_at        = tx.confirmedAt;
-    // Set when a Transfer is confirmed via a matched bank alert
-    // (PaymentValidation.tsx) -- previously only ever held in optimistic
-    // local state with no column to persist to, so it vanished on refetch.
     if (tx.bankReference)                 updatePayload.bank_reference      = tx.bankReference;
     if (tx.bankSender)                    updatePayload.bank_sender         = tx.bankSender;
     if (tx.bankAlertText)                 updatePayload.bank_alert_text     = tx.bankAlertText;
-    // marketing_entries already has an amount_paid column holding the sale
-    // amount itself (see 20260710_debt_payment_columns.sql) -- debt
-    // repayment tracking for that table lives in debt_amount_paid instead
-    // so it doesn't clobber the real sale amount.
     const amountPaidCol = table === 'marketing_entries' ? 'debt_amount_paid' : 'amount_paid';
     if (tx.amountPaid !== undefined)     updatePayload[amountPaidCol] = tx.amountPaid;
     if (tx.paymentHistory !== undefined) updatePayload.payment_history = tx.paymentHistory;
 
-    // Main transaction amount -- previously never written here, so editing
-    // "Amount" in the ledger's Edit modal looked saved locally (the
-    // optimistic setTransactions above) but silently reverted on the next
-    // fetch. marketing_entries stores its sale amount in amount_paid (see
-    // the comment above); cargo_entries/manifests use amount directly.
     if (table === 'marketing_entries') {
       updatePayload.amount_paid = tx.amount;
     } else {
       updatePayload.amount = tx.amount;
     }
 
-    // Editable shipment/customer details -- the ledger's Edit modal used to
-    // only expose payment fields, so a misspelled name or a typo'd
-    // weight/route had nowhere to be corrected.
     if (tx.type === 'cargo') {
       updatePayload.consignee_name = tx.name;
       updatePayload.route = tx.route;
@@ -976,7 +974,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       if (tx.paymentNarration !== undefined) updatePayload.payment_narration = tx.paymentNarration;
     }
 
-    // Update local IndexedDB mirror table so offline queries adopt changes immediately
     try {
       const existingRecord = await (db[table] as Dexie.Table).get(tx.id);
       if (existingRecord) {
@@ -1004,12 +1001,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         console.error('Failed to queue update', qErr);
       }
     }
-    // A B2B corporate shipment's debt being paid down (via DebtorsTab,
-    // the only place that happens today) should reduce the client's
-    // monthly aggregate the same way finalizing a new shipment increments
-    // it -- previously nothing did this, so PricingConfiguration's "owed"
-    // figure only ever went up. Only the newly-paid delta is decremented,
-    // since payments are recorded one at a time.
     if (!error && tx.type === 'cargo' && tx.corporate_client_id && (tx.amountPaid || 0) > prevAmountPaid) {
       supabase.rpc('decrement_corporate_debt', {
         p_client_id: tx.corporate_client_id,
@@ -1037,7 +1028,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     setExpenses(prev => [expense, ...prev]);
     pendingExpenseRef.current.push(expense);
     const today = new Date().toISOString().split('T')[0];
-    // expense.time may be "14:30" (no date) — only use it as a date if it looks like one
     const parsedDate = /^\d{4}-\d{2}-\d{2}/.test(expense.time) ? expense.time.split(' ')[0] : today;
     const payload = {
       id: expense.id,
@@ -1156,7 +1146,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           minWidth: 0,
         }}
       >
-        {/* Header — mobile only */}
         <Header
           user={user}
           isOffline={isOffline}
@@ -1194,7 +1183,13 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                 (user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant') ? (
                   <Analytics user={user} transactions={transactions} expenses={expenses} dateRange={globalDateRange} setDateRange={setGlobalDateRange} />
                 ) : (
-                  <Dashboard user={user} transactions={transactions} />
+                  <Dashboard 
+                    user={user} 
+                    transactions={transactions} 
+                    activeShift={activeShift}
+                    onStartShift={handleStartShift}
+                    onEndShift={handleEndShift}
+                  />
                 )
               )}
               {currentTab === 'Cargo' && (

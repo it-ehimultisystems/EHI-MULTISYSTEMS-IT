@@ -573,10 +573,9 @@ export const AccountingConsole = ({ user, transactions, expenses, onBack, onAddE
         <DebtorsTab
           transactions={transactions}
           user={user}
-          onUpdateTx={(id, update) => {
+          onUpdateTx={(tx) => {
             if (onFullUpdateTx) {
-              const tx = transactions.find(t => t.id === id);
-              if (tx) onFullUpdateTx({ ...tx, ...update });
+              onFullUpdateTx(tx);
             }
           }}
           onAddTx={onAddTx}

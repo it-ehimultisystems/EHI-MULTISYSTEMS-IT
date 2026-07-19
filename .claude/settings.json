@@ -65,7 +65,9 @@
       "Bash(tee /tmp/tsc_full.log)",
       "Bash(wc -l /tmp/session_diff.patch)",
       "Read(//tmp/**)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(rm -rf dist)",
+      "Bash(git status *)"
     ]
   }
 }

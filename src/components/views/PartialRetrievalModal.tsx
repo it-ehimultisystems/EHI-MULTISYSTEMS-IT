@@ -7,7 +7,7 @@ interface PartialRetrievalModalProps {
   onClose: () => void;
   onConfirm: (data: {
     isPartial: boolean;
-    refundAmount: number;
+    retrievedValue: number;
     retrievedPieces: number;
     retrievedKg: number;
   }) => void;
@@ -29,10 +29,18 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
   const parsedPieces = parseInt(retrievedPieces) || 0;
   const parsedKg = parseFloat(retrievedKg) || 0;
   
-  let refundAmount = totalAmount;
+  let retrievedValue = totalAmount;
   if (retrievalType === 'partial') {
-    refundAmount = Math.min(totalAmount, Math.round(parsedKg * originalRate));
+    retrievedValue = Math.min(totalAmount, Math.round(parsedKg * originalRate));
   }
+
+  const amountPaid = (entry as any).amountPaid || (entry.mode !== 'Debt' ? entry.amount : 0);
+  const alreadyRetrieved = (entry as any).raw?.retrieved_amount || 0;
+  let unpaidDebt = entry.amount - amountPaid - alreadyRetrieved;
+  if (unpaidDebt < 0) unpaidDebt = 0;
+  
+  const debtReduction = Math.min(retrievedValue, unpaidDebt);
+  const walletRefund = retrievedValue - debtReduction;
 
   const handleConfirm = () => {
     if (retrievalType === 'partial') {
@@ -48,7 +56,7 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
     
     onConfirm({
       isPartial: retrievalType === 'partial',
-      refundAmount,
+      retrievedValue,
       retrievedPieces: retrievalType === 'partial' ? parsedPieces : totalPieces,
       retrievedKg: retrievalType === 'partial' ? parsedKg : totalKg,
     });
@@ -134,19 +142,32 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
             </div>
           )}
 
-          {/* Refund Calculation */}
-          <div className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-colors ${retrievalType === 'full' ? 'bg-[rgba(245,158,11,0.05)] border-[rgba(245,158,11,0.2)]' : 'bg-[rgba(59,130,246,0.05)] border-[rgba(59,130,246,0.2)]'}`}>
-            <div className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
-              <Wallet size={12} /> Pro-Rated Refund Amount
-            </div>
-            <div className={`text-[28px] font-mono font-bold ${retrievalType === 'full' ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-accent-cobalt)]'}`}>
-              ₦{fmt(refundAmount)}
-            </div>
-            {retrievalType === 'partial' && (
-              <div className="text-[10px] font-mono text-[var(--color-muted)]">
-                Calculated at ₦{fmt(Math.round(originalRate))}/KG
+          {/* Value Calculation */}
+          <div className={`p-4 rounded-xl border flex flex-col gap-3 transition-colors ${retrievalType === 'full' ? 'bg-[rgba(245,158,11,0.05)] border-[rgba(245,158,11,0.2)]' : 'bg-[rgba(59,130,246,0.05)] border-[rgba(59,130,246,0.2)]'}`}>
+            <div className="flex flex-col items-center justify-center gap-1 border-b border-[rgba(255,255,255,0.1)] pb-3">
+              <div className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                <Wallet size={12} /> Total Retrieved Value
               </div>
-            )}
+              <div className={`text-[28px] font-mono font-bold ${retrievalType === 'full' ? 'text-[var(--color-accent-amber)]' : 'text-[var(--color-accent-cobalt)]'}`}>
+                ₦{fmt(retrievedValue)}
+              </div>
+              {retrievalType === 'partial' && (
+                <div className="text-[10px] font-mono text-[var(--color-muted)]">
+                  Calculated at ₦{fmt(Math.round(originalRate))}/KG
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-between items-center px-2">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-mono text-[var(--color-muted)] uppercase">Debt Cleared</span>
+                <span className="text-[13px] font-mono text-[var(--color-success)] font-bold">₦{fmt(debtReduction)}</span>
+              </div>
+              <div className="flex flex-col text-right">
+                <span className="text-[10px] font-mono text-[var(--color-muted)] uppercase">Wallet Refund</span>
+                <span className="text-[13px] font-mono text-[var(--color-accent-cobalt)] font-bold">₦{fmt(walletRefund)}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -161,7 +182,7 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
             }`}
           >
             <CheckCircle2 size={16} />
-            {retrievalType === 'full' ? 'Refund Full Amount to Wallet' : 'Process Partial Refund to Wallet'}
+            Confirm Retrieval
           </button>
         </div>
       </div>

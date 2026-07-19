@@ -65,7 +65,29 @@ export const Analytics = ({
 }) => {
   const [period, setPeriod] = useState<'shift' | 'today' | '7days' | 'month' | 'custom'>('shift');
   const [selectedHub, setSelectedHub] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'overview' | 'pareto' | 'cargo_types' | 'terminal_shifts' | 'cash_flow'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'pareto' | 'cargo_types' | 'terminal_shifts' | 'cash_flow' | 'past_shifts'>('overview');
+  const [pastShifts, setPastShifts] = useState<any[]>([]);
+  const [loadingShifts, setLoadingShifts] = useState(false);
+  const [selectedPastShift, setSelectedPastShift] = useState<any | null>(null);
+  const [shiftHistory, setShiftHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'past_shifts') {
+      const fetchShifts = async () => {
+        setLoadingShifts(true);
+        const { data } = await supabase
+          .from('hub_shifts')
+          .select('*')
+          .eq('status', 'closed')
+          .order('ended_at', { ascending: false })
+          .limit(50);
+        if (data) setPastShifts(data);
+        setLoadingShifts(false);
+      };
+      fetchShifts();
+    }
+  }, [activeTab]);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Custom Date Range State
@@ -780,8 +802,13 @@ export const Analytics = ({
           onClick={() => setActiveTab('terminal_shifts')}
           className={`pb-2.5 px-3 text-[12px] font-sans font-bold flex items-center gap-1.5 cursor-pointer transition-colors border-b-2 ${activeTab === 'terminal_shifts' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
         >
-          <Clock size={14} />
-          <span>Terminal Shift Matrix</span>
+          <Clock size={14} /> Time Analysis
+        </button>
+        <button
+          onClick={() => setActiveTab('past_shifts')}
+          className={`pb-2.5 px-3 text-[12px] font-sans font-bold flex items-center gap-1.5 cursor-pointer transition-colors border-b-2 ${activeTab === 'past_shifts' ? 'border-[var(--color-accent-amber)] text-[var(--color-accent-amber)]' : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)]'}`}
+        >
+          <Calendar size={14} /> Past Shifts
         </button>
 
         <button
@@ -1071,6 +1098,169 @@ export const Analytics = ({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'past_shifts' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          {selectedPastShift ? (
+            <div className="space-y-4">
+              <button 
+                onClick={() => setSelectedPastShift(null)} 
+                className="flex items-center gap-2 text-[12px] font-bold text-[var(--color-muted)] hover:text-white transition-colors"
+              >
+                <ChevronDown className="rotate-90" size={16} /> Back to Shifts
+              </button>
+              
+              <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--color-border)]">
+                  <div>
+                    <h2 className="text-[16px] font-bold text-white mb-1">Shift Sales Details</h2>
+                    <div className="text-[12px] font-mono text-[var(--color-muted)]">
+                      {new Date(selectedPastShift.started_at).toLocaleString()} — {new Date(selectedPastShift.ended_at).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[11px] text-[var(--color-muted)] mb-1">Opened by: {selectedPastShift.opened_by}</div>
+                    <div className="text-[11px] text-[var(--color-muted)]">Closed by: {selectedPastShift.closed_by}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                  <div className="bg-[var(--color-surface-1)] p-4 rounded-lg">
+                    <div className="text-[11px] text-[var(--color-muted)] mb-1">Total Sales</div>
+                    <div className="text-[18px] font-bold text-[var(--color-success)] font-mono">₦{fmt(selectedPastShift.sales_summary?.totalSales || 0)}</div>
+                  </div>
+                  <div className="bg-[var(--color-surface-1)] p-4 rounded-lg">
+                    <div className="text-[11px] text-[var(--color-muted)] mb-1">Cash</div>
+                    <div className="text-[18px] font-bold text-[var(--color-accent-amber)] font-mono">₦{fmt(selectedPastShift.sales_summary?.cashSales || 0)}</div>
+                  </div>
+                  <div className="bg-[var(--color-surface-1)] p-4 rounded-lg">
+                    <div className="text-[11px] text-[var(--color-muted)] mb-1">Transfer</div>
+                    <div className="text-[18px] font-bold text-[var(--color-accent-cobalt)] font-mono">₦{fmt(selectedPastShift.sales_summary?.transferSales || 0)}</div>
+                  </div>
+                  <div className="bg-[var(--color-surface-1)] p-4 rounded-lg">
+                    <div className="text-[11px] text-[var(--color-muted)] mb-1">POS</div>
+                    <div className="text-[18px] font-bold text-[var(--color-success)] font-mono">₦{fmt(selectedPastShift.sales_summary?.posSales || 0)}</div>
+                  </div>
+                  <div className="bg-[var(--color-surface-1)] p-4 rounded-lg">
+                    <div className="text-[11px] text-[var(--color-muted)] mb-1">Entries</div>
+                    <div className="text-[18px] font-bold text-white font-mono">{selectedPastShift.sales_summary?.totalTxCount || 0}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-[14px] font-bold text-white mb-4 border-b border-[var(--color-surface-2)] pb-2">Shift Transaction History</h3>
+                  {loadingHistory ? (
+                    <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[var(--color-muted)]" size={24} /></div>
+                  ) : shiftHistory.length === 0 ? (
+                    <div className="text-center p-8 text-[var(--color-muted)] font-mono text-[12px]">No transactions found for this shift.</div>
+                  ) : (
+                    <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="sticky top-0 bg-[var(--color-surface-card)] z-10">
+                          <tr>
+                            <th className="p-2 border-b border-[var(--color-border)] text-[10px] font-mono text-[var(--color-muted)]">TIME</th>
+                            <th className="p-2 border-b border-[var(--color-border)] text-[10px] font-mono text-[var(--color-muted)]">TYPE</th>
+                            <th className="p-2 border-b border-[var(--color-border)] text-[10px] font-mono text-[var(--color-muted)]">CUSTOMER</th>
+                            <th className="p-2 border-b border-[var(--color-border)] text-[10px] font-mono text-[var(--color-muted)]">MODE</th>
+                            <th className="p-2 border-b border-[var(--color-border)] text-[10px] font-mono text-[var(--color-muted)] text-right">AMOUNT</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-[12px] font-mono">
+                          {shiftHistory.map((tx, i) => (
+                            <tr key={i} className="border-b border-[var(--color-surface-2)] hover:bg-[var(--color-surface-1)]">
+                              <td className="p-2 text-[var(--color-muted)]">{new Date(tx.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                              <td className="p-2 text-[var(--color-foreground)]">{tx.type}</td>
+                              <td className="p-2 text-[var(--color-foreground)]">{tx.name}</td>
+                              <td className="p-2 text-[var(--color-muted)]">{tx.mode}</td>
+                              <td className="p-2 text-right text-[var(--color-success)] font-bold">₦{fmt(tx.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : loadingShifts ? (
+            <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[var(--color-muted)]" size={24} /></div>
+          ) : pastShifts.length === 0 ? (
+            <div className="text-center p-8 text-[var(--color-muted)] font-mono text-[12px]">No closed shifts found.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pastShifts.map((s, i) => (
+                <div 
+                  key={i} 
+                  onClick={() => {
+                    setSelectedPastShift(s);
+                    // Fetch history for this shift
+                    setLoadingHistory(true);
+                    const fetchHistory = async () => {
+                       const start = s.started_at;
+                       const end = s.ended_at;
+                       const hubFilter = s.hub_id ? `hub_id=eq.${s.hub_id}` : '';
+                       
+                       const [cargo, manifests, market, packages] = await Promise.all([
+                         supabase.from('cargo_entries').select('created_at, consignee_name, amount, receipt_mode').gte('created_at', start).lte('created_at', end).eq('hub_id', s.hub_id).order('created_at', { ascending: false }),
+                         supabase.from('manifests').select('created_at, passenger_name, amount, payment_mode').gte('created_at', start).lte('created_at', end).eq('hub_id', s.hub_id).order('created_at', { ascending: false }),
+                         supabase.from('marketing_entries').select('created_at, customer_name, amount_paid, payment_mode').gte('created_at', start).lte('created_at', end).eq('hub_id', s.hub_id).order('created_at', { ascending: false }),
+                         supabase.from('package_entries').select('created_at, sender_name, amount, payment_mode').gte('created_at', start).lte('created_at', end).eq('hub_id', s.hub_id).order('created_at', { ascending: false })
+                       ]);
+                       
+                       const allTx: any[] = [];
+                       cargo.data?.forEach(r => allTx.push({ type: 'Cargo', created_at: r.created_at, name: r.consignee_name, amount: r.amount, mode: r.receipt_mode }));
+                       manifests.data?.forEach(r => allTx.push({ type: 'Baggage', created_at: r.created_at, name: r.passenger_name, amount: r.amount, mode: r.payment_mode }));
+                       market.data?.forEach(r => allTx.push({ type: 'Marketing', created_at: r.created_at, name: r.customer_name, amount: r.amount_paid, mode: r.payment_mode }));
+                       packages.data?.forEach(r => allTx.push({ type: 'Package', created_at: r.created_at, name: r.sender_name, amount: r.amount, mode: r.payment_mode }));
+                       
+                       allTx.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                       setShiftHistory(allTx);
+                       setLoadingHistory(false);
+                    };
+                    fetchHistory();
+                  }}
+                  className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between cursor-pointer hover:border-[var(--color-accent-amber)] transition-all"
+                >
+                  <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2 mb-3">
+                    <span className="text-[12px] font-bold font-sans text-[var(--color-foreground)]">
+                      {new Date(s.started_at).toLocaleDateString()}
+                    </span>
+                    <span className="text-[10px] font-mono bg-[var(--color-surface-2)] px-2 py-0.5 rounded text-[var(--color-muted)]">
+                      {new Date(s.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(s.ended_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  
+                  <div className="text-[20px] font-bold font-mono text-[var(--color-success)] mb-1">
+                    ₦{fmt(s.sales_summary?.totalSales || 0)}
+                  </div>
+                  <div className="text-[11px] font-mono text-[var(--color-muted)] space-y-1 mt-2">
+                    <div className="flex justify-between">
+                      <span>Total Tx:</span>
+                      <span className="text-[var(--color-foreground)] font-bold">{s.sales_summary?.totalTxCount || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Cash Sales:</span>
+                      <span className="text-[var(--color-accent-amber)] font-bold">₦{fmt(s.sales_summary?.cashSales || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Transfer Sales:</span>
+                      <span className="text-[var(--color-accent-cobalt)] font-bold">₦{fmt(s.sales_summary?.transferSales || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>POS Sales:</span>
+                      <span className="text-[var(--color-success)] font-bold">₦{fmt(s.sales_summary?.posSales || 0)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-[var(--color-border)] text-[10px] font-mono text-[var(--color-muted)] flex justify-between">
+                    <span>Opened by: {s.opened_by}</span>
+                    <span>Closed by: {s.closed_by}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -60,6 +60,9 @@ export const TransactionLedger = ({
   viewOnly = false,
   dateRange,
   onDateRangeChange,
+  activeShift,
+  onStartShift,
+  onEndShift,
 }: {
   user: User;
   transactions: Transaction[];
@@ -70,12 +73,17 @@ export const TransactionLedger = ({
   viewOnly?: boolean;
   dateRange?: { start: string; end: string };
   onDateRangeChange?: (range: { start: string; end: string }) => void;
+  activeShift?: any;
+  onStartShift?: () => void;
+  onEndShift?: () => void;
 }) => {
   const contentTypes = useContentTypes();
   const routes = useHubRoutes();
   const banks = useBanks();
   const [showPrintHistory, setShowPrintHistory] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [showStartConfirm, setShowStartConfirm] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
   // Marketing entries store bag counts inside the composed `detail` string,
   // not as discrete Transaction fields, so the edit modal keeps its own
   // working copy (seeded by parsing `detail` in handleEditClick) and
@@ -913,7 +921,7 @@ export const TransactionLedger = ({
     setRetrievalModalEntry(entry);
   };
 
-  const executeRetrieval = async (data: { isPartial: boolean, refundAmount: number, retrievedPieces: number, retrievedKg: number }) => {
+  const executeRetrieval = async (data: { isPartial: boolean, retrievedValue: number, retrievedPieces: number, retrievedKg: number }) => {
     if (!retrievalModalEntry) return;
     const entry = retrievalModalEntry;
     const customerName = entry.name;
@@ -925,7 +933,7 @@ export const TransactionLedger = ({
     const result = await processCargoRetrieval({
       entryRef: entry.id,
       isPartial: data.isPartial,
-      refundAmount: data.refundAmount,
+      retrievedValue: data.retrievedValue,
       retrievedPieces: data.retrievedPieces,
       retrievedKg: data.retrievedKg,
       customerName,
@@ -939,7 +947,7 @@ export const TransactionLedger = ({
     }
 
     const priorRetrievedAmount = (entry.raw as any)?.retrieved_amount || 0;
-    const newRetrievedAmount = priorRetrievedAmount + data.refundAmount;
+    const newRetrievedAmount = priorRetrievedAmount + data.retrievedValue;
     const fullyRetrieved = newRetrievedAmount >= (entry.raw as any)?.amount;
     onUpdateTx({
       ...entry.raw,
@@ -950,7 +958,7 @@ export const TransactionLedger = ({
       status: fullyRetrieved ? 'Retrieved' : (entry.raw as any)?.status,
     });
 
-    showToast({ message: `Successfully deposited ₦${fmt(data.refundAmount)} to ${customerName}'s wallet!`, type: 'success' });
+    showToast({ message: `Successfully deposited ₦${fmt(data.retrievedValue)} to ${customerName}'s wallet!`, type: 'success' });
     setViewingDetail(null);
     setRetrievalModalEntry(null);
   };
@@ -994,18 +1002,30 @@ export const TransactionLedger = ({
   const totalAmount = filteredEntries.reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
   const cashAmount = filteredEntries.filter(e => e.mode === 'Cash').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
 
+  // Insert shift markers into the visible array.
+  const displayEntries = useMemo(() => {
+    let result = [...filteredEntries];
+    if (activeShift) {
+      result.push({
+        id: `shift-start-${activeShift.id}`,
+        time: new Date(activeShift.started_at).toISOString().split('T')[1].slice(0, 5),
+        type: 'shift-marker',
+        name: 'SHIFT STARTED',
+        detail: `Day started at ${new Date(activeShift.started_at).toLocaleString()}`,
+        amount: 0,
+        mode: '',
+        status: '',
+        source: 'transaction',
+        raw: activeShift,
+      });
+    }
+    return result;
+  }, [filteredEntries, activeShift]);
+
   const tableRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
-    count: filteredEntries.length,
+    count: displayEntries.length,
     getScrollElement: () => tableRef.current,
-    // 56 was a rough guess and undershoots real rows -- the Customer/Detail
-    // cell can wrap onto 2-3 lines depending on content length, so actual
-    // rows run closer to 70-90px. Without measureElement wired below (via
-    // the <tr> ref), the virtualizer never corrects for that drift: its
-    // estimated total height ends up smaller than the real rendered
-    // content, so getVirtualItems() can under-fill the scroll container
-    // and leave later rows unreachable even though they're still in
-    // filteredEntries.
     estimateSize: () => 72,
     overscan: 10,
   });
@@ -1359,7 +1379,7 @@ export const TransactionLedger = ({
               </tr>
             </thead>
             <tbody>
-              {filteredEntries.length === 0 ? (
+              {displayEntries.length === 0 ? (
                 <tr>
                   <td
                     colSpan={(isAccountantOrAdmin || !viewOnly) ? (canSeePin ? 9 : 8) : (canSeePin ? 8 : 7)}
@@ -1376,7 +1396,16 @@ export const TransactionLedger = ({
                     </tr>
                   )}
                   {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const e = filteredEntries[virtualRow.index];
+                    const e = displayEntries[virtualRow.index];
+                    if (e.type === 'shift-marker') {
+                      return (
+                        <tr key={e.id} className="bg-[rgba(245,158,11,0.1)] border-b border-[var(--color-accent-amber)]">
+                          <td colSpan={9} className="py-2 px-4 text-center font-bold text-[var(--color-accent-amber)] text-[11px]">
+                            {e.name} — {e.detail}
+                          </td>
+                        </tr>
+                      );
+                    }
                     
                     // Parse date and time safely from created_at or fallback to time string
                     let displayDate = '';
@@ -1669,6 +1698,27 @@ export const TransactionLedger = ({
                   )}
                 </div>
               </section>
+
+              {/* Shift Controls */}
+              {!viewOnly && (
+                <div className="flex gap-2 border-t border-[var(--color-border)] pt-4">
+                  {!activeShift ? (
+                    <button 
+                      onClick={() => setShowStartConfirm(true)}
+                      className="flex-1 h-10 rounded-lg bg-[var(--color-success)] hover:bg-emerald-600 text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg"
+                    >
+                      Start Day
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setShowEndConfirm(true)}
+                      className="flex-1 h-10 rounded-lg bg-[var(--color-error)] hover:bg-red-600 text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg"
+                    >
+                      End Day
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Payment Section */}
               <section>
@@ -2370,6 +2420,35 @@ export const TransactionLedger = ({
         transactions={transactions}
         onFilterByCustomer={(name) => setSearchQuery(name)}
       />
+      {showStartConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-surface-2)] rounded-xl w-full max-w-sm shadow-2xl p-6 flex flex-col gap-4 text-center">
+            <h3 className="text-[16px] font-bold text-white">Start the Day?</h3>
+            <p className="text-[13px] text-[var(--color-muted)]">
+              This will officially open the station's shift, tracking all new sales under this shift until you close it.
+            </p>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setShowStartConfirm(false)} className="flex-1 py-2 rounded-lg bg-[var(--color-surface-1)] text-white text-[13px] font-bold hover:bg-[var(--color-surface-2)] transition-colors">Cancel</button>
+              <button onClick={() => { setShowStartConfirm(false); onStartShift && onStartShift(); }} className="flex-1 py-2 rounded-lg bg-[var(--color-success)] text-[var(--color-obsidian)] text-[13px] font-bold hover:bg-emerald-600 transition-colors">Yes, Start Day</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEndConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[var(--color-surface-card)] border border-[var(--color-surface-2)] rounded-xl w-full max-w-sm shadow-2xl p-6 flex flex-col gap-4 text-center">
+            <h3 className="text-[16px] font-bold text-white">End the Day?</h3>
+            <p className="text-[13px] text-[var(--color-muted)]">
+              This will close the current shift and generate the final sales analysis.
+            </p>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setShowEndConfirm(false)} className="flex-1 py-2 rounded-lg bg-[var(--color-surface-1)] text-white text-[13px] font-bold hover:bg-[var(--color-surface-2)] transition-colors">Cancel</button>
+              <button onClick={() => { setShowEndConfirm(false); onEndShift && onEndShift(); }} className="flex-1 py-2 rounded-lg bg-[var(--color-error)] text-white text-[13px] font-bold hover:bg-red-600 transition-colors">Yes, End Day</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

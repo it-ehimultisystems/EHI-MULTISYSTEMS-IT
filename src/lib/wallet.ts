@@ -59,7 +59,7 @@ export interface RetrievalResult {
 export async function processCargoRetrieval(params: {
   entryRef: string;
   isPartial: boolean;
-  refundAmount: number;
+  retrievedValue: number;
   retrievedPieces: number;
   retrievedKg: number;
   customerName: string;
@@ -70,7 +70,7 @@ export async function processCargoRetrieval(params: {
   const { data, error } = await supabase.rpc('process_cargo_retrieval', {
     p_entry_ref: params.entryRef,
     p_is_partial: params.isPartial,
-    p_refund_amount: params.refundAmount,
+    p_retrieved_value: params.retrievedValue,
     p_retrieved_pieces: params.retrievedPieces,
     p_retrieved_kg: params.retrievedKg,
     p_customer_name: params.customerName,

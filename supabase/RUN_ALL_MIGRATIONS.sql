@@ -3363,15 +3363,15 @@ ALTER TABLE public.cargo_entries
 -- transaction, so a failure partway through can't leave the entry
 -- marked retrieved without the wallet credited, or vice versa.
 CREATE OR REPLACE FUNCTION public.process_cargo_retrieval(
-  p_entry_ref         text,
-  p_is_partial        boolean,
-  p_refund_amount     numeric,
-  p_retrieved_pieces  numeric,
-  p_retrieved_kg      numeric,
-  p_customer_name     text,
-  p_hub_id            uuid,
-  p_logged_by         text,
-  p_wallet_id         uuid DEFAULT NULL
+  p_entry_ref text,
+  p_is_partial boolean,
+  p_retrieved_value numeric,  -- <== THIS USED TO BE p_refund_amount
+  p_retrieved_pieces numeric,
+  p_retrieved_kg numeric,
+  p_customer_name text,
+  p_hub_id uuid,
+  p_logged_by text,
+  p_wallet_id uuid DEFAULT NULL
 )
 RETURNS TABLE(out_wallet_id uuid, new_balance numeric)
 LANGUAGE plpgsql
@@ -3379,17 +3379,21 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_entry           RECORD;
-  v_wallet_id       uuid := p_wallet_id;
-  v_already         numeric;
-  v_new_status      text;
-  v_txn_result      RECORD;
+  v_entry RECORD;
+  v_wallet_id uuid := p_wallet_id;
+  v_already numeric;
+  v_new_status text;
+  v_txn_result RECORD;
+  v_amount_paid numeric;
+  v_unpaid_debt numeric;
+  v_wallet_refund numeric;
+  v_debt_reduction numeric;
 BEGIN
-  IF p_refund_amount <= 0 THEN
-    RAISE EXCEPTION 'Refund amount must be positive (got %)', p_refund_amount;
+  IF p_retrieved_value <= 0 THEN
+    RAISE EXCEPTION 'Retrieval value must be positive (got %)', p_retrieved_value;
   END IF;
 
-  SELECT id, hub_id, amount, retrieved_amount, status
+  SELECT id, hub_id, amount, retrieved_amount, status, amount_paid, receipt_mode
   INTO v_entry
   FROM public.cargo_entries
   WHERE entry_ref = p_entry_ref
@@ -3406,53 +3410,71 @@ BEGIN
   END IF;
 
   v_already := COALESCE(v_entry.retrieved_amount, 0);
-  IF v_already + p_refund_amount > v_entry.amount THEN
-    RAISE EXCEPTION 'Refund of % would exceed remaining retrievable amount (already retrieved % of %)',
-      p_refund_amount, v_already, v_entry.amount;
+  IF v_already + p_retrieved_value > v_entry.amount THEN
+    RAISE EXCEPTION 'Retrieval value % would exceed remaining retrievable amount (already retrieved % of %)',
+      p_retrieved_value, v_already, v_entry.amount;
   END IF;
 
-  v_new_status := CASE WHEN v_already + p_refund_amount >= v_entry.amount THEN 'Retrieved' ELSE v_entry.status END;
+  v_new_status := CASE WHEN v_already + p_retrieved_value >= v_entry.amount THEN 'Retrieved' ELSE v_entry.status END;
+
+  -- Determine how much they actually paid
+  IF v_entry.receipt_mode IN ('Cash', 'Transfer', 'POS', 'Wallet') THEN
+    v_amount_paid := v_entry.amount;
+  ELSE
+    v_amount_paid := COALESCE(v_entry.amount_paid, 0);
+  END IF;
+
+  v_unpaid_debt := v_entry.amount - v_amount_paid - v_already;
+  IF v_unpaid_debt < 0 THEN v_unpaid_debt := 0; END IF;
+
+  -- The retrieved value first pays off the unpaid debt, and any remainder is refunded to the wallet
+  v_debt_reduction := LEAST(p_retrieved_value, v_unpaid_debt);
+  v_wallet_refund := p_retrieved_value - v_debt_reduction;
 
   UPDATE public.cargo_entries SET
     retrieved_pieces = COALESCE(retrieved_pieces, 0) + p_retrieved_pieces,
     retrieved_kg     = COALESCE(retrieved_kg, 0) + p_retrieved_kg,
-    retrieved_amount = v_already + p_refund_amount,
-    retrieved        = (v_already + p_refund_amount >= v_entry.amount),
+    retrieved_amount = v_already + p_retrieved_value,
+    retrieved        = (v_already + p_retrieved_value >= v_entry.amount),
     retrieved_at     = now(),
     retrieved_by     = p_logged_by,
     retrieval_note   = COALESCE(retrieval_note || E'\n', '') ||
-                        format('%s retrieval: %s pcs / %s kg, %s refunded to wallet',
+                        format('%s retrieval: %s pcs / %s kg, %s debt cleared, %s refunded to wallet',
                           CASE WHEN p_is_partial THEN 'Partial' ELSE 'Full' END,
-                          p_retrieved_pieces, p_retrieved_kg, p_refund_amount),
+                          p_retrieved_pieces, p_retrieved_kg, v_debt_reduction, v_wallet_refund),
     status           = v_new_status
   WHERE entry_ref = p_entry_ref;
 
-  IF v_wallet_id IS NULL THEN
-    SELECT id INTO v_wallet_id FROM public.customer_wallets
-    WHERE lower(customer_name) = lower(p_customer_name)
-    LIMIT 1;
+  IF v_wallet_refund > 0 THEN
+    IF v_wallet_id IS NULL THEN
+      SELECT id INTO v_wallet_id FROM public.customer_wallets
+      WHERE lower(customer_name) = lower(p_customer_name)
+      LIMIT 1;
+    END IF;
+
+    IF v_wallet_id IS NULL THEN
+      INSERT INTO public.customer_wallets (
+        hub_id, customer_name, opening_balance, balance,
+        total_topped_up, total_used, source_type, source_ref, source_note,
+        status, created_by
+      ) VALUES (
+        p_hub_id, p_customer_name, 0, 0,
+        0, 0, 'airline_retrieval', p_entry_ref,
+        format('Credit from %sretrieved cargo %s', CASE WHEN p_is_partial THEN 'partial ' ELSE '' END, p_entry_ref),
+        'active', p_logged_by
+      ) RETURNING id INTO v_wallet_id;
+    END IF;
+
+    SELECT * INTO v_txn_result FROM public.apply_wallet_transaction(
+      v_wallet_id, 'refund', v_wallet_refund, p_entry_ref, v_entry.id,
+      format('Airline %sretrieval refund for %s', CASE WHEN p_is_partial THEN 'partial ' ELSE '' END, p_entry_ref),
+      p_logged_by
+    );
+
+    RETURN QUERY SELECT v_wallet_id, v_txn_result.new_balance;
+  ELSE
+    RETURN QUERY SELECT p_wallet_id, 0::numeric;
   END IF;
-
-  IF v_wallet_id IS NULL THEN
-    INSERT INTO public.customer_wallets (
-      hub_id, customer_name, opening_balance, balance,
-      total_topped_up, total_used, source_type, source_ref, source_note,
-      status, created_by
-    ) VALUES (
-      p_hub_id, p_customer_name, 0, 0,
-      0, 0, 'airline_retrieval', p_entry_ref,
-      format('Credit from %sretrieved cargo %s', CASE WHEN p_is_partial THEN 'partial ' ELSE '' END, p_entry_ref),
-      'active', p_logged_by
-    ) RETURNING id INTO v_wallet_id;
-  END IF;
-
-  SELECT * INTO v_txn_result FROM public.apply_wallet_transaction(
-    v_wallet_id, 'refund', p_refund_amount, p_entry_ref, v_entry.id,
-    format('Airline %sretrieval refund for %s', CASE WHEN p_is_partial THEN 'partial ' ELSE '' END, p_entry_ref),
-    p_logged_by
-  );
-
-  RETURN QUERY SELECT v_wallet_id, v_txn_result.new_balance;
 END;
 $$;
 
@@ -3492,3 +3514,72 @@ CREATE POLICY "Hub-scoped read wallet_transactions"   ON public.wallet_transacti
 DROP POLICY IF EXISTS "Hub-scoped insert wallet_transactions" ON public.wallet_transactions;
 CREATE POLICY "Hub-scoped insert wallet_transactions" ON public.wallet_transactions FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
+
+
+-- Create a function to get all sibling hub IDs (hubs in the same state)
+CREATE OR REPLACE FUNCTION public.sibling_hub_ids()
+RETURNS uuid[]
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT array_agg(id)
+  FROM public.hubs
+  WHERE state = (
+    SELECT state FROM public.hubs WHERE id = public.current_user_hub_id()
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.sibling_hub_ids() TO authenticated;
+
+-- Update RLS policies to use sibling_hub_ids() for read operations
+-- so agents can see transactions from other hubs in their state.
+
+DROP POLICY IF EXISTS "Hub-scoped read cargo_entries" ON public.cargo_entries;
+CREATE POLICY "Hub-scoped read cargo_entries" ON public.cargo_entries FOR SELECT TO authenticated
+  USING (hub_id = ANY(public.sibling_hub_ids()) OR hub_id IS NULL OR public.is_hub_unrestricted());
+
+DROP POLICY IF EXISTS "Hub-scoped read manifests" ON public.manifests;
+CREATE POLICY "Hub-scoped read manifests" ON public.manifests FOR SELECT TO authenticated
+  USING (hub_id = ANY(public.sibling_hub_ids()) OR hub_id IS NULL OR public.is_hub_unrestricted());
+
+DROP POLICY IF EXISTS "Hub-scoped read marketing_entries" ON public.marketing_entries;
+CREATE POLICY "Hub-scoped read marketing_entries" ON public.marketing_entries FOR SELECT TO authenticated
+  USING (hub_id = ANY(public.sibling_hub_ids()) OR hub_id IS NULL OR public.is_hub_unrestricted());
+
+DROP POLICY IF EXISTS "Hub-scoped read package_entries" ON public.package_entries;
+CREATE POLICY "Hub-scoped read package_entries" ON public.package_entries FOR SELECT TO authenticated
+  USING (hub_id = ANY(public.sibling_hub_ids()) OR hub_id IS NULL OR public.is_hub_unrestricted());
+
+DROP POLICY IF EXISTS "Hub-scoped read expenses" ON public.expenses;
+CREATE POLICY "Hub-scoped read expenses" ON public.expenses FOR SELECT TO authenticated
+  USING (hub_id = ANY(public.sibling_hub_ids()) OR hub_id IS NULL OR public.is_hub_unrestricted());
+
+
+CREATE TABLE IF NOT EXISTS public.hub_shifts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  hub_id uuid NOT NULL REFERENCES public.hubs(id),
+  started_at timestamptz NOT NULL DEFAULT now(),
+  ended_at timestamptz,
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  sales_summary jsonb,
+  opened_by text,
+  closed_by text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- RLS
+ALTER TABLE public.hub_shifts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Hub-scoped read hub_shifts" ON public.hub_shifts;
+CREATE POLICY "Hub-scoped read hub_shifts" ON public.hub_shifts FOR SELECT TO authenticated
+  USING (hub_id = ANY(public.sibling_hub_ids()) OR hub_id IS NULL OR public.is_hub_unrestricted());
+
+DROP POLICY IF EXISTS "Hub-scoped insert hub_shifts" ON public.hub_shifts;
+CREATE POLICY "Hub-scoped insert hub_shifts" ON public.hub_shifts FOR INSERT TO authenticated
+  WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
+
+DROP POLICY IF EXISTS "Hub-scoped update hub_shifts" ON public.hub_shifts;
+CREATE POLICY "Hub-scoped update hub_shifts" ON public.hub_shifts FOR UPDATE TO authenticated
+  USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());

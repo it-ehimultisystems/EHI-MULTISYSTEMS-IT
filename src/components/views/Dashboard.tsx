@@ -159,8 +159,19 @@ const ScoreCard = ({ label, icon: Icon, color, bg, borderColor, total, sub1, sub
   </div>
 );
 
-export const Dashboard = React.memo(
-  ({ user, transactions }: { user: User; transactions: Transaction[] }) => {
+export const Dashboard = ({ 
+  user, 
+  transactions,
+  activeShift,
+  onStartShift,
+  onEndShift
+}: { 
+  user: User; 
+  transactions: Transaction[];
+  activeShift?: any;
+  onStartShift?: () => void;
+  onEndShift?: () => void;
+}) => {
     const today = useMemo(() => {
       const n = new Date();
       return new Date(n.getFullYear(), n.getMonth(), n.getDate());
@@ -475,5 +486,4 @@ export const Dashboard = React.memo(
         )}
       </div>
     );
-  },
-);
+};

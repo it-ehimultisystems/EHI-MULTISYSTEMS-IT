@@ -13,7 +13,7 @@ export const DebtorsTab = ({
 }: {
   transactions?: Transaction[];
   user?: User;
-  onUpdateTx?: (id: string, update: Partial<Transaction>) => void;
+  onUpdateTx?: (tx: Transaction) => void;
   onAddTx?: (tx: Transaction) => void;
 }) => {
   const { showToast } = useToast();
@@ -54,7 +54,7 @@ export const DebtorsTab = ({
         clientType: t.clientType || (t.corporate_client_id ? 'Corporate' : 'Individual'),
         ageInDays,
         agingBucket: bucket,
-        balance: t.amount - (t.amountPaid || 0),
+        balance: t.amount - (t.amountPaid || 0) - ((t.raw as any)?.retrieved_amount || 0),
       };
     })
     .filter(d => d.balance > 0);
@@ -116,7 +116,8 @@ export const DebtorsTab = ({
 
     // 1. Update the original debt entry (existing behaviour)
     if (onUpdateTx) {
-      onUpdateTx(id, {
+      onUpdateTx({
+        ...debt,
         amountPaid: newAmountPaid,
         paymentHistory: newHistory,
         mode: remaining <= 0 ? 'Debt Paid' : 'Debt',

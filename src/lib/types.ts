@@ -517,3 +517,15 @@ export interface WalletTransaction {
   logged_by: string;
   created_at: string;
 }
+
+export interface HubShift {
+  id: string;
+  hub_id: string;
+  started_at: string;
+  ended_at?: string;
+  status: 'open' | 'closed';
+  sales_summary?: any;
+  opened_by: string;
+  closed_by?: string;
+  created_at: string;
+}
