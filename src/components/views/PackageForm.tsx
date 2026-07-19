@@ -729,7 +729,7 @@ export const PackageForm = ({
                 )}
 
                 <button
-                  onClick={handleAddEntry}
+                  onClick={() => setShowPackageReview(true)}
                   disabled={!isValid || submitting}
                   className={`w-full py-3 rounded font-bold font-mono text-[12px] flex items-center justify-center gap-2 transition-all focus:outline-none ${
                     submitting ? "opacity-80 cursor-wait bg-[var(--color-accent-cobalt)] text-white"
@@ -737,6 +737,26 @@ export const PackageForm = ({
                     : "bg-[var(--color-accent-cobalt)] text-white cursor-pointer hover:bg-opacity-90"
                   }`}
                 >
+                  
+      {showPackageReview && (
+        <ReviewEntryModal
+          title="Review Package/Mail Entry"
+          details={[
+            { label: 'Customer', value: name },
+            { label: 'Content', value: contentType === 'Other' ? customContents : contentType },
+            { label: 'Amount', value: parseFloat(amount) || 0 },
+            { label: 'Payment Mode', value: mode === 'Debt' ? `Debt (${debtorName})` : mode }
+          ]}
+          onConfirm={() => {
+            setShowPackageReview(false);
+            handleAddEntry();
+          }}
+          onCancel={() => setShowPackageReview(false)}
+          confirmText="Log Package"
+          isSubmitting={submitting}
+        />
+      )}
+
                   {submitting && <Loader2 size={16} className="animate-spin" />}
                   {submitting ? "ADDING ENTRY..." : (<><Plus size={16} /> ADD ENTRY</>)}
                 </button>

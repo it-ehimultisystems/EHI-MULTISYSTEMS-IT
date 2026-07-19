@@ -699,7 +699,7 @@ export const ExcessBaggageForm = ({
           <div className="pt-4">
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={() => setShowBaggageReview(true)}
               disabled={!isValid || submitting}
               className={`w-full py-4 rounded-[var(--radius-sm)] font-sans font-bold text-[16px] flex items-center justify-center gap-2 transition-all focus:outline-none ${
                 submitting ? 'opacity-80 cursor-wait bg-[var(--color-accent-cobalt)] text-white' :

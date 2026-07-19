@@ -122,6 +122,7 @@ function incrementLocalSerial(): number {
 }
 
 import { QRCode } from "../QRCode";
+import { ReviewEntryModal } from "./ReviewEntryModal";
 import { PaymentNarrationBox } from "../PaymentNarrationBox";
 
 export const CargoForm = ({
@@ -2172,7 +2173,7 @@ export const CargoForm = ({
 
             <div className="pt-8">
               <button
-                onClick={handleRetailSubmit}
+                onClick={() => setShowRetailReview(true)}
                 disabled={!isRetailFormValid || submitting}
                 className={`w-full py-4 rounded-[var(--radius-sm)] font-sans font-bold text-[16px] flex items-center justify-center gap-2 transition-all focus:outline-none ${
                   submitting
