@@ -1,5 +1,5 @@
 -- ============================================================
--- COMBINED MIGRATION RUNNER -- generated 2026-07-14T06:47:06Z
+-- COMBINED MIGRATION RUNNER -- regenerated 2026-07-19T08:22:11Z
 -- Every migration in supabase/migrations/, concatenated in
 -- chronological (filename) order. Every statement in every file
 -- uses IF NOT EXISTS / ON CONFLICT DO NOTHING / DROP ... IF EXISTS
@@ -105,7 +105,6 @@ FROM (VALUES
 JOIN corporate_clients c ON c.company_name = r.company_name
 ON CONFLICT (corporate_client_id, route_name) DO NOTHING;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260702_rate_limiting.sql
 -- ============================================================
@@ -186,7 +185,6 @@ AS $$
   DELETE FROM public.rate_limits WHERE reset_at < clock_timestamp() - interval '1 hour';
 $$;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260702_scale_indexes.sql
 -- ============================================================
@@ -247,7 +245,6 @@ CREATE INDEX IF NOT EXISTS idx_driver_trips_driver_created
 CREATE INDEX IF NOT EXISTS idx_driver_trips_gps_enabled
   ON public.driver_trips (driver_id) WHERE gps_enabled = true;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260706_full_schema.sql
 -- ============================================================
@@ -258,12 +255,20 @@ CREATE INDEX IF NOT EXISTS idx_driver_trips_gps_enabled
 -- ============================================================
 
 -- ── 1. HUBS ────────────────────────────────────────────────
+-- IF NOT EXISTS is a no-op here in every environment where this migration
+-- has actually run -- the hubs table predates this migration file and
+-- already has its own real CHECK constraint ('Cargo Station' | 'Head
+-- Office' | 'Field Office'), confirmed live via pg_get_constraintdef. The
+-- clause below is corrected to match that reality (it originally read
+-- 'airport'/'transit'/'depot', which never matched anything real and was
+-- copied into Settings.tsx's Add Hub form, where it failed every insert
+-- with a check-constraint violation until fixed there too).
 CREATE TABLE IF NOT EXISTS public.hubs (
   id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name      text NOT NULL,
   code      text UNIQUE NOT NULL,
   state     text,
-  type      text NOT NULL DEFAULT 'airport' CHECK (type IN ('airport','transit','depot')),
+  type      text NOT NULL DEFAULT 'Cargo Station' CHECK (type IN ('Cargo Station','Head Office','Field Office')),
   active    boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -770,7 +775,6 @@ INSERT INTO public.standard_cargo_rates (route_name, rate_per_kg) VALUES
   ('Other',                        500)
 ON CONFLICT (route_name) DO NOTHING;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260707_ledger_manifest.sql
 -- ============================================================
@@ -843,7 +847,6 @@ CREATE POLICY "Authenticated insert weight_manifest" ON public.cargo_weight_mani
 CREATE POLICY "Authenticated update weight_manifest" ON public.cargo_weight_manifests FOR UPDATE TO authenticated USING (true);
 CREATE POLICY "Authenticated delete weight_manifest" ON public.cargo_weight_manifests FOR DELETE TO authenticated USING (true);
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260707_wrong_destination_resolution.sql
 -- ============================================================
@@ -860,7 +863,6 @@ CREATE INDEX IF NOT EXISTS idx_tracking_events_wrong_destination_unresolved
   ON public.tracking_events (created_at DESC)
   WHERE event_type = 'WRONG_DESTINATION_ALERT' AND resolved = false;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260708_cargo_commission_rate.sql
 -- ============================================================
@@ -870,7 +872,6 @@ CREATE INDEX IF NOT EXISTS idx_tracking_events_wrong_destination_unresolved
 -- airline on every past transaction. Lock the rate in at entry time.
 ALTER TABLE public.cargo_entries
   ADD COLUMN IF NOT EXISTS commission_rate numeric(5,2);
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260708_expenses_approval_columns.sql
@@ -896,7 +897,6 @@ ALTER TABLE public.expenses
   ADD COLUMN IF NOT EXISTS rejected_at       timestamptz;
 
 CREATE INDEX IF NOT EXISTS expenses_status_idx ON public.expenses(status);
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260708_hub_isolation_rls.sql
@@ -974,7 +974,6 @@ CREATE POLICY "Service role all profiles" ON public.user_profiles
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Users read own profile" ON public.user_profiles;
-DROP POLICY IF EXISTS "Users read own or same-hub profiles" ON public.user_profiles;
 CREATE POLICY "Users read own or same-hub profiles" ON public.user_profiles
   FOR SELECT TO authenticated
   USING (
@@ -1003,13 +1002,10 @@ CREATE POLICY "Admins update same-hub profiles" ON public.user_profiles
 DROP POLICY IF EXISTS "Authenticated read cargo_entries"   ON public.cargo_entries;
 DROP POLICY IF EXISTS "Authenticated insert cargo_entries" ON public.cargo_entries;
 DROP POLICY IF EXISTS "Authenticated update cargo_entries" ON public.cargo_entries;
-DROP POLICY IF EXISTS "Hub-scoped read cargo_entries" ON public.cargo_entries;
 CREATE POLICY "Hub-scoped read cargo_entries"   ON public.cargo_entries FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert cargo_entries" ON public.cargo_entries;
 CREATE POLICY "Hub-scoped insert cargo_entries" ON public.cargo_entries FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update cargo_entries" ON public.cargo_entries;
 CREATE POLICY "Hub-scoped update cargo_entries" ON public.cargo_entries FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
@@ -1017,13 +1013,10 @@ CREATE POLICY "Hub-scoped update cargo_entries" ON public.cargo_entries FOR UPDA
 DROP POLICY IF EXISTS "Authenticated read manifests"   ON public.manifests;
 DROP POLICY IF EXISTS "Authenticated insert manifests" ON public.manifests;
 DROP POLICY IF EXISTS "Authenticated update manifests" ON public.manifests;
-DROP POLICY IF EXISTS "Hub-scoped read manifests" ON public.manifests;
 CREATE POLICY "Hub-scoped read manifests"   ON public.manifests FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert manifests" ON public.manifests;
 CREATE POLICY "Hub-scoped insert manifests" ON public.manifests FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update manifests" ON public.manifests;
 CREATE POLICY "Hub-scoped update manifests" ON public.manifests FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
@@ -1031,13 +1024,10 @@ CREATE POLICY "Hub-scoped update manifests" ON public.manifests FOR UPDATE TO au
 DROP POLICY IF EXISTS "Authenticated read marketing_entries"   ON public.marketing_entries;
 DROP POLICY IF EXISTS "Authenticated insert marketing_entries" ON public.marketing_entries;
 DROP POLICY IF EXISTS "Authenticated update marketing_entries" ON public.marketing_entries;
-DROP POLICY IF EXISTS "Hub-scoped read marketing_entries" ON public.marketing_entries;
 CREATE POLICY "Hub-scoped read marketing_entries"   ON public.marketing_entries FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert marketing_entries" ON public.marketing_entries;
 CREATE POLICY "Hub-scoped insert marketing_entries" ON public.marketing_entries FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update marketing_entries" ON public.marketing_entries;
 CREATE POLICY "Hub-scoped update marketing_entries" ON public.marketing_entries FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
@@ -1045,26 +1035,20 @@ CREATE POLICY "Hub-scoped update marketing_entries" ON public.marketing_entries 
 DROP POLICY IF EXISTS "Authenticated read marketing_day_close"   ON public.marketing_day_close;
 DROP POLICY IF EXISTS "Authenticated upsert marketing_day_close" ON public.marketing_day_close;
 DROP POLICY IF EXISTS "Authenticated update marketing_day_close" ON public.marketing_day_close;
-DROP POLICY IF EXISTS "Hub-scoped read marketing_day_close" ON public.marketing_day_close;
 CREATE POLICY "Hub-scoped read marketing_day_close"   ON public.marketing_day_close FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped upsert marketing_day_close" ON public.marketing_day_close;
 CREATE POLICY "Hub-scoped upsert marketing_day_close" ON public.marketing_day_close FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update marketing_day_close" ON public.marketing_day_close;
 CREATE POLICY "Hub-scoped update marketing_day_close" ON public.marketing_day_close FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
 -- EXPENSES
 DROP POLICY IF EXISTS "Authenticated read expenses"   ON public.expenses;
 DROP POLICY IF EXISTS "Authenticated insert expenses" ON public.expenses;
-DROP POLICY IF EXISTS "Hub-scoped read expenses" ON public.expenses;
 CREATE POLICY "Hub-scoped read expenses"   ON public.expenses FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert expenses" ON public.expenses;
 CREATE POLICY "Hub-scoped insert expenses" ON public.expenses FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update expenses" ON public.expenses;
 CREATE POLICY "Hub-scoped update expenses" ON public.expenses FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
@@ -1072,33 +1056,26 @@ CREATE POLICY "Hub-scoped update expenses" ON public.expenses FOR UPDATE TO auth
 DROP POLICY IF EXISTS "Authenticated read eod_records"   ON public.eod_records;
 DROP POLICY IF EXISTS "Authenticated upsert eod_records" ON public.eod_records;
 DROP POLICY IF EXISTS "Authenticated update eod_records" ON public.eod_records;
-DROP POLICY IF EXISTS "Hub-scoped read eod_records" ON public.eod_records;
 CREATE POLICY "Hub-scoped read eod_records"   ON public.eod_records FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped upsert eod_records" ON public.eod_records;
 CREATE POLICY "Hub-scoped upsert eod_records" ON public.eod_records FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update eod_records" ON public.eod_records;
 CREATE POLICY "Hub-scoped update eod_records" ON public.eod_records FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
 -- EOD_LOCKS
 DROP POLICY IF EXISTS "Authenticated read eod_locks"   ON public.eod_locks;
 DROP POLICY IF EXISTS "Authenticated insert eod_locks" ON public.eod_locks;
-DROP POLICY IF EXISTS "Hub-scoped read eod_locks" ON public.eod_locks;
 CREATE POLICY "Hub-scoped read eod_locks"   ON public.eod_locks FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert eod_locks" ON public.eod_locks;
 CREATE POLICY "Hub-scoped insert eod_locks" ON public.eod_locks FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
 -- TAG_PRINT_LOG
 DROP POLICY IF EXISTS "Authenticated read tag_print_log"   ON public.tag_print_log;
 DROP POLICY IF EXISTS "Authenticated insert tag_print_log" ON public.tag_print_log;
-DROP POLICY IF EXISTS "Hub-scoped read tag_print_log" ON public.tag_print_log;
 CREATE POLICY "Hub-scoped read tag_print_log"   ON public.tag_print_log FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert tag_print_log" ON public.tag_print_log;
 CREATE POLICY "Hub-scoped insert tag_print_log" ON public.tag_print_log FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
@@ -1106,23 +1083,18 @@ CREATE POLICY "Hub-scoped insert tag_print_log" ON public.tag_print_log FOR INSE
 DROP POLICY IF EXISTS "Authenticated read support_tickets"   ON public.support_tickets;
 DROP POLICY IF EXISTS "Authenticated insert support_tickets" ON public.support_tickets;
 DROP POLICY IF EXISTS "Authenticated update support_tickets" ON public.support_tickets;
-DROP POLICY IF EXISTS "Hub-scoped read support_tickets" ON public.support_tickets;
 CREATE POLICY "Hub-scoped read support_tickets"   ON public.support_tickets FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert support_tickets" ON public.support_tickets;
 CREATE POLICY "Hub-scoped insert support_tickets" ON public.support_tickets FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update support_tickets" ON public.support_tickets;
 CREATE POLICY "Hub-scoped update support_tickets" ON public.support_tickets FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
 -- AUDIT_LOG
 DROP POLICY IF EXISTS "Authenticated read audit_log"   ON public.audit_log;
 DROP POLICY IF EXISTS "Authenticated insert audit_log" ON public.audit_log;
-DROP POLICY IF EXISTS "Hub-scoped read audit_log" ON public.audit_log;
 CREATE POLICY "Hub-scoped read audit_log"   ON public.audit_log FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert audit_log" ON public.audit_log;
 CREATE POLICY "Hub-scoped insert audit_log" ON public.audit_log FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
@@ -1130,13 +1102,10 @@ CREATE POLICY "Hub-scoped insert audit_log" ON public.audit_log FOR INSERT TO au
 DROP POLICY IF EXISTS "Authenticated read airline_ledger"   ON public.airline_ledger_entries;
 DROP POLICY IF EXISTS "Authenticated insert airline_ledger" ON public.airline_ledger_entries;
 DROP POLICY IF EXISTS "Authenticated update airline_ledger" ON public.airline_ledger_entries;
-DROP POLICY IF EXISTS "Hub-scoped read airline_ledger" ON public.airline_ledger_entries;
 CREATE POLICY "Hub-scoped read airline_ledger"   ON public.airline_ledger_entries FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert airline_ledger" ON public.airline_ledger_entries;
 CREATE POLICY "Hub-scoped insert airline_ledger" ON public.airline_ledger_entries FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update airline_ledger" ON public.airline_ledger_entries;
 CREATE POLICY "Hub-scoped update airline_ledger" ON public.airline_ledger_entries FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
@@ -1145,19 +1114,14 @@ DROP POLICY IF EXISTS "Authenticated read weight_manifest"   ON public.cargo_wei
 DROP POLICY IF EXISTS "Authenticated insert weight_manifest" ON public.cargo_weight_manifests;
 DROP POLICY IF EXISTS "Authenticated update weight_manifest" ON public.cargo_weight_manifests;
 DROP POLICY IF EXISTS "Authenticated delete weight_manifest" ON public.cargo_weight_manifests;
-DROP POLICY IF EXISTS "Hub-scoped read weight_manifest" ON public.cargo_weight_manifests;
 CREATE POLICY "Hub-scoped read weight_manifest"   ON public.cargo_weight_manifests FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert weight_manifest" ON public.cargo_weight_manifests;
 CREATE POLICY "Hub-scoped insert weight_manifest" ON public.cargo_weight_manifests FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update weight_manifest" ON public.cargo_weight_manifests;
 CREATE POLICY "Hub-scoped update weight_manifest" ON public.cargo_weight_manifests FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped delete weight_manifest" ON public.cargo_weight_manifests;
 CREATE POLICY "Hub-scoped delete weight_manifest" ON public.cargo_weight_manifests FOR DELETE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260709_package_desk.sql
@@ -1233,26 +1197,19 @@ GRANT EXECUTE ON FUNCTION public.allocate_package_tracking() TO authenticated;
 ALTER TABLE public.package_entries   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.package_day_close ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Hub-scoped read package_entries" ON public.package_entries;
 CREATE POLICY "Hub-scoped read package_entries"   ON public.package_entries FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped insert package_entries" ON public.package_entries;
 CREATE POLICY "Hub-scoped insert package_entries" ON public.package_entries FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update package_entries" ON public.package_entries;
 CREATE POLICY "Hub-scoped update package_entries" ON public.package_entries FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
-DROP POLICY IF EXISTS "Hub-scoped read package_day_close" ON public.package_day_close;
 CREATE POLICY "Hub-scoped read package_day_close"   ON public.package_day_close FOR SELECT TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped upsert package_day_close" ON public.package_day_close;
 CREATE POLICY "Hub-scoped upsert package_day_close" ON public.package_day_close FOR INSERT TO authenticated
   WITH CHECK (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-DROP POLICY IF EXISTS "Hub-scoped update package_day_close" ON public.package_day_close;
 CREATE POLICY "Hub-scoped update package_day_close" ON public.package_day_close FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260710_bank_reconciliations.sql
@@ -1270,11 +1227,8 @@ CREATE TABLE IF NOT EXISTS public.bank_reconciliations (
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.bank_reconciliations ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Authenticated read bank_reconciliations" ON public.bank_reconciliations;
 CREATE POLICY "Authenticated read bank_reconciliations" ON public.bank_reconciliations FOR SELECT TO authenticated USING (true);
-DROP POLICY IF EXISTS "Authenticated insert bank_reconciliations" ON public.bank_reconciliations;
 CREATE POLICY "Authenticated insert bank_reconciliations" ON public.bank_reconciliations FOR INSERT TO authenticated WITH CHECK (true);
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260710_client_type_column.sql
@@ -1283,6 +1237,10 @@ ALTER TABLE public.cargo_entries      ADD COLUMN IF NOT EXISTS client_type text 
 ALTER TABLE public.manifests          ADD COLUMN IF NOT EXISTS client_type text CHECK (client_type IN ('Corporate','Individual'));
 ALTER TABLE public.marketing_entries  ADD COLUMN IF NOT EXISTS client_type text CHECK (client_type IN ('Corporate','Individual'));
 
+-- Resolve stale schema and new user roles
+ALTER TABLE public.corporate_route_rates ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS can_edit_remarks boolean NOT NULL DEFAULT false;
+ALTER TABLE public.corporate_route_rates ADD COLUMN IF NOT EXISTS minimum_amount NUMERIC(10, 2) NOT NULL DEFAULT 0;
 
 -- ============================================================
 -- FILE: supabase/migrations/20260710_debt_payment_columns.sql
@@ -1304,7 +1262,6 @@ ALTER TABLE public.manifests          ADD COLUMN IF NOT EXISTS payment_history j
 ALTER TABLE public.marketing_entries  ADD COLUMN IF NOT EXISTS debt_amount_paid numeric(12,2) NOT NULL DEFAULT 0;
 ALTER TABLE public.marketing_entries  ADD COLUMN IF NOT EXISTS payment_history jsonb NOT NULL DEFAULT '[]'::jsonb;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260710_eod_cash_register_columns.sql
 -- ============================================================
@@ -1317,7 +1274,6 @@ ALTER TABLE public.eod_records
   ADD COLUMN IF NOT EXISTS opening_balance numeric(12,2),
   ADD COLUMN IF NOT EXISTS physical_count  numeric(12,2);
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260710_expenses_id_text.sql
 -- ============================================================
@@ -1329,14 +1285,12 @@ ALTER TABLE public.eod_records
 ALTER TABLE public.expenses ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE public.expenses ALTER COLUMN id TYPE text USING id::text;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260710_expenses_mode_column.sql
 -- ============================================================
 ALTER TABLE public.expenses
   ADD COLUMN IF NOT EXISTS mode text,
   ADD COLUMN IF NOT EXISTS bank text;
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260710_hub_awb_counters.sql
@@ -1377,7 +1331,6 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.next_awb_number(TEXT) TO authenticated;
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260711_marketing_pricing_and_vj_settings.sql
@@ -1426,7 +1379,6 @@ INSERT INTO public.marketing_route_rates (route_name, bb_rate, mb_rate, sb_rate)
   ('LOS/Lagos - ENU/Enugu', 19500, 13000, 8000)
 ON CONFLICT (route_name) DO NOTHING;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260712_dedup_deliver_events.sql
 -- ============================================================
@@ -1458,7 +1410,6 @@ WHERE t.id = dup.id AND dup.rn > 1;
 CREATE UNIQUE INDEX IF NOT EXISTS tracking_events_one_deliver_per_cargo
   ON public.tracking_events (cargo_ref)
   WHERE event_type = 'DELIVER';
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260712_marketing_route_rates_unique_fix.sql
@@ -1499,7 +1450,6 @@ INSERT INTO public.marketing_route_rates (route_name, bb_rate, mb_rate, sb_rate)
   ('LOS/Lagos - ENU/Enugu', 19500, 13000, 8000)
 ON CONFLICT (route_name) DO NOTHING;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260713_proof_of_delivery_table.sql
 -- ============================================================
@@ -1539,7 +1489,6 @@ DROP POLICY IF EXISTS "Authenticated insert proof_of_delivery" ON public.proof_o
 CREATE POLICY "Authenticated read proof_of_delivery"   ON public.proof_of_delivery FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated insert proof_of_delivery" ON public.proof_of_delivery FOR INSERT TO authenticated WITH CHECK (true);
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260714_peek_awb_number.sql
 -- ============================================================
@@ -1568,7 +1517,6 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.peek_next_awb_number(TEXT) TO authenticated;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260715_cargo_entries_corporate_client_id.sql
 -- ============================================================
@@ -1591,6 +1539,44 @@ CREATE INDEX IF NOT EXISTS idx_cargo_entries_corporate_client_id
   ON public.cargo_entries (corporate_client_id)
   WHERE corporate_client_id IS NOT NULL;
 
+-- ============================================================
+-- FILE: supabase/migrations/20260716_minimum_charges.sql
+-- ============================================================
+-- Every rate table so far computes price as kg * rate_per_kg with no floor,
+-- but the business also quotes a flat minimum charge per airline+route for
+-- low weight brackets (e.g. Airline X, Lagos-Abuja, 1-13kg = a flat 8000
+-- minimum, even though 13 * rate_per_kg might come out lower). This is
+-- independent of content type -- it's a floor applied after the normal
+-- per-kg rate (standard/hub/special-goods) resolves. See CargoForm.tsx's
+-- resolveRate()/autoAmount for where the floor is applied.
+CREATE TABLE IF NOT EXISTS public.minimum_charges (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  airline          text NOT NULL,
+  route_name       text NOT NULL,
+  min_kg           numeric(10,2) NOT NULL CHECK (min_kg >= 0),
+  max_kg           numeric(10,2) CHECK (max_kg IS NULL OR max_kg > min_kg),
+  minimum_amount   numeric(12,2) NOT NULL,
+  updated_by       text,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (airline, route_name, min_kg)
+);
+
+CREATE INDEX IF NOT EXISTS minimum_charges_airline_route_idx ON public.minimum_charges(airline, route_name);
+
+REVOKE ALL ON TABLE public.minimum_charges FROM anon;
+ALTER TABLE public.minimum_charges ENABLE ROW LEVEL SECURITY;
+-- Not hub-scoped -- company-wide config, same access tier as
+-- special_goods_rates/content_types (super_admin/admin/accountant write,
+-- any authenticated read).
+DROP POLICY IF EXISTS "Authenticated read minimum_charges" ON public.minimum_charges;
+DROP POLICY IF EXISTS "Admins insert minimum_charges" ON public.minimum_charges;
+DROP POLICY IF EXISTS "Admins update minimum_charges" ON public.minimum_charges;
+DROP POLICY IF EXISTS "Admins delete minimum_charges" ON public.minimum_charges;
+CREATE POLICY "Authenticated read minimum_charges" ON public.minimum_charges FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins insert minimum_charges" ON public.minimum_charges FOR INSERT TO authenticated WITH CHECK (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins update minimum_charges" ON public.minimum_charges FOR UPDATE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins delete minimum_charges" ON public.minimum_charges FOR DELETE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
 
 -- ============================================================
 -- FILE: supabase/migrations/20260716_security_hardening.sql
@@ -1816,10 +1802,8 @@ CREATE POLICY "Authenticated read routing_hubs" ON public.routing_hubs FOR SELEC
 REVOKE ALL ON TABLE public.bank_reconciliations FROM anon;
 DROP POLICY IF EXISTS "Authenticated read bank_reconciliations"   ON public.bank_reconciliations;
 DROP POLICY IF EXISTS "Authenticated insert bank_reconciliations" ON public.bank_reconciliations;
-DROP POLICY IF EXISTS "Recon-role read bank_reconciliations" ON public.bank_reconciliations;
 CREATE POLICY "Recon-role read bank_reconciliations" ON public.bank_reconciliations FOR SELECT TO authenticated
   USING (public.current_user_role() IN ('super_admin', 'accountant'));
-DROP POLICY IF EXISTS "Recon-role insert bank_reconciliations" ON public.bank_reconciliations;
 CREATE POLICY "Recon-role insert bank_reconciliations" ON public.bank_reconciliations FOR INSERT TO authenticated
   WITH CHECK (public.current_user_role() IN ('super_admin', 'accountant'));
 
@@ -1832,7 +1816,6 @@ CREATE POLICY "Recon-role insert bank_reconciliations" ON public.bank_reconcilia
 REVOKE ALL ON TABLE public.proof_of_delivery FROM anon;
 DROP POLICY IF EXISTS "Authenticated read proof_of_delivery"   ON public.proof_of_delivery;
 DROP POLICY IF EXISTS "Authenticated insert proof_of_delivery" ON public.proof_of_delivery;
-DROP POLICY IF EXISTS "Hub-scoped read proof_of_delivery" ON public.proof_of_delivery;
 CREATE POLICY "Hub-scoped read proof_of_delivery" ON public.proof_of_delivery FOR SELECT TO authenticated
   USING (
     public.is_hub_unrestricted()
@@ -1897,6 +1880,237 @@ CREATE POLICY "Anon read tracking_events for delivery history" ON public.trackin
   FOR SELECT TO anon
   USING (event_type IN ('DEPART', 'ARRIVE', 'DELIVER'));
 
+-- ============================================================
+-- FILE: supabase/migrations/20260716_special_goods_rates.sql
+-- ============================================================
+-- Content types (Medical, Tyres, Documents, ...) were pure metadata with no
+-- rate attached. Some of them ("special goods") need their own per-airline
+-- pricing that varies by weight bracket instead of the flat route-based
+-- rate everything else uses -- e.g. Tyres on Airline X: 0-45kg = rate A,
+-- 46-100kg = rate B. is_special_goods flags which content types this
+-- applies to; special_goods_rates holds the actual per-airline kg-tier
+-- rows for flagged ones. See CargoForm.tsx's resolveRate() for how a
+-- matching tier takes priority over the normal hub/company rate cascade.
+ALTER TABLE public.content_types ADD COLUMN IF NOT EXISTS is_special_goods boolean NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS public.special_goods_rates (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_type_id  uuid NOT NULL REFERENCES public.content_types(id) ON DELETE CASCADE,
+  airline          text NOT NULL,
+  min_kg           numeric(10,2) NOT NULL CHECK (min_kg >= 0),
+  max_kg           numeric(10,2) CHECK (max_kg IS NULL OR max_kg > min_kg),
+  rate_per_kg      numeric(10,2) NOT NULL,
+  updated_by       text,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (content_type_id, airline, min_kg)
+);
+
+CREATE INDEX IF NOT EXISTS special_goods_rates_content_type_idx ON public.special_goods_rates(content_type_id);
+
+REVOKE ALL ON TABLE public.special_goods_rates FROM anon;
+ALTER TABLE public.special_goods_rates ENABLE ROW LEVEL SECURITY;
+-- Not hub-scoped -- company-wide config, same access tier as
+-- content_types/standard_cargo_rates (super_admin/admin/accountant write,
+-- any authenticated read -- staff pricing an entry need to read these
+-- without being able to change them).
+DROP POLICY IF EXISTS "Authenticated read special_goods_rates" ON public.special_goods_rates;
+DROP POLICY IF EXISTS "Admins insert special_goods_rates" ON public.special_goods_rates;
+DROP POLICY IF EXISTS "Admins update special_goods_rates" ON public.special_goods_rates;
+DROP POLICY IF EXISTS "Admins delete special_goods_rates" ON public.special_goods_rates;
+CREATE POLICY "Authenticated read special_goods_rates" ON public.special_goods_rates FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins insert special_goods_rates" ON public.special_goods_rates FOR INSERT TO authenticated WITH CHECK (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins update special_goods_rates" ON public.special_goods_rates FOR UPDATE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins delete special_goods_rates" ON public.special_goods_rates FOR DELETE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+
+-- ============================================================
+-- FILE: supabase/migrations/20260717_cargo_workflow_overhaul.sql
+-- ============================================================
+-- =============================================================
+-- EHI Multisystems — Cargo Workflow Overhaul Migration
+-- File: supabase/migrations/20260717_cargo_workflow_overhaul.sql
+-- Safe to run: all ADD COLUMN IF NOT EXISTS, no drops, no data
+-- changes, no existing rows touched.
+-- =============================================================
+
+-- ─── 1. HUBS: configurable shift start hour ──────────────────
+-- Controls the "cargo day" boundary per hub.
+-- Default 19 = 7 PM. Set lower (e.g. 18) for 6 PM start hubs.
+ALTER TABLE hubs
+  ADD COLUMN IF NOT EXISTS shift_start_hour INTEGER NOT NULL DEFAULT 19;
+
+-- ─── 2. CARGO ENTRIES: tag retrieval tracking ────────────────
+ALTER TABLE cargo_entries
+  ADD COLUMN IF NOT EXISTS retrieved          BOOLEAN      NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS retrieval_note     TEXT,
+  ADD COLUMN IF NOT EXISTS retrieved_at       TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS retrieved_by       TEXT;
+
+-- ─── 3. CARGO ENTRIES: debt clearance event tracking ─────────
+-- When a customer pays off a prior debt, a shadow entry is
+-- created so the payment is visible in today's ledger and EOD.
+ALTER TABLE cargo_entries
+  ADD COLUMN IF NOT EXISTS is_debt_clearance  BOOLEAN      NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS related_tx_id      TEXT;
+
+-- ─── 4. CARGO ENTRIES: office work link fields ───────────────
+-- Allows a retail-form entry to be linked to a corporate client
+-- (office work B2B) after the fact, or at point of entry when
+-- the consignee name matches a registered corp client.
+ALTER TABLE cargo_entries
+  ADD COLUMN IF NOT EXISTS linked_as_office_work   BOOLEAN      NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS reclassification_note   TEXT,
+  ADD COLUMN IF NOT EXISTS reclassification_by     TEXT,
+  ADD COLUMN IF NOT EXISTS reclassification_at     TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS original_amount         NUMERIC(12,2);
+  -- original_amount: preserved when reclassification adjusts the
+  -- billed amount to the office rate, so the audit trail always
+  -- shows what the retail rate would have been.
+
+-- ─── 5. CORPORATE CLIENTS: default rate fallback ─────────────
+-- Used when no route-specific rate row exists in
+-- corporate_route_rates for a given client+route combo.
+ALTER TABLE corporate_clients
+  ADD COLUMN IF NOT EXISTS default_rate_per_kg  NUMERIC(10,2);
+
+-- ─── 6. CUSTOMER WALLETS: new table ──────────────────────────
+-- One row per customer. Additional top-ups add to the same row.
+-- This is a liability: EHI holds this money for the customer.
+CREATE TABLE IF NOT EXISTS customer_wallets (
+  id                UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  hub_id            UUID         REFERENCES hubs(id),
+
+  -- Customer identity (staff-facing only — no customer portal)
+  customer_name     TEXT         NOT NULL,
+  customer_phone    TEXT,
+
+  -- Accumulating balance (one wallet per customer — confirmed)
+  opening_balance   NUMERIC(12,2) NOT NULL DEFAULT 0,
+  balance           NUMERIC(12,2) NOT NULL DEFAULT 0,
+  total_topped_up   NUMERIC(12,2) NOT NULL DEFAULT 0,
+  total_used        NUMERIC(12,2) NOT NULL DEFAULT 0,
+
+  -- Origin of the first credit
+  source_type       TEXT         NOT NULL
+    CHECK (source_type IN (
+      'airline_retrieval',  -- cargo retrieved; money left as credit
+      'advance_deposit',    -- customer paid in advance
+      'refund',             -- EHI refunding an overcharge
+      'manual_credit'       -- admin-created
+    )),
+  source_ref        TEXT,   -- e.g. original AWB of the retrieval
+  source_note       TEXT,   -- free text: "Cargo retrieved from Dana Air"
+
+  status            TEXT         NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'exhausted', 'frozen')),
+
+  created_by        TEXT         NOT NULL,
+  created_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+-- ─── 7. WALLET TRANSACTIONS: full audit trail ────────────────
+-- Every debit or credit to a wallet is a row here.
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_id       UUID         NOT NULL REFERENCES customer_wallets(id) ON DELETE CASCADE,
+  hub_id          UUID         REFERENCES hubs(id),
+
+  type            TEXT         NOT NULL
+    CHECK (type IN ('top_up', 'deduction', 'refund', 'adjustment')),
+  amount          NUMERIC(12,2) NOT NULL,      -- always positive
+  balance_before  NUMERIC(12,2) NOT NULL,
+  balance_after   NUMERIC(12,2) NOT NULL,
+
+  -- Link to the cargo entry this deduction paid for (deductions only)
+  cargo_ref       TEXT,
+  cargo_entry_id  UUID,
+
+  description     TEXT,
+  logged_by       TEXT         NOT NULL,
+  created_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+-- RLS policies for customer_wallets & wallet_transactions
+ALTER TABLE customer_wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wallet_transactions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow full access to customer_wallets" ON customer_wallets;
+CREATE POLICY "Allow full access to customer_wallets" ON customer_wallets
+  FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow full access to wallet_transactions" ON wallet_transactions;
+CREATE POLICY "Allow full access to wallet_transactions" ON wallet_transactions
+  FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- ─── 8. CARGO ENTRIES: wallet payment tracking & constraint update ───
+-- When a cargo entry is paid wholly or partly from a wallet.
+ALTER TABLE cargo_entries
+  ADD COLUMN IF NOT EXISTS wallet_id               UUID
+    REFERENCES customer_wallets(id),
+  ADD COLUMN IF NOT EXISTS wallet_deduction_amount NUMERIC(12,2);
+
+-- Update check constraints on all 4 transaction tables to allow 'Wallet' payment mode
+ALTER TABLE cargo_entries DROP CONSTRAINT IF EXISTS cargo_entries_receipt_mode_check;
+ALTER TABLE cargo_entries ADD CONSTRAINT cargo_entries_receipt_mode_check
+  CHECK (receipt_mode IN ('Cash', 'Transfer', 'TransferCash', 'POS', 'Debt', 'Wallet', 'Complementary'));
+
+ALTER TABLE manifests DROP CONSTRAINT IF EXISTS manifests_payment_mode_check;
+ALTER TABLE manifests ADD CONSTRAINT manifests_payment_mode_check
+  CHECK (payment_mode IN ('Cash', 'Transfer', 'TransferCash', 'POS', 'Debt', 'Wallet', 'Complementary'));
+
+ALTER TABLE marketing_entries DROP CONSTRAINT IF EXISTS marketing_entries_payment_mode_check;
+ALTER TABLE marketing_entries ADD CONSTRAINT marketing_entries_payment_mode_check
+  CHECK (payment_mode IN ('Cash', 'Transfer', 'TransferCash', 'POS', 'Debt', 'Wallet', 'Complementary'));
+
+ALTER TABLE package_entries DROP CONSTRAINT IF EXISTS package_entries_payment_mode_check;
+ALTER TABLE package_entries ADD CONSTRAINT package_entries_payment_mode_check
+  CHECK (payment_mode IN ('Cash', 'Transfer', 'TransferCash', 'POS', 'Debt', 'Wallet', 'Complementary'));
+
+-- ─── 9. INDEXES for performance ──────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_cargo_retrieved
+  ON cargo_entries(hub_id, retrieved)
+  WHERE retrieved = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_cargo_debt_clearance
+  ON cargo_entries(hub_id, is_debt_clearance, created_at)
+  WHERE is_debt_clearance = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_cargo_office_work
+  ON cargo_entries(hub_id, linked_as_office_work)
+  WHERE linked_as_office_work = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_wallets_name
+  ON customer_wallets(customer_name, hub_id);
+
+CREATE INDEX IF NOT EXISTS idx_wallets_phone
+  ON customer_wallets(customer_phone)
+  WHERE customer_phone IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_wallet_txns_wallet
+  ON wallet_transactions(wallet_id, created_at DESC);
+
+-- ─── 10. REPAIR HISTORICAL OFFICE WORK KG & TAG NUMBERS ──────
+-- Fixes past entries where total_kg was saved as 0 due to custom detail format in Office Work intakes
+UPDATE cargo_entries
+SET total_kg = ROUND(amount / NULLIF(CAST(substring(remark from 'Gate Weight Finalized \((\d+) N/KG Contract\)') AS NUMERIC), 0))
+WHERE (total_kg = 0 OR total_kg IS NULL)
+  AND amount > 0
+  AND remark LIKE 'Gate Weight Finalized (%';
+
+-- Repair awb_tag_number where it was erroneously set to consignee_name (e.g. 'SLOT')
+UPDATE cargo_entries
+SET awb_tag_number = entry_ref
+WHERE awb_tag_number = consignee_name OR awb_tag_number IS NULL OR awb_tag_number = '';
+
+-- ─── 11. RECLASSIFY MANUAL RETRIEVAL ENTRIES TO WALLET ───────
+-- Converts entries where staff manually typed 'RETRIVAL' in remarks from Cash to Wallet mode,
+-- so they no longer falsely inflate today's cash-in-hand tally.
+UPDATE cargo_entries
+SET receipt_mode = 'Wallet',
+    wallet_deduction_amount = amount
+WHERE receipt_mode = 'Cash'
+  AND (remark LIKE '%RETRIVAL%' OR remark LIKE '%RETRIEVAL%');
 
 -- ============================================================
 -- FILE: supabase/migrations/20260717_pending_corporate_intakes.sql
@@ -1955,7 +2169,6 @@ CREATE POLICY "Hub-scoped insert pending_corporate_intakes" ON public.pending_co
 CREATE POLICY "Hub-scoped delete pending_corporate_intakes" ON public.pending_corporate_intakes FOR DELETE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260718_package_tracking.sql
 -- ============================================================
@@ -1978,7 +2191,6 @@ GRANT SELECT (entry_ref, customer_name, destination, content_type, status)
 DROP POLICY IF EXISTS "Anon read package_entries for tracking" ON public.package_entries;
 CREATE POLICY "Anon read package_entries for tracking" ON public.package_entries
   FOR SELECT TO anon USING (true);
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260719_atomic_corporate_debt.sql
@@ -2028,7 +2240,6 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.increment_corporate_debt(uuid, numeric) TO authenticated;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260719_package_payment_columns.sql
 -- ============================================================
@@ -2053,7 +2264,6 @@ ALTER TABLE public.package_entries ADD COLUMN IF NOT EXISTS pos_approval_code te
 ALTER TABLE public.package_entries ADD COLUMN IF NOT EXISTS confirmed_by text;
 ALTER TABLE public.package_entries ADD COLUMN IF NOT EXISTS confirmed_at timestamptz;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260720_marketing_bag_weights.sql
 -- ============================================================
@@ -2066,7 +2276,6 @@ ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS bb_kg numeric(10,2
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS mb_kg numeric(10,2) NOT NULL DEFAULT 0;
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS sb_kg numeric(10,2) NOT NULL DEFAULT 0;
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS total_kg numeric(10,2) GENERATED ALWAYS AS (bb_kg + mb_kg + sb_kg) STORED;
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260721_marketing_awb_tag_number.sql
@@ -2089,7 +2298,6 @@ REVOKE ALL ON TABLE public.marketing_entries FROM anon;
 GRANT SELECT (entry_ref, awb_tag_number, customer_name, route, status)
   ON public.marketing_entries TO anon;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260722_package_weight_and_contents.sql
 -- ============================================================
@@ -2109,7 +2317,6 @@ ALTER TABLE public.package_entries ADD COLUMN IF NOT EXISTS contents  text;
 REVOKE ALL ON TABLE public.package_entries FROM anon;
 GRANT SELECT (entry_ref, customer_name, destination, content_type, total_pcs, total_kg, contents, status)
   ON public.package_entries TO anon;
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260723_excess_baggage_airlines.sql
@@ -2207,7 +2414,6 @@ ALTER TABLE public.user_profiles ADD CONSTRAINT user_profiles_role_check CHECK (
   'super_admin','admin','cargo_agent','marketing_agent',
   'baggage_agent','scanner','driver','accountant','auditor','office_work'));
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260724_staff_view_overrides.sql
 -- ============================================================
@@ -2222,7 +2428,6 @@ ALTER TABLE public.user_profiles ADD CONSTRAINT user_profiles_role_check CHECK (
 -- so this ships with zero behavior change for every staff member until an
 -- admin explicitly sets one.
 ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS view_overrides text[];
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260725_payment_confirmation_columns.sql
@@ -2257,7 +2462,6 @@ ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS pos_approval_code 
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS confirmed_by text;
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS confirmed_at timestamptz;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260726_outbound_arrivals_indexes.sql
 -- ============================================================
@@ -2276,7 +2480,6 @@ ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS confirmed_at times
 CREATE INDEX IF NOT EXISTS idx_cargo_entries_hub_status_created ON public.cargo_entries(hub_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_marketing_entries_hub_status_created ON public.marketing_entries(hub_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_package_entries_hub_status_created ON public.package_entries(hub_id, status, created_at DESC);
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260727_hub_airline_route_rates.sql
@@ -2383,7 +2586,6 @@ CREATE POLICY "Hub rate editors delete hub_airline_route_rates" ON public.hub_ai
     OR (public.current_user_role() = 'accountant' AND hub_id = public.current_user_hub_id())
   );
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260728_reserve_awb_block.sql
 -- ============================================================
@@ -2442,8 +2644,6 @@ GRANT EXECUTE ON FUNCTION public.reserve_awb_block(TEXT, INTEGER) TO authenticat
 ALTER TABLE public.marketing_entries DROP CONSTRAINT IF EXISTS marketing_entries_awb_tag_number_key;
 ALTER TABLE public.marketing_entries ADD CONSTRAINT marketing_entries_awb_tag_number_key UNIQUE (awb_tag_number);
 
-
-
 -- ============================================================
 -- FILE: supabase/migrations/20260729_decrement_corporate_debt.sql
 -- ============================================================
@@ -2488,7 +2688,6 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.decrement_corporate_debt(uuid, numeric) TO authenticated;
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260730_bank_reference_columns.sql
 -- ============================================================
@@ -2513,7 +2712,6 @@ ALTER TABLE public.manifests ADD COLUMN IF NOT EXISTS bank_alert_text text;
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS bank_reference text;
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS bank_sender text;
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS bank_alert_text text;
-
 
 -- ============================================================
 -- FILE: supabase/migrations/20260731_backfill_view_overrides_more_menu.sql
@@ -2587,7 +2785,6 @@ WHERE view_overrides IS NOT NULL;
 
 DROP FUNCTION public._more_menu_defaults_for_role(text);
 
-
 -- ============================================================
 -- FILE: supabase/migrations/20260801_cargo_day_close.sql
 -- ============================================================
@@ -2658,7 +2855,9 @@ DROP POLICY IF EXISTS "Hub-scoped update cargo_day_close" ON public.cargo_day_cl
 CREATE POLICY "Hub-scoped update cargo_day_close" ON public.cargo_day_close FOR UPDATE TO authenticated
   USING (hub_id = public.current_user_hub_id() OR hub_id IS NULL OR public.is_hub_unrestricted());
 
-
+-- ============================================================
+-- FILE: supabase/migrations/20260802_customer_credit_wallets.sql
+-- ============================================================
 -- ============================================================
 -- FILE: supabase/migrations/20260802_customer_credit_wallets.sql
 -- ============================================================
@@ -2707,6 +2906,7 @@ CREATE POLICY "Allow full access to customer_wallets" ON public.customer_wallets
 DROP POLICY IF EXISTS "Allow full access to wallet_transactions" ON public.wallet_transactions;
 CREATE POLICY "Allow full access to wallet_transactions" ON public.wallet_transactions FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+-- Also allow public access if anon key is used
 DROP POLICY IF EXISTS "Allow public access to customer_wallets" ON public.customer_wallets;
 CREATE POLICY "Allow public access to customer_wallets" ON public.customer_wallets FOR ALL TO public USING (true) WITH CHECK (true);
 
@@ -2739,7 +2939,233 @@ ALTER TABLE public.marketing_entries ADD CONSTRAINT marketing_entries_payment_mo
 ALTER TABLE public.package_entries DROP CONSTRAINT IF EXISTS package_entries_payment_mode_check;
 ALTER TABLE public.package_entries ADD CONSTRAINT package_entries_payment_mode_check CHECK (payment_mode IN ('Cash', 'Transfer', 'TransferCash', 'POS', 'Debt', 'Wallet', 'Complementary'));
 
+-- ============================================================
+-- FILE: supabase/migrations/20260802_hubs_write_policies.sql
+-- ============================================================
+-- The hubs table has only ever had a SELECT RLS policy (20260706_full_schema.sql)
+-- -- no INSERT, no UPDATE. That means Settings.tsx's existing hub
+-- active/inactive toggle (handleToggleHub, calling .update() on this table)
+-- has likely been silently failing at the database layer since it shipped,
+-- since its result was never checked. It also means the new "Add Hub" form
+-- (Settings.tsx) cannot work without an INSERT policy. Both are fixed here,
+-- with the same predicate used for admin-gated tables elsewhere
+-- (hub_route_rates, hub_airline_route_rates): super_admin/admin only --
+-- unlike those two rate tables, hub creation/editing has no accountant
+-- carve-out, since hubs are company-wide infrastructure, not a hub-scoped
+-- pricing override.
+DROP POLICY IF EXISTS "Admins insert hubs" ON public.hubs;
+CREATE POLICY "Admins insert hubs" ON public.hubs FOR INSERT TO authenticated
+  WITH CHECK (public.current_user_role() IN ('super_admin', 'admin'));
 
+DROP POLICY IF EXISTS "Admins update hubs" ON public.hubs;
+CREATE POLICY "Admins update hubs" ON public.hubs FOR UPDATE TO authenticated
+  USING (public.current_user_role() IN ('super_admin', 'admin'))
+  WITH CHECK (public.current_user_role() IN ('super_admin', 'admin'));
+
+-- ============================================================
+-- FILE: supabase/migrations/20260803_excess_baggage_airlines_delete_policy.sql
+-- ============================================================
+-- excess_baggage_airlines (20260723_excess_baggage_airlines.sql) enabled RLS
+-- and added SELECT/INSERT/UPDATE policies but no DELETE policy, yet
+-- ExcessBaggageAirlines.tsx's "Remove airline" button calls .delete() on
+-- this table -- with RLS enabled and no matching policy, Postgres denies by
+-- default, so that button has likely been silently failing since it shipped.
+-- Matches the broad "any authenticated user" access tier the other three
+-- policies on this table already use (not the stricter admin-only tier used
+-- by hubs/hub_route_rates), since this table has never distinguished roles.
+DROP POLICY IF EXISTS "Authenticated delete excess_baggage_airlines" ON public.excess_baggage_airlines;
+CREATE POLICY "Authenticated delete excess_baggage_airlines" ON public.excess_baggage_airlines FOR DELETE TO authenticated USING (true);
+
+-- ============================================================
+-- FILE: supabase/migrations/20260804_content_types.sql
+-- ============================================================
+-- Cargo/package content categories (Medical, Documents, Tyres, ...) were a
+-- hardcoded constant with no DB table and no admin UI -- adding a new
+-- category required a code change and redeploy. This gives them the same
+-- registry-table treatment excess_baggage_airlines already has.
+CREATE TABLE IF NOT EXISTS public.content_types (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       text UNIQUE NOT NULL,
+  active     boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.content_types ENABLE ROW LEVEL SECURITY;
+-- Not hub-scoped -- company-wide config, same access tier as
+-- standard_cargo_rates/marketing_route_rates (super_admin/admin/accountant
+-- write, any authenticated read).
+DROP POLICY IF EXISTS "Authenticated read content_types" ON public.content_types;
+DROP POLICY IF EXISTS "Admins insert content_types" ON public.content_types;
+DROP POLICY IF EXISTS "Admins update content_types" ON public.content_types;
+DROP POLICY IF EXISTS "Admins delete content_types" ON public.content_types;
+CREATE POLICY "Authenticated read content_types" ON public.content_types FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins insert content_types" ON public.content_types FOR INSERT TO authenticated WITH CHECK (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins update content_types" ON public.content_types FOR UPDATE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins delete content_types" ON public.content_types FOR DELETE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+
+-- Seed from the hardcoded list this table replaces. 'Other' is not seeded --
+-- it's a synthetic sentinel appended at read time, same convention as
+-- hubRoutes.ts/airlines.ts (CargoForm.tsx already branches on
+-- contentType === "Other" for a free-text override, so it must stay out of
+-- the DB-backed list, not become a deletable/renamable row).
+INSERT INTO public.content_types (name) VALUES
+  ('Medical'),
+  ('Clothes & Shoes'),
+  ('Documents'),
+  ('Chairs/Furniture'),
+  ('Tyres'),
+  ('Phones/Electronics'),
+  ('Cosmetics'),
+  ('Package/Parcel'),
+  ('Baby Items'),
+  ('SIM Cards'),
+  ('Clearance'),
+  ('Courier')
+ON CONFLICT (name) DO NOTHING;
+
+-- ============================================================
+-- FILE: supabase/migrations/20260805_backfill_view_overrides_content_types.sql
+-- ============================================================
+-- More:ContentTypes is a new More-menu screen (src/lib/permissions.ts
+-- STATIC_VIEWS). getAllowedTabs() treats a non-null view_overrides as the
+-- exact, non-additive list of what a user can see, so anyone with a
+-- customized view list set before this screen existed would never see it
+-- even though their role (super_admin/admin/accountant) grants it by
+-- default -- same backfill pattern as 20260731_backfill_view_overrides_more_menu.sql.
+
+UPDATE public.user_profiles
+SET view_overrides = (
+  SELECT ARRAY(SELECT DISTINCT unnest(view_overrides || ARRAY['More:ContentTypes']))
+)
+WHERE view_overrides IS NOT NULL
+  AND role IN ('super_admin', 'admin', 'accountant');
+
+-- ============================================================
+-- FILE: supabase/migrations/20260806_expense_categories.sql
+-- ============================================================
+-- Expense categories were a hardcoded constants.ts list, independently
+-- drifted from ExpensesTab.tsx's own hardcoded defaultBudgets keys (7 items
+-- vs 6, different names -- "Card/Cardboard"+"Marker" vs "Cars"). Budgets
+-- themselves were localStorage-only, keyed per month per device, so a
+-- budget set on one terminal was invisible everywhere else despite the
+-- month-scoped key implying they were meant to vary over time. This
+-- replaces both with one canonical category list plus real per-month
+-- budget rows.
+CREATE TABLE IF NOT EXISTS public.expense_categories (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       text UNIQUE NOT NULL,
+  active     boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.expense_budgets (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  category_id uuid NOT NULL REFERENCES public.expense_categories(id) ON DELETE CASCADE,
+  month       text NOT NULL, -- 'YYYY-MM'
+  budget      numeric(12,2) NOT NULL DEFAULT 0,
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(category_id, month)
+);
+
+ALTER TABLE public.expense_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expense_budgets ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Authenticated read expense_categories" ON public.expense_categories;
+DROP POLICY IF EXISTS "Admins insert expense_categories" ON public.expense_categories;
+DROP POLICY IF EXISTS "Admins update expense_categories" ON public.expense_categories;
+DROP POLICY IF EXISTS "Admins delete expense_categories" ON public.expense_categories;
+CREATE POLICY "Authenticated read expense_categories" ON public.expense_categories FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins insert expense_categories" ON public.expense_categories FOR INSERT TO authenticated WITH CHECK (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins update expense_categories" ON public.expense_categories FOR UPDATE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins delete expense_categories" ON public.expense_categories FOR DELETE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+
+DROP POLICY IF EXISTS "Authenticated read expense_budgets" ON public.expense_budgets;
+DROP POLICY IF EXISTS "Admins insert expense_budgets" ON public.expense_budgets;
+DROP POLICY IF EXISTS "Admins update expense_budgets" ON public.expense_budgets;
+CREATE POLICY "Authenticated read expense_budgets" ON public.expense_budgets FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins insert expense_budgets" ON public.expense_budgets FOR INSERT TO authenticated WITH CHECK (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins update expense_budgets" ON public.expense_budgets FOR UPDATE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+
+-- Canonical list decided as constants.ts's version (Card/Cardboard, Marker
+-- kept; "Cars" from ExpensesTab.tsx's separately-drifted list dropped).
+INSERT INTO public.expense_categories (name) VALUES
+  ('Card/Cardboard'),
+  ('Carrier'),
+  ('Transport'),
+  ('Bus Hire'),
+  ('Sack & Nylon'),
+  ('Marker'),
+  ('Miscellaneous')
+ON CONFLICT (name) DO NOTHING;
+
+-- ============================================================
+-- FILE: supabase/migrations/20260807_backfill_view_overrides_expense_categories.sql
+-- ============================================================
+-- More:ExpenseCategories is a new More-menu screen (src/lib/permissions.ts
+-- STATIC_VIEWS) -- same backfill need as 20260805_backfill_view_overrides_content_types.sql.
+
+UPDATE public.user_profiles
+SET view_overrides = (
+  SELECT ARRAY(SELECT DISTINCT unnest(view_overrides || ARRAY['More:ExpenseCategories']))
+)
+WHERE view_overrides IS NOT NULL
+  AND role IN ('super_admin', 'admin', 'accountant');
+
+-- ============================================================
+-- FILE: supabase/migrations/20260808_banks.sql
+-- ============================================================
+-- Bank list was a hardcoded constants.ts export (10 banks), independently
+-- drifted from BankReconciliation.tsx's own 5-bank BankFormat dropdown and
+-- TransactionLedger.tsx's edit-modal 5-bank dropdown (different casing,
+-- e.g. "Access Bank" vs "Access"). This gives it one canonical DB-backed
+-- list; csv_format lets BankReconciliation.tsx's dropdown pick the right
+-- statement-parser variant without a second hardcoded list -- the parser
+-- logic itself (parseNigerianBankCSV) stays code, unaffected.
+CREATE TABLE IF NOT EXISTS public.banks (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       text UNIQUE NOT NULL,
+  csv_format text, -- one of BankReconciliation.tsx's parser keys ('UBA'|'GTBank'|'Access'|'Zenith'|'FirstBank'), NULL if unsupported
+  active     boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.banks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Authenticated read banks" ON public.banks;
+DROP POLICY IF EXISTS "Admins insert banks" ON public.banks;
+DROP POLICY IF EXISTS "Admins update banks" ON public.banks;
+DROP POLICY IF EXISTS "Admins delete banks" ON public.banks;
+CREATE POLICY "Authenticated read banks" ON public.banks FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins insert banks" ON public.banks FOR INSERT TO authenticated WITH CHECK (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins update banks" ON public.banks FOR UPDATE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+CREATE POLICY "Admins delete banks" ON public.banks FOR DELETE TO authenticated USING (public.current_user_role() IN ('super_admin','admin','accountant'));
+
+INSERT INTO public.banks (name, csv_format) VALUES
+  ('UBA', 'UBA'),
+  ('GTBank', 'GTBank'),
+  ('Access', 'Access'),
+  ('Zenith', 'Zenith'),
+  ('First Bank', 'FirstBank'),
+  ('Polaris', NULL),
+  ('Keystone', NULL),
+  ('Fidelity', NULL),
+  ('Sterling', NULL)
+ON CONFLICT (name) DO NOTHING;
+
+-- ============================================================
+-- FILE: supabase/migrations/20260809_backfill_view_overrides_banks.sql
+-- ============================================================
+-- More:Banks is a new More-menu screen (src/lib/permissions.ts
+-- STATIC_VIEWS) -- same backfill need as 20260805_backfill_view_overrides_content_types.sql.
+
+UPDATE public.user_profiles
+SET view_overrides = (
+  SELECT ARRAY(SELECT DISTINCT unnest(view_overrides || ARRAY['More:Banks']))
+)
+WHERE view_overrides IS NOT NULL
+  AND role IN ('super_admin', 'admin', 'accountant');
 
 -- ============================================================
 -- FILE: supabase/migrations/20260810_wallet_atomicity_and_isolation.sql
