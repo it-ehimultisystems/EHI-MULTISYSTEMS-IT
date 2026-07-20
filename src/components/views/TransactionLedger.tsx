@@ -61,6 +61,7 @@ export const TransactionLedger = ({
   dateRange,
   onDateRangeChange,
   activeShift,
+  shifts,
   onStartShift,
   onEndShift,
 }: {
@@ -74,6 +75,7 @@ export const TransactionLedger = ({
   dateRange?: { start: string; end: string };
   onDateRangeChange?: (range: { start: string; end: string }) => void;
   activeShift?: any;
+  shifts?: any[];
   onStartShift?: () => void;
   onEndShift?: () => void;
 }) => {
@@ -82,8 +84,6 @@ export const TransactionLedger = ({
   const banks = useBanks();
   const [showPrintHistory, setShowPrintHistory] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
-  const [showStartConfirm, setShowStartConfirm] = useState(false);
-  const [showEndConfirm, setShowEndConfirm] = useState(false);
   // Marketing entries store bag counts inside the composed `detail` string,
   // not as discrete Transaction fields, so the edit modal keeps its own
   // working copy (seeded by parsing `detail` in handleEditClick) and
@@ -160,9 +160,22 @@ export const TransactionLedger = ({
     };
   }, []);
 
-  // Current shift boundary — hub shift_start_hour from user object, default 18 (6 PM)
+  // Current shift boundary. When an explicit hub_shifts shift is open, this
+  // ledger's own "current shift" filter uses ITS real started_at -- it would
+  // be confusing for the same screen that has the Start/End Day buttons to
+  // ignore the very shift those buttons control. Falls back to the fixed
+  // hub shift_start_hour boundary (default 18 / 6PM) when no shift is open,
+  // which is still what Analytics/AirlinePerformance/EODReconciliation use
+  // for their own "shift" period option -- those weren't migrated to the
+  // explicit-shift system in this pass, so the two definitions intentionally
+  // still coexist outside this one screen.
   const shiftHour: number = (user as any).shift_start_hour ?? 18;
-  const shiftBoundary = useMemo(() => getShiftBoundary(shiftHour), [shiftHour]);
+  const shiftBoundary = useMemo(() => {
+    if (activeShift?.started_at) {
+      return { start: new Date(activeShift.started_at), end: new Date() };
+    }
+    return getShiftBoundary(shiftHour);
+  }, [shiftHour, activeShift]);
 
   const entries = useMemo(() => {
     const list: Entry[] = [
@@ -946,19 +959,45 @@ export const TransactionLedger = ({
       return;
     }
 
-    const priorRetrievedAmount = (entry.raw as any)?.retrieved_amount || 0;
+    // entry.raw is the Transaction (see the `entries` useMemo above, which
+    // sets `raw: t` on every row) -- the real cargo_entries DB row one level
+    // further down is Transaction.raw, set at EHIApp.tsx's fetch. Reading
+    // retrieved_amount off entry.raw directly always resolved to undefined,
+    // so the just-completed retrieval was invisible (e.g. in DebtorsTab,
+    // which reads t.raw?.retrieved_amount) until the next full refetch.
+    const priorRaw = (entry.raw as any)?.raw || {};
+    const entryAmount = (entry.raw as any)?.amount ?? priorRaw.amount ?? 0;
+    const priorRetrievedAmount = priorRaw.retrieved_amount || 0;
     const newRetrievedAmount = priorRetrievedAmount + data.retrievedValue;
-    const fullyRetrieved = newRetrievedAmount >= (entry.raw as any)?.amount;
+    const fullyRetrieved = newRetrievedAmount >= entryAmount;
+    const newStatus = fullyRetrieved ? 'Retrieved' : priorRaw.status;
     onUpdateTx({
-      ...entry.raw,
-      retrieved_amount: newRetrievedAmount,
-      retrieved_pieces: ((entry.raw as any)?.retrieved_pieces || 0) + data.retrievedPieces,
-      retrieved_kg: ((entry.raw as any)?.retrieved_kg || 0) + data.retrievedKg,
+      ...(entry.raw as any),
+      raw: {
+        ...priorRaw,
+        retrieved_amount: newRetrievedAmount,
+        retrieved_pieces: (priorRaw.retrieved_pieces || 0) + data.retrievedPieces,
+        retrieved_kg: (priorRaw.retrieved_kg || 0) + data.retrievedKg,
+        retrieved: fullyRetrieved,
+        status: newStatus,
+      },
       retrieved: fullyRetrieved,
-      status: fullyRetrieved ? 'Retrieved' : (entry.raw as any)?.status,
+      retrievedAt: new Date().toISOString(),
+      retrievedBy: user.name,
+      status: newStatus,
     });
 
-    showToast({ message: `Successfully deposited ₦${fmt(data.retrievedValue)} to ${customerName}'s wallet!`, type: 'success' });
+    // Report what the RPC actually did, not the full retrieved value --
+    // an unpaid-debt or already-paid-in-full retrieval can send ₦0 (or
+    // less than the full amount) to the wallet, with the rest clearing debt.
+    const refund = result.walletRefund ?? 0;
+    const debtCleared = result.debtReduction ?? 0;
+    const message = refund > 0 && debtCleared > 0
+      ? `₦${fmt(debtCleared)} debt cleared and ₦${fmt(refund)} deposited to ${customerName}'s wallet!`
+      : refund > 0
+        ? `Successfully deposited ₦${fmt(refund)} to ${customerName}'s wallet!`
+        : `₦${fmt(debtCleared)} debt cleared for ${customerName}. No wallet refund was due.`;
+    showToast({ message, type: 'success' });
     setViewingDetail(null);
     setRetrievalModalEntry(null);
   };
@@ -1002,25 +1041,45 @@ export const TransactionLedger = ({
   const totalAmount = filteredEntries.reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
   const cashAmount = filteredEntries.filter(e => e.mode === 'Cash').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
 
-  // Insert shift markers into the visible array.
+  // Insert shift start/end markers into the visible array. `shifts` (all of
+  // today's, open or closed) is preferred so both "Day started" and "Day
+  // ended" markers show and survive a shift closing (activeShift alone goes
+  // back to null the moment a shift ends, which would erase the marker);
+  // falls back to just the single open shift if a caller doesn't pass the
+  // fuller list.
+  const shiftsToMark = shifts && shifts.length > 0 ? shifts : (activeShift ? [activeShift] : []);
   const displayEntries = useMemo(() => {
     let result = [...filteredEntries];
-    if (activeShift) {
+    shiftsToMark.forEach((s: any) => {
       result.push({
-        id: `shift-start-${activeShift.id}`,
-        time: new Date(activeShift.started_at).toISOString().split('T')[1].slice(0, 5),
+        id: `shift-start-${s.id}`,
+        time: new Date(s.started_at).toISOString().split('T')[1].slice(0, 5),
         type: 'shift-marker',
         name: 'SHIFT STARTED',
-        detail: `Day started at ${new Date(activeShift.started_at).toLocaleString()}`,
+        detail: `Day started at ${new Date(s.started_at).toLocaleString()}`,
         amount: 0,
         mode: '',
         status: '',
         source: 'transaction',
-        raw: activeShift,
+        raw: s,
       });
-    }
+      if (s.ended_at) {
+        result.push({
+          id: `shift-end-${s.id}`,
+          time: new Date(s.ended_at).toISOString().split('T')[1].slice(0, 5),
+          type: 'shift-marker',
+          name: 'SHIFT ENDED',
+          detail: `Day ended at ${new Date(s.ended_at).toLocaleString()}`,
+          amount: 0,
+          mode: '',
+          status: '',
+          source: 'transaction',
+          raw: s,
+        });
+      }
+    });
     return result;
-  }, [filteredEntries, activeShift]);
+  }, [filteredEntries, shiftsToMark]);
 
   const tableRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
@@ -1699,19 +1758,38 @@ export const TransactionLedger = ({
                 </div>
               </section>
 
-              {/* Shift Controls */}
-              {!viewOnly && (
+              {/* Shift Controls -- confirmations go through the shared
+                  useConfirm() dialog (z-[9999]) rather than a hand-rolled
+                  overlay, so they render above this detail popup (z-[60])
+                  instead of getting stuck behind its backdrop. */}
+              {!viewOnly && (onStartShift || onEndShift) && (
                 <div className="flex gap-2 border-t border-[var(--color-border)] pt-4">
                   {!activeShift ? (
-                    <button 
-                      onClick={() => setShowStartConfirm(true)}
+                    <button
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Start the Day?',
+                          message: "This will officially open the station's shift, tracking all new sales under this shift until you close it.",
+                          confirmLabel: 'Yes, Start Day',
+                          tone: 'default',
+                        });
+                        if (ok) onStartShift && onStartShift();
+                      }}
                       className="flex-1 h-10 rounded-lg bg-[var(--color-success)] hover:bg-emerald-600 text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg"
                     >
                       Start Day
                     </button>
                   ) : (
-                    <button 
-                      onClick={() => setShowEndConfirm(true)}
+                    <button
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'End the Day?',
+                          message: 'This will close the current shift and generate the final sales analysis.',
+                          confirmLabel: 'Yes, End Day',
+                          tone: 'danger',
+                        });
+                        if (ok) onEndShift && onEndShift();
+                      }}
                       className="flex-1 h-10 rounded-lg bg-[var(--color-error)] hover:bg-red-600 text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg"
                     >
                       End Day
@@ -2420,35 +2498,6 @@ export const TransactionLedger = ({
         transactions={transactions}
         onFilterByCustomer={(name) => setSearchQuery(name)}
       />
-      {showStartConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[var(--color-surface-card)] border border-[var(--color-surface-2)] rounded-xl w-full max-w-sm shadow-2xl p-6 flex flex-col gap-4 text-center">
-            <h3 className="text-[16px] font-bold text-white">Start the Day?</h3>
-            <p className="text-[13px] text-[var(--color-muted)]">
-              This will officially open the station's shift, tracking all new sales under this shift until you close it.
-            </p>
-            <div className="flex gap-2 mt-2">
-              <button onClick={() => setShowStartConfirm(false)} className="flex-1 py-2 rounded-lg bg-[var(--color-surface-1)] text-white text-[13px] font-bold hover:bg-[var(--color-surface-2)] transition-colors">Cancel</button>
-              <button onClick={() => { setShowStartConfirm(false); onStartShift && onStartShift(); }} className="flex-1 py-2 rounded-lg bg-[var(--color-success)] text-[var(--color-obsidian)] text-[13px] font-bold hover:bg-emerald-600 transition-colors">Yes, Start Day</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showEndConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[var(--color-surface-card)] border border-[var(--color-surface-2)] rounded-xl w-full max-w-sm shadow-2xl p-6 flex flex-col gap-4 text-center">
-            <h3 className="text-[16px] font-bold text-white">End the Day?</h3>
-            <p className="text-[13px] text-[var(--color-muted)]">
-              This will close the current shift and generate the final sales analysis.
-            </p>
-            <div className="flex gap-2 mt-2">
-              <button onClick={() => setShowEndConfirm(false)} className="flex-1 py-2 rounded-lg bg-[var(--color-surface-1)] text-white text-[13px] font-bold hover:bg-[var(--color-surface-2)] transition-colors">Cancel</button>
-              <button onClick={() => { setShowEndConfirm(false); onEndShift && onEndShift(); }} className="flex-1 py-2 rounded-lg bg-[var(--color-error)] text-white text-[13px] font-bold hover:bg-red-600 transition-colors">Yes, End Day</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

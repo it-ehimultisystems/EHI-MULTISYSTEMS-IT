@@ -159,18 +159,12 @@ const ScoreCard = ({ label, icon: Icon, color, bg, borderColor, total, sub1, sub
   </div>
 );
 
-export const Dashboard = ({ 
-  user, 
+export const Dashboard = ({
+  user,
   transactions,
-  activeShift,
-  onStartShift,
-  onEndShift
-}: { 
-  user: User; 
+}: {
+  user: User;
   transactions: Transaction[];
-  activeShift?: any;
-  onStartShift?: () => void;
-  onEndShift?: () => void;
 }) => {
     const today = useMemo(() => {
       const n = new Date();

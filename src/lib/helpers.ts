@@ -376,6 +376,15 @@ export function cleanRoute(route: string | null | undefined): string {
 // Example (shiftHour = 18, current time = 03:00 Friday):
 //   start = Thursday 18:00, end = Friday 18:00  ← same shift
 //
+// NOTE: this fixed boundary and the explicit hub_shifts table (Start/End Day
+// in TransactionLedger.tsx, supabase/migrations/20260818_explicit_shifts.sql)
+// are two different definitions of "today's shift" that currently coexist.
+// TransactionLedger's own "current shift" filter prefers a real open
+// hub_shifts row when one exists and falls back to this fixed boundary
+// otherwise. Analytics.tsx, AirlinePerformance.tsx, and EODReconciliation.tsx
+// still use only this fixed boundary for their own "shift" period option --
+// migrating them to the explicit-shift system too is a deliberate follow-up,
+// not done in this pass.
 export function getShiftBoundary(shiftHour: number = 18): { start: Date; end: Date } {
   const now = new Date();
   const currentHour = now.getHours();

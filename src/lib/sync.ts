@@ -345,9 +345,10 @@ export async function getUnsyncedLocalTransactions(): Promise<{ transactions: an
   }
 }
 
-export async function processSyncQueue(): Promise<number> {
+export async function processSyncQueue(): Promise<{ synced: number; errors: string[] }> {
   const pending = await db.sync_queue.where('synced').equals(0).toArray();
   let synced = 0;
+  const errors: string[] = [];
 
   for (const item of pending) {
     try {
@@ -385,14 +386,17 @@ export async function processSyncQueue(): Promise<number> {
         synced++;
       } else {
         const errMsg = error.message || error.details || JSON.stringify(error);
+        errors.push(`${item.table_name}: ${errMsg}`);
         console.error(`Background sync failed for ${item.table_name} (record ${item.record_id}):`, error);
         appLogger.log('ERROR', 'SYNC_QUEUE', `Background sync failed for ${item.table_name}: ${errMsg}`);
       }
     } catch (err) {
-      appLogger.log('ERROR', 'SYNC_QUEUE', `Background sync exception for ${item.table_name}: ${err instanceof Error ? err.message : String(err)}`);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      errors.push(`${item.table_name}: ${errMsg}`);
+      appLogger.log('ERROR', 'SYNC_QUEUE', `Background sync exception for ${item.table_name}: ${errMsg}`);
       // leave for next sync attempt
     }
   }
-  return synced;
+  return { synced, errors };
 }
 

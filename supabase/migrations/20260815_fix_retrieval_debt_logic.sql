@@ -12,9 +12,10 @@ CREATE OR REPLACE FUNCTION public.process_cargo_retrieval(
   p_logged_by text,
   p_wallet_id uuid DEFAULT NULL
 )
-RETURNS TABLE (wallet_id uuid, new_balance numeric)
+RETURNS TABLE (wallet_id uuid, new_balance numeric, wallet_refund numeric, debt_reduction numeric)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_entry RECORD;
@@ -27,6 +28,10 @@ DECLARE
   v_wallet_refund numeric;
   v_debt_reduction numeric;
 BEGIN
+  IF p_retrieved_value <= 0 THEN
+    RAISE EXCEPTION 'Retrieved value must be positive (got %)', p_retrieved_value;
+  END IF;
+
   SELECT id, amount, status, retrieved_amount, hub_id, amount_paid, receipt_mode
   INTO v_entry
   FROM public.cargo_entries
@@ -51,10 +56,17 @@ BEGIN
 
   v_new_status := CASE WHEN v_already + p_retrieved_value >= v_entry.amount THEN 'Retrieved' ELSE v_entry.status END;
 
-  -- Determine how much they actually paid
-  -- If it's Cash/Transfer/POS/Wallet, amount_paid is often 0 in the DB but implicitly equals amount.
-  -- Only 'Debt' tracks partial payments reliably in amount_paid.
-  IF v_entry.receipt_mode IN ('Cash', 'Transfer', 'POS', 'Wallet') THEN
+  -- Determine how much of this entry was actually already paid for.
+  -- amount_paid is only ever populated for 'Debt' entries (see EHIApp.tsx's
+  -- cargo insert payload, which never sets amount_paid for any other mode)
+  -- -- every other valid receipt_mode is settled in full at intake. This
+  -- must be the FULL list from cargo_entries_receipt_mode_check
+  -- (20260717_cargo_workflow_overhaul.sql), not a partial guess: an earlier
+  -- version of this function only listed 4 of the 6 non-Debt modes, so a
+  -- 'TransferCash' or 'Complementary' retrieval fell into the ELSE branch,
+  -- computed v_amount_paid = 0, and silently zeroed the wallet refund for
+  -- money the customer had already paid.
+  IF v_entry.receipt_mode IN ('Cash', 'Transfer', 'TransferCash', 'POS', 'Wallet', 'Complementary') THEN
     v_amount_paid := v_entry.amount;
   ELSE
     v_amount_paid := COALESCE(v_entry.amount_paid, 0);
@@ -108,10 +120,13 @@ BEGIN
       p_logged_by
     );
 
-    RETURN QUERY SELECT v_wallet_id, v_txn_result.new_balance;
+    RETURN QUERY SELECT v_wallet_id, v_txn_result.new_balance, v_wallet_refund, v_debt_reduction;
   ELSE
-    -- Return null/0 if no wallet transaction occurred
-    RETURN QUERY SELECT p_wallet_id, 0::numeric;
+    -- No wallet transaction occurred -- still report the split so the
+    -- caller can show an accurate "debt cleared" confirmation.
+    RETURN QUERY SELECT v_wallet_id, 0::numeric, v_wallet_refund, v_debt_reduction;
   END IF;
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION public.process_cargo_retrieval(text, boolean, numeric, numeric, numeric, text, uuid, text, uuid) TO authenticated;

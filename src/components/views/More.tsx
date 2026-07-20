@@ -26,7 +26,7 @@ import { RatesList } from './RatesList';
 import { CustomerWallets } from './CustomerWallets';
 
 import { useState } from 'react';
-import { User, TabView, Transaction, Expense, ExcessBaggageAirline } from '../../lib/types';
+import { User, TabView, Transaction, Expense, ExcessBaggageAirline, HubShift } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { canAccessTab } from '../../lib/permissions';
 import {
@@ -65,7 +65,7 @@ import { ChevronRight } from 'lucide-react';
 
 import { StaffManagement } from './StaffManagement';
 
-export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onUpdateExpense, onChangeTab, dateRange, onDateRangeChange, excessBaggageAirlines }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: (summary: any) => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; excessBaggageAirlines: ExcessBaggageAirline[]; }) => {
+export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onUpdateExpense, onChangeTab, dateRange, onDateRangeChange, excessBaggageAirlines, activeShift, todayShifts, onStartShift, onEndShift }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: (summary: any) => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; excessBaggageAirlines: ExcessBaggageAirline[]; activeShift?: HubShift | null; todayShifts?: HubShift[]; onStartShift?: () => void; onEndShift?: () => void; }) => {
   const [eodView, setEodView] = useState(false);
   const [accountingView, setAccountingView] = useState(false);
   const [reportsView, setReportsView] = useState(false);
@@ -148,7 +148,21 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   }
 
   if (ledgerView) {
-    return <TransactionLedger user={user} transactions={transactions} expenses={expenses} onBack={() => setLedgerView(false)} onUpdateTx={onFullUpdateTx || onAddTx} dateRange={dateRange} onDateRangeChange={onDateRangeChange} />;
+    return (
+      <TransactionLedger
+        user={user}
+        transactions={transactions}
+        expenses={expenses}
+        onBack={() => setLedgerView(false)}
+        onUpdateTx={onFullUpdateTx || onAddTx}
+        dateRange={dateRange}
+        onDateRangeChange={onDateRangeChange}
+        activeShift={activeShift}
+        shifts={todayShifts}
+        onStartShift={onStartShift}
+        onEndShift={onEndShift}
+      />
+    );
   }
 
   if (auditLogView) {

@@ -47,6 +47,8 @@ export interface RetrievalResult {
   ok: boolean;
   walletId?: string;
   newBalance?: number;
+  walletRefund?: number;
+  debtReduction?: number;
   error?: string;
 }
 
@@ -83,5 +85,11 @@ export async function processCargoRetrieval(params: {
     return { ok: false, error: error.message };
   }
   const row = Array.isArray(data) ? data[0] : data;
-  return { ok: true, walletId: row?.out_wallet_id, newBalance: Number(row?.new_balance) };
+  return {
+    ok: true,
+    walletId: row?.wallet_id,
+    newBalance: Number(row?.new_balance),
+    walletRefund: Number(row?.wallet_refund ?? 0),
+    debtReduction: Number(row?.debt_reduction ?? 0),
+  };
 }

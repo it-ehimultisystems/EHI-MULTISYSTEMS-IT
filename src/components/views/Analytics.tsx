@@ -1195,31 +1195,15 @@ export const Analytics = ({
                   key={i} 
                   onClick={() => {
                     setSelectedPastShift(s);
-                    // Fetch history for this shift
-                    setLoadingHistory(true);
-                    const fetchHistory = async () => {
-                       const start = s.started_at;
-                       const end = s.ended_at;
-                       const hubFilter = s.hub_id ? `hub_id=eq.${s.hub_id}` : '';
-                       
-                       const [cargo, manifests, market, packages] = await Promise.all([
-                         supabase.from('cargo_entries').select('created_at, consignee_name, amount, receipt_mode').gte('created_at', start).lte('created_at', end).eq('hub_id', s.hub_id).order('created_at', { ascending: false }),
-                         supabase.from('manifests').select('created_at, passenger_name, amount, payment_mode').gte('created_at', start).lte('created_at', end).eq('hub_id', s.hub_id).order('created_at', { ascending: false }),
-                         supabase.from('marketing_entries').select('created_at, customer_name, amount_paid, payment_mode').gte('created_at', start).lte('created_at', end).eq('hub_id', s.hub_id).order('created_at', { ascending: false }),
-                         supabase.from('package_entries').select('created_at, sender_name, amount, payment_mode').gte('created_at', start).lte('created_at', end).eq('hub_id', s.hub_id).order('created_at', { ascending: false })
-                       ]);
-                       
-                       const allTx: any[] = [];
-                       cargo.data?.forEach(r => allTx.push({ type: 'Cargo', created_at: r.created_at, name: r.consignee_name, amount: r.amount, mode: r.receipt_mode }));
-                       manifests.data?.forEach(r => allTx.push({ type: 'Baggage', created_at: r.created_at, name: r.passenger_name, amount: r.amount, mode: r.payment_mode }));
-                       market.data?.forEach(r => allTx.push({ type: 'Marketing', created_at: r.created_at, name: r.customer_name, amount: r.amount_paid, mode: r.payment_mode }));
-                       packages.data?.forEach(r => allTx.push({ type: 'Package', created_at: r.created_at, name: r.sender_name, amount: r.amount, mode: r.payment_mode }));
-                       
-                       allTx.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                       setShiftHistory(allTx);
-                       setLoadingHistory(false);
-                    };
-                    fetchHistory();
+                    // Read the frozen line-item snapshot captured at close
+                    // time (EHIApp.tsx's handleEndShift) instead of
+                    // re-querying live data -- a live re-query could drift
+                    // from the summary totals shown above if any of these
+                    // transactions were edited, retrieved, or voided after
+                    // the shift closed, defeating the point of a locked
+                    // snapshot. Older shifts closed before this snapshot
+                    // field existed will just show an empty list here.
+                    setShiftHistory(s.sales_summary?.transactions || []);
                   }}
                   className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between cursor-pointer hover:border-[var(--color-accent-amber)] transition-all"
                 >

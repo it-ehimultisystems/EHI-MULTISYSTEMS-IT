@@ -127,6 +127,12 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   // Global Customer Wallets state and real-time synchronization
   const [customerWallets, setCustomerWallets] = useState<CustomerWallet[]>([]);
   const [activeShift, setActiveShift] = useState<HubShift | null>(null);
+  // Every shift touched in the last 24h (open or closed), not just the
+  // single open one -- lets the ledger render both "Day started" and
+  // "Day ended" markers, and survives a reload (unlike keeping only the
+  // in-memory activeShift, which is set back to null the moment a shift
+  // closes and would otherwise erase all trace it ever happened).
+  const [todayShifts, setTodayShifts] = useState<HubShift[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -201,20 +207,20 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         const startISO = startDate.toISOString();
         const endISO = endDate.toISOString();
 
-        const fetchShift = async () => {
-          if (!user.hub_id) return null;
+        const fetchShifts = async (): Promise<HubShift[]> => {
+          if (!user.hub_id) return [];
+          const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
           const { data } = await supabase
             .from('hub_shifts')
             .select('*')
             .eq('hub_id', user.hub_id)
-            .eq('status', 'open')
-            .order('started_at', { ascending: false })
-            .limit(1);
-          return data && data.length > 0 ? (data[0] as HubShift) : null;
+            .gte('started_at', dayAgo)
+            .order('started_at', { ascending: false });
+          return (data || []) as HubShift[];
         };
 
-        const [shift, cargoRes, baggageRes, mktRes, packageRes, expRes, profilesRes] = await Promise.all([
-          fetchShift(),
+        const [shifts, cargoRes, baggageRes, mktRes, packageRes, expRes, profilesRes] = await Promise.all([
+          fetchShifts(),
           addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,pickup_pin,status,created_at,commission_rate,bank,hub_id,remark,amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,consignee_phone,client_type,corporate_client_id,bank_reference,bank_sender,bank_alert_text,entered_by,wallet_id,wallet_deduction_amount,retrieved,retrieved_amount,retrieved_pieces,retrieved_kg,retrieval_note,retrieved_at,retrieved_by').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
           addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history,airline,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text,entered_by,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
           addHubFilter(supabase.from('marketing_entries').select('entry_ref,awb_tag_number,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,bb_kg,mb_kg,sb_kg,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,debt_amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
@@ -224,7 +230,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         ]);
 
         if (fetchEpochRef.current !== myEpoch) return;
-        setActiveShift(shift);
+        setTodayShifts(shifts);
+        setActiveShift(shifts.find(s => s.status === 'open') || null);
 
         const profileLookup: Record<string, string> = {};
         if (profilesRes.data) {
@@ -437,6 +444,15 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
   const handleStartShift = useCallback(async () => {
     if (!user.hub_id) return;
+    // Client-side guard against the common case (double-click, a stale
+    // activeShift the user forgot to close). The real guard is the partial
+    // unique index on hub_shifts(hub_id) WHERE status = 'open'
+    // (20260818_explicit_shifts.sql) -- this just gives a friendly message
+    // instead of a raw constraint-violation error for the race case.
+    if (activeShift) {
+      showToast({ message: 'A shift is already open for your hub.', type: 'warning' });
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from('hub_shifts')
@@ -446,30 +462,48 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         })
         .select()
         .single();
-      
+
       if (error) throw error;
-      setActiveShift(data as HubShift);
+      const newShift = data as HubShift;
+      setActiveShift(newShift);
+      setTodayShifts(prev => [newShift, ...prev]);
       showToast({ message: 'Shift started successfully!', type: 'success' });
     } catch (e: any) {
-      showToast({ message: `Failed to start shift: ${e.message}`, type: 'error' });
+      // Postgres unique_violation -- another device/tab won the race.
+      const message = e?.code === '23505'
+        ? 'A shift is already open for your hub (started elsewhere just now).'
+        : `Failed to start shift: ${e.message}`;
+      showToast({ message, type: 'error' });
     }
-  }, [user.hub_id, user.name, showToast]);
+  }, [activeShift, user.hub_id, user.name, showToast]);
 
   const handleEndShift = useCallback(async () => {
     if (!activeShift) return;
     try {
-      // Calculate sales summary since shift start
-      const shiftTx = transactionsRef.current.filter(t => 
+      // Calculate sales summary since shift start, scoped to THIS hub only.
+      // transactionsRef.current can legitimately contain sibling-hub rows
+      // now (see addHubFilter above, removed in favor of state-wide RLS
+      // visibility) -- without the hub_id check, closing a shift at one
+      // hub could roll another hub's sales into this hub's locked snapshot.
+      const shiftTx = transactionsRef.current.filter(t =>
+        t.hub_id === activeShift.hub_id &&
         new Date(t.created_at || t.time) >= new Date(activeShift.started_at)
       );
-      
+
       const salesSummary = {
         totalTxCount: shiftTx.length,
         totalSales: shiftTx.reduce((acc, t) => acc + t.amount, 0),
         cashSales: shiftTx.filter(t => t.mode === 'Cash').reduce((acc, t) => acc + t.amount, 0),
         transferSales: shiftTx.filter(t => t.mode === 'Transfer').reduce((acc, t) => acc + t.amount, 0),
         posSales: shiftTx.filter(t => t.mode === 'POS').reduce((acc, t) => acc + t.amount, 0),
-        debtSales: shiftTx.filter(t => t.mode === 'Debt').reduce((acc, t) => acc + t.amount, 0)
+        debtSales: shiftTx.filter(t => t.mode === 'Debt').reduce((acc, t) => acc + t.amount, 0),
+        // Frozen line-item snapshot -- so a past shift's "Shift Transaction
+        // History" (Analytics.tsx) reads what was actually true at close
+        // time instead of live-re-querying, which could drift from the
+        // summary figures above if entries are edited/retrieved afterward.
+        transactions: shiftTx.map(t => ({
+          type: t.type, created_at: t.created_at, name: t.name, amount: t.amount, mode: t.mode,
+        })),
       };
 
       const { data, error } = await supabase
@@ -483,9 +517,11 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         .eq('id', activeShift.id)
         .select()
         .single();
-      
+
       if (error) throw error;
+      const closedShift = data as HubShift;
       setActiveShift(null);
+      setTodayShifts(prev => prev.map(s => s.id === closedShift.id ? closedShift : s));
       showToast({ message: 'Shift ended and sales summary generated!', type: 'success' });
     } catch (e: any) {
       showToast({ message: `Failed to end shift: ${e.message}`, type: 'error' });
@@ -496,17 +532,22 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     setIsOffline(false);
     const queueCount = await db.sync_queue.where('synced').equals(0).count().catch(() => 0);
     setPendingSyncCount(queueCount);
-    const count = await processSyncQueue();
-    if (count > 0) {
-      showToast({ message: `${count} transaction(s) synced to server`, type: 'success' });
+    const { synced, errors } = await processSyncQueue();
+    if (synced > 0) {
+      showToast({ message: `${synced} transaction(s) synced to server`, type: 'success' });
       const remaining = await db.sync_queue.where('synced').equals(0).count().catch(() => 0);
       setPendingSyncCount(remaining);
       fetchInitial();
+      if (errors.length > 0) {
+        setTimeout(() => showToast({ message: `${remaining} item(s) failed: ${errors[0]}`, type: 'error' }), 2000);
+      }
     } else {
       const remaining = await db.sync_queue.where('synced').equals(0).count().catch(() => 0);
       setPendingSyncCount(remaining);
       if (remaining === 0) {
         showToast({ message: 'All local entries are fully synced', type: 'info' });
+      } else if (errors.length > 0) {
+        showToast({ message: `Sync failed for ${remaining} item(s): ${errors[0]}`, type: 'error' });
       }
     }
 
@@ -1183,12 +1224,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                 (user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant') ? (
                   <Analytics user={user} transactions={transactions} expenses={expenses} dateRange={globalDateRange} setDateRange={setGlobalDateRange} />
                 ) : (
-                  <Dashboard 
-                    user={user} 
-                    transactions={transactions} 
-                    activeShift={activeShift}
-                    onStartShift={handleStartShift}
-                    onEndShift={handleEndShift}
+                  <Dashboard
+                    user={user}
+                    transactions={transactions}
                   />
                 )
               )}
@@ -1275,6 +1313,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                    onDateRangeChange={setGlobalDateRange}
                    onEOD={handleEOD}
                    excessBaggageAirlines={excessBaggageAirlines}
+                   activeShift={activeShift}
+                   todayShifts={todayShifts}
+                   onStartShift={handleStartShift}
+                   onEndShift={handleEndShift}
                 />
               )}
             </ErrorBoundary>
