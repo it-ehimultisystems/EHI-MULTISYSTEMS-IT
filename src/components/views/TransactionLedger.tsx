@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow, isStandalonePWA, getHubCode, getShiftBoundary } from "../../lib/helpers";
 import { applyWalletTransaction, processCargoRetrieval } from "../../lib/wallet";
+import { clearDebt, DebtEntryType } from "../../lib/debt";
 import { useHubRoutes } from "../../lib/hubRoutes";
 import { MIN_PACKAGE_AMOUNT } from "../../lib/constants";
 import { useContentTypes } from "../../lib/contentTypes";
@@ -887,7 +888,12 @@ export const TransactionLedger = ({
     if (evt) evt.stopPropagation();
     if (e.source !== 'transaction') return;
     const tx = e.raw as Transaction;
-    const remaining = tx.amount - (tx.amountPaid || 0);
+    // Subtract retrieved_amount too (matches DebtorsTab.tsx's balance
+    // formula) -- a cargo entry that's been partially retrieved has a
+    // smaller true remaining balance than amount - amountPaid alone, and
+    // clear_cargo_debt's own guard rejects a payment larger than that --
+    // computing it the same way here keeps the two in agreement.
+    const remaining = tx.amount - (tx.amountPaid || 0) - ((tx.raw as any)?.retrieved_amount || 0);
     if (remaining <= 0) return;
 
     const ok = await confirm({
@@ -898,13 +904,26 @@ export const TransactionLedger = ({
     });
     if (!ok) return;
 
+    const result = await clearDebt({
+      type: tx.type as DebtEntryType,
+      id: tx.id,
+      paymentAmount: remaining,
+      paymentMode: 'Cash',
+      loggedBy: user.name || 'Unknown',
+    });
+
+    if (!result.ok) {
+      showToast({ message: result.error || 'Failed to clear debt.', type: 'error' });
+      return;
+    }
+
     const historyEntry = {
       amount: remaining,
       mode: 'Cash' as const,
       by: user.name || 'Unknown',
       at: new Date().toISOString()
     };
-    
+
     const updated: Transaction = {
       ...tx,
       amountPaid: tx.amount,

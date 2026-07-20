@@ -4,6 +4,7 @@ import { fmt, tnow } from '../../lib/helpers';
 import { ChevronDown, ChevronUp, Printer, Plus, HandCoins } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../../lib/ToastContext';
+import { clearDebt } from '../../lib/debt';
 
 export const DebtorsTab = ({
   transactions = [],
@@ -100,7 +101,7 @@ export const DebtorsTab = ({
     }
   };
 
-  const handleRecordPayment = (id: string) => {
+  const handleRecordPayment = async (id: string) => {
     const debt = debts.find(d => d.id === id);
     if (!debt) return;
     const paidNow = parseFloat(paymentAmount);
@@ -109,20 +110,26 @@ export const DebtorsTab = ({
       return;
     }
     const cappedPaid = Math.min(paidNow, debt.balance);
-    const newAmountPaid = (debt as any).amountPaid ? (debt as any).amountPaid + cappedPaid : cappedPaid;
-    const historyEntry = { amount: cappedPaid, mode: paymentMode, by: user?.name || 'Unknown', at: new Date().toISOString() };
-    const newHistory = [...(((debt as any).paymentHistory) || []), historyEntry];
     const remaining = debt.balance - cappedPaid;
 
-    // 1. Update the original debt entry (existing behaviour)
-    if (onUpdateTx) {
-      onUpdateTx({
-        ...debt,
-        amountPaid: newAmountPaid,
-        paymentHistory: newHistory,
-        mode: remaining <= 0 ? 'Debt Paid' : 'Debt',
-        debtClearedBy: user?.name
-      } as any);
+    // 1. Update the original debt entry via clear_*_debt (see
+    // src/lib/debt.ts) instead of the generic onUpdateTx path -- that
+    // path's plain UPDATE is hub-locked and silently affects 0 rows (no
+    // error) when the debtor belongs to a sibling hub the agent can see
+    // but doesn't own, which used to show "recorded" regardless of
+    // whether the database actually changed.
+    const result = await clearDebt({
+      type: (debt as any).type,
+      id,
+      paymentAmount: cappedPaid,
+      paymentMode,
+      bank: paymentMode === 'Transfer' ? paymentBank : undefined,
+      loggedBy: user?.name || 'Unknown',
+    });
+
+    if (!result.ok) {
+      showToast({ message: result.error || 'Failed to record payment.', type: 'error' });
+      return;
     }
 
     // 2. Emit a visible debt-clearance shadow transaction so today's
