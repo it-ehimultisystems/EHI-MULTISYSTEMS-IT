@@ -370,6 +370,22 @@ export async function processSyncQueue(): Promise<{ synced: number; errors: stri
         item.table_name === 'trip_pings'         ? 'id'             :
         item.table_name === 'proof_of_delivery'  ? 'id'             :
         'entry_ref';
+
+      // An UPDATE-action queue item's payload only ever carries the changed
+      // columns (see handleUpdateTx in EHIApp.tsx) -- if it predates that
+      // function including the on-conflict column in its own payload, the
+      // upsert below has no value to match the existing row against, falls
+      // through to a fresh INSERT, and dies on the first NOT NULL column
+      // missing from the partial payload (this is exactly how a handful of
+      // records got stuck retrying forever with "null value in column
+      // entry_ref"). item.record_id is always set correctly regardless of
+      // when the item was queued, so backfilling from it here heals any
+      // already-stuck item on its very next retry, the same way
+      // sanitizeManifestsPayload heals stale free_allowance_kg/rate_per_kg.
+      if (onConflictColumn !== 'id' && !supabasePayload[onConflictColumn] && item.record_id) {
+        supabasePayload[onConflictColumn] = item.record_id;
+      }
+
       const { error } = await supabase
         .from(item.table_name)
         .upsert(supabasePayload, { onConflict: onConflictColumn });

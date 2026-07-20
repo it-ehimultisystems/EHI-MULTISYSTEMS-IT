@@ -1033,7 +1033,14 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           table_name: table,
           record_id: tx.id,
           action: 'UPDATE',
-          payload: { ...updatePayload, id: tx.id },
+          // processSyncQueue retries every queued item as an upsert keyed on
+          // idCol (entry_ref/transaction_id) -- without that column in the
+          // payload, Postgres can't match the existing row, falls through to
+          // a fresh INSERT, and dies on the first NOT NULL column that isn't
+          // in this partial update payload. Without this, a failed edit
+          // retries forever and never actually applies, despite the toast
+          // above claiming it's queued.
+          payload: { ...updatePayload, id: tx.id, [idCol]: tx.id },
           synced: 0,
           created_at: new Date().toISOString(),
         });
