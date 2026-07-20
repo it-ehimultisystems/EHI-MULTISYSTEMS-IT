@@ -773,10 +773,38 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       )
       .subscribe() : null;
 
+    // hub_shifts only ever loads this device's own hub (fetchShifts above
+    // does .eq('hub_id', user.hub_id) unconditionally, unlike the
+    // admin-sees-everything cargo/baggage/marketing channels above) --
+    // matched here so a shift started/ended on another device/tab for this
+    // hub updates activeShift/todayShifts immediately instead of waiting
+    // for the next full fetchInitial (tab switch, date change, or the 60s
+    // sync interval).
+    const shiftsChannel = user.hub_id ? supabase
+      .channel('ehi-shifts-live')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'hub_shifts', filter: `hub_id=eq.${user.hub_id}` },
+        payload => {
+          const r = payload.new as HubShift;
+          setTodayShifts(prev => prev.some(s => s.id === r.id) ? prev : [r, ...prev]);
+          if (r.status === 'open') setActiveShift(r);
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'hub_shifts', filter: `hub_id=eq.${user.hub_id}` },
+        payload => {
+          const r = payload.new as HubShift;
+          setTodayShifts(prev => prev.map(s => s.id === r.id ? r : s));
+          setActiveShift(prev => (prev && prev.id === r.id) ? (r.status === 'open' ? r : null) : prev);
+        }
+      )
+      .subscribe() : null;
+
     return () => {
       if (cargoChannel) supabase.removeChannel(cargoChannel);
       if (baggageChannel) supabase.removeChannel(baggageChannel);
       if (marketingChannel) supabase.removeChannel(marketingChannel);
+      if (shiftsChannel) supabase.removeChannel(shiftsChannel);
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     };
   }, [isOffline, flushPendingTx, user.hub_id, user.role, currentTab]);
@@ -939,8 +967,82 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     }).catch(() => {});
   }, [user.hub_id, user.id, showToast]);
 
+  // Builds the full Supabase update payload for a transaction. Pulled out of
+  // handleUpdateTx so it can be called twice (once for the incoming tx, once
+  // for the transaction's previous known state) to diff out columns that
+  // didn't actually change -- see the comment at its call site below for why.
+  const buildTxUpdatePayload = (t: Transaction, table: string): Record<string, any> => {
+    const modeCol = table === 'cargo_entries' ? 'receipt_mode' : 'payment_mode';
+    const dbMode = t.mode === 'Debt Paid' ? 'Debt' : t.mode;
+    const updatePayload: Record<string, any> = {
+      [modeCol]: dbMode,
+      bank: t.bank,
+      status: t.status,
+    };
+    if (t.paymentConfirmed !== undefined) updatePayload.payment_confirmed = t.paymentConfirmed;
+    if (t.posApprovalCode)               updatePayload.pos_approval_code  = t.posApprovalCode;
+    if (t.confirmedBy)                   updatePayload.confirmed_by        = t.confirmedBy;
+    if (t.confirmedAt)                   updatePayload.confirmed_at        = t.confirmedAt;
+    if (t.bankReference)                 updatePayload.bank_reference      = t.bankReference;
+    if (t.bankSender)                    updatePayload.bank_sender         = t.bankSender;
+    if (t.bankAlertText)                 updatePayload.bank_alert_text     = t.bankAlertText;
+    const amountPaidCol = table === 'marketing_entries' ? 'debt_amount_paid' : 'amount_paid';
+    if (t.amountPaid !== undefined)     updatePayload[amountPaidCol] = t.amountPaid;
+    if (t.paymentHistory !== undefined) updatePayload.payment_history = t.paymentHistory;
+
+    if (table === 'marketing_entries') {
+      updatePayload.amount_paid = t.amount;
+    } else {
+      updatePayload.amount = t.amount;
+    }
+
+    if (t.type === 'cargo') {
+      updatePayload.consignee_name = t.name;
+      updatePayload.route = t.route;
+      updatePayload.total_pcs = t.pieces;
+      updatePayload.total_kg = t.kg;
+      updatePayload.content_type = t.contentType;
+      updatePayload.airline = t.airline;
+      if ((t as any).remarks !== undefined) updatePayload.remark = (t as any).remarks;
+      if ((t as any).pickupPin !== undefined) updatePayload.pickup_pin = (t as any).pickupPin;
+      if (t.consigneePhone !== undefined) updatePayload.consignee_phone = t.consigneePhone;
+    } else if (t.type === 'baggage') {
+      updatePayload.passenger_name = t.name;
+      updatePayload.flight_no = t.flight;
+      updatePayload.destination = t.destination;
+      updatePayload.total_pcs = t.pieces || 1;
+      const excess = Math.round(t.excessKg || (t as any).excessKg || t.kg || 0);
+      updatePayload.excess_kg = excess;
+      updatePayload.total_kg = Math.round(t.totalKg || (t as any).totalKg || excess);
+      if (t.pnr !== undefined) updatePayload.pnr = t.pnr;
+      if ((t as any).phone !== undefined || t.consigneePhone !== undefined) {
+        updatePayload.passenger_phone = (t as any).phone || t.consigneePhone;
+      }
+    } else if (t.type === 'marketing') {
+      updatePayload.customer_name = t.name;
+      updatePayload.route = t.route;
+      const bb = (t as any)._bb;
+      const mb = (t as any)._mb;
+      const sb = (t as any)._sb;
+      if (bb !== undefined) updatePayload.qty_big_bag = bb;
+      if (mb !== undefined) updatePayload.qty_med_bag = mb;
+      if (sb !== undefined) updatePayload.qty_small_bag = sb;
+    } else if (t.type === 'package') {
+      updatePayload.customer_name = t.name;
+      updatePayload.destination = t.destination;
+      updatePayload.content_type = t.contentType;
+      updatePayload.total_pcs = t.pieces || 1;
+      updatePayload.total_kg = t.kg || 0;
+      updatePayload.contents = (t as any).contents || null;
+      if (t.paymentNarration !== undefined) updatePayload.payment_narration = t.paymentNarration;
+    }
+
+    return updatePayload;
+  };
+
   const handleUpdateTx = useCallback(async (tx: Transaction) => {
-    const prevAmountPaid = transactionsRef.current.find(t => t.id === tx.id)?.amountPaid || 0;
+    const prevTx = transactionsRef.current.find(t => t.id === tx.id);
+    const prevAmountPaid = prevTx?.amountPaid || 0;
     setTransactions(prev => prev.map(t => t.id === tx.id ? tx : t));
 
     const table = tx.type === 'cargo' ? 'cargo_entries'
@@ -948,71 +1050,30 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
                 : tx.type === 'package' ? 'package_entries'
                 : 'marketing_entries';
 
-    const idCol      = table === 'manifests' ? 'transaction_id' : 'entry_ref';
-    const modeCol    = table === 'cargo_entries' ? 'receipt_mode' : 'payment_mode';
+    const idCol = table === 'manifests' ? 'transaction_id' : 'entry_ref';
 
-    const dbMode = tx.mode === 'Debt Paid' ? 'Debt' : tx.mode;
-    const updatePayload: Record<string, any> = {
-      [modeCol]: dbMode,
-      bank: tx.bank,
-      status: tx.status,
-    };
-    if (tx.paymentConfirmed !== undefined) updatePayload.payment_confirmed = tx.paymentConfirmed;
-    if (tx.posApprovalCode)               updatePayload.pos_approval_code  = tx.posApprovalCode;
-    if (tx.confirmedBy)                   updatePayload.confirmed_by        = tx.confirmedBy;
-    if (tx.confirmedAt)                   updatePayload.confirmed_at        = tx.confirmedAt;
-    if (tx.bankReference)                 updatePayload.bank_reference      = tx.bankReference;
-    if (tx.bankSender)                    updatePayload.bank_sender         = tx.bankSender;
-    if (tx.bankAlertText)                 updatePayload.bank_alert_text     = tx.bankAlertText;
-    const amountPaidCol = table === 'marketing_entries' ? 'debt_amount_paid' : 'amount_paid';
-    if (tx.amountPaid !== undefined)     updatePayload[amountPaidCol] = tx.amountPaid;
-    if (tx.paymentHistory !== undefined) updatePayload.payment_history = tx.paymentHistory;
-
-    if (table === 'marketing_entries') {
-      updatePayload.amount_paid = tx.amount;
-    } else {
-      updatePayload.amount = tx.amount;
-    }
-
-    if (tx.type === 'cargo') {
-      updatePayload.consignee_name = tx.name;
-      updatePayload.route = tx.route;
-      updatePayload.total_pcs = tx.pieces;
-      updatePayload.total_kg = tx.kg;
-      updatePayload.content_type = tx.contentType;
-      updatePayload.airline = tx.airline;
-      if ((tx as any).remarks !== undefined) updatePayload.remark = (tx as any).remarks;
-      if ((tx as any).pickupPin !== undefined) updatePayload.pickup_pin = (tx as any).pickupPin;
-      if (tx.consigneePhone !== undefined) updatePayload.consignee_phone = tx.consigneePhone;
-    } else if (tx.type === 'baggage') {
-      updatePayload.passenger_name = tx.name;
-      updatePayload.flight_no = tx.flight;
-      updatePayload.destination = tx.destination;
-      updatePayload.total_pcs = tx.pieces || 1;
-      const excess = Math.round(tx.excessKg || (tx as any).excessKg || tx.kg || 0);
-      updatePayload.excess_kg = excess;
-      updatePayload.total_kg = Math.round(tx.totalKg || (tx as any).totalKg || excess);
-      if (tx.pnr !== undefined) updatePayload.pnr = tx.pnr;
-      if ((tx as any).phone !== undefined || tx.consigneePhone !== undefined) {
-        updatePayload.passenger_phone = (tx as any).phone || tx.consigneePhone;
+    const fullPayload = buildTxUpdatePayload(tx, table);
+    // A retrieval (TransactionLedger.tsx's executeRetrieval) calls onUpdateTx
+    // with a full Transaction built by spreading the PRIOR record and
+    // overriding only retrieval fields -- mode/bank/amount/route/etc are
+    // therefore unchanged from what's already in the database, and
+    // process_cargo_retrieval() already persisted the retrieval columns
+    // server-side via its own RPC call. Diffing against the previously-known
+    // transaction and sending only what actually changed avoids rewriting a
+    // dozen unrelated, unchanged columns on every retrieval. Falls back to
+    // the full payload whenever there's no known baseline, or when the diff
+    // would otherwise be empty -- this can only ever narrow what's sent
+    // relative to the old unconditional behavior, never omit a real change.
+    let updatePayload = fullPayload;
+    if (prevTx) {
+      const prevPayload = buildTxUpdatePayload(prevTx, table);
+      const diffed: Record<string, any> = {};
+      for (const key of Object.keys(fullPayload)) {
+        if (JSON.stringify(fullPayload[key]) !== JSON.stringify(prevPayload[key])) {
+          diffed[key] = fullPayload[key];
+        }
       }
-    } else if (tx.type === 'marketing') {
-      updatePayload.customer_name = tx.name;
-      updatePayload.route = tx.route;
-      const bb = (tx as any)._bb;
-      const mb = (tx as any)._mb;
-      const sb = (tx as any)._sb;
-      if (bb !== undefined) updatePayload.qty_big_bag = bb;
-      if (mb !== undefined) updatePayload.qty_med_bag = mb;
-      if (sb !== undefined) updatePayload.qty_small_bag = sb;
-    } else if (tx.type === 'package') {
-      updatePayload.customer_name = tx.name;
-      updatePayload.destination = tx.destination;
-      updatePayload.content_type = tx.contentType;
-      updatePayload.total_pcs = tx.pieces || 1;
-      updatePayload.total_kg = tx.kg || 0;
-      updatePayload.contents = (tx as any).contents || null;
-      if (tx.paymentNarration !== undefined) updatePayload.payment_narration = tx.paymentNarration;
+      if (Object.keys(diffed).length > 0) updatePayload = diffed;
     }
 
     try {

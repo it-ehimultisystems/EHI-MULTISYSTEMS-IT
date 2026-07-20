@@ -1,9 +1,10 @@
   -- =============================================================
   -- Wallet atomicity, hub isolation, and retrieval double-credit fix
   -- =============================================================
-  -- customer_wallets/wallet_transactions were created (20260717,
-  -- 20260802) after the rest of the app's financial tables had already
-  -- been locked down to hub-scoped RLS (20260708_hub_isolation_rls.sql)
+  -- customer_wallets/wallet_transactions were created
+  -- (20260717_cargo_workflow_overhaul.sql) after the rest of the app's
+  -- financial tables had already been locked down to hub-scoped RLS
+  -- (20260708_hub_isolation_rls.sql)
   -- and after the atomic increment_corporate_debt() pattern
   -- (20260719_atomic_corporate_debt.sql) was established to close
   -- exactly this class of bug -- but neither fix was ever ported to

@@ -70,7 +70,6 @@ export const Analytics = ({
   const [loadingShifts, setLoadingShifts] = useState(false);
   const [selectedPastShift, setSelectedPastShift] = useState<any | null>(null);
   const [shiftHistory, setShiftHistory] = useState<any[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'past_shifts') {
@@ -1151,9 +1150,7 @@ export const Analytics = ({
 
                 <div>
                   <h3 className="text-[14px] font-bold text-white mb-4 border-b border-[var(--color-surface-2)] pb-2">Shift Transaction History</h3>
-                  {loadingHistory ? (
-                    <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[var(--color-muted)]" size={24} /></div>
-                  ) : shiftHistory.length === 0 ? (
+                  {shiftHistory.length === 0 ? (
                     <div className="text-center p-8 text-[var(--color-muted)] font-mono text-[12px]">No transactions found for this shift.</div>
                   ) : (
                     <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
