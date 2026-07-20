@@ -1,5 +1,5 @@
 -- ============================================================
--- COMBINED MIGRATION RUNNER -- regenerated 2026-07-20T07:46:24Z
+-- COMBINED MIGRATION RUNNER -- regenerated 2026-07-20T08:06:39Z
 -- Every migration in supabase/migrations/, concatenated in
 -- chronological (filename) order. Every statement in every file
 -- uses IF NOT EXISTS / ON CONFLICT DO NOTHING / DROP ... IF EXISTS
@@ -3498,6 +3498,17 @@ CREATE POLICY "Hub-scoped insert wallet_transactions" ON public.wallet_transacti
 -- ============================================================
 -- Fix the retrieval logic to differentiate between the value of the goods retrieved (retrieved_value)
 -- and the actual money sent to the customer's wallet (wallet_refund), which depends on how much they actually paid.
+
+-- Postgres refuses CREATE OR REPLACE when the OUT-parameter row type
+-- changes ("cannot change return type of existing function") -- and it
+-- does here: the version this migration replaces (20260810_wallet_
+-- atomicity_and_isolation.sql) returns TABLE(out_wallet_id uuid,
+-- new_balance numeric), while this one returns four columns under
+-- different names. On a fresh database that's invisible (each version is
+-- only ever created once, in filename order) -- it only bites a database
+-- that already has the old signature installed, which every real
+-- environment does. DROP first so CREATE always succeeds either way.
+DROP FUNCTION IF EXISTS public.process_cargo_retrieval(text, boolean, numeric, numeric, numeric, text, uuid, text, uuid);
 
 CREATE OR REPLACE FUNCTION public.process_cargo_retrieval(
   p_entry_ref text,
