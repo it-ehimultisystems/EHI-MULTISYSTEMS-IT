@@ -4103,3 +4103,282 @@ ALTER TABLE public.cargo_entries     ADD COLUMN IF NOT EXISTS last_edited_by tex
 ALTER TABLE public.manifests         ADD COLUMN IF NOT EXISTS last_edited_by text, ADD COLUMN IF NOT EXISTS last_edited_at timestamptz;
 ALTER TABLE public.marketing_entries ADD COLUMN IF NOT EXISTS last_edited_by text, ADD COLUMN IF NOT EXISTS last_edited_at timestamptz;
 ALTER TABLE public.package_entries   ADD COLUMN IF NOT EXISTS last_edited_by text, ADD COLUMN IF NOT EXISTS last_edited_at timestamptz;
+
+-- ============================================================
+-- FILE: supabase/migrations/20260823_corporate_clients_uppercase_dedupe.sql
+-- ============================================================
+-- ============================================================
+-- CORPORATE CLIENTS: normalize to UPPERCASE, de-duplicate, seed
+-- ============================================================
+
+-- 1. Canonical name normalizer: UPPERCASE, trimmed, internal runs of
+--    whitespace collapsed to one space. Single source of truth used by
+--    the merge below and the write-time trigger.
+CREATE OR REPLACE FUNCTION public.normalize_company_name(p_name text)
+RETURNS text
+LANGUAGE sql IMMUTABLE AS $$
+  SELECT upper(regexp_replace(btrim(coalesce(p_name, '')), '\s+', ' ', 'g'));
+$$;
+
+-- 2. Merge duplicates that only differ by case/whitespace. For each group
+--    of rows sharing a normalized name, keep the oldest row (min created_at,
+--    tie-broken by id) and fold the rest into it.
+DO $$
+DECLARE
+  g   RECORD;
+  keeper uuid;
+  loser  uuid;
+BEGIN
+  FOR g IN
+    SELECT public.normalize_company_name(company_name) AS norm
+    FROM public.corporate_clients
+    GROUP BY 1
+    HAVING count(*) > 1
+  LOOP
+    SELECT id INTO keeper
+    FROM public.corporate_clients
+    WHERE public.normalize_company_name(company_name) = g.norm
+    ORDER BY created_at ASC, id ASC
+    LIMIT 1;
+
+    FOR loser IN
+      SELECT id FROM public.corporate_clients
+      WHERE public.normalize_company_name(company_name) = g.norm
+        AND id <> keeper
+    LOOP
+      -- Fold the loser's outstanding balance into the keeper.
+      UPDATE public.corporate_clients k
+      SET accumulated_monthly_debt = k.accumulated_monthly_debt
+          + coalesce((SELECT l.accumulated_monthly_debt FROM public.corporate_clients l WHERE l.id = loser), 0)
+      WHERE k.id = keeper;
+
+      -- Repoint transactional FKs.
+      UPDATE public.cargo_entries          SET corporate_client_id = keeper WHERE corporate_client_id = loser;
+      UPDATE public.pending_corporate_intakes SET corporate_client_id = keeper WHERE corporate_client_id = loser;
+
+      -- Repoint route rates, but only where the keeper doesn't already
+      -- have that route (the unique (client, route_name) constraint would
+      -- reject a collision) — keep the keeper's rate, drop the loser's dupe.
+      UPDATE public.corporate_route_rates r
+      SET corporate_client_id = keeper
+      WHERE r.corporate_client_id = loser
+        AND NOT EXISTS (
+          SELECT 1 FROM public.corporate_route_rates k
+          WHERE k.corporate_client_id = keeper AND k.route_name = r.route_name
+        );
+      DELETE FROM public.corporate_route_rates WHERE corporate_client_id = loser;
+
+      DELETE FROM public.corporate_clients WHERE id = loser;
+    END LOOP;
+  END LOOP;
+END $$;
+
+-- 3. Normalize the survivors in place.
+UPDATE public.corporate_clients
+SET company_name = public.normalize_company_name(company_name)
+WHERE company_name <> public.normalize_company_name(company_name);
+
+-- 4. Enforce it forever: every insert/update is normalized before write,
+--    so the existing UNIQUE(company_name) index now behaves as a
+--    case/whitespace-insensitive constraint.
+CREATE OR REPLACE FUNCTION public.tg_normalize_company_name()
+RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.company_name := public.normalize_company_name(NEW.company_name);
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_normalize_company_name ON public.corporate_clients;
+CREATE TRIGGER trg_normalize_company_name
+  BEFORE INSERT OR UPDATE OF company_name ON public.corporate_clients
+  FOR EACH ROW EXECUTE FUNCTION public.tg_normalize_company_name();
+
+-- 5. Seed the office B2B clients (idempotent). Names are already the
+--    canonical form; the trigger would normalize them anyway.
+INSERT INTO public.corporate_clients (company_name) VALUES
+  ('SLOT'), ('A51'), ('CANDYPLUS'), ('GLOBACOM'), ('ZANON'),
+  ('3C HUB'), ('FEDEX'), ('ARAMEX'), ('NIG ARMY'), ('SPECTRUM'),
+  ('ROYAL-ARCH'), ('SMART MARK'), ('SAHCO'), ('SCHOOL KITS')
+ON CONFLICT (company_name) DO NOTHING;
+
+-- 6. Seed negotiated route rates, joined to the live hubs table on code so
+--    route_name always matches CargoForm's `${code}/${name}`. Any
+--    (client, hub_code) whose hub doesn't exist is silently skipped — add
+--    those rates later in Pricing Configuration once the hub exists.
+--    NOTE: these numbers are transcribed from the six rate letters, which
+--    conflict across dates. Treat as a starting point and adjust in the
+--    Pricing Configuration screen; nothing here is hardcoded in the app.
+INSERT INTO public.corporate_route_rates (corporate_client_id, route_name, rate_per_kg, minimum_amount)
+SELECT c.id, h.code || '/' || h.name, v.rate, v.min_charge
+FROM (VALUES
+  -- client,       hub_code, rate,  min_charge
+  ('SLOT',        'ABV',  800,  15000),
+  ('SLOT',        'PHC',  950,  18000),
+  ('SLOT',        'ENU',  950,  18000),
+  ('SLOT',        'BNI',  950,  18000),
+  ('A51',         'ABV',  800,  8000),
+  ('CANDYPLUS',   'ABV',  800,  8000),
+  ('GLOBACOM',    'ABV',  850,  15000),
+  ('GLOBACOM',    'PHC',  950,  15000),
+  ('GLOBACOM',    'QOW',  950,  15000),
+  ('GLOBACOM',    'ENU',  950,  15000),
+  ('GLOBACOM',    'BNI',  950,  15000),
+  ('GLOBACOM',    'CBQ',  950,  15000),
+  ('GLOBACOM',    'KAN',  1300, 20000),
+  ('GLOBACOM',    'KAD',  1300, 20000),
+  ('GLOBACOM',    'MIU',  1300, 20000),
+  ('ZANON',       'ABV',  750,  0),
+  ('3C HUB',      'ABV',  800,  15000),
+  ('3C HUB',      'PHC',  800,  15000),
+  ('3C HUB',      'QOW',  950,  18000),
+  ('3C HUB',      'ENU',  950,  18000),
+  ('3C HUB',      'QRW',  950,  18000),
+  ('3C HUB',      'QUO',  950,  18000),
+  ('3C HUB',      'CBQ',  950,  18000),
+  ('3C HUB',      'ABB',  950,  18000),
+  ('3C HUB',      'BNI',  950,  18000),
+  ('3C HUB',      'BCU',  1200, 20000),
+  ('3C HUB',      'KAN',  1200, 20000),
+  ('3C HUB',      'KAD',  1200, 20000),
+  ('3C HUB',      'MIU',  1200, 20000),
+  ('FEDEX',       'ABV',  750,  10000),
+  ('FEDEX',       'PHC',  750,  10000),
+  ('FEDEX',       'ENU',  950,  15000),
+  ('FEDEX',       'BNI',  950,  15000),
+  ('FEDEX',       'QOW',  950,  15000),
+  ('FEDEX',       'KAN',  1000, 15000),
+  ('FEDEX',       'YOL',  1000, 15000),
+  ('ARAMEX',      'ABV',  750,  10000),
+  ('ARAMEX',      'PHC',  750,  10000),
+  ('ARAMEX',      'ENU',  950,  15000),
+  ('ARAMEX',      'BNI',  950,  15000),
+  ('ARAMEX',      'QOW',  950,  15000),
+  ('NIG ARMY',    'ABV',  650,  10000),
+  ('NIG ARMY',    'PHC',  650,  10000),
+  ('NIG ARMY',    'ENU',  650,  10000),
+  ('NIG ARMY',    'YOL',  850,  12000),
+  ('NIG ARMY',    'KAD',  850,  12000),
+  ('NIG ARMY',    'KAN',  850,  12000),
+  ('SPECTRUM',    'ABV',  750,  0),
+  ('SPECTRUM',    'PHC',  750,  0),
+  ('ROYAL-ARCH',  'ABV',  700,  10000),
+  ('SMART MARK',  'ABV',  850,  18000),
+  ('SMART MARK',  'PHC',  850,  18000),
+  ('SMART MARK',  'QRW',  950,  25000),
+  ('SMART MARK',  'KAN',  950,  25000),
+  ('SAHCO',       'ABV',  700,  10000),
+  ('SAHCO',       'PHC',  900,  15000),
+  ('SAHCO',       'QOW',  900,  15000),
+  ('SAHCO',       'ENU',  900,  15000),
+  ('SAHCO',       'QRW',  900,  15000),
+  ('SAHCO',       'QUO',  900,  15000),
+  ('SAHCO',       'CBQ',  900,  15000),
+  ('SAHCO',       'ABB',  900,  15000),
+  ('SAHCO',       'BNI',  900,  15000),
+  ('SAHCO',       'IBA',  900,  15000),
+  ('SAHCO',       'ILR',  900,  15000),
+  ('SAHCO',       'BCU',  1100, 15000),
+  ('SAHCO',       'YOL',  1100, 15000),
+  ('SAHCO',       'KAN',  1100, 15000),
+  ('SAHCO',       'KAD',  1100, 15000),
+  ('SAHCO',       'MIU',  1100, 15000),
+  ('SAHCO',       'GMO',  1100, 15000),
+  ('SCHOOL KITS', 'ABV',  650,  10000),
+  ('SCHOOL KITS', 'PHC',  650,  10000),
+  ('SCHOOL KITS', 'KAN',  1000, 15000),
+  ('SCHOOL KITS', 'YOL',  1000, 15000)
+) AS v(company_name, hub_code, rate, min_charge)
+JOIN public.corporate_clients c ON c.company_name = public.normalize_company_name(v.company_name)
+JOIN public.hubs h ON h.code = v.hub_code
+ON CONFLICT (corporate_client_id, route_name) DO NOTHING;
+
+-- ============================================================
+-- FILE: supabase/migrations/20260824_clear_cargo_debt_corporate_decrement.sql
+-- ============================================================
+-- ============================================================
+-- clear_cargo_debt: also decrement the corporate running balance
+-- ============================================================
+-- clearDebt() -> clear_cargo_debt (20260819_clear_debt_state_wide.sql)
+-- updates cargo_entries.amount_paid but never touched
+-- corporate_clients.accumulated_monthly_debt, so a corporate client's
+-- running balance stayed inflated after payment -- the old handleUpdateTx
+-- path called decrement_corporate_debt() for this, and the RPC path that
+-- replaced it dropped that call. Folded in here so it's atomic regardless
+-- of caller, mirroring decrement_corporate_debt's own GREATEST-clamped
+-- floor at zero. Full CREATE OR REPLACE (re-declares the whole function)
+-- so this also works as a re-apply if 20260819 was only partially applied.
+-- Only clear_cargo_debt changes; baggage/marketing/package versions are
+-- untouched (no corporate_client_id concept on those tables).
+CREATE OR REPLACE FUNCTION public.clear_cargo_debt(
+  p_entry_ref     text,
+  p_payment_amount numeric,
+  p_payment_mode  text,
+  p_bank          text DEFAULT NULL,
+  p_logged_by     text DEFAULT NULL
+)
+RETURNS TABLE (new_amount_paid numeric, remaining_balance numeric, fully_paid boolean)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_entry RECORD;
+  v_new_amount_paid numeric;
+  v_remaining numeric;
+BEGIN
+  IF p_payment_amount <= 0 THEN
+    RAISE EXCEPTION 'Payment amount must be positive (got %)', p_payment_amount;
+  END IF;
+
+  SELECT hub_id, amount, amount_paid, retrieved_amount, receipt_mode, corporate_client_id
+  INTO v_entry
+  FROM public.cargo_entries
+  WHERE entry_ref = p_entry_ref
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Cargo entry % not found', p_entry_ref;
+  END IF;
+
+  IF v_entry.receipt_mode <> 'Debt' THEN
+    RAISE EXCEPTION 'Entry % is not a Debt-mode entry', p_entry_ref;
+  END IF;
+
+  IF v_entry.hub_id IS NOT NULL
+     AND v_entry.hub_id <> ALL(public.sibling_hub_ids())
+     AND NOT public.is_hub_unrestricted() THEN
+    RAISE EXCEPTION 'Not authorized to clear debt for this entry''s hub';
+  END IF;
+
+  v_remaining := v_entry.amount - COALESCE(v_entry.amount_paid, 0) - COALESCE(v_entry.retrieved_amount, 0);
+  IF p_payment_amount > v_remaining THEN
+    RAISE EXCEPTION 'Payment of % would exceed remaining balance of %', p_payment_amount, v_remaining;
+  END IF;
+
+  v_new_amount_paid := COALESCE(v_entry.amount_paid, 0) + p_payment_amount;
+  v_remaining := v_remaining - p_payment_amount;
+
+  UPDATE public.cargo_entries SET
+    amount_paid = v_new_amount_paid,
+    payment_history = COALESCE(payment_history, '[]'::jsonb) ||
+      jsonb_build_object('amount', p_payment_amount, 'mode', p_payment_mode, 'by', COALESCE(p_logged_by, 'system'), 'at', now()),
+    bank = COALESCE(p_bank, bank),
+    payment_confirmed = CASE WHEN v_remaining <= 0 THEN true ELSE payment_confirmed END,
+    confirmed_by = CASE WHEN v_remaining <= 0 THEN COALESCE(p_logged_by, confirmed_by) ELSE confirmed_by END,
+    confirmed_at = CASE WHEN v_remaining <= 0 THEN now() ELSE confirmed_at END
+  WHERE entry_ref = p_entry_ref;
+
+  -- NEW: keep the corporate running balance in sync. Mirrors the old
+  -- handleUpdateTx decrement that the clearDebt() RPC path had dropped.
+  IF v_entry.corporate_client_id IS NOT NULL THEN
+    UPDATE public.corporate_clients
+    SET accumulated_monthly_debt = GREATEST(accumulated_monthly_debt - p_payment_amount, 0)
+    WHERE id = v_entry.corporate_client_id;
+  END IF;
+
+  RETURN QUERY SELECT v_new_amount_paid, GREATEST(v_remaining, 0), (v_remaining <= 0);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.clear_cargo_debt(text, numeric, text, text, text) TO authenticated;

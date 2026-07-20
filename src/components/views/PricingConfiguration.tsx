@@ -213,15 +213,26 @@ export const PricingConfiguration = ({ user, onBack }: { user: User; onBack: () 
   };
 
   const handleCreateCorpClient = async () => {
-    if (!newClientName.trim()) return;
+    // Canonical form: UPPERCASE, trimmed, internal whitespace collapsed --
+    // mirrors the DB's normalize_company_name() so what we check against and
+    // what gets stored are identical.
+    const normalizedName = newClientName.trim().toUpperCase().replace(/\s+/g, ' ');
+    if (!normalizedName) return;
+
+    // Reject case/space-only duplicates client-side with a friendly message
+    // instead of surfacing the DB's raw unique-violation error.
+    if (corpClients.some(c => c.company_name.toUpperCase().replace(/\s+/g, ' ') === normalizedName)) {
+      showToast({ message: `${normalizedName} already exists.`, type: 'warning' });
+      return;
+    }
 
     // corporate_clients.id is a real `uuid` column (DEFAULT gen_random_uuid())
     // -- a client-generated id like "corp_<timestamp>" isn't valid UUID
     // syntax, so this insert failed unconditionally with every attempt.
     // Let the DB generate the real id and read it back instead.
     const { data, error } = await supabase.from('corporate_clients').insert({
-      company_name: newClientName,
-      contact_phone: newClientPhone,
+      company_name: normalizedName,
+      contact_phone: newClientPhone.trim(),
       created_at: new Date().toISOString()
     }).select().single();
     if (error) {

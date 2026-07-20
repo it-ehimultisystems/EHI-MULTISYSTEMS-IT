@@ -1249,6 +1249,53 @@ export const TransactionLedger = ({
           </div>
         </div>
 
+        {/* Always-visible shift controls — no longer buried in the row-detail
+            popup. Only shown to non-viewOnly users on a station ledger where a
+            shift handler is wired. */}
+        {!viewOnly && (onStartShift || onEndShift) && (
+          <div className="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface-1)] flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`w-2 h-2 rounded-full ${activeShift ? 'bg-[var(--color-success)] animate-pulse' : 'bg-[var(--color-muted)]'}`} />
+              <span className="text-[11px] font-mono text-[var(--color-muted)] truncate">
+                {activeShift
+                  ? `Shift open · started ${new Date(activeShift.started_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                  : 'No open shift'}
+              </span>
+            </div>
+            {!activeShift ? (
+              <button
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Start the Day?',
+                    message: "This will officially open the station's shift, tracking all new sales under this shift until you close it.",
+                    confirmLabel: 'Yes, Start Day',
+                    tone: 'default',
+                  });
+                  if (ok) onStartShift && onStartShift();
+                }}
+                className="h-9 px-4 rounded-lg bg-[var(--color-success)] hover:bg-emerald-600 text-white font-bold text-[12px] flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
+              >
+                Start Day
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'End the Day?',
+                    message: 'This will close the current shift and generate the final sales analysis.',
+                    confirmLabel: 'Yes, End Day',
+                    tone: 'danger',
+                  });
+                  if (ok) onEndShift && onEndShift();
+                }}
+                className="h-9 px-4 rounded-lg bg-[var(--color-error)] hover:bg-red-600 text-white font-bold text-[12px] flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
+              >
+                End Day
+              </button>
+            )}
+          </div>
+        )}
+
         {showPrintHistory ? (
           <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar relative z-10">
             <TagPrintHistory user={user} />
@@ -1835,46 +1882,6 @@ export const TransactionLedger = ({
                   )}
                 </div>
               </section>
-
-              {/* Shift Controls -- confirmations go through the shared
-                  useConfirm() dialog (z-[9999]) rather than a hand-rolled
-                  overlay, so they render above this detail popup (z-[60])
-                  instead of getting stuck behind its backdrop. */}
-              {!viewOnly && (onStartShift || onEndShift) && (
-                <div className="flex gap-2 border-t border-[var(--color-border)] pt-4">
-                  {!activeShift ? (
-                    <button
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: 'Start the Day?',
-                          message: "This will officially open the station's shift, tracking all new sales under this shift until you close it.",
-                          confirmLabel: 'Yes, Start Day',
-                          tone: 'default',
-                        });
-                        if (ok) onStartShift && onStartShift();
-                      }}
-                      className="flex-1 h-10 rounded-lg bg-[var(--color-success)] hover:bg-emerald-600 text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg"
-                    >
-                      Start Day
-                    </button>
-                  ) : (
-                    <button
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: 'End the Day?',
-                          message: 'This will close the current shift and generate the final sales analysis.',
-                          confirmLabel: 'Yes, End Day',
-                          tone: 'danger',
-                        });
-                        if (ok) onEndShift && onEndShift();
-                      }}
-                      className="flex-1 h-10 rounded-lg bg-[var(--color-error)] hover:bg-red-600 text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg"
-                    >
-                      End Day
-                    </button>
-                  )}
-                </div>
-              )}
 
               {/* Payment Section */}
               <section>
