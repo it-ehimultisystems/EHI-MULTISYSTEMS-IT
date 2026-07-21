@@ -900,6 +900,10 @@ export const Settings = ({
         )}
       </div>
       </div>
+
+      <p className="text-xs text-center py-4" style={{ color: 'var(--color-text-secondary)' }}>
+        EHI Platform v{__APP_VERSION__}
+      </p>
     </div>
   );
 };

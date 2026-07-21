@@ -9,3 +9,14 @@ coverage/
 .env.production
 .env.*.local
 !.env.example
+
+# Scratch / one-off scripts — never commit these. If a debug script is
+# worth keeping, it belongs in scripts/ with no secrets in it.
+/*.py
+/test-*.js
+/test-*.cjs
+/query_*.js
+/query_*.cjs
+/fix_*.cjs
+/fix_*.js
+*.patch

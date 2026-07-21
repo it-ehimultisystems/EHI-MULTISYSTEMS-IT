@@ -55,10 +55,13 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
-    // @react-pdf/renderer references Node's `global` -- resolve it to the
-    // browser's globalThis (paired with the Buffer polyfill in main.tsx).
     define: {
+      // @react-pdf/renderer references Node's `global` -- resolve it to the
+      // browser's globalThis (paired with the Buffer polyfill in main.tsx).
       global: 'globalThis',
+      // Surfaced in Settings.tsx as a version footer -- read from
+      // package.json at build time so the two never drift apart.
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
