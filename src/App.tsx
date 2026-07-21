@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import { LoginScreen } from './components/LoginScreen';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { EHIApp } from './components/EHIApp';
@@ -425,6 +425,7 @@ const AuthenticatedApp = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     getSession().then((profile) => {
@@ -476,6 +477,11 @@ const AuthenticatedApp = () => {
   const handleLogout = async () => {
     await signOut();
     setUser(null);
+    // Otherwise the URL stays wherever it was (e.g. /more/audit-log) --
+    // EHIApp is now URL-driven, so the next sign-in on this device would
+    // land straight back on that path instead of the new user's own
+    // role-based default / remembered tab.
+    navigate('/', { replace: true });
   };
 
   return (

@@ -28,7 +28,8 @@ import { RatesList } from './RatesList';
 import { CustomerWallets } from './CustomerWallets';
 import { GatPrintQueue } from './GatPrintQueue';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { User, TabView, Transaction, Expense, ExcessBaggageAirline, HubShift } from '../../lib/types';
 import { fmt } from '../../lib/helpers';
 import { canAccessTab } from '../../lib/permissions';
@@ -69,61 +70,82 @@ import { ChevronRight } from 'lucide-react';
 
 import { StaffManagement } from './StaffManagement';
 
-export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onUpdateExpense, onChangeTab, dateRange, onDateRangeChange, excessBaggageAirlines, activeShift, todayShifts, onStartShift, onEndShift }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: (summary: any) => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; excessBaggageAirlines: ExcessBaggageAirline[]; activeShift?: HubShift | null; todayShifts?: HubShift[]; onStartShift?: () => void; onEndShift?: () => void; }) => {
-  const [eodView, setEodView] = useState(false);
-  const [accountingView, setAccountingView] = useState(false);
-  const [reportsView, setReportsView] = useState(false);
-  const [settingsView, setSettingsView] = useState(false);
-  const [excessBaggageAirlinesView, setExcessBaggageAirlinesView] = useState(false);
-  const [contentTypesView, setContentTypesView] = useState(false);
-  const [expenseCategoriesView, setExpenseCategoriesView] = useState(false);
-  const [banksView, setBanksView] = useState(false);
-  const [specialGoodsRatesView, setSpecialGoodsRatesView] = useState(false);
-  const [specialGoodsPreset, setSpecialGoodsPreset] = useState<string | undefined>(undefined);
-  const [minimumChargesView, setMinimumChargesView] = useState(false);
-  const [flatTierRatesView, setFlatTierRatesView] = useState(false);
-  const [ratesListView, setRatesListView] = useState(false);
+// Every sub-view inside More is a URL slug under /more/ -- refresh, browser
+// back/forward, and deep-links all work through this instead of 29 separate
+// useState(false) flags. Object keys are what the rest of this file uses to
+// refer to each screen; values are the literal URL segment after "/more/".
+const MORE_SUB_ROUTES = {
+  eod: 'eod',
+  accounting: 'accounting',
+  reports: 'reports',
+  settings: 'settings',
+  excessBaggageAirlines: 'excess-baggage-airlines',
+  contentTypes: 'content-types',
+  expenseCategories: 'expense-categories',
+  banks: 'banks',
+  specialGoodsRates: 'special-goods-rates',
+  minimumCharges: 'minimum-charges',
+  flatTierRates: 'flat-tier-rates',
+  ratesList: 'rates-list',
+  bankRecon: 'bank-recon',
+  fleet: 'fleet',
+  forecasting: 'forecasting',
+  fraudAlerts: 'fraud-alerts',
+  auditLog: 'audit-log',
+  ledger: 'ledger',
+  gatPrintQueue: 'gat-print-queue',
+  podLog: 'pod-log',
+  dispatch: 'dispatch',
+  airlineCommissions: 'airline-commissions',
+  corporateBilling: 'corporate-billing',
+  officeReconcile: 'office-reconcile',
+  pricing: 'pricing',
+  hubCargoRates: 'hub-cargo-rates',
+  support: 'support',
+  staff: 'staff',
+  customerWallets: 'customer-wallets',
+} as const;
+type MoreSubKey = keyof typeof MORE_SUB_ROUTES;
 
-  // Premium Enterprise modules views states
-  const [bankReconView, setBankReconView] = useState(false);
-  const [fleetView, setFleetView] = useState(false);
-  const [forecastingView, setForecastingView] = useState(false);
-  const [fraudAlertsView, setFraudAlertsView] = useState(false);
-  const [auditLogView, setAuditLogView] = useState(false);
-  const [ledgerView, setLedgerView] = useState(false);
-  const [gatPrintQueueView, setGatPrintQueueView] = useState(false);
-  const [podLogView, setPodLogView] = useState(false);
-  const [dispatchView, setDispatchView] = useState(false);
-  const [airlineCommissionsView, setAirlineCommissionsView] = useState(false);
-  const [corporateBillingView, setCorporateBillingView] = useState(false);
-  const [officeReconcileView, setOfficeReconcileView] = useState(false);
-  const [pricingView, setPricingView] = useState(false);
-  const [hubCargoRatesView, setHubCargoRatesView] = useState(false);
-  const [supportView, setSupportView] = useState(false);
-  const [staffView, setStaffView] = useState(false);
-  const [customerWalletsView, setCustomerWalletsView] = useState(false);
+export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, onFullUpdateTx, onAddExpense, onUpdateExpense, onChangeTab, dateRange, onDateRangeChange, excessBaggageAirlines, activeShift, todayShifts, onStartShift, onEndShift }: { user: User; transactions: Transaction[]; expenses: Expense[]; onLogout: () => void; onEOD?: (summary: any) => void; onAddTx: (tx: Transaction) => void; onFullUpdateTx?: (tx: Transaction) => void; onAddExpense: (e: Expense) => void; onUpdateExpense?: (expenseId: string, decision: 'approved' | 'rejected') => void; onChangeTab: (t: TabView) => void; dateRange?: { start: string; end: string }; onDateRangeChange?: (range: { start: string; end: string }) => void; excessBaggageAirlines: ExcessBaggageAirline[]; activeShift?: HubShift | null; todayShifts?: HubShift[]; onStartShift?: () => void; onEndShift?: () => void; }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeSub: MoreSubKey | null = useMemo(() => {
+    const m = location.pathname.match(/^\/more\/([^/]+)/);
+    if (!m) return null;
+    const slug = m[1];
+    const entry = Object.entries(MORE_SUB_ROUTES).find(([, s]) => s === slug);
+    return (entry ? entry[0] : null) as MoreSubKey | null;
+  }, [location.pathname]);
+  const openSub = useCallback((key: MoreSubKey) => navigate('/more/' + MORE_SUB_ROUTES[key]), [navigate]);
+  const closeSub = useCallback(() => navigate('/more'), [navigate]);
+
+  // Only remaining piece of view-local state -- not a "which screen" flag,
+  // just data carried across the ContentTypes -> SpecialGoodsRates handoff
+  // (see onManageRates/onBack below).
+  const [specialGoodsPreset, setSpecialGoodsPreset] = useState<string | undefined>(undefined);
 
   // View controllers
-  if (eodView) {
-    return <EODReconciliation user={user} transactions={transactions} expenses={expenses} onBack={() => setEodView(false)} onEOD={onEOD || (() => {})} />;
+  if (activeSub === 'eod') {
+    return <EODReconciliation user={user} transactions={transactions} expenses={expenses} onBack={closeSub} onEOD={onEOD || (() => {})} />;
   }
 
-  if (accountingView) {
-    return <AccountingConsole user={user} transactions={transactions} expenses={expenses} onBack={() => setAccountingView(false)} onAddExpense={onAddExpense} onUpdateExpense={onUpdateExpense} onOpenBankRecon={() => setBankReconView(true)} onFullUpdateTx={onFullUpdateTx} onAddTx={onAddTx} />;
+  if (activeSub === 'accounting') {
+    return <AccountingConsole user={user} transactions={transactions} expenses={expenses} onBack={closeSub} onAddExpense={onAddExpense} onUpdateExpense={onUpdateExpense} onOpenBankRecon={() => openSub('bankRecon')} onFullUpdateTx={onFullUpdateTx} onAddTx={onAddTx} />;
   }
 
-  if (reportsView) {
-    return <Reports user={user} transactions={transactions} onBack={() => setReportsView(false)} />;
+  if (activeSub === 'reports') {
+    return <Reports user={user} transactions={transactions} onBack={closeSub} />;
   }
 
-  if (settingsView) {
-    return <Settings user={user} onBack={() => setSettingsView(false)} onOpenAirlineCommissions={() => { setSettingsView(false); setAirlineCommissionsView(true); }} />;
+  if (activeSub === 'settings') {
+    return <Settings user={user} onBack={closeSub} onOpenAirlineCommissions={() => openSub('airlineCommissions')} />;
   }
 
-  if (bankReconView) {
+  if (activeSub === 'bankRecon') {
     return <BankReconciliation
       transactions={transactions}
-      onBack={() => setBankReconView(false)}
+      onBack={closeSub}
       user={user}
       onConfirm={({ matchedIds }) => {
         if (onFullUpdateTx) {
@@ -138,29 +160,29 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
     />;
   }
 
-  if (fleetView) {
-    return <Fleet onBack={() => setFleetView(false)} />;
+  if (activeSub === 'fleet') {
+    return <Fleet onBack={closeSub} />;
   }
 
-  if (forecastingView) {
-    return <Forecasting onBack={() => setForecastingView(false)} />;
+  if (activeSub === 'forecasting') {
+    return <Forecasting onBack={closeSub} />;
   }
 
-  if (fraudAlertsView) {
-    return <FraudAlerts user={user} onBack={() => setFraudAlertsView(false)} />;
+  if (activeSub === 'fraudAlerts') {
+    return <FraudAlerts user={user} onBack={closeSub} />;
   }
 
-  if (customerWalletsView) {
-    return <CustomerWallets user={user} onBack={() => setCustomerWalletsView(false)} />;
+  if (activeSub === 'customerWallets') {
+    return <CustomerWallets user={user} onBack={closeSub} />;
   }
 
-  if (ledgerView) {
+  if (activeSub === 'ledger') {
     return (
       <TransactionLedger
         user={user}
         transactions={transactions}
         expenses={expenses}
-        onBack={() => setLedgerView(false)}
+        onBack={closeSub}
         onUpdateTx={onFullUpdateTx || onAddTx}
         dateRange={dateRange}
         onDateRangeChange={onDateRangeChange}
@@ -172,92 +194,91 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
     );
   }
 
-  if (gatPrintQueueView) {
-    return <GatPrintQueue user={user} onBack={() => setGatPrintQueueView(false)} />;
+  if (activeSub === 'gatPrintQueue') {
+    return <GatPrintQueue user={user} onBack={closeSub} />;
   }
 
-  if (auditLogView) {
-    return <AuditLog onBack={() => setAuditLogView(false)} />;
+  if (activeSub === 'auditLog') {
+    return <AuditLog onBack={closeSub} />;
   }
 
-  if (podLogView) {
-    return <PODLog user={user} onBack={() => setPodLogView(false)} />;
+  if (activeSub === 'podLog') {
+    return <PODLog user={user} onBack={closeSub} />;
   }
 
-  if (dispatchView) {
-    return <Dispatch onBack={() => setDispatchView(false)} />;
+  if (activeSub === 'dispatch') {
+    return <Dispatch onBack={closeSub} />;
   }
 
-  if (airlineCommissionsView) {
-    return <AirlineCommissions onBack={() => setAirlineCommissionsView(false)} />;
+  if (activeSub === 'airlineCommissions') {
+    return <AirlineCommissions onBack={closeSub} />;
   }
 
-  if (corporateBillingView) {
-    return <CorporateBilling user={user} onBack={() => setCorporateBillingView(false)} />;
+  if (activeSub === 'corporateBilling') {
+    return <CorporateBilling user={user} onBack={closeSub} />;
   }
 
-  if (officeReconcileView) {
-    return <OfficeWorkReconciliation user={user} onBack={() => setOfficeReconcileView(false)} />;
+  if (activeSub === 'officeReconcile') {
+    return <OfficeWorkReconciliation user={user} onBack={closeSub} />;
   }
 
-  if (pricingView) {
-    return <PricingConfiguration user={user} onBack={() => setPricingView(false)} />;
+  if (activeSub === 'pricing') {
+    return <PricingConfiguration user={user} onBack={closeSub} />;
   }
 
-  if (hubCargoRatesView) {
-    return <HubCargoRates user={user} onBack={() => setHubCargoRatesView(false)} />;
+  if (activeSub === 'hubCargoRates') {
+    return <HubCargoRates user={user} onBack={closeSub} />;
   }
 
-  if (excessBaggageAirlinesView) {
-    return <ExcessBaggageAirlines onBack={() => setExcessBaggageAirlinesView(false)} />;
+  if (activeSub === 'excessBaggageAirlines') {
+    return <ExcessBaggageAirlines onBack={closeSub} />;
   }
 
-  if (contentTypesView) {
-    return <ContentTypes onBack={() => setContentTypesView(false)} onManageRates={(contentTypeId) => { setContentTypesView(false); setSpecialGoodsPreset(contentTypeId); setSpecialGoodsRatesView(true); }} />;
+  if (activeSub === 'contentTypes') {
+    return <ContentTypes onBack={closeSub} onManageRates={(contentTypeId) => { setSpecialGoodsPreset(contentTypeId); openSub('specialGoodsRates'); }} />;
   }
 
-  if (specialGoodsRatesView) {
-    return <SpecialGoodsRates user={user} onBack={() => { setSpecialGoodsRatesView(false); setSpecialGoodsPreset(undefined); }} presetContentTypeId={specialGoodsPreset} />;
+  if (activeSub === 'specialGoodsRates') {
+    return <SpecialGoodsRates user={user} onBack={() => { setSpecialGoodsPreset(undefined); closeSub(); }} presetContentTypeId={specialGoodsPreset} />;
   }
 
-  if (minimumChargesView) {
-    return <MinimumCharges onBack={() => setMinimumChargesView(false)} />;
+  if (activeSub === 'minimumCharges') {
+    return <MinimumCharges onBack={closeSub} />;
   }
 
-  if (flatTierRatesView) {
-    return <FlatTierRates user={user} onBack={() => setFlatTierRatesView(false)} />;
+  if (activeSub === 'flatTierRates') {
+    return <FlatTierRates user={user} onBack={closeSub} />;
   }
 
-  if (ratesListView) {
+  if (activeSub === 'ratesList') {
     return <RatesList
-      onBack={() => setRatesListView(false)}
+      onBack={closeSub}
       onOpenConfig={(target) => {
-        setRatesListView(false);
-        if (target === 'pricing') setPricingView(true);
-        else if (target === 'hubRates') setHubCargoRatesView(true);
-        else if (target === 'excessBaggage') setExcessBaggageAirlinesView(true);
-        else if (target === 'contentTypes') setContentTypesView(true);
-        else if (target === 'specialGoods') setSpecialGoodsRatesView(true);
-        else if (target === 'minimumCharges') setMinimumChargesView(true);
-        else if (target === 'airlineCommissions') setAirlineCommissionsView(true);
+        if (target === 'pricing') openSub('pricing');
+        else if (target === 'hubRates') openSub('hubCargoRates');
+        else if (target === 'excessBaggage') openSub('excessBaggageAirlines');
+        else if (target === 'contentTypes') openSub('contentTypes');
+        else if (target === 'specialGoods') openSub('specialGoodsRates');
+        else if (target === 'minimumCharges') openSub('minimumCharges');
+        else if (target === 'airlineCommissions') openSub('airlineCommissions');
       }}
     />;
   }
 
-  if (expenseCategoriesView) {
-    return <ExpenseCategories onBack={() => setExpenseCategoriesView(false)} />;
+  if (activeSub === 'expenseCategories') {
+    return <ExpenseCategories onBack={closeSub} />;
   }
 
-  if (banksView) {
-    return <Banks onBack={() => setBanksView(false)} />;
+  if (activeSub === 'banks') {
+    return <Banks onBack={closeSub} />;
   }
 
-  if (supportView) {
-    return <SupportTickets user={user} onBack={() => setSupportView(false)} />;
+  if (activeSub === 'support') {
+    return <SupportTickets user={user} onBack={closeSub} />;
   }
 
-  if (staffView) {
-    return <StaffManagement user={user} onBack={() => setStaffView(false)} />;
+  if (activeSub === 'staff') {
+    return <StaffManagement user={user} onBack={closeSub} />;
   }
 
 
@@ -328,7 +349,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             icon={FileTextIcon}
             title="EOD Daily Close"
             subtitle="Generate and dispatch end of day reports"
-            onClick={() => setEodView(true)}
+            onClick={() => openSub('eod')}
           />
         )}
         {canAccessTab(user, 'More:TransactionLedger', excessBaggageAirlines) && (
@@ -336,7 +357,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             icon={PulseIcon}
             title="Transaction Ledger"
             subtitle={`${transactions.length} entries — view, search and export`}
-            onClick={() => setLedgerView(true)}
+            onClick={() => openSub('ledger')}
           />
         )}
         {canAccessTab(user, 'More:GatPrintQueue', excessBaggageAirlines) && (
@@ -344,7 +365,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             icon={PrinterIcon}
             title="GAT Print Queue"
             subtitle="Batch-print tags & receipts for GAT sales"
-            onClick={() => setGatPrintQueueView(true)}
+            onClick={() => openSub('gatPrintQueue')}
           />
         )}
         {excessBaggageAirlines.filter(a => canAccessTab(user, `Baggage:${a.name}`, excessBaggageAirlines)).map(a => (
@@ -373,7 +394,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           icon={ListBulletsIcon}
           title="Rates Directory"
           subtitle="View every configured rate — read-only, edit from each config screen"
-          onClick={() => { if (canAccessTab(user, 'More:RatesList', excessBaggageAirlines)) setRatesListView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:RatesList', excessBaggageAirlines)) openSub('ratesList'); }}
           disabled={!canAccessTab(user, 'More:RatesList', excessBaggageAirlines)}
         />
         <MenuItem
@@ -392,21 +413,21 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             </span>
           }
           subtitle="Match bank deposits with system payment ledgers"
-          onClick={() => { if (canAccessTab(user, 'More:BankReconciliation', excessBaggageAirlines)) setBankReconView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:BankReconciliation', excessBaggageAirlines)) openSub('bankRecon'); }}
           disabled={!canAccessTab(user, 'More:BankReconciliation', excessBaggageAirlines)}
         />
         <MenuItem
           icon={DatabaseIcon}
           title="Central Accounting ERP"
           subtitle="Check balance sheets and cash flows dashboard"
-          onClick={() => { if (canAccessTab(user, 'More:AccountingConsole', excessBaggageAirlines)) setAccountingView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:AccountingConsole', excessBaggageAirlines)) openSub('accounting'); }}
           disabled={!canAccessTab(user, 'More:AccountingConsole', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ChartBarIcon}
           title="Advanced Reports"
           subtitle="Operational audits and trend sheets"
-          onClick={() => { if (canAccessTab(user, 'More:Reports', excessBaggageAirlines)) setReportsView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:Reports', excessBaggageAirlines)) openSub('reports'); }}
           disabled={!canAccessTab(user, 'More:Reports', excessBaggageAirlines)}
         />
         <MenuItem
@@ -420,28 +441,28 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           icon={PercentIcon}
           title="Airline Commissions"
           subtitle="Set percentage cuts for partner airlines"
-          onClick={() => { if (canAccessTab(user, 'More:AirlineCommissions', excessBaggageAirlines)) setAirlineCommissionsView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:AirlineCommissions', excessBaggageAirlines)) openSub('airlineCommissions'); }}
           disabled={!canAccessTab(user, 'More:AirlineCommissions', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ReceiptIcon}
           title="Corporate Client Billing"
           subtitle="Generate a shipment statement for a corporate account"
-          onClick={() => { if (canAccessTab(user, 'More:CorporateBilling', excessBaggageAirlines)) setCorporateBillingView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:CorporateBilling', excessBaggageAirlines)) openSub('corporateBilling'); }}
           disabled={!canAccessTab(user, 'More:CorporateBilling', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ReceiptIcon}
           title="Office Work Reconciliation"
           subtitle="Link & reprice mis-entered corporate debts"
-          onClick={() => { if (canAccessTab(user, 'More:OfficeWorkReconcile', excessBaggageAirlines)) setOfficeReconcileView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:OfficeWorkReconcile', excessBaggageAirlines)) openSub('officeReconcile'); }}
           disabled={!canAccessTab(user, 'More:OfficeWorkReconcile', excessBaggageAirlines)}
         />
         <MenuItem
           icon={CurrencyDollarIcon}
           title="Customer Credit Wallets"
           subtitle="Manage customer advance balances, top-ups, and credit history"
-          onClick={() => setCustomerWalletsView(true)}
+          onClick={() => openSub('customerWallets')}
         />
       </div>
 
@@ -457,7 +478,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             </span>
           }
           subtitle="Capacity heatmap and busy periods projections"
-          onClick={() => { if (canAccessTab(user, 'More:Forecasting', excessBaggageAirlines)) setForecastingView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:Forecasting', excessBaggageAirlines)) openSub('forecasting'); }}
           disabled={!canAccessTab(user, 'More:Forecasting', excessBaggageAirlines)}
         />
         <MenuItem
@@ -472,14 +493,14 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             </span>
           }
           subtitle="Track sudden debt spikes and duplicated AWBs"
-          onClick={() => { if (canAccessTab(user, 'More:FraudAlerts', excessBaggageAirlines)) setFraudAlertsView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:FraudAlerts', excessBaggageAirlines)) openSub('fraudAlerts'); }}
           disabled={!canAccessTab(user, 'More:FraudAlerts', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ClockCounterClockwiseIcon}
           title="Revision Audit Log"
           subtitle="Strict NDPR/Financial compliance trace log"
-          onClick={() => { if (canAccessTab(user, 'More:AuditLog', excessBaggageAirlines)) setAuditLogView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:AuditLog', excessBaggageAirlines)) openSub('auditLog'); }}
           disabled={!canAccessTab(user, 'More:AuditLog', excessBaggageAirlines)}
         />
       </div>
@@ -491,21 +512,21 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           icon={TruckIcon}
           title="Fleet Management"
           subtitle="Vehicles registration, service scheduler, fuel expense log"
-          onClick={() => { if (canAccessTab(user, 'More:Fleet', excessBaggageAirlines)) setFleetView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:Fleet', excessBaggageAirlines)) openSub('fleet'); }}
           disabled={!canAccessTab(user, 'More:Fleet', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ShieldIcon}
           title="Proof of Delivery Log"
           subtitle="GPS trace, signatures and photo evidence"
-          onClick={() => { if (canAccessTab(user, 'More:PODLog', excessBaggageAirlines)) setPodLogView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:PODLog', excessBaggageAirlines)) openSub('podLog'); }}
           disabled={!canAccessTab(user, 'More:PODLog', excessBaggageAirlines)}
         />
         <MenuItem
           icon={MapPinIcon}
           title="Dispatch & Fleet Tracking"
           subtitle="Live driver tracking on active routes"
-          onClick={() => { if (canAccessTab(user, 'More:Dispatch', excessBaggageAirlines)) setDispatchView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:Dispatch', excessBaggageAirlines)) openSub('dispatch'); }}
           disabled={!canAccessTab(user, 'More:Dispatch', excessBaggageAirlines)}
         />
       </div>
@@ -557,70 +578,70 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           icon={CurrencyDollarIcon}
           title="Pricing & Rates Configuration"
           subtitle="B2B client rates and retail standard tariffs"
-          onClick={() => { if (canAccessTab(user, 'More:PricingConfiguration', excessBaggageAirlines)) setPricingView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:PricingConfiguration', excessBaggageAirlines)) openSub('pricing'); }}
           disabled={!canAccessTab(user, 'More:PricingConfiguration', excessBaggageAirlines)}
         />
         <MenuItem
           icon={CurrencyDollarIcon}
           title="Hub Cargo Rates"
           subtitle="Per-hub, per-airline rate overrides on the standard tariff"
-          onClick={() => { if (canAccessTab(user, 'More:HubCargoRates', excessBaggageAirlines)) setHubCargoRatesView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:HubCargoRates', excessBaggageAirlines)) openSub('hubCargoRates'); }}
           disabled={!canAccessTab(user, 'More:HubCargoRates', excessBaggageAirlines)}
         />
         <MenuItem
           icon={AirplaneIcon}
           title="Excess Baggage Airlines"
           subtitle="Add airlines and set their free allowance / rate per KG"
-          onClick={() => { if (canAccessTab(user, 'More:ExcessBaggageAirlines', excessBaggageAirlines)) setExcessBaggageAirlinesView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:ExcessBaggageAirlines', excessBaggageAirlines)) openSub('excessBaggageAirlines'); }}
           disabled={!canAccessTab(user, 'More:ExcessBaggageAirlines', excessBaggageAirlines)}
         />
         <MenuItem
           icon={TagIcon}
           title="Content Types"
           subtitle="Cargo/package content categories staff pick from at intake"
-          onClick={() => { if (canAccessTab(user, 'More:ContentTypes', excessBaggageAirlines)) setContentTypesView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:ContentTypes', excessBaggageAirlines)) openSub('contentTypes'); }}
           disabled={!canAccessTab(user, 'More:ContentTypes', excessBaggageAirlines)}
         />
         <MenuItem
           icon={SparkleIcon}
           title="Special Goods Rates"
           subtitle="Per-airline, weight-tiered rates for flagged content types"
-          onClick={() => { if (canAccessTab(user, 'More:SpecialGoodsRates', excessBaggageAirlines)) setSpecialGoodsRatesView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:SpecialGoodsRates', excessBaggageAirlines)) openSub('specialGoodsRates'); }}
           disabled={!canAccessTab(user, 'More:SpecialGoodsRates', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ScalesIcon}
           title="Minimum Charges"
           subtitle="Flat weight-bracket floor per airline + route"
-          onClick={() => { if (canAccessTab(user, 'More:MinimumCharges', excessBaggageAirlines)) setMinimumChargesView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:MinimumCharges', excessBaggageAirlines)) openSub('minimumCharges'); }}
           disabled={!canAccessTab(user, 'More:MinimumCharges', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ReceiptIcon}
           title="Flat Tier Rates"
           subtitle="Flat weight-bracket pricing (Bumper & Burnet)"
-          onClick={() => { if (canAccessTab(user, 'More:FlatTierRates', excessBaggageAirlines)) setFlatTierRatesView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:FlatTierRates', excessBaggageAirlines)) openSub('flatTierRates'); }}
           disabled={!canAccessTab(user, 'More:FlatTierRates', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ReceiptIcon}
           title="Expense Categories"
           subtitle="Categories staff log expenses against, plus monthly budgets"
-          onClick={() => { if (canAccessTab(user, 'More:ExpenseCategories', excessBaggageAirlines)) setExpenseCategoriesView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:ExpenseCategories', excessBaggageAirlines)) openSub('expenseCategories'); }}
           disabled={!canAccessTab(user, 'More:ExpenseCategories', excessBaggageAirlines)}
         />
         <MenuItem
           icon={BankIcon}
           title="Banks"
           subtitle="Bank list used in Transfer/POS payment dropdowns"
-          onClick={() => { if (canAccessTab(user, 'More:Banks', excessBaggageAirlines)) setBanksView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:Banks', excessBaggageAirlines)) openSub('banks'); }}
           disabled={!canAccessTab(user, 'More:Banks', excessBaggageAirlines)}
         />
         <MenuItem
           icon={GearIcon}
           title="Platform Settings"
           subtitle="Automation and route pricing configuration"
-          onClick={() => { if (canAccessTab(user, 'More:Settings', excessBaggageAirlines)) setSettingsView(true); }}
+          onClick={() => { if (canAccessTab(user, 'More:Settings', excessBaggageAirlines)) openSub('settings'); }}
           disabled={!canAccessTab(user, 'More:Settings', excessBaggageAirlines)}
         />
       </div>
@@ -633,7 +654,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             icon={UsersIcon}
             title="Staff Management"
             subtitle="Add staff, assign hubs, set roles, deactivate accounts"
-            onClick={() => setStaffView(true)}
+            onClick={() => openSub('staff')}
           />
         )}
         {canAccessTab(user, 'More:SupportTickets', excessBaggageAirlines) && (
@@ -641,7 +662,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
             icon={ShieldWarningIcon}
             title="Help Desk & Issue Resolution"
             subtitle="Report operational complaints or bugs"
-            onClick={() => setSupportView(true)}
+            onClick={() => openSub('support')}
           />
         )}
 

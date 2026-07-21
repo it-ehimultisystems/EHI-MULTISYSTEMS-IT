@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense, useRef, useCallback, memo, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { User, TabView, Transaction, Expense, ExcessBaggageAirline, CustomerWallet, HubShift } from '../lib/types';
 import { processSyncQueue, writeWithOfflineSupport, cleanupOldQueue, getUnsyncedLocalTransactions } from '../lib/sync';
 import { db } from '../lib/db';
@@ -59,6 +60,54 @@ const CreditDebit = memo(CreditDebitRaw);
 // replaying their own last tab back to them is always safe.
 const CURRENT_TAB_KEY = (userId: string) => `ehi_current_tab_${userId}`;
 
+// URL <-> TabView mapping. App.tsx already renders EHIApp inside its own
+// <BrowserRouter><Routes><Route path="/*" .../></Routes></BrowserRouter> --
+// no router setup needed here, just consuming the context it already
+// provides via useNavigate/useLocation below.
+const TAB_PATHS: Partial<Record<TabView, string>> = {
+  'Tower':              '/tower',
+  'Cargo':              '/cargo',
+  'Marketing':          '/marketing',
+  'Packages':           '/packages',
+  'Scan':               '/scan',
+  'Incoming':           '/incoming',
+  'IncomingToHub':      '/incoming-to-hub',
+  'OutboundArrivals':   '/outbound-arrivals',
+  'More':               '/more',
+  'MyTrips':            '/my-trips',
+  'IT Debug':           '/it-debug',
+  'Credit & Debit':     '/credit-debit',
+  'AirlineLogos':       '/airline-logos',
+  'DataImport':         '/data-import',
+  'AirlineLedger':      '/airline-ledger',
+  'WeightManifest':     '/weight-manifest',
+  'AirlinePerformance': '/airline-performance',
+  // Baggage:{name} and More:{name} are handled by prefix -- see tabToPath/pathToTab below.
+};
+
+function tabToPath(tab: TabView): string {
+  if (tab.startsWith('Baggage:')) return '/baggage/' + encodeURIComponent(tab.slice('Baggage:'.length));
+  if (tab.startsWith('More:'))    return '/more/'    + encodeURIComponent(tab.slice('More:'.length));
+  return TAB_PATHS[tab] || '/tower';
+}
+
+function pathToTab(pathname: string): TabView {
+  // Longest-prefix match against TAB_PATHS, then Baggage:/More: parameterized.
+  // Slug must be non-empty -- a bare "/more/" (trailing slash, no slug) falls
+  // through to the plain TAB_PATHS lookup below instead of becoming the
+  // invalid tab 'More:' (which matches no render branch at all).
+  if (pathname.startsWith('/baggage/')) {
+    const slug = decodeURIComponent(pathname.slice('/baggage/'.length).split('/')[0]);
+    if (slug) return ('Baggage:' + slug) as TabView;
+  }
+  if (pathname.startsWith('/more/')) {
+    const slug = decodeURIComponent(pathname.slice('/more/'.length).split('/')[0]);
+    if (slug) return ('More:' + slug) as TabView;
+  }
+  const hit = Object.entries(TAB_PATHS).find(([, p]) => pathname === p || pathname.startsWith(p + '/'));
+  return (hit ? hit[0] : 'Tower') as TabView;
+}
+
 export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const getDefaultTab = (role: string): TabView => {
     if (role === 'office_work') return 'Cargo';
@@ -67,17 +116,35 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     if (role === 'baggage_agent' && user.assigned_airline) return `Baggage:${user.assigned_airline}`;
     return 'Tower';
   };
-  // Restores the tab the user was last on instead of always landing back on
-  // the dashboard -- this matters a lot more now that the app auto-reloads
-  // on every new deploy (see main.tsx's controllerchange listener): without
-  // this, that silent reload would yank anyone mid-task back to Tower.
-  const [currentTab, setCurrentTab] = useState<TabView>(() => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  // The tab is now URL-derived (see TAB_PATHS/tabToPath/pathToTab above) so
+  // refresh preserves the view via the URL itself, back/forward work, and
+  // every screen has a shareable link. setCurrentTab's signature is
+  // unchanged -- every existing caller (SideNav, BottomNav, the 'ehi-nav'
+  // window event, onBack={() => setCurrentTab('More')} etc.) keeps working.
+  const currentTab: TabView = useMemo(() => pathToTab(location.pathname), [location.pathname]);
+  const setCurrentTab = useCallback((tab: TabView) => {
+    const path = tabToPath(tab);
+    if (path !== location.pathname) navigate(path);
+  }, [navigate, location.pathname]);
+
+  // Bare "/" (fresh load, bookmark, PWA icon launch) has no tab encoded in
+  // the URL yet -- redirect once to the remembered tab, falling back to the
+  // role default, same fallback order the old useState initializer used.
+  // This is what used to live inside that initializer; preserved here so a
+  // fresh "/" load still restores the last-visited tab instead of always
+  // bouncing to Tower.
+  useEffect(() => {
+    if (location.pathname !== '/' && location.pathname !== '') return;
+    let target: TabView | null = null;
     try {
       const saved = localStorage.getItem(CURRENT_TAB_KEY(user.id));
-      if (saved) return saved as TabView;
+      if (saved) target = saved as TabView;
     } catch { /* ignore -- fall through to role default */ }
-    return getDefaultTab(user.role);
-  });
+    if (!target) target = getDefaultTab(user.role);
+    navigate(tabToPath(target), { replace: true });
+  }, [location.pathname, navigate, user]);
 
   useEffect(() => {
     try {
