@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tag, Plus, Trash2, Loader, Power, Sparkles } from 'lucide-react';
+import { Tag, Plus, Trash2, Loader, Power, Sparkles, Layers } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
@@ -10,6 +10,7 @@ interface ContentType {
   name: string;
   active: boolean;
   is_special_goods: boolean;
+  is_flat_tier: boolean;
 }
 
 export const ContentTypes = ({ onBack, onManageRates }: { onBack: () => void; onManageRates?: (contentTypeId: string) => void }) => {
@@ -67,6 +68,17 @@ export const ContentTypes = ({ onBack, onManageRates }: { onBack: () => void; on
     const prev = types;
     setTypes(cur => cur.map(x => x.id === t.id ? { ...x, is_special_goods: !x.is_special_goods } : x));
     const { error } = await supabase.from('content_types').update({ is_special_goods: !t.is_special_goods, updated_at: new Date().toISOString() }).eq('id', t.id);
+    if (error) {
+      setTypes(prev);
+      showToast({ message: `Failed to save change: ${error.message}`, type: 'error' });
+    }
+  };
+
+  // Same optimistic pattern as handleToggleActive/handleToggleSpecialGoods above.
+  const handleToggleFlatTier = async (t: ContentType) => {
+    const prev = types;
+    setTypes(cur => cur.map(x => x.id === t.id ? { ...x, is_flat_tier: !x.is_flat_tier } : x));
+    const { error } = await supabase.from('content_types').update({ is_flat_tier: !t.is_flat_tier, updated_at: new Date().toISOString() }).eq('id', t.id);
     if (error) {
       setTypes(prev);
       showToast({ message: `Failed to save change: ${error.message}`, type: 'error' });
@@ -176,6 +188,17 @@ export const ContentTypes = ({ onBack, onManageRates }: { onBack: () => void; on
                       }`}
                     >
                       <Sparkles size={11} /> {t.is_special_goods ? 'Special Goods' : 'Mark Special Goods'}
+                    </button>
+                    <button
+                      onClick={() => handleToggleFlatTier(t)}
+                      aria-label={t.is_flat_tier ? `Unflag ${t.name} as flat tier` : `Flag ${t.name} as flat tier`}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-colors ${
+                        t.is_flat_tier
+                          ? 'bg-[rgba(59,130,246,0.12)] text-[var(--color-accent-cobalt)]'
+                          : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
+                      }`}
+                    >
+                      <Layers size={11} /> {t.is_flat_tier ? 'Flat Tier' : 'Mark Flat Tier'}
                     </button>
                     {t.is_special_goods && onManageRates && (
                       <button

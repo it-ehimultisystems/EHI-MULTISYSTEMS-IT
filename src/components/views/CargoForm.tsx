@@ -9,6 +9,7 @@ import { useHubRoutes, useValidatedRouteSelection } from "../../lib/hubRoutes";
 import { useAirlines, addAirlineIfMissing } from "../../lib/airlines";
 import { useContentTypes } from "../../lib/contentTypes";
 import { useSpecialGoodsRates, resolveSpecialGoodsRate } from "../../lib/specialGoodsRates";
+import { useFlatTierRates, resolveFlatTier } from "../../lib/flatTierRates";
 import { useMinimumCharges, resolveMinimumCharge } from "../../lib/minimumCharges";
 import { useBanks } from "../../lib/banks";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
@@ -326,6 +327,7 @@ export const CargoForm = ({
 
   const specialGoodsRates = useSpecialGoodsRates();
   const minimumCharges = useMinimumCharges();
+  const flatTierRates = useFlatTierRates();
 
   // Rate lookup for retail cargo pricing, highest priority first: a
   // special-goods kg-tier rate for this content type + airline (set in
@@ -366,6 +368,11 @@ export const CargoForm = ({
   const autoAmount = useMemo(() => {
     const w = Math.round(parseFloat(kg)) || 0;
     if (w <= 0) return "";
+    // Flat-tier content (e.g. Bumper & Burnet) prices as one whole amount per
+    // weight bracket, not per-kg -- it overrides the entire per-kg cascade
+    // below (including minimum charges) rather than layering on top of it.
+    const flat = resolveFlatTier(flatTierRates, actualContentType, actualAirline, route, w, user.hub_id);
+    if (flat != null) return flat.toString();
     const rate = resolveRate(actualAirline, route, actualContentType, w);
     const minCharge = resolveMinimumCharge(minimumCharges, actualAirline, route, w);
     if (rate == null && minCharge == null) return "";
@@ -373,7 +380,7 @@ export const CargoForm = ({
     const final = minCharge != null ? Math.max(computed, minCharge) : computed;
     return final.toString();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kg, route, actualContentType, actualAirline, standardRates, hubRouteRates, hubAirlineRouteRates, specialGoodsRates, minimumCharges]);
+  }, [kg, route, actualContentType, actualAirline, standardRates, hubRouteRates, hubAirlineRouteRates, specialGoodsRates, minimumCharges, flatTierRates]);
 
   // Which of the two overrides (if any) determined autoAmount -- surfaced
   // as a badge near the price preview so staff aren't confused by a number
@@ -381,6 +388,10 @@ export const CargoForm = ({
   const priceOverrideInfo = useMemo(() => {
     const w = Math.round(parseFloat(kg)) || 0;
     if (w <= 0) return null;
+    const flat = resolveFlatTier(flatTierRates, actualContentType, actualAirline, route, w, user.hub_id);
+    if (flat != null) {
+      return { type: 'flat' as const, amount: flat };
+    }
     const specialRate = resolveSpecialGoodsRate(specialGoodsRates, actualContentType, actualAirline, w, user.hub_id, route);
     const minCharge = resolveMinimumCharge(minimumCharges, actualAirline, route, w);
     const perKgAmount = specialRate != null ? roundMoney(w * specialRate) : null;
@@ -392,7 +403,7 @@ export const CargoForm = ({
     }
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kg, route, actualContentType, actualAirline, specialGoodsRates, minimumCharges]);
+  }, [kg, route, actualContentType, actualAirline, specialGoodsRates, minimumCharges, flatTierRates]);
 
   const availableAirlines = useAirlines();
 
@@ -2087,7 +2098,9 @@ export const CargoForm = ({
                 )}
                 {priceOverrideInfo && (
                   <div className="text-[10px] text-[var(--color-accent-cobalt)] mt-1">
-                    {priceOverrideInfo.type === 'special'
+                    {priceOverrideInfo.type === 'flat'
+                      ? `Flat Rate applied: ${fmt(priceOverrideInfo.amount)} (whole bracket, not per-kg)`
+                      : priceOverrideInfo.type === 'special'
                       ? `Special Goods Rate applied: ${fmt(priceOverrideInfo.rate)}/kg`
                       : `Minimum Charge applied: ${fmt(priceOverrideInfo.amount)}`}
                   </div>

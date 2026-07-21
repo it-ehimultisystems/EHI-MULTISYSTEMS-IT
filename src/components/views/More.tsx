@@ -23,6 +23,7 @@ import { ExpenseCategories } from './ExpenseCategories';
 import { Banks } from './Banks';
 import { SpecialGoodsRates } from './SpecialGoodsRates';
 import { MinimumCharges } from './MinimumCharges';
+import { FlatTierRates } from './FlatTierRates';
 import { RatesList } from './RatesList';
 import { CustomerWallets } from './CustomerWallets';
 
@@ -78,6 +79,7 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
   const [specialGoodsRatesView, setSpecialGoodsRatesView] = useState(false);
   const [specialGoodsPreset, setSpecialGoodsPreset] = useState<string | undefined>(undefined);
   const [minimumChargesView, setMinimumChargesView] = useState(false);
+  const [flatTierRatesView, setFlatTierRatesView] = useState(false);
   const [ratesListView, setRatesListView] = useState(false);
 
   // Premium Enterprise modules views states
@@ -213,6 +215,10 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
   if (minimumChargesView) {
     return <MinimumCharges onBack={() => setMinimumChargesView(false)} />;
+  }
+
+  if (flatTierRatesView) {
+    return <FlatTierRates user={user} onBack={() => setFlatTierRatesView(false)} />;
   }
 
   if (ratesListView) {
@@ -573,6 +579,13 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           subtitle="Flat weight-bracket floor per airline + route"
           onClick={() => { if (canAccessTab(user, 'More:MinimumCharges', excessBaggageAirlines)) setMinimumChargesView(true); }}
           disabled={!canAccessTab(user, 'More:MinimumCharges', excessBaggageAirlines)}
+        />
+        <MenuItem
+          icon={ReceiptIcon}
+          title="Flat Tier Rates"
+          subtitle="Flat weight-bracket pricing (Bumper & Burnet)"
+          onClick={() => { if (canAccessTab(user, 'More:FlatTierRates', excessBaggageAirlines)) setFlatTierRatesView(true); }}
+          disabled={!canAccessTab(user, 'More:FlatTierRates', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ReceiptIcon}
