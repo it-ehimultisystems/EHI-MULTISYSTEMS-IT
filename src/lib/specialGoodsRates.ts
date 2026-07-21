@@ -10,6 +10,7 @@ export interface SpecialGoodsRate {
   airline: string;
   hub_id: string | null;
   hub_name: string | null;
+  route_name: string | null;   // NULL = applies to any route
   min_kg: number;
   max_kg: number | null;
   rate_per_kg: number;
@@ -28,7 +29,7 @@ function getCached(): SpecialGoodsRate[] {
 export async function fetchSpecialGoodsRates(): Promise<SpecialGoodsRate[] | null> {
   const { data, error } = await supabase
     .from('special_goods_rates')
-    .select('id, content_type_id, airline, hub_id, min_kg, max_kg, rate_per_kg, content_types(name), hubs(name)');
+    .select('id, content_type_id, airline, hub_id, route_name, min_kg, max_kg, rate_per_kg, content_types(name), hubs(name)');
   if (!data || error) return null;
   const rows: SpecialGoodsRate[] = data.map((r: any) => {
     const ct = Array.isArray(r.content_types) ? r.content_types[0] : r.content_types;
@@ -40,6 +41,7 @@ export async function fetchSpecialGoodsRates(): Promise<SpecialGoodsRate[] | nul
       airline: r.airline,
       hub_id: r.hub_id ?? null,
       hub_name: hub?.name || null,
+      route_name: r.route_name ?? null,
       min_kg: Number(r.min_kg),
       max_kg: r.max_kg == null ? null : Number(r.max_kg),
       rate_per_kg: Number(r.rate_per_kg),
@@ -75,20 +77,35 @@ export function useSpecialGoodsRates(): SpecialGoodsRate[] {
 // by CargoForm.tsx's resolveRate() and the read-only rates list so the
 // bracket-matching rule lives in exactly one place.
 //
-// hub_id is nullable on each row (see 20260820_special_goods_hub_scoping.sql):
-// NULL is the company-wide default/fallback, a real hub_id is that hub's
-// override. An exact match for the caller's hubId is checked first; a
-// company-wide (hub_id == null) row for the same tier is only used if no
-// hub-specific override exists.
-export function resolveSpecialGoodsRate(rows: SpecialGoodsRate[], contentTypeName: string, airline: string, kg: number, hubId?: string | null): number | null {
-  const matches = rows.filter(r =>
+// hub_id and route_name are each independently nullable (see
+// 20260820_special_goods_hub_scoping.sql and
+// 20260828_special_goods_route_and_perishable.sql): NULL is the
+// company-wide/any-route default, a real value is that hub's or that
+// route's override. Most specific wins: this hub + this route, then
+// hub-only (any route), then route-only (any hub), then the fully
+// company-wide/any-route default.
+export function resolveSpecialGoodsRate(
+  rows: SpecialGoodsRate[],
+  contentTypeName: string,
+  airline: string,
+  kg: number,
+  hubId?: string | null,
+  route?: string | null,
+): number | null {
+  const scoped = rows.filter(r =>
     r.content_type_name === contentTypeName &&
     r.airline === airline &&
     kg >= r.min_kg &&
     (r.max_kg == null || kg <= r.max_kg)
   );
-  const hubMatch = hubId ? matches.find(r => r.hub_id === hubId) : undefined;
-  const fallbackMatch = matches.find(r => r.hub_id == null);
-  const match = hubMatch || fallbackMatch;
+  const pick = (hubOk: boolean, routeOk: boolean) => scoped.find(r =>
+    (hubOk ? r.hub_id === hubId : r.hub_id == null) &&
+    (routeOk ? r.route_name === route : r.route_name == null)
+  );
+  const match =
+    (hubId && route && pick(true, true)) ||
+    (hubId && pick(true, false)) ||
+    (route && pick(false, true)) ||
+    pick(false, false);
   return match ? match.rate_per_kg : null;
 }

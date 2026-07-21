@@ -339,7 +339,7 @@ export const CargoForm = ({
   // replaces could silently under/overcharge for any route/hub that simply
   // hadn't been configured yet).
   const resolveRate = (forAirline: string, forRoute: string, forContentType: string, forKg: number): number | null => {
-    const special = resolveSpecialGoodsRate(specialGoodsRates, forContentType, forAirline, forKg, user.hub_id);
+    const special = resolveSpecialGoodsRate(specialGoodsRates, forContentType, forAirline, forKg, user.hub_id, forRoute);
     if (special != null) return special;
     const exact = hubAirlineRouteRates[`${forAirline}|${forRoute}`];
     if (exact != null) return exact;
@@ -381,7 +381,7 @@ export const CargoForm = ({
   const priceOverrideInfo = useMemo(() => {
     const w = Math.round(parseFloat(kg)) || 0;
     if (w <= 0) return null;
-    const specialRate = resolveSpecialGoodsRate(specialGoodsRates, actualContentType, actualAirline, w, user.hub_id);
+    const specialRate = resolveSpecialGoodsRate(specialGoodsRates, actualContentType, actualAirline, w, user.hub_id, route);
     const minCharge = resolveMinimumCharge(minimumCharges, actualAirline, route, w);
     const perKgAmount = specialRate != null ? roundMoney(w * specialRate) : null;
     if (minCharge != null && (perKgAmount == null || minCharge > perKgAmount)) {
