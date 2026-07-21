@@ -92,18 +92,29 @@ function tabToPath(tab: TabView): string {
 }
 
 function pathToTab(pathname: string): TabView {
-  // Longest-prefix match against TAB_PATHS, then Baggage:/More: parameterized.
-  // Slug must be non-empty -- a bare "/more/" (trailing slash, no slug) falls
-  // through to the plain TAB_PATHS lookup below instead of becoming the
-  // invalid tab 'More:' (which matches no render branch at all).
+  // Longest-prefix match against TAB_PATHS, then Baggage: parameterized.
+  // Slug must be non-empty for Baggage -- an empty one falls through to the
+  // plain TAB_PATHS lookup below instead of an invalid 'Baggage:' tab.
   if (pathname.startsWith('/baggage/')) {
     const slug = decodeURIComponent(pathname.slice('/baggage/'.length).split('/')[0]);
     if (slug) return ('Baggage:' + slug) as TabView;
   }
-  if (pathname.startsWith('/more/')) {
-    const slug = decodeURIComponent(pathname.slice('/more/'.length).split('/')[0]);
-    if (slug) return ('More:' + slug) as TabView;
-  }
+  // Every /more or /more/<sub-view> path renders the SAME top-level <More>
+  // component -- this only needs to know "show More"; which sub-screen is
+  // showing is derived independently inside More.tsx from location.pathname
+  // itself (see MORE_SUB_ROUTES/activeSub there), which stays mounted and
+  // re-reads the URL on every navigation without EHIApp's involvement.
+  // Do NOT try to encode the sub-view into currentTab here the way Baggage
+  // does: the render switch below matches currentTab === 'More' by exact
+  // equality (not startsWith, unlike the Baggage: branch), and `More:<slug>`
+  // is a different, unrelated namespace already used for permission-check
+  // IDs (canAccessTab(user, 'More:EODClose', ...) in permissions.ts) that
+  // are never assigned to currentTab. Producing More:<slug> here broke
+  // every single More sub-screen: the instant a sub-route was entered,
+  // currentTab became e.g. 'More:eod', matched no render branch at all, and
+  // <More> unmounted -- so clicking ANY More-menu item blanked the whole
+  // content area, not just refresh/deep-link.
+  if (pathname === '/more' || pathname.startsWith('/more/')) return 'More';
   const hit = Object.entries(TAB_PATHS).find(([, p]) => pathname === p || pathname.startsWith(p + '/'));
   return (hit ? hit[0] : 'Tower') as TabView;
 }
