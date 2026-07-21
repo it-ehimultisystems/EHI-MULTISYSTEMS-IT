@@ -327,11 +327,22 @@ export const TransactionLedger = ({
     // implicit "today since midnight" assumption with the real 7PM–7PM window.
     if (shiftFilter === 'current') {
       const { start, end } = shiftBoundary;
-      const entryTime = e.raw?.created_at
-        ? new Date(e.raw.created_at)
-        : (e as any)._sortTime
-        ? new Date((e as any)._sortTime)
+      // Was only ever checking created_at -- clearing a debt on an entry
+      // logged days/weeks ago (handleClearDebt/DebtorsTab, or the RPC path)
+      // sets confirmedAt/paymentHistory[].at to "now" but never touches
+      // created_at, so a debt cleared THIS shift on an old entry was silently
+      // excluded from "Current Shift" -- invisible to the very agent who just
+      // cleared it. Same candidate timestamps as the attribution badge below
+      // (editedAt/confirmedAt/last payment), taking the MOST RECENT one so an
+      // entry shows up under whichever shift its latest activity happened in.
+      const raw = e.raw as any;
+      const lastPayment = Array.isArray(raw?.paymentHistory) && raw.paymentHistory.length > 0
+        ? raw.paymentHistory[raw.paymentHistory.length - 1]
         : null;
+      const candidateTimes = [e.raw?.created_at, (e as any)._sortTime, raw?.editedAt, raw?.confirmedAt, lastPayment?.at]
+        .map((v) => (v ? new Date(v).getTime() : NaN))
+        .filter((t) => !isNaN(t));
+      const entryTime = candidateTimes.length > 0 ? new Date(Math.max(...candidateTimes)) : null;
       if (entryTime && (entryTime < start || (end && entryTime >= end))) return false;
     }
 

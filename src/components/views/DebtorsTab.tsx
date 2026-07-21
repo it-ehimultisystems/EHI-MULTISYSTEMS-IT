@@ -148,7 +148,14 @@ export const DebtorsTab = ({
         bank: paymentMode === 'Transfer' ? paymentBank : undefined,
         time: tnow(),
         created_at: new Date().toISOString(),
-        type: 'cargo',
+        // Was hardcoded 'cargo' regardless of the debt's real type -- the
+        // RPC call above already uses (debt as any).type correctly (it
+        // routes to the matching clear_*_debt function), but this shadow
+        // receipt didn't, so clearing a baggage/marketing/package debt
+        // wrote its receipt into cargo_entries instead: parsed through
+        // cargo's own detail-string format (garbled airline/route/awb),
+        // and invisible under any type filter except "Cargo"/"All Types".
+        type: (debt as any).type || 'cargo',
         status: 'Intake',
         is_debt_clearance: true,
         related_tx_id: id,
