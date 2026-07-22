@@ -219,8 +219,16 @@ BEGIN
     RAISE EXCEPTION 'Cargo entry % not found', p_entry_ref;
   END IF;
 
+  -- sibling_hub_ids() (20260817_state_visibility.sql), not a strict
+  -- current_user_hub_id() match -- matching the READ policy's scope and
+  -- the same fix already applied to clear_cargo_debt/clear_baggage_debt/
+  -- clear_marketing_debt/clear_package_debt (20260819_clear_debt_state_
+  -- wide.sql): an agent who can SEE this entry via sibling-hub visibility
+  -- must also be able to act on it, or every retrieval attempted on a
+  -- sibling hub's own entry (not the agent's literal home hub) would hit
+  -- this exception despite being fully visible in their ledger.
   IF v_entry.hub_id IS NOT NULL
-     AND v_entry.hub_id <> public.current_user_hub_id()
+     AND v_entry.hub_id <> ALL(public.sibling_hub_ids())
      AND NOT public.is_hub_unrestricted() THEN
     RAISE EXCEPTION 'Not authorized to process a retrieval for this entry''s hub';
   END IF;
@@ -340,8 +348,16 @@ BEGIN
     RAISE EXCEPTION 'Package entry % not found', p_entry_ref;
   END IF;
 
+  -- sibling_hub_ids() (20260817_state_visibility.sql), not a strict
+  -- current_user_hub_id() match -- matching the READ policy's scope and
+  -- the same fix already applied to clear_cargo_debt/clear_baggage_debt/
+  -- clear_marketing_debt/clear_package_debt (20260819_clear_debt_state_
+  -- wide.sql): an agent who can SEE this entry via sibling-hub visibility
+  -- must also be able to act on it, or every retrieval attempted on a
+  -- sibling hub's own entry (not the agent's literal home hub) would hit
+  -- this exception despite being fully visible in their ledger.
   IF v_entry.hub_id IS NOT NULL
-     AND v_entry.hub_id <> public.current_user_hub_id()
+     AND v_entry.hub_id <> ALL(public.sibling_hub_ids())
      AND NOT public.is_hub_unrestricted() THEN
     RAISE EXCEPTION 'Not authorized to process a retrieval for this entry''s hub';
   END IF;
@@ -459,8 +475,16 @@ BEGIN
     RAISE EXCEPTION 'Baggage manifest % not found', p_transaction_id;
   END IF;
 
+  -- sibling_hub_ids() (20260817_state_visibility.sql), not a strict
+  -- current_user_hub_id() match -- matching the READ policy's scope and
+  -- the same fix already applied to clear_cargo_debt/clear_baggage_debt/
+  -- clear_marketing_debt/clear_package_debt (20260819_clear_debt_state_
+  -- wide.sql): an agent who can SEE this entry via sibling-hub visibility
+  -- must also be able to act on it, or every retrieval attempted on a
+  -- sibling hub's own entry (not the agent's literal home hub) would hit
+  -- this exception despite being fully visible in their ledger.
   IF v_entry.hub_id IS NOT NULL
-     AND v_entry.hub_id <> public.current_user_hub_id()
+     AND v_entry.hub_id <> ALL(public.sibling_hub_ids())
      AND NOT public.is_hub_unrestricted() THEN
     RAISE EXCEPTION 'Not authorized to process a retrieval for this entry''s hub';
   END IF;
@@ -584,8 +608,16 @@ BEGIN
     RAISE EXCEPTION 'Marketing entry % not found', p_entry_ref;
   END IF;
 
+  -- sibling_hub_ids() (20260817_state_visibility.sql), not a strict
+  -- current_user_hub_id() match -- matching the READ policy's scope and
+  -- the same fix already applied to clear_cargo_debt/clear_baggage_debt/
+  -- clear_marketing_debt/clear_package_debt (20260819_clear_debt_state_
+  -- wide.sql): an agent who can SEE this entry via sibling-hub visibility
+  -- must also be able to act on it, or every retrieval attempted on a
+  -- sibling hub's own entry (not the agent's literal home hub) would hit
+  -- this exception despite being fully visible in their ledger.
   IF v_entry.hub_id IS NOT NULL
-     AND v_entry.hub_id <> public.current_user_hub_id()
+     AND v_entry.hub_id <> ALL(public.sibling_hub_ids())
      AND NOT public.is_hub_unrestricted() THEN
     RAISE EXCEPTION 'Not authorized to process a retrieval for this entry''s hub';
   END IF;
