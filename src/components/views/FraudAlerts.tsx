@@ -51,10 +51,16 @@ export const FraudAlerts = ({
 
       try {
         // Rule 1: Duplicate AWB detection (last 24 hours)
+        // Ordered oldest-first so the duplicate-AWB rule's forEach below
+        // (which overwrites awbLastAgent[awb] on every match) ends up with
+        // the chronologically LAST agent, not just whichever row the
+        // database happened to return last -- without an explicit order,
+        // Postgres/PostgREST give no ordering guarantee at all.
         const { data: cargoData, error: cargoError } = await supabase
           .from('cargo_entries')
           .select('id, hub_id, awb_tag_number, consignee_name, amount, route, total_kg, entered_by, created_at, receipt_mode')
-          .gte('created_at', last24h);
+          .gte('created_at', last24h)
+          .order('created_at', { ascending: true });
         if (cargoError) {
           liveAlerts.push({
             id: 'FR-SYS-CARGOFETCH', type: 'system_error', severity: 'critical',

@@ -1193,10 +1193,14 @@ export const CargoForm = ({
       actualConsignee.trim().length > 0 &&
       route.trim().length > 0 &&
       actualContentType.trim().length > 0 &&
-      w > 0 &&
+      // Size-tier content (e.g. Plasma TV) is priced by screen size, not
+      // weight -- kg stays optional/still-trackable for these entries, but
+      // requiring w > 0 unconditionally would block a valid size-tier sale
+      // whenever the agent hasn't also weighed the item.
+      (isSizeTierContent ? (Math.round(parseFloat(sizeInches)) || 0) > 0 : w > 0) &&
       Number.isInteger(piecesNum) && piecesNum > 0 &&
       (rate == null && minCharge == null ? parsedAmount > 0 : parsedAmount >= minAmount && parsedAmount > 0),
-    [actualConsignee, route, actualContentType, w, piecesNum, parsedAmount, minAmount, rate, minCharge],
+    [actualConsignee, route, actualContentType, w, sizeInches, isSizeTierContent, piecesNum, parsedAmount, minAmount, rate, minCharge],
   );
 
   const handleRetailSubmit = async () => {
@@ -2154,7 +2158,7 @@ export const CargoForm = ({
                     className={`ehi-input pl-12 ${parsedAmount < minAmount ? 'border-[var(--color-error)]' : ''}`}
                   />
                 </div>
-                {rate == null && minCharge == null ? (
+                {rate == null && minCharge == null && !priceOverrideInfo ? (
                   <div className="text-[10px] text-[var(--color-accent-amber)] mt-1">No rate configured for this hub/airline/route — enter amount manually</div>
                 ) : (
                   parsedAmount > 0 && parsedAmount < minAmount && (

@@ -25,7 +25,13 @@ export const EODReconciliation = ({ user, transactions, expenses, onBack, onEOD 
       .from('eod_locks')
       .select('closed_by, created_at')
       .eq('hub_id', user.hub_id)
-      .gte('created_at', today + 'T00:00:00')
+      // Explicit +01:00 (Africa/Lagos, fixed offset, no DST) -- without it,
+      // a bare "T00:00:00" against a timestamptz column is interpreted in
+      // the DB session's timezone (typically UTC), which would put this
+      // boundary an hour after actual Lagos midnight and silently miss an
+      // EOD locked in that window, defeating the whole point of computing
+      // `today` as the Lagos business date above.
+      .gte('created_at', today + 'T00:00:00+01:00')
       .maybeSingle()
       .then(({ data }) => { if (data) setAlreadyLocked(data); });
   };

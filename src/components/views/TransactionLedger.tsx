@@ -599,7 +599,7 @@ export const TransactionLedger = ({
         await printCargoReceipt({
           entryRef: tx.id,
           serialNumber: 0,
-          date: tx.time,
+          date: txDisplayDateTime(tx.created_at, tx.time),
           hubName: tx.hub || user.hub,
           agentName: tx.enteredByName || user.name,
           airline: tx.airline || 'Unknown',
@@ -639,7 +639,7 @@ export const TransactionLedger = ({
         await printBaggageReceipt({
           airlineName: tx.airline || 'ValueJet',
           entryRef: tx.id,
-          date: tx.time,
+          date: txDisplayDateTime(tx.created_at, tx.time),
           hubName: tx.hub || user.hub,
           agentName: tx.enteredByName || user.name,
           passengerName: tx.name,

@@ -355,7 +355,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             allTx.push({
               id: r.entry_ref || r.id,
               name: r.consignee_name || 'Cargo',
-              detail: `${r.airline || ''} · ${r.awb_tag_number || ''} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg · ${r.route || ''} · ${r.content_type || 'Package'}`,
+              detail: `${r.airline || ''} · ${r.awb_tag_number || ''} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg · ${r.route || ''} · ${r.content_type || 'Package'}${r.size_inches ? ` · ${r.size_inches}in` : ''}`,
               amount: r.amount || 0,
               mode: r.receipt_mode === 'Debt' && (r.amount_paid || 0) >= (r.amount || 0) ? 'Debt Paid' : (r.receipt_mode || 'Cash'),
               time: new Date(r.created_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
@@ -794,7 +794,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
           pushUnique({
             id: r.entry_ref || r.id,
             name: r.consignee_name || 'Cargo',
-            detail: `${r.airline || ''} · ${r.awb_tag_number || ''} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg · ${r.route || ''} · ${r.content_type || 'Package'}`,
+            detail: `${r.airline || ''} · ${r.awb_tag_number || ''} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg · ${r.route || ''} · ${r.content_type || 'Package'}${r.size_inches ? ` · ${r.size_inches}in` : ''}`,
             amount: r.amount || 0,
             mode: r.receipt_mode || 'Cash',
             time: new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
@@ -1008,6 +1008,23 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
   }, [isOffline, flushPendingTx, user.hub_id, user.role, currentTab]);
 
   const handleAddTx = useCallback(async (tx: Transaction) => {
+    const tableName = tx.type === 'marketing' ? 'marketing_entries'
+      : tx.type === 'cargo' ? 'cargo_entries'
+      : tx.type === 'baggage' ? 'manifests'
+      : tx.type === 'package' ? 'package_entries'
+      : null;
+    if (!tableName) {
+      // A tx.type outside the known four is a programming error, not a
+      // runtime condition -- the old fallback wrote to a 'shipments' table
+      // that does not exist, silently losing the entry. Fail loud instead,
+      // and BEFORE the optimistic UI update below -- otherwise a rejected
+      // entry would still flash into the ledger locally and only vanish
+      // (unexplained) on the next refetch, since it was never actually saved.
+      console.error(`handleAddTx: unknown tx.type "${tx.type}" — entry not saved`, tx);
+      showToast({ message: `Internal error: unknown entry type "${tx.type}". Entry NOT saved — report this.`, type: 'error' });
+      return;
+    }
+
     setTransactions(prev => {
       const idx = prev.findIndex(t => t.id === tx.id);
       if (idx !== -1) {
@@ -1017,19 +1034,6 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       }
       return [tx, ...prev];
     });
-    const tableName = tx.type === 'marketing' ? 'marketing_entries'
-      : tx.type === 'cargo' ? 'cargo_entries'
-      : tx.type === 'baggage' ? 'manifests'
-      : tx.type === 'package' ? 'package_entries'
-      : null;
-    if (!tableName) {
-      // A tx.type outside the known four is a programming error, not a
-      // runtime condition -- the old fallback wrote to a 'shipments' table
-      // that does not exist, silently losing the entry. Fail loud instead.
-      console.error(`handleAddTx: unknown tx.type "${tx.type}" — entry not saved`, tx);
-      showToast({ message: `Internal error: unknown entry type "${tx.type}". Entry NOT saved — report this.`, type: 'error' });
-      return;
-    }
 
     let hubId = user.hub_id;
     if (!hubId) {
