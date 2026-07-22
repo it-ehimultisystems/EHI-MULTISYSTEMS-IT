@@ -36,6 +36,8 @@ import { useConfirm } from "../../lib/ConfirmContext";
 import { LiveCreditFeed } from "../LiveCreditFeed";
 import { PartialRetrievalModal } from "./PartialRetrievalModal";
 import { CustomerWallet } from "../../lib/types";
+import { CustomerWalletPicker } from "../CustomerWalletPicker";
+import { chargeWalletForSale } from "../../lib/walletPayment";
 
 type Entry = {
   id: string;
@@ -68,12 +70,14 @@ export const TransactionLedger = ({
   onStartShift,
   onEndShift,
   shiftLabel,
+  customerWallets = [],
 }: {
   user: User;
   transactions: Transaction[];
   expenses?: Expense[];
   onBack: () => void;
   onUpdateTx: (tx: Transaction) => void;
+  customerWallets?: CustomerWallet[];
   defaultTypeFilter?: 'cargo' | 'baggage' | 'marketing' | 'package' | null;
   // Seeds the terminal filter chip -- used by the GAT tab's History button,
   // where defaultTypeFilter can't express "cargo AND package" alone.
@@ -104,6 +108,13 @@ export const TransactionLedger = ({
   const banks = useBanks();
   const [showPrintHistory, setShowPrintHistory] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  // The mode the entry actually had when the edit modal opened -- only
+  // switching TO 'Wallet' from something else should trigger a deduction;
+  // re-saving an edit that was already 'Wallet' (or leaving it unchanged)
+  // must not charge the wallet a second time.
+  const [editOriginalMode, setEditOriginalMode] = useState<string | null>(null);
+  const [editWallet, setEditWallet] = useState<CustomerWallet | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   // Marketing entries store bag counts inside the composed `detail` string,
   // not as discrete Transaction fields, so the edit modal keeps its own
   // working copy (seeded by parsing `detail` in handleEditClick) and
@@ -400,6 +411,8 @@ export const TransactionLedger = ({
     if (e.source === "transaction") {
       const tx = { ...e.raw } as Transaction;
       setEditingTx(tx);
+      setEditOriginalMode(tx.mode);
+      setEditWallet(null);
       setPieceInput(String(tx.pieces ?? ''));
       setKgInput(String(tx.kg ?? ''));
       setAmountInput(String(tx.amount ?? ''));
@@ -414,7 +427,7 @@ export const TransactionLedger = ({
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingTx) return;
     const pieces = parseInt(pieceInput) || 0;
     const kg = parseFloat(kgInput) || 0;
@@ -430,7 +443,7 @@ export const TransactionLedger = ({
       showToast({ message: `Package/Parcel transactions must have an amount of at least ₦${MIN_PACKAGE_AMOUNT.toLocaleString()}`, type: 'warning' });
       return;
     }
-    
+
     if (editingTx.type === 'cargo') {
       try {
         const standardRates = JSON.parse(localStorage.getItem("ehi_standard_cargo_rates") || "{}");
@@ -443,12 +456,47 @@ export const TransactionLedger = ({
       } catch (e) {}
     }
 
+    // Switching an entry's mode TO 'Wallet' (from anything else) deducts
+    // the amount from the selected customer's wallet, same as picking
+    // Wallet at intake (CargoForm's chargeWalletForSale). Re-saving an
+    // entry that was already 'Wallet' does NOT charge again -- only an
+    // actual change of mode triggers it, guarded by editOriginalMode
+    // captured when the modal opened.
+    const switchingToWallet = editingTx.mode === 'Wallet' && editOriginalMode !== 'Wallet';
+    let walletId = editingTx.wallet_id;
+    let walletDeduction = editingTx.wallet_deduction_amount;
+    if (switchingToWallet) {
+      if (!editWallet) {
+        showToast({ message: 'Select a customer wallet to charge before saving.', type: 'warning' });
+        return;
+      }
+      if (editWallet.balance < amount) {
+        showToast({ message: `${editWallet.customer_name}'s wallet only has ₦${fmt(editWallet.balance)} -- not enough to cover ₦${fmt(amount)}.`, type: 'error' });
+        return;
+      }
+      setSavingEdit(true);
+      const charge = await chargeWalletForSale({
+        wallet: editWallet,
+        amount,
+        cargoRef: editingTx.id,
+        description: `Mode changed to Wallet on edit (${editingTx.type} ${editingTx.id})`,
+        loggedBy: user.name,
+      });
+      setSavingEdit(false);
+      if (!charge.ok || charge.remainder > 0) {
+        showToast({ message: `Wallet charge failed: ${charge.error || 'insufficient balance'}. Entry not saved.`, type: 'error' });
+        return;
+      }
+      walletId = editWallet.id;
+      walletDeduction = charge.walletDeduction;
+    }
+
     // Details fields (name, route, pieces, weight, etc.) are edited as
     // discrete fields, but `detail` is the composed string the rest of the
     // app (ledger rows, receipts) displays -- rebuild it here so the
     // optimistic local update stays consistent with what a refetch from
     // Supabase will later reconstruct (see EHIApp.tsx's fetchInitial).
-    const finalTx: Transaction = { ...editingTx, pieces, kg, amount };
+    const finalTx: Transaction = { ...editingTx, pieces, kg, amount, wallet_id: walletId, wallet_deduction_amount: walletDeduction };
     finalTx.editedBy = user.name;
     finalTx.editedAt = new Date().toISOString();
     if (finalTx.type === 'cargo') {
@@ -465,6 +513,8 @@ export const TransactionLedger = ({
     }
     onUpdateTx(finalTx);
     setEditingTx(null);
+    setEditWallet(null);
+    setEditOriginalMode(null);
   };
 
   const handleReprintReceipt = async (width: '58mm' | '80mm') => {
@@ -2130,7 +2180,11 @@ export const TransactionLedger = ({
                     >
                       <QrCode size={14} /> Scan
                     </button>
-                    {(['cargo', 'baggage', 'marketing', 'package'] as const).includes(viewingDetail.type as RetrievalEntryType) && !viewOnly && !viewingDetail.raw?.retrieved && (
+                    {/* Deliberately not gated by !viewOnly like the ledger's other
+                        edit actions -- any staff member can process a retrieval
+                        and refund it to the customer's wallet, not just
+                        super_admin/can_print_ledger holders. */}
+                    {(['cargo', 'baggage', 'marketing', 'package'] as const).includes(viewingDetail.type as RetrievalEntryType) && !viewingDetail.raw?.retrieved && (
                       <button
                         onClick={() => handleMarkRetrievedAndDeposit(viewingDetail)}
                         className="flex-1 py-2.5 flex items-center justify-center gap-1.5 bg-[rgba(245,158,11,0.12)] hover:bg-[var(--color-accent-amber)] hover:text-[var(--color-obsidian)] text-[var(--color-accent-amber)] rounded-lg transition-colors border border-[rgba(245,158,11,0.3)] text-[11px] font-mono font-bold"
@@ -2608,17 +2662,34 @@ export const TransactionLedger = ({
                 </label>
                 <select
                   value={editingTx.mode}
-                  onChange={(e) =>
-                    setEditingTx({ ...editingTx, mode: e.target.value as any })
-                  }
+                  onChange={(e) => {
+                    const nextMode = e.target.value as any;
+                    setEditingTx({ ...editingTx, mode: nextMode });
+                    if (nextMode !== 'Wallet') setEditWallet(null);
+                  }}
                   className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[16px] focus:outline-none focus:border-[var(--color-accent-amber)]"
                 >
                   <option value="Cash">Cash</option>
                   <option value="Transfer">Bank Transfer</option>
                   <option value="POS">POS / Card</option>
                   <option value="Debt">Debt</option>
+                  <option value="Wallet">Customer Wallet</option>
                 </select>
               </div>
+
+              {editingTx.mode === 'Wallet' && editOriginalMode !== 'Wallet' && (
+                <div className="space-y-1">
+                  <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">
+                    Charge Wallet (deducts ₦{fmt(parseFloat(amountInput) || 0)} on save)
+                  </label>
+                  <CustomerWalletPicker
+                    wallets={customerWallets}
+                    selectedWallet={editWallet}
+                    onSelectWallet={setEditWallet}
+                    currentCustomerName={editingTx.name}
+                  />
+                </div>
+              )}
 
               {editingTx.mode === "Transfer" && (
                 <div className="space-y-1">
@@ -2663,10 +2734,11 @@ export const TransactionLedger = ({
             <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-card)] flex justify-end shrink-0">
               <button
                 onClick={handleSaveEdit}
-                className="h-9 px-4 bg-[var(--color-success)] hover:bg-emerald-600 text-[var(--color-obsidian)] font-bold font-sans text-[13px] rounded-lg cursor-pointer flex items-center gap-1.5 transition-colors"
+                disabled={savingEdit}
+                className="h-9 px-4 bg-[var(--color-success)] hover:bg-emerald-600 text-[var(--color-obsidian)] font-bold font-sans text-[13px] rounded-lg cursor-pointer flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
                 <Check size={14} />
-                <span>Save Changes</span>
+                <span>{savingEdit ? 'Charging Wallet...' : 'Save Changes'}</span>
               </button>
             </div>
           </div>

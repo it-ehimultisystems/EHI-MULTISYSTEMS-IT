@@ -1269,6 +1269,13 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     const amountPaidCol = table === 'marketing_entries' ? 'debt_amount_paid' : 'amount_paid';
     if (t.amountPaid !== undefined)     updatePayload[amountPaidCol] = t.amountPaid;
     if (t.paymentHistory !== undefined) updatePayload.payment_history = t.paymentHistory;
+    // Set when TransactionLedger's edit modal switches mode to 'Wallet'
+    // (chargeWalletForSale already deducted the balance by the time this
+    // runs) -- without persisting these two columns, the deduction would
+    // have genuinely happened against the wallet, but the entry itself
+    // would silently forget which wallet paid for it on the next refetch.
+    if (t.wallet_id !== undefined)              updatePayload.wallet_id = t.wallet_id;
+    if (t.wallet_deduction_amount !== undefined) updatePayload.wallet_deduction_amount = t.wallet_deduction_amount;
 
     if (table === 'marketing_entries') {
       updatePayload.amount_paid = t.amount;
@@ -1774,6 +1781,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             onStartShift={streamLedgerDepartment ? () => handleStartShift(streamLedgerDepartment) : undefined}
             onEndShift={streamLedgerDepartment ? () => handleEndShift(streamLedgerDepartment) : undefined}
             shiftLabel={streamLedgerDepartment && streamLedgerDepartment !== 'all' ? STREAM_LEDGER_DEPT_LABEL[streamLedgerDepartment] : undefined}
+            customerWallets={customerWallets}
           />
         </div>
       )}
