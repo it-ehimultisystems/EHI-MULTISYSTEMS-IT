@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { User, Transaction } from '../../lib/types';
-import { fmt, tnow, getShiftBoundary } from '../../lib/helpers';
+import { fmt, tnow, getShiftBoundary, normalizeAirlineName } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { BackButton } from '../BackButton';
 import { useAirlines } from '../../lib/airlines';
@@ -133,7 +133,7 @@ export const AirlinePerformance = ({ user, onBack }: AirlinePerformanceProps) =>
           cargoRes.data.forEach((r) => {
             combined.push({
               id: r.entry_ref,
-              airline: r.airline || 'Unassigned Airline',
+              airline: r.airline ? normalizeAirlineName(r.airline) : 'Unassigned Airline',
               sales: r.amount || 0,
               kg: r.total_kg || 0,
               pcs: r.total_pcs || 1,
@@ -146,7 +146,7 @@ export const AirlinePerformance = ({ user, onBack }: AirlinePerformanceProps) =>
           baggageRes.data.forEach((r) => {
             combined.push({
               id: r.transaction_id,
-              airline: r.airline || 'ValueJet',
+              airline: r.airline ? normalizeAirlineName(r.airline) : 'ValueJet',
               sales: r.amount || 0,
               kg: r.excess_kg || r.total_kg || 0,
               pcs: r.total_pcs || 1,
@@ -187,7 +187,7 @@ export const AirlinePerformance = ({ user, onBack }: AirlinePerformanceProps) =>
     const map: Record<string, AirlineStat> = {};
 
     transactions.forEach((tx) => {
-      const air = tx.airline || 'Unassigned Airline';
+      const air = tx.airline ? normalizeAirlineName(tx.airline) : 'Unassigned Airline';
       if (!map[air]) {
         map[air] = {
           airline: air,
@@ -234,7 +234,7 @@ export const AirlinePerformance = ({ user, onBack }: AirlinePerformanceProps) =>
     let filtered = list;
 
     if (selectedAirlineFilter !== 'All') {
-      filtered = filtered.filter((s) => s.airline === selectedAirlineFilter);
+      filtered = filtered.filter((s) => normalizeAirlineName(s.airline) === normalizeAirlineName(selectedAirlineFilter));
     }
 
     if (searchQuery.trim().length > 0) {
