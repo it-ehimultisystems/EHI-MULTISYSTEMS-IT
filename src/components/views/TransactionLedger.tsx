@@ -4,6 +4,7 @@ import { Transaction, User, Expense } from "../../lib/types";
 import { fmt, tnow, isStandalonePWA, getHubCode, getShiftBoundary, txDisplayDateTime } from "../../lib/helpers";
 import { applyWalletTransaction, processRetrieval, unretrieveEntry, RetrievalEntryType } from "../../lib/wallet";
 import { clearDebt, DebtEntryType } from "../../lib/debt";
+import { confirmPayment, PaymentEntryType } from "../../lib/paymentConfirmation";
 import { useHubRoutes } from "../../lib/hubRoutes";
 import { useAirlines } from "../../lib/airlines";
 import { MIN_PACKAGE_AMOUNT } from "../../lib/constants";
@@ -981,7 +982,7 @@ export const TransactionLedger = ({
     }
   };
 
-  const toggleConfirm = (e: Entry, evt: React.MouseEvent) => {
+  const toggleConfirm = async (e: Entry, evt: React.MouseEvent) => {
     evt.stopPropagation();
     if (e.source !== 'transaction') return;
     // Maker-checker: whoever logged the sale can't be the one confirming
@@ -992,8 +993,21 @@ export const TransactionLedger = ({
       showToast({ message: "You can't confirm a payment you personally logged.", type: 'warning' });
       return;
     }
+    const nextConfirmed = !e.raw.paymentConfirmed;
+    // State-wide-authorized RPC does the real write (the generic onUpdateTx
+    // path below is hub-locked to an exact match, unlike this table's own
+    // sibling-hub read policy -- see confirmPayment's own comment).
+    const result = await confirmPayment(e.raw.type as PaymentEntryType, {
+      id: e.raw.id,
+      confirmed: nextConfirmed,
+      loggedBy: user.name || 'Unknown',
+    });
+    if (!result.ok) {
+      showToast({ message: result.error || 'Failed to confirm payment.', type: 'error' });
+      return;
+    }
     const updated = { ...e.raw };
-    if (!e.raw.paymentConfirmed) {
+    if (nextConfirmed) {
       updated.paymentConfirmed = true;
       updated.confirmedAt = new Date().toISOString();
       updated.confirmedBy = user.name;
@@ -1005,12 +1019,24 @@ export const TransactionLedger = ({
     onUpdateTx(updated);
   };
 
-  const savePosCode = (e: Entry, evt: React.MouseEvent) => {
+  const savePosCode = async (e: Entry, evt: React.MouseEvent) => {
     evt.stopPropagation();
     if (e.source !== 'transaction') return;
     if (!posCodeInput.code.trim()) return;
+    const code = posCodeInput.code.trim();
+    // Same state-wide-authorized RPC as toggleConfirm.
+    const result = await confirmPayment(e.raw.type as PaymentEntryType, {
+      id: e.raw.id,
+      confirmed: true,
+      posApprovalCode: code,
+      loggedBy: user.name || 'Unknown',
+    });
+    if (!result.ok) {
+      showToast({ message: result.error || 'Failed to save POS code.', type: 'error' });
+      return;
+    }
     const updated = { ...e.raw };
-    updated.posApprovalCode = posCodeInput.code.trim();
+    updated.posApprovalCode = code;
     updated.paymentConfirmed = true;
     updated.confirmedAt = new Date().toISOString();
     updated.confirmedBy = user.name;
@@ -1250,8 +1276,10 @@ export const TransactionLedger = ({
   const unverifiedCash = filteredEntries.filter(e => e.mode === 'Cash' && !e.raw.paymentConfirmed);
   const unconfirmedTransfer = filteredEntries.filter(e => e.mode === 'Transfer' && !e.raw.paymentConfirmed);
 
-  const selectAllCash = () => {
+  const selectAllCash = async () => {
     let skipped = 0;
+    let failed = 0;
+    const toConfirm: Entry[] = [];
     unverifiedCash.forEach(e => {
       if (e.source !== 'transaction') return;
       // Same maker-checker rule as toggleConfirm -- skip rows the current
@@ -1260,6 +1288,19 @@ export const TransactionLedger = ({
         skipped++;
         return;
       }
+      toConfirm.push(e);
+    });
+    // Same state-wide-authorized RPC as toggleConfirm -- this bulk action is
+    // exactly the workflow a state-wide accountant would use across
+    // multiple sibling hubs at once, so it needs the same fix.
+    const results = await Promise.all(toConfirm.map(e => confirmPayment(e.raw.type as PaymentEntryType, {
+      id: e.raw.id,
+      confirmed: true,
+      loggedBy: user.name || 'Unknown',
+    })));
+    results.forEach((result, i) => {
+      if (!result.ok) { failed++; return; }
+      const e = toConfirm[i];
       const updated = { ...e.raw };
       updated.paymentConfirmed = true;
       updated.confirmedAt = new Date().toISOString();
@@ -1268,6 +1309,9 @@ export const TransactionLedger = ({
     });
     if (skipped > 0) {
       showToast({ message: `Skipped ${skipped} entr${skipped === 1 ? 'y' : 'ies'} you personally logged.`, type: 'warning' });
+    }
+    if (failed > 0) {
+      showToast({ message: `Failed to confirm ${failed} entr${failed === 1 ? 'y' : 'ies'}.`, type: 'error' });
     }
   };
 

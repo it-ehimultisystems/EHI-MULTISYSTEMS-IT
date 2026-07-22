@@ -1075,5 +1075,157 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.unretrieve_marketing_entry(text, text) TO authenticated;
 
+-- ─── 11. STATE-WIDE PAYMENT CONFIRMATION ───────────────────────────────
+-- The UPDATE policies on cargo_entries/manifests/marketing_entries/
+-- package_entries were never widened to sibling_hub_ids() to match their
+-- READ policies (20260817_state_visibility.sql) -- deliberately, per
+-- 20260819_clear_debt_state_wide.sql's own comment: widening the general
+-- UPDATE policy would open every field on these tables to cross-hub
+-- edits, not just one narrow action. That RPC-per-action pattern is
+-- reused here rather than reversing that decision.
+--
+-- TransactionLedger.tsx's toggleConfirm/savePosCode both call the generic
+-- onUpdateTx path (a plain client .update()), which is therefore still
+-- hub-locked to an exact match -- any staff member with the
+-- can_print_ledger flag but NOT one of is_hub_unrestricted()'s roles
+-- (super_admin/admin/accountant/auditor) confirming payment on a sibling
+-- hub's visible-but-not-their-own entry hits the same silent
+-- 0-rows-affected UPDATE clear_cargo_debt was fixed for. These four
+-- functions only ever touch payment-confirmation fields (never amount,
+-- name, route, or any other field handleSaveEdit's full-form edit
+-- covers) -- that broader edit path is intentionally NOT widened here;
+-- it stays same-hub-only, matching the original design.
+CREATE OR REPLACE FUNCTION public.confirm_payment_cargo(
+  p_entry_ref         text,
+  p_confirmed         boolean,
+  p_pos_approval_code text DEFAULT NULL,
+  p_logged_by         text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_hub_id uuid;
+BEGIN
+  SELECT hub_id INTO v_hub_id FROM public.cargo_entries WHERE entry_ref = p_entry_ref FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Cargo entry % not found', p_entry_ref;
+  END IF;
+  IF v_hub_id IS NOT NULL AND v_hub_id <> ALL(public.sibling_hub_ids()) AND NOT public.is_hub_unrestricted() THEN
+    RAISE EXCEPTION 'Not authorized to confirm payment for this entry''s hub';
+  END IF;
+
+  UPDATE public.cargo_entries SET
+    payment_confirmed = p_confirmed,
+    confirmed_by      = CASE WHEN p_confirmed THEN COALESCE(p_logged_by, confirmed_by) ELSE NULL END,
+    confirmed_at       = CASE WHEN p_confirmed THEN now() ELSE NULL END,
+    pos_approval_code  = COALESCE(p_pos_approval_code, pos_approval_code)
+  WHERE entry_ref = p_entry_ref;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.confirm_payment_cargo(text, boolean, text, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.confirm_payment_package(
+  p_entry_ref         text,
+  p_confirmed         boolean,
+  p_pos_approval_code text DEFAULT NULL,
+  p_logged_by         text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_hub_id uuid;
+BEGIN
+  SELECT hub_id INTO v_hub_id FROM public.package_entries WHERE entry_ref = p_entry_ref FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Package entry % not found', p_entry_ref;
+  END IF;
+  IF v_hub_id IS NOT NULL AND v_hub_id <> ALL(public.sibling_hub_ids()) AND NOT public.is_hub_unrestricted() THEN
+    RAISE EXCEPTION 'Not authorized to confirm payment for this entry''s hub';
+  END IF;
+
+  UPDATE public.package_entries SET
+    payment_confirmed = p_confirmed,
+    confirmed_by      = CASE WHEN p_confirmed THEN COALESCE(p_logged_by, confirmed_by) ELSE NULL END,
+    confirmed_at       = CASE WHEN p_confirmed THEN now() ELSE NULL END,
+    pos_approval_code  = COALESCE(p_pos_approval_code, pos_approval_code)
+  WHERE entry_ref = p_entry_ref;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.confirm_payment_package(text, boolean, text, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.confirm_payment_baggage(
+  p_transaction_id    text,
+  p_confirmed         boolean,
+  p_pos_approval_code text DEFAULT NULL,
+  p_logged_by         text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_hub_id uuid;
+BEGIN
+  SELECT hub_id INTO v_hub_id FROM public.manifests WHERE transaction_id = p_transaction_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Baggage manifest % not found', p_transaction_id;
+  END IF;
+  IF v_hub_id IS NOT NULL AND v_hub_id <> ALL(public.sibling_hub_ids()) AND NOT public.is_hub_unrestricted() THEN
+    RAISE EXCEPTION 'Not authorized to confirm payment for this entry''s hub';
+  END IF;
+
+  UPDATE public.manifests SET
+    payment_confirmed = p_confirmed,
+    confirmed_by      = CASE WHEN p_confirmed THEN COALESCE(p_logged_by, confirmed_by) ELSE NULL END,
+    confirmed_at       = CASE WHEN p_confirmed THEN now() ELSE NULL END,
+    pos_approval_code  = COALESCE(p_pos_approval_code, pos_approval_code)
+  WHERE transaction_id = p_transaction_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.confirm_payment_baggage(text, boolean, text, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.confirm_payment_marketing(
+  p_entry_ref         text,
+  p_confirmed         boolean,
+  p_pos_approval_code text DEFAULT NULL,
+  p_logged_by         text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_hub_id uuid;
+BEGIN
+  SELECT hub_id INTO v_hub_id FROM public.marketing_entries WHERE entry_ref = p_entry_ref FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Marketing entry % not found', p_entry_ref;
+  END IF;
+  IF v_hub_id IS NOT NULL AND v_hub_id <> ALL(public.sibling_hub_ids()) AND NOT public.is_hub_unrestricted() THEN
+    RAISE EXCEPTION 'Not authorized to confirm payment for this entry''s hub';
+  END IF;
+
+  UPDATE public.marketing_entries SET
+    payment_confirmed = p_confirmed,
+    confirmed_by      = CASE WHEN p_confirmed THEN COALESCE(p_logged_by, confirmed_by) ELSE NULL END,
+    confirmed_at       = CASE WHEN p_confirmed THEN now() ELSE NULL END,
+    pos_approval_code  = COALESCE(p_pos_approval_code, pos_approval_code)
+  WHERE entry_ref = p_entry_ref;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.confirm_payment_marketing(text, boolean, text, text) TO authenticated;
+
 INSERT INTO public.schema_migrations (filename) VALUES ('20260902_multi_department_retrieval_and_wallet_cashout.sql')
 ON CONFLICT (filename) DO NOTHING;
