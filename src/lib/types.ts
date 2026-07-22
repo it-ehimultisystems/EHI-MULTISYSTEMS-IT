@@ -204,6 +204,11 @@ export interface Transaction {
   applied_rate_per_kg?: number;
   pieces?: number;
   kg?: number;
+  // Screen size for size-tier-priced content (e.g. Plasma TV) -- a
+  // different physical quantity from kg, which stays a separate field for
+  // manifest/cargo weight even when size_inches is what actually set the
+  // price. See src/lib/sizeTierRates.ts.
+  sizeInches?: number;
   pickupPin?: string;
   contentType?: string;
   // Package/Parcel specifics -- distinct from contentType, which for this

@@ -24,6 +24,7 @@ import { Banks } from './Banks';
 import { SpecialGoodsRates } from './SpecialGoodsRates';
 import { MinimumCharges } from './MinimumCharges';
 import { FlatTierRates } from './FlatTierRates';
+import { SizeTierRates } from './SizeTierRates';
 import { RatesList } from './RatesList';
 import { CustomerWallets } from './CustomerWallets';
 import { GatPrintQueue } from './GatPrintQueue';
@@ -86,6 +87,7 @@ const MORE_SUB_ROUTES = {
   specialGoodsRates: 'special-goods-rates',
   minimumCharges: 'minimum-charges',
   flatTierRates: 'flat-tier-rates',
+  sizeTierRates: 'size-tier-rates',
   ratesList: 'rates-list',
   bankRecon: 'bank-recon',
   fleet: 'fleet',
@@ -248,6 +250,10 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
 
   if (activeSub === 'flatTierRates') {
     return <FlatTierRates user={user} onBack={closeSub} />;
+  }
+
+  if (activeSub === 'sizeTierRates') {
+    return <SizeTierRates user={user} onBack={closeSub} />;
   }
 
   if (activeSub === 'ratesList') {
@@ -622,6 +628,13 @@ export const More = ({ user, transactions, expenses, onLogout, onEOD, onAddTx, o
           subtitle="Flat weight-bracket pricing (Bumper & Burnet)"
           onClick={() => { if (canAccessTab(user, 'More:FlatTierRates', excessBaggageAirlines)) openSub('flatTierRates'); }}
           disabled={!canAccessTab(user, 'More:FlatTierRates', excessBaggageAirlines)}
+        />
+        <MenuItem
+          icon={ReceiptIcon}
+          title="Size Tier Rates"
+          subtitle="Flat screen-size-bracket pricing (Plasma TV)"
+          onClick={() => { if (canAccessTab(user, 'More:SizeTierRates', excessBaggageAirlines)) openSub('sizeTierRates'); }}
+          disabled={!canAccessTab(user, 'More:SizeTierRates', excessBaggageAirlines)}
         />
         <MenuItem
           icon={ReceiptIcon}

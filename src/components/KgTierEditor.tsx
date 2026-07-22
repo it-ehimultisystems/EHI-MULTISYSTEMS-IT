@@ -23,6 +23,7 @@ export const KgTierEditor = ({
   onUpdateField,
   onDelete,
   itemLabel = 'tier',
+  unitLabel = 'KG',
 }: {
   tiers: KgTier[];
   priceLabel: string;
@@ -31,6 +32,11 @@ export const KgTierEditor = ({
   onUpdateField: (id: string, field: 'min_kg' | 'max_kg' | 'price', value: number | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   itemLabel?: string;
+  // Bracket unit shown in the MIN/MAX labels below -- the underlying
+  // min_kg/max_kg fields stay generic numeric ranges regardless (e.g.
+  // SizeTierRates.tsx maps its min_inches/max_inches into these same
+  // fields and passes unitLabel="IN" so the labels read correctly).
+  unitLabel?: string;
 }) => {
   const [newMin, setNewMin] = useState('');
   const [newMax, setNewMax] = useState('');
@@ -57,7 +63,7 @@ export const KgTierEditor = ({
   const handleDelete = async (id: string) => {
     const ok = await confirm({
       title: `Remove ${itemLabel}?`,
-      message: `This weight bracket will no longer apply to new entries.`,
+      message: `This bracket will no longer apply to new entries.`,
       confirmLabel: 'Remove',
       tone: 'danger',
     });
@@ -68,14 +74,14 @@ export const KgTierEditor = ({
   return (
     <div className="space-y-3">
       <div className="ehi-card p-4 space-y-3">
-        <div className="text-[11px] font-bold text-[var(--color-muted)] uppercase tracking-widest">Add Weight Bracket</div>
+        <div className="text-[11px] font-bold text-[var(--color-muted)] uppercase tracking-widest">Add {unitLabel === 'KG' ? 'Weight' : 'Size'} Bracket</div>
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <label htmlFor="tier-min" className="text-[9px] font-mono text-[var(--color-muted)] block mb-1">MIN KG</label>
+            <label htmlFor="tier-min" className="text-[9px] font-mono text-[var(--color-muted)] block mb-1">MIN {unitLabel}</label>
             <input id="tier-min" type="number" value={newMin} onChange={(e) => setNewMin(e.target.value)} placeholder="0" className="w-full ehi-input" />
           </div>
           <div>
-            <label htmlFor="tier-max" className="text-[9px] font-mono text-[var(--color-muted)] block mb-1">MAX KG (blank = &amp; up)</label>
+            <label htmlFor="tier-max" className="text-[9px] font-mono text-[var(--color-muted)] block mb-1">MAX {unitLabel} (blank = &amp; up)</label>
             <input id="tier-max" type="number" value={newMax} onChange={(e) => setNewMax(e.target.value)} placeholder="45" className="w-full ehi-input" />
           </div>
           <div>
@@ -104,7 +110,7 @@ export const KgTierEditor = ({
             </button>
             <div className="flex-1 grid grid-cols-3 gap-2">
               <div>
-                <label htmlFor={`min-${t.id}`} className="text-[9px] font-mono text-[var(--color-muted)] block mb-1">MIN KG</label>
+                <label htmlFor={`min-${t.id}`} className="text-[9px] font-mono text-[var(--color-muted)] block mb-1">MIN {unitLabel}</label>
                 <input
                   id={`min-${t.id}`}
                   type="number"
@@ -115,7 +121,7 @@ export const KgTierEditor = ({
                 />
               </div>
               <div>
-                <label htmlFor={`max-${t.id}`} className="text-[9px] font-mono text-[var(--color-muted)] block mb-1">MAX KG</label>
+                <label htmlFor={`max-${t.id}`} className="text-[9px] font-mono text-[var(--color-muted)] block mb-1">MAX {unitLabel}</label>
                 <input
                   id={`max-${t.id}`}
                   type="number"

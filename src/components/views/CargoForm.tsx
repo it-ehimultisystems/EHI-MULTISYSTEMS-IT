@@ -10,6 +10,7 @@ import { useAirlines, addAirlineIfMissing } from "../../lib/airlines";
 import { useContentTypes } from "../../lib/contentTypes";
 import { useSpecialGoodsRates, resolveSpecialGoodsRate } from "../../lib/specialGoodsRates";
 import { useFlatTierRates, resolveFlatTier } from "../../lib/flatTierRates";
+import { useSizeTierRates, resolveSizeTier, useSizeTierContentTypeNames } from "../../lib/sizeTierRates";
 import { useMinimumCharges, resolveMinimumCharge } from "../../lib/minimumCharges";
 import { useBanks } from "../../lib/banks";
 import { useEnterToNextField } from "../../lib/useEnterToNextField";
@@ -50,6 +51,7 @@ import {
   Bluetooth,
   Lock,
   Calendar,
+  Ruler,
 } from "lucide-react";
 import {
   sendReceiptWhatsApp,
@@ -207,6 +209,10 @@ export const CargoForm = ({
 
   const [pcs, setPcs] = useState("1");
   const [kg, setKg] = useState("");
+  // Screen size, only relevant/shown for content types flagged is_size_tier
+  // (e.g. Plasma TV) -- see isSizeTierContent below. kg stays a separate
+  // field even for these entries (still tracked for manifest/cargo weight).
+  const [sizeInches, setSizeInches] = useState("");
   const [showRetailReview, setShowRetailReview] = useState(false);
   const [route, setRoute] = useState(routes[0]);
   useValidatedRouteSelection(routes, route, setRoute);
@@ -339,6 +345,8 @@ export const CargoForm = ({
   const specialGoodsRates = useSpecialGoodsRates();
   const minimumCharges = useMinimumCharges();
   const flatTierRates = useFlatTierRates();
+  const sizeTierRates = useSizeTierRates();
+  const sizeTierContentTypeNames = useSizeTierContentTypeNames();
 
   // Rate lookup for retail cargo pricing, highest priority first: a
   // special-goods kg-tier rate for this content type + airline (set in
@@ -371,6 +379,10 @@ export const CargoForm = ({
   // submit paths (and the special-goods/minimum-charge lookups both use)
   // agree on one value instead of each re-deriving it.
   const actualContentType = contentType === "Other" ? customContentType : contentType;
+  // Whether the currently-selected content type is flagged is_size_tier
+  // (e.g. Plasma TV) -- drives the Screen Size (inches) input below and
+  // the size-tier price check that takes priority over the normal kg cascade.
+  const isSizeTierContent = sizeTierContentTypeNames.has(actualContentType);
 
   // Compute auto-price from KG × rate, floored by any matching minimum
   // charge bracket for this airline+route — used to pre-fill the amount
@@ -378,6 +390,17 @@ export const CargoForm = ({
   // keystroke.
   const autoAmount = useMemo(() => {
     const w = Math.round(parseFloat(kg)) || 0;
+    // Size-tier content (e.g. Plasma TV) prices as one whole amount per
+    // screen-size bracket, keyed on inches instead of kg -- checked before
+    // the kg-based checks below since w may legitimately be 0/irrelevant
+    // for a sized item whose price doesn't depend on weight at all.
+    if (isSizeTierContent) {
+      const inches = Math.round(parseFloat(sizeInches)) || 0;
+      if (inches > 0) {
+        const sized = resolveSizeTier(sizeTierRates, actualContentType, actualAirline, route, inches, user.hub_id);
+        if (sized != null) return sized.toString();
+      }
+    }
     if (w <= 0) return "";
     // Flat-tier content (e.g. Bumper & Burnet) prices as one whole amount per
     // weight bracket, not per-kg -- it overrides the entire per-kg cascade
@@ -391,12 +414,19 @@ export const CargoForm = ({
     const final = minCharge != null ? Math.max(computed, minCharge) : computed;
     return final.toString();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kg, route, actualContentType, actualAirline, standardRates, hubRouteRates, hubAirlineRouteRates, specialGoodsRates, minimumCharges, flatTierRates]);
+  }, [kg, sizeInches, isSizeTierContent, route, actualContentType, actualAirline, standardRates, hubRouteRates, hubAirlineRouteRates, specialGoodsRates, minimumCharges, flatTierRates, sizeTierRates]);
 
-  // Which of the two overrides (if any) determined autoAmount -- surfaced
+  // Which of the three overrides (if any) determined autoAmount -- surfaced
   // as a badge near the price preview so staff aren't confused by a number
   // that doesn't match kg × the route rate they're used to seeing.
   const priceOverrideInfo = useMemo(() => {
+    if (isSizeTierContent) {
+      const inches = Math.round(parseFloat(sizeInches)) || 0;
+      if (inches > 0) {
+        const sized = resolveSizeTier(sizeTierRates, actualContentType, actualAirline, route, inches, user.hub_id);
+        if (sized != null) return { type: 'size' as const, amount: sized };
+      }
+    }
     const w = Math.round(parseFloat(kg)) || 0;
     if (w <= 0) return null;
     const flat = resolveFlatTier(flatTierRates, actualContentType, actualAirline, route, w, user.hub_id);
@@ -414,7 +444,7 @@ export const CargoForm = ({
     }
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kg, route, actualContentType, actualAirline, specialGoodsRates, minimumCharges, flatTierRates]);
+  }, [kg, sizeInches, isSizeTierContent, route, actualContentType, actualAirline, specialGoodsRates, minimumCharges, flatTierRates, sizeTierRates]);
 
   const availableAirlines = useAirlines();
 
@@ -1232,7 +1262,7 @@ export const CargoForm = ({
     const nextSerial = incrementLocalSerial();
     setSerialNumber(nextSerial);
 
-    const summaryStr = `${actualAirline} · ${resolvedAwb} · ${pcs}pcs · ${kg}KG · ${route} · ${actualContentType}`;
+    const summaryStr = `${actualAirline} · ${resolvedAwb} · ${pcs}pcs · ${kg}KG · ${route} · ${actualContentType}${isSizeTierContent && sizeInches ? ` · ${sizeInches}in` : ''}`;
 
     const tx: Transaction = {
       id: resolvedAwb,
@@ -1251,6 +1281,7 @@ export const CargoForm = ({
       commissionRate,
       pieces: parseInt(pcs) || 1,
       kg: Math.round(parseFloat(kg)) || 0,
+      sizeInches: isSizeTierContent && sizeInches ? (Math.round(parseFloat(sizeInches)) || undefined) : undefined,
       pickupPin,
       consigneePhone: consigneePhone.trim(),
       // Office-work linking: when staff confirm this retail entry belongs to
@@ -2053,6 +2084,26 @@ export const CargoForm = ({
                   />
                 )}
               </div>
+
+              {isSizeTierContent && (
+                <div>
+                  {renderLabel(Ruler, "Screen Size (inches)")}
+                  <input
+                    id="retail-size-inches"
+                    name="size-inches"
+                    type="number"
+                    step="1"
+                    min="1"
+                    value={sizeInches}
+                    onChange={(e) => {
+                      const cleanVal = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                      setSizeInches(cleanVal);
+                      setAmount(""); // reset manual override so autoAmount takes over
+                    }}
+                    className={formInputClass}
+                  />
+                </div>
+              )}
             </div>
 
             <div
@@ -2112,7 +2163,9 @@ export const CargoForm = ({
                 )}
                 {priceOverrideInfo && (
                   <div className="text-[10px] text-[var(--color-accent-cobalt)] mt-1">
-                    {priceOverrideInfo.type === 'flat'
+                    {priceOverrideInfo.type === 'size'
+                      ? `Size Tier Rate applied: ${fmt(priceOverrideInfo.amount)} (whole bracket, by screen size)`
+                      : priceOverrideInfo.type === 'flat'
                       ? `Flat Rate applied: ${fmt(priceOverrideInfo.amount)} (whole bracket, not per-kg)`
                       : priceOverrideInfo.type === 'special'
                       ? `Special Goods Rate applied: ${fmt(priceOverrideInfo.rate)}/kg`

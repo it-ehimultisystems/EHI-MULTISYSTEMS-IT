@@ -85,6 +85,7 @@ export const STATIC_VIEWS: ViewDef[] = [
   { id: 'More:SpecialGoodsRates', label: 'Special Goods Rates', roles: ['super_admin', 'admin', 'accountant'], category: 'Administration' },
   { id: 'More:MinimumCharges', label: 'Minimum Charges', roles: ['super_admin', 'admin', 'accountant'], category: 'Administration' },
   { id: 'More:FlatTierRates', label: 'Flat Tier Rates', roles: ['super_admin', 'admin', 'accountant'], category: 'Administration' },
+  { id: 'More:SizeTierRates', label: 'Size Tier Rates', roles: ['super_admin', 'admin', 'accountant'], category: 'Administration' },
   { id: 'More:ExpenseCategories', label: 'Expense Categories', roles: ['super_admin', 'admin', 'accountant'], category: 'Administration' },
   { id: 'More:Banks', label: 'Banks', roles: ['super_admin', 'admin', 'accountant'], category: 'Administration' },
   { id: 'More:Settings', label: 'Platform Settings', roles: ['super_admin'], category: 'Administration' },

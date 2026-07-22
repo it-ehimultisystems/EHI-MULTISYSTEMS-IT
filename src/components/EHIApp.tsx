@@ -326,7 +326,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
         const [shifts, cargoRes, baggageRes, mktRes, packageRes, expRes, profilesRes] = await Promise.all([
           fetchShifts(),
-          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,pickup_pin,status,created_at,commission_rate,bank,hub_id,terminal,remark,amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,consignee_phone,client_type,corporate_client_id,bank_reference,bank_sender,bank_alert_text,entered_by,last_edited_by,last_edited_at,wallet_id,wallet_deduction_amount,retrieved,retrieved_amount,retrieved_pieces,retrieved_kg,retrieval_note,retrieved_at,retrieved_by').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
+          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,size_inches,route,content_type,amount,receipt_mode,pickup_pin,status,created_at,commission_rate,bank,hub_id,terminal,remark,amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,consignee_phone,client_type,corporate_client_id,bank_reference,bank_sender,bank_alert_text,entered_by,last_edited_by,last_edited_at,wallet_id,wallet_deduction_amount,retrieved,retrieved_amount,retrieved_pieces,retrieved_kg,retrieval_note,retrieved_at,retrieved_by').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
           addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,total_pcs,amount_paid,payment_history,airline,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text,entered_by,last_edited_by,last_edited_at,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
           addHubFilter(supabase.from('marketing_entries').select('entry_ref,awb_tag_number,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,bb_kg,mb_kg,sb_kg,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,last_edited_by,last_edited_at,debt_amount_paid,payment_history,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,bank_reference,bank_sender,bank_alert_text,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
           addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,status,amount,payment_mode,bank,payment_narration,debt_paid,debt_paid_at,amount_paid,payment_history,created_at,hub_id,terminal,payment_confirmed,pos_approval_code,confirmed_by,confirmed_at,entered_by,last_edited_by,last_edited_at,wallet_id,wallet_deduction_amount').gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false }).limit(5000)),
@@ -363,6 +363,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               status: r.status || 'Intake',
               awb_tag_number: r.awb_tag_number,
               kg: r.total_kg,
+              sizeInches: r.size_inches ?? undefined,
               pieces: r.total_pcs,
               pickupPin: r.pickup_pin || undefined,
               created_at: r.created_at,
@@ -1082,6 +1083,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         route: (tx as any).route || route,
         total_pcs: (tx as any).pieces != null ? (tx as any).pieces : (parseInt(pcsStr) || 1),
         total_kg: (tx as any).kg != null ? Math.round((tx as any).kg) : (Math.round(parseFloat(kgStr) || 0)),
+        size_inches: tx.sizeInches ?? null,
         content_type: (tx as any).contentType ?? content,
         awb_tag_number: (tx as any).awb_tag_number || awbFromDetail,
         amount: tx.amount,

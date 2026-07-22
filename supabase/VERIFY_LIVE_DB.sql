@@ -55,7 +55,7 @@ SELECT count(*) AS cargo_cols_found FROM information_schema.columns
 WHERE table_schema='public' AND table_name='cargo_entries'
   AND column_name IN (
     'entry_ref','consignee_name','airline','awb_tag_number','total_pcs',
-    'total_kg','route','content_type','amount','receipt_mode','pickup_pin',
+    'total_kg','size_inches','route','content_type','amount','receipt_mode','pickup_pin',
     'status','created_at','commission_rate','bank','hub_id','terminal',
     'remark','amount_paid','payment_history','payment_confirmed',
     'pos_approval_code','confirmed_by','confirmed_at','consignee_phone',
@@ -64,7 +64,7 @@ WHERE table_schema='public' AND table_name='cargo_entries'
     'wallet_id','wallet_deduction_amount','retrieved','retrieved_amount',
     'retrieved_pieces','retrieved_kg','retrieval_note','retrieved_at',
     'retrieved_by'
-  ); -- EXPECTED: 42
+  ); -- EXPECTED: 43 (added size_inches 2026-07-22, see 20260901_size_tier_rates_plasma_tv.sql)
 
 SELECT count(*) AS manifest_cols_found FROM information_schema.columns
 WHERE table_schema='public' AND table_name='manifests'

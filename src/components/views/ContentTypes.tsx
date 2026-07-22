@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tag, Plus, Trash2, Loader, Power, Sparkles, Layers } from 'lucide-react';
+import { Tag, Plus, Trash2, Loader, Power, Sparkles, Layers, Ruler } from 'lucide-react';
 import { BackButton } from '../BackButton';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/ToastContext';
@@ -11,6 +11,7 @@ interface ContentType {
   active: boolean;
   is_special_goods: boolean;
   is_flat_tier: boolean;
+  is_size_tier: boolean;
 }
 
 export const ContentTypes = ({ onBack, onManageRates }: { onBack: () => void; onManageRates?: (contentTypeId: string) => void }) => {
@@ -57,6 +58,18 @@ export const ContentTypes = ({ onBack, onManageRates }: { onBack: () => void; on
     const prev = types;
     setTypes(cur => cur.map(x => x.id === t.id ? { ...x, active: !x.active } : x));
     const { error } = await supabase.from('content_types').update({ active: !t.active, updated_at: new Date().toISOString() }).eq('id', t.id);
+    if (error) {
+      setTypes(prev);
+      showToast({ message: `Failed to save change: ${error.message}`, type: 'error' });
+    }
+  };
+
+  // Same optimistic pattern as handleToggleActive/handleToggleSpecialGoods/
+  // handleToggleFlatTier below.
+  const handleToggleSizeTier = async (t: ContentType) => {
+    const prev = types;
+    setTypes(cur => cur.map(x => x.id === t.id ? { ...x, is_size_tier: !x.is_size_tier } : x));
+    const { error } = await supabase.from('content_types').update({ is_size_tier: !t.is_size_tier, updated_at: new Date().toISOString() }).eq('id', t.id);
     if (error) {
       setTypes(prev);
       showToast({ message: `Failed to save change: ${error.message}`, type: 'error' });
@@ -199,6 +212,17 @@ export const ContentTypes = ({ onBack, onManageRates }: { onBack: () => void; on
                       }`}
                     >
                       <Layers size={11} /> {t.is_flat_tier ? 'Flat Tier' : 'Mark Flat Tier'}
+                    </button>
+                    <button
+                      onClick={() => handleToggleSizeTier(t)}
+                      aria-label={t.is_size_tier ? `Unflag ${t.name} as size tier` : `Flag ${t.name} as size tier`}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-colors ${
+                        t.is_size_tier
+                          ? 'bg-[rgba(59,130,246,0.12)] text-[var(--color-accent-cobalt)]'
+                          : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
+                      }`}
+                    >
+                      <Ruler size={11} /> {t.is_size_tier ? 'Size Tier' : 'Mark Size Tier'}
                     </button>
                     {t.is_special_goods && onManageRates && (
                       <button
