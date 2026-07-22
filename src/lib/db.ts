@@ -35,7 +35,10 @@ export interface TagPoolItem {
 }
 
 class EHILocalDB extends Dexie {
-  shipments!: Table<LocalShipment>;
+  // NOTE: `shipments` was dropped in Dexie schema v3. Do NOT re-declare it --
+  // a declared-but-undefined table property throws "not a constructor" at
+  // the first access. Historical version(1)/version(2) blocks below still
+  // reference it purely so Dexie can migrate old devices forward.
   manifests!: Table<LocalShipment>;
   marketing_entries!: Table<LocalShipment>;
   cargo_entries!: Table<LocalShipment>;

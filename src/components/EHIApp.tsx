@@ -751,17 +751,27 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
 
     const isAdmin = ['super_admin','admin','accountant','auditor'].includes(user.role);
     const canSeePin = ['admin', 'super_admin', 'accountant'].includes(user.role);
-    const hubFilter = (!isAdmin && user.hub_id) ? `hub_id=eq.${user.hub_id}` : undefined;
+    // No per-hub channel filter on cargo/baggage/marketing/package below:
+    // fetchInitial is state-wide (RLS-scoped) since the frontend hub filter
+    // was removed, and a channel filtered to one hub made the live feed
+    // silently miss sister-hub entries that the initial fetch DID show.
+    // Realtime events are RLS-filtered server-side for authenticated
+    // channels, so scoping stays consistent with fetch. If per-hub live
+    // feeds are ever needed again, both layers must change together --
+    // never one without the other. hub_shifts stays hub-local below (a
+    // shift is deliberately per-hub, not state-wide).
 
     let needsCargo = true;
     let needsBaggage = true;
     let needsMarketing = true;
+    let needsPackage = true;
 
     if (isAdmin) {
       const isAggregateView = ['Tower', 'Scan', 'More'].includes(currentTab);
       needsCargo = isAggregateView || currentTab === 'Cargo' || currentTab === 'GAT';
       needsBaggage = isAggregateView || currentTab.startsWith('Baggage:');
       needsMarketing = isAggregateView || currentTab === 'Marketing';
+      needsPackage = isAggregateView || currentTab === 'Packages' || currentTab === 'GAT';
     }
 
     const pushUnique = (tx: Transaction) => {
@@ -777,7 +787,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     const cargoChannel = needsCargo ? supabase
       .channel('ehi-cargo-live')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'cargo_entries', filter: hubFilter },
+        { event: 'INSERT', schema: 'public', table: 'cargo_entries' },
         payload => {
           const r = payload.new as any;
           pushUnique({
@@ -803,7 +813,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         }
       )
       .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'cargo_entries', filter: hubFilter },
+        { event: 'UPDATE', schema: 'public', table: 'cargo_entries' },
         payload => {
           const r = payload.new as any;
           setTransactions(prev => prev.map(t =>
@@ -827,7 +837,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     const baggageChannel = needsBaggage ? supabase
       .channel('ehi-baggage-live')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'manifests', filter: hubFilter },
+        { event: 'INSERT', schema: 'public', table: 'manifests' },
         payload => {
           const r = payload.new as any;
           pushUnique({
@@ -852,7 +862,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         }
       )
       .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'manifests', filter: hubFilter },
+        { event: 'UPDATE', schema: 'public', table: 'manifests' },
         payload => {
           const r = payload.new as any;
           setTransactions(prev => prev.map(t =>
@@ -872,7 +882,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
     const marketingChannel = needsMarketing ? supabase
       .channel('ehi-marketing-live')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'marketing_entries', filter: hubFilter },
+        { event: 'INSERT', schema: 'public', table: 'marketing_entries' },
         payload => {
           const r = payload.new as any;
           pushUnique({
@@ -892,7 +902,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         }
       )
       .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'marketing_entries', filter: hubFilter },
+        { event: 'UPDATE', schema: 'public', table: 'marketing_entries' },
         payload => {
           const r = payload.new as any;
           setTransactions(prev => prev.map(t =>
@@ -903,6 +913,57 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               status: r.status || t.status,
               editedBy: r.last_edited_by ?? t.editedBy,
               editedAt: r.last_edited_at ?? t.editedAt,
+            } : t
+          ));
+        }
+      )
+      .subscribe() : null;
+
+    const packageChannel = needsPackage ? supabase
+      .channel('ehi-package-live')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'package_entries' },
+        payload => {
+          const r = payload.new as any;
+          pushUnique({
+            id: r.entry_ref || r.id,
+            name: r.customer_name || 'Customer',
+            detail: `${r.destination || ''} · ${r.content_type || 'Package'} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg${r.contents ? ` · ${r.contents}` : ''}`,
+            amount: r.amount || 0,
+            mode: r.payment_mode || 'Cash',
+            time: new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+            type: 'package',
+            status: r.status || 'Intake',
+            created_at: r.created_at,
+            hub_id: r.hub_id,
+            terminal: r.terminal,
+            destination: r.destination,
+            contentType: r.content_type,
+            pieces: r.total_pcs,
+            kg: r.total_kg,
+            contents: r.contents || undefined,
+          });
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'package_entries' },
+        payload => {
+          const r = payload.new as any;
+          setTransactions(prev => prev.map(t =>
+            t.id === (r.entry_ref || r.id) ? {
+              ...t,
+              status: r.status || t.status,
+              mode: r.payment_mode || t.mode,
+              paymentConfirmed: r.payment_confirmed,
+              posApprovalCode: r.pos_approval_code,
+              bank: r.bank ?? t.bank,
+              confirmedBy: r.confirmed_by ?? t.confirmedBy,
+              confirmedAt: r.confirmed_at ?? t.confirmedAt,
+              debtPaid: r.debt_paid ?? t.debtPaid,
+              debtPaidAt: r.debt_paid_at ?? t.debtPaidAt,
+              amountPaid: r.amount_paid ?? t.amountPaid,
+              editedBy: r.last_edited_by ?? t.editedBy,
+              editedAt: r.last_edited_at ?? t.editedAt
             } : t
           ));
         }
@@ -939,6 +1000,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       if (cargoChannel) supabase.removeChannel(cargoChannel);
       if (baggageChannel) supabase.removeChannel(baggageChannel);
       if (marketingChannel) supabase.removeChannel(marketingChannel);
+      if (packageChannel) supabase.removeChannel(packageChannel);
       if (shiftsChannel) supabase.removeChannel(shiftsChannel);
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     };
@@ -958,8 +1020,16 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       : tx.type === 'cargo' ? 'cargo_entries'
       : tx.type === 'baggage' ? 'manifests'
       : tx.type === 'package' ? 'package_entries'
-      : 'shipments';
-    
+      : null;
+    if (!tableName) {
+      // A tx.type outside the known four is a programming error, not a
+      // runtime condition -- the old fallback wrote to a 'shipments' table
+      // that does not exist, silently losing the entry. Fail loud instead.
+      console.error(`handleAddTx: unknown tx.type "${tx.type}" — entry not saved`, tx);
+      showToast({ message: `Internal error: unknown entry type "${tx.type}". Entry NOT saved — report this.`, type: 'error' });
+      return;
+    }
+
     let hubId = user.hub_id;
     if (!hubId) {
       const { data: hubData } = await supabase.from('hubs').select('id').eq('name', user.hub).single();
@@ -1086,7 +1156,7 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
       payload = { ...tx, created_at: new Date().toISOString(), hub_id: hubId };
     }
 
-    const { offline, error } = await writeWithOfflineSupport(tableName as any, payload);
+    const { offline, error } = await writeWithOfflineSupport(tableName, payload);
     
     if (offline) {
       setPendingSyncCount(prev => prev + 1);
