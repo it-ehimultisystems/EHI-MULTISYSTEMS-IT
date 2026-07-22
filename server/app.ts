@@ -146,6 +146,26 @@ export async function requireAuthenticatedUser(req: any, res: any, next: any) {
   }
 }
 
+// Inbound email webhooks can't carry a user JWT -- they authenticate with
+// a static shared secret instead. Configure INBOUND_WEBHOOK_SECRET in
+// Vercel and paste the same value into the email provider's webhook URL
+// as ?secret=... (or an X-Webhook-Secret header). Requests without a
+// matching secret are rejected before any parsing happens. If the env
+// var is unset the endpoint is DISABLED (503), never open.
+function requireWebhookSecret(req: any, res: any): boolean {
+  const configured = process.env.INBOUND_WEBHOOK_SECRET;
+  if (!configured) {
+    res.status(503).json({ error: 'Inbound webhook not configured on server' });
+    return false;
+  }
+  const supplied = (req.query?.secret as string) || req.headers['x-webhook-secret'];
+  if (supplied !== configured) {
+    res.status(401).json({ error: 'Invalid webhook secret' });
+    return false;
+  }
+  return true;
+}
+
 export function createApp() {
   const app = express();
   app.set('trust proxy', 1);
@@ -387,7 +407,7 @@ export function createApp() {
     next(new Error('[TEST] Manual Sentry verification from IT Debug panel — safe to ignore, no action needed'));
   });
 
-  app.post('/api/validate-payment/parse', (req, res) => {
+  app.post('/api/validate-payment/parse', notifyLimiter, requireAuthenticatedUser, (req, res) => {
     try {
       const { emailText } = req.body;
       if (!emailText) {
@@ -400,7 +420,8 @@ export function createApp() {
     }
   });
 
-  app.post('/api/validate-payment/inbound', (req, res) => {
+  app.post('/api/validate-payment/inbound', notifyLimiter, (req, res) => {
+    if (!requireWebhookSecret(req, res)) return;
     try {
       const { TextBody, HtmlBody } = req.body;
       const emailText = TextBody || (HtmlBody ? HtmlBody.replace(/<[^>]+>/g, '') : '');

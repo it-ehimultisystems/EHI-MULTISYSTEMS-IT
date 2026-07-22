@@ -3,6 +3,7 @@ import { Transaction, ParsedBankAlert, PaymentMatch, User } from '../../lib/type
 import { fmt } from '../../lib/helpers';
 import { AlertCircle, CheckCircle, Mail, Search, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '../../lib/ToastContext';
+import { supabase } from '../../lib/supabase';
 
 interface PaymentValidationProps {
   transactions: Transaction[];
@@ -46,9 +47,11 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
 
     setParsing(true);
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token || '';
       const res = await fetch('/api/validate-payment/parse', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ emailText })
       });
       let data: any = {};
@@ -321,8 +324,9 @@ export const PaymentValidation: React.FC<PaymentValidationProps> = ({ transactio
               <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-1)] text-[11px] text-[var(--color-muted)] space-y-2">
                 <p>To receive confirmations automatically without pasting emails, forward your bank alerts to this address:</p>
                 <div className="bg-[var(--color-surface-3)] p-2 rounded border border-[var(--color-border)] font-mono text-[10px] break-all select-all">
-                  [server-url]/api/validate-payment/inbound
+                  [server-url]/api/validate-payment/inbound?secret=[INBOUND_WEBHOOK_SECRET]
                 </div>
+                <p>The <code>secret</code> query param must match the server's <code>INBOUND_WEBHOOK_SECRET</code> environment variable — ask an administrator for the value.</p>
                 <p className="font-bold text-[var(--color-foreground)] mt-2">How to set up auto-forward:</p>
                 <ol className="list-decimal pl-4 space-y-1">
                   <li>Gmail: Settings → Filters → Create filter → From: [bank email address]</li>
