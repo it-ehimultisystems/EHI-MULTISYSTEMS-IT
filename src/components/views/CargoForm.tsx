@@ -1771,7 +1771,7 @@ export const CargoForm = ({
       <div className="px-4 pt-4">
 
       {isAdmin && (
-        <div className="mb-4 p-3 bg-[var(--color-surface-2)] rounded-lg border border-[var(--color-accent-amber)] border-opacity-30 animate-in fade-in">
+        <div className="mb-4 p-3 max-w-[220px] bg-[var(--color-surface-2)] rounded-lg border border-[var(--color-accent-amber)] border-opacity-30 animate-in fade-in">
            <label className="text-[10px] uppercase font-bold text-[var(--color-accent-amber)] mb-1 block flex items-center gap-1">
              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
              Admin: Global Hub Context
