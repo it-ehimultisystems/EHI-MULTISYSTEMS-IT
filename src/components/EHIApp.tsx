@@ -481,6 +481,13 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               bankReference: r.bank_reference || undefined,
               bankSender: r.bank_sender || undefined,
               bankAlertText: r.bank_alert_text || undefined,
+              // Was missing here (unlike cargo/baggage/package's identical
+              // mapping just above/below) despite being selected -- a
+              // marketing sale partly paid via wallet showed the correct
+              // wallet badge only in the instant of creation (optimistic
+              // local state) and lost it on every subsequent refetch.
+              wallet_id: r.wallet_id || undefined,
+              wallet_deduction_amount: r.wallet_deduction_amount ?? undefined,
               retrieved: r.retrieved ?? undefined,
               retrievalNote: r.retrieval_note ?? undefined,
               retrievedAt: r.retrieved_at ?? undefined,
@@ -833,6 +840,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             pickupPin: canSeePin ? (r.pickup_pin || undefined) : undefined,
             consigneePhone: r.consignee_phone || undefined,
             clientType: r.client_type || undefined,
+            wallet_id: r.wallet_id || undefined,
+            wallet_deduction_amount: r.wallet_deduction_amount ?? undefined,
             // Brought to parity with baggage/marketing/package's own INSERT
             // handlers below, which already carry these -- cargo's was
             // missing raw entirely, so (t.raw as any)?.retrieved_amount
@@ -873,6 +882,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               confirmedAt: r.confirmed_at ?? t.confirmedAt,
               editedBy: r.last_edited_by ?? t.editedBy,
               editedAt: r.last_edited_at ?? t.editedAt,
+              wallet_id: r.wallet_id ?? t.wallet_id,
+              wallet_deduction_amount: r.wallet_deduction_amount ?? t.wallet_deduction_amount,
               // Without this, a retrieval processed on another device never
               // shows up here until a full refetch -- DebtorsTab's balance
               // and handleClearDebt's remaining-debt calc both read
@@ -913,6 +924,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             flight: r.flight_no,
             kg: r.excess_kg,
             pieces: r.total_pcs,
+            wallet_id: r.wallet_id || undefined,
+            wallet_deduction_amount: r.wallet_deduction_amount ?? undefined,
             retrieved: r.retrieved ?? undefined,
             retrievalNote: r.retrieval_note ?? undefined,
             retrievedAt: r.retrieved_at ?? undefined,
@@ -935,6 +948,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               posApprovalCode: r.pos_approval_code,
               editedBy: r.last_edited_by ?? t.editedBy,
               editedAt: r.last_edited_at ?? t.editedAt,
+              wallet_id: r.wallet_id ?? t.wallet_id,
+              wallet_deduction_amount: r.wallet_deduction_amount ?? t.wallet_deduction_amount,
               retrieved: r.retrieved ?? t.retrieved,
               retrievalNote: r.retrieval_note ?? t.retrievalNote,
               retrievedAt: r.retrieved_at ?? t.retrievedAt,
@@ -965,6 +980,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             created_at: r.created_at,
             hub_id: r.hub_id,
             route: r.route,
+            wallet_id: r.wallet_id || undefined,
+            wallet_deduction_amount: r.wallet_deduction_amount ?? undefined,
             retrieved: r.retrieved ?? undefined,
             retrievalNote: r.retrieval_note ?? undefined,
             retrievedAt: r.retrieved_at ?? undefined,
@@ -990,6 +1007,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               status: r.status || t.status,
               editedBy: r.last_edited_by ?? t.editedBy,
               editedAt: r.last_edited_at ?? t.editedAt,
+              wallet_id: r.wallet_id ?? t.wallet_id,
+              wallet_deduction_amount: r.wallet_deduction_amount ?? t.wallet_deduction_amount,
               retrieved: r.retrieved ?? t.retrieved,
               retrievalNote: r.retrieval_note ?? t.retrievalNote,
               retrievedAt: r.retrieved_at ?? t.retrievedAt,
@@ -1024,6 +1043,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
             pieces: r.total_pcs,
             kg: r.total_kg,
             contents: r.contents || undefined,
+            wallet_id: r.wallet_id || undefined,
+            wallet_deduction_amount: r.wallet_deduction_amount ?? undefined,
             retrieved: r.retrieved ?? undefined,
             retrievalNote: r.retrieval_note ?? undefined,
             retrievedAt: r.retrieved_at ?? undefined,
@@ -1054,6 +1075,8 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
               amountPaid: r.amount_paid ?? t.amountPaid,
               editedBy: r.last_edited_by ?? t.editedBy,
               editedAt: r.last_edited_at ?? t.editedAt,
+              wallet_id: r.wallet_id ?? t.wallet_id,
+              wallet_deduction_amount: r.wallet_deduction_amount ?? t.wallet_deduction_amount,
               retrieved: r.retrieved ?? t.retrieved,
               retrievalNote: r.retrieval_note ?? t.retrievalNote,
               retrievedAt: r.retrieved_at ?? t.retrievedAt,
@@ -1167,6 +1190,14 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         payment_mode: tx.mode === 'Debt Paid' ? 'Debt' : tx.mode,
         bank: tx.bank,
         hub_id: hubId,
+        // Set by MarketingWorkspace.tsx (mirrors CargoForm/PackageForm/
+        // ExcessBaggageForm) when a wallet covers all or part of the
+        // sale -- was never actually persisted here despite the wallet
+        // itself already being debited via a separate chargeWalletForSale
+        // call, so the sale record permanently forgot which wallet paid
+        // for it (and how much) the moment the page next refreshed.
+        wallet_id: tx.wallet_id ?? null,
+        wallet_deduction_amount: tx.wallet_deduction_amount ?? null,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
         created_at: new Date().toISOString()
       };
@@ -1201,6 +1232,10 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         client_type: tx.clientType || null,
         corporate_client_id: (tx as any).corporate_client_id || null,
         applied_rate_per_kg: tx.applied_rate_per_kg ?? null,
+        // See the marketing branch's comment above -- same gap, same fix,
+        // for the department this bug was actually noticed in.
+        wallet_id: tx.wallet_id ?? null,
+        wallet_deduction_amount: tx.wallet_deduction_amount ?? null,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
         created_at: new Date().toISOString()
       };
@@ -1228,6 +1263,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         payment_mode: tx.mode === 'Debt Paid' ? 'Debt' : tx.mode,
         bank: tx.bank,
         hub_id: hubId,
+        // See the marketing branch's comment above -- same gap, same fix.
+        wallet_id: tx.wallet_id ?? null,
+        wallet_deduction_amount: tx.wallet_deduction_amount ?? null,
         entered_by: user.id && user.id.includes('-') && user.id.length > 30 ? user.id : undefined,
         created_at: new Date().toISOString()
       };
@@ -1250,6 +1288,9 @@ export const EHIApp = ({ user, onLogout }: { user: User; onLogout: () => void })
         debt_paid_at: (tx as any).debtPaidAt || null,
         amount_paid: tx.amountPaid,
         payment_history: tx.paymentHistory,
+        // See the marketing branch's comment above -- same gap, same fix.
+        wallet_id: tx.wallet_id ?? null,
+        wallet_deduction_amount: tx.wallet_deduction_amount ?? null,
         hub_id: hubId,
         hub: user.hub,
         terminal: (tx as any).terminal ?? 'MMA2',
