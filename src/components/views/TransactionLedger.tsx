@@ -15,6 +15,7 @@ import {
   Edit2,
   X,
   Check,
+  Loader2,
   Filter,
   Search,
   QrCode,
@@ -133,6 +134,14 @@ export const TransactionLedger = ({
   // fast double-click fired two overlapping Promise.all batches of
   // confirmPayment calls across the same rows.
   const [bulkConfirming, setBulkConfirming] = useState(false);
+  // Clear Debt previously hardcoded mode: 'Cash' with no prompt at all, so
+  // the resulting DC- collection entry always claimed Cash regardless of
+  // how the money actually came in. clearDebtEntry holds the pending entry
+  // while the mode/bank picker is open; null means the picker is closed.
+  const [clearDebtEntry, setClearDebtEntry] = useState<Entry | null>(null);
+  const [clearDebtMode, setClearDebtMode] = useState<'Cash' | 'Transfer' | 'POS'>('Cash');
+  const [clearDebtBank, setClearDebtBank] = useState('');
+  const [clearingDebt, setClearingDebt] = useState(false);
   // Marketing entries store bag counts inside the composed `detail` string,
   // not as discrete Transaction fields, so the edit modal keeps its own
   // working copy (seeded by parsing `detail` in handleEditClick) and
@@ -1107,138 +1116,156 @@ export const TransactionLedger = ({
     }
   };
 
-  const handleClearDebt = async (e: Entry, evt?: React.MouseEvent) => {
+  // Opens the mode/bank picker instead of clearing immediately -- previously
+  // this went straight to a generic yes/no confirm() and hardcoded
+  // paymentMode: 'Cash', so the resulting DC- collection entry always
+  // claimed Cash no matter how the debt was actually paid off.
+  const openClearDebt = (e: Entry, evt?: React.MouseEvent) => {
     if (evt) evt.stopPropagation();
     if (e.source !== 'transaction') return;
     const tx = e.raw as Transaction;
+    const remaining = tx.amount - (tx.amountPaid || 0) - ((tx.raw as any)?.retrieved_amount || 0);
+    if (remaining <= 0) return;
+    setClearDebtMode('Cash');
+    setClearDebtBank('');
+    setClearDebtEntry(e);
+  };
+
+  const confirmClearDebt = async () => {
+    if (!clearDebtEntry || clearingDebt) return;
+    const tx = clearDebtEntry.raw as Transaction;
     // Subtract retrieved_amount too (matches DebtorsTab.tsx's balance
     // formula) -- a cargo entry that's been partially retrieved has a
     // smaller true remaining balance than amount - amountPaid alone, and
     // clear_cargo_debt's own guard rejects a payment larger than that --
     // computing it the same way here keeps the two in agreement.
     const remaining = tx.amount - (tx.amountPaid || 0) - ((tx.raw as any)?.retrieved_amount || 0);
-    if (remaining <= 0) return;
-
-    const ok = await confirm({
-      title: 'Clear Outstanding Debt?',
-      message: `Are you sure you want to mark the remaining debt of ₦${fmt(remaining)} for ${tx.name} as fully paid?`,
-      confirmLabel: 'Clear Debt',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    const result = await clearDebt({
-      type: tx.type as DebtEntryType,
-      id: tx.id,
-      paymentAmount: remaining,
-      paymentMode: 'Cash',
-      loggedBy: user.name || 'Unknown',
-      // Server re-validates this against the just-locked row and rejects
-      // the call if it's changed -- catches a double-click/retry (or two
-      // staff clearing the same debt near-simultaneously) that would
-      // otherwise both independently pass the RPC's own "doesn't exceed
-      // remaining" check and double-clear the debt.
-      expectedRemaining: remaining,
-    });
-
-    if (!result.ok) {
-      showToast({ message: result.error || 'Failed to clear debt.', type: 'error' });
+    if (remaining <= 0) { setClearDebtEntry(null); return; }
+    if (clearDebtMode === 'Transfer' && !clearDebtBank) {
+      showToast({ message: 'Select a bank before clearing via Transfer.', type: 'warning' });
       return;
     }
 
-    // Trust the RPC's own returned state rather than assuming full
-    // settlement -- this call always requests payment of the full
-    // `remaining` balance, so fullyPaid should be true, but reflecting
-    // what the server actually recorded (rather than what the client
-    // assumed) means a future formula change on either side can't
-    // silently desync the ledger's displayed mode from the real balance.
-    const stillOwed = result.remainingBalance ?? 0;
-    const fullyPaid = result.fullyPaid ?? (stillOwed <= 0);
-
-    const historyEntry = {
-      amount: remaining,
-      mode: 'Cash' as const,
-      by: user.name || 'Unknown',
-      at: new Date().toISOString()
-    };
-
-    const updated: Transaction = {
-      ...tx,
-      // Use clear_cargo_debt's own returned total, not tx.amount -- for an
-      // entry with a prior partial retrieval, the correct fully-paid value
-      // is amount - retrieved_amount, not the full original amount (the RPC
-      // already computes this correctly server-side). onUpdateTx below still
-      // fires a redundant client-side write on top of the RPC's own -- using
-      // the RPC's real value here makes that write idempotent instead of
-      // overwriting a correct DB row with an inflated amount_paid, which
-      // previously produced a negative "remaining balance" on every later
-      // computation for any entry that had been partially retrieved.
-      amountPaid: result.newAmountPaid ?? tx.amount,
-      paymentHistory: [...(tx.paymentHistory || []), historyEntry],
-      mode: fullyPaid ? 'Debt Paid' : 'Debt',
-      paymentConfirmed: fullyPaid,
-      confirmedBy: fullyPaid ? (user.name || 'Unknown') : tx.confirmedBy,
-      confirmedAt: fullyPaid ? new Date().toISOString() : tx.confirmedAt,
-      ...(tx.type === 'package' && fullyPaid ? {
-        debtPaid: true,
-        debtPaidAt: new Date().toISOString()
-      } : {})
-    };
-
-    onUpdateTx(updated);
-
-    if (!fullyPaid) {
-      showToast({ message: `Payment recorded, but ₦${fmt(stillOwed)} still remains on this debt -- check with the server before assuming it's fully cleared.`, type: 'warning' });
-    }
-
-    // Same shadow-clearance record DebtorsTab.tsx's handleRecordPayment
-    // emits, and for the same reason: without a NEW, dated entry, this
-    // collection has no created_at of its own -- EODReconciliation.tsx's
-    // todaysTx filters strictly by created_at, so a debt logged on one day
-    // and cleared here on a later day was invisible to that later day's
-    // cash reconciliation even though the cash was physically collected
-    // then. Carries the real airline (see DebtorsTab's own shadowTx
-    // comment on why an unset one corrupts airline reports) and the
-    // debt's own hub_id, not the clearing user's.
-    if (onAddTx) {
-      // Kept short and un-delimited on purpose -- EHIApp.tsx's handleAddTx
-      // positionally parses a cargo/marketing entry's `detail` (airline ·
-      // awb · pcs · kg · route · content) as a fallback for its structured
-      // columns, and cargo_entries doesn't persist `detail` verbatim at all
-      // (it's rebuilt from those columns on every fetch) -- a multi-segment
-      // summary here either got discarded on refresh or, worse, corrupted
-      // route/awb/content with fragments of this text. The full breakdown
-      // goes in `remarks` instead, which genuinely round-trips.
-      onAddTx({
-        id: `DC-${Date.now()}-${tx.id.slice(-6)}`,
-        name: tx.name,
-        detail: 'DEBT CLEARANCE',
-        remarks: `${(tx as any).awb_tag_number ? `AWB: ${(tx as any).awb_tag_number} · ` : ''}Orig: ${fmt(tx.amount)} · Paid: ${fmt(remaining)} · Bal: ₦${fmt(stillOwed)}`,
-        amount: remaining,
-        mode: 'Cash',
-        time: tnow(),
-        created_at: new Date().toISOString(),
-        type: tx.type,
-        status: 'Intake',
-        is_debt_clearance: true,
-        related_tx_id: tx.id,
-        clientType: tx.clientType || 'Individual',
-        airline: (tx as any).airline,
-        enteredByName: user.name || 'Unknown',
-        hub_id: tx.hub_id,
-        hub: tx.hub,
-      } as Transaction);
-    }
-
-    if (fullyPaid) {
-      showToast({ message: 'Debt cleared successfully', type: 'success' });
-    }
-    if (viewingDetail && viewingDetail.id === tx.id) {
-      setViewingDetail({
-        ...viewingDetail,
-        mode: fullyPaid ? 'Debt Paid' : 'Debt',
-        raw: updated
+    setClearingDebt(true);
+    try {
+      const result = await clearDebt({
+        type: tx.type as DebtEntryType,
+        id: tx.id,
+        paymentAmount: remaining,
+        paymentMode: clearDebtMode,
+        bank: clearDebtMode === 'Transfer' ? clearDebtBank : undefined,
+        loggedBy: user.name || 'Unknown',
+        // Server re-validates this against the just-locked row and rejects
+        // the call if it's changed -- catches a double-click/retry (or two
+        // staff clearing the same debt near-simultaneously) that would
+        // otherwise both independently pass the RPC's own "doesn't exceed
+        // remaining" check and double-clear the debt.
+        expectedRemaining: remaining,
       });
+
+      if (!result.ok) {
+        showToast({ message: result.error || 'Failed to clear debt.', type: 'error' });
+        return;
+      }
+
+      // Trust the RPC's own returned state rather than assuming full
+      // settlement -- this call always requests payment of the full
+      // `remaining` balance, so fullyPaid should be true, but reflecting
+      // what the server actually recorded (rather than what the client
+      // assumed) means a future formula change on either side can't
+      // silently desync the ledger's displayed mode from the real balance.
+      const stillOwed = result.remainingBalance ?? 0;
+      const fullyPaid = result.fullyPaid ?? (stillOwed <= 0);
+
+      const historyEntry = {
+        amount: remaining,
+        mode: clearDebtMode,
+        by: user.name || 'Unknown',
+        at: new Date().toISOString()
+      };
+
+      const updated: Transaction = {
+        ...tx,
+        // Use clear_cargo_debt's own returned total, not tx.amount -- for an
+        // entry with a prior partial retrieval, the correct fully-paid value
+        // is amount - retrieved_amount, not the full original amount (the RPC
+        // already computes this correctly server-side). onUpdateTx below still
+        // fires a redundant client-side write on top of the RPC's own -- using
+        // the RPC's real value here makes that write idempotent instead of
+        // overwriting a correct DB row with an inflated amount_paid, which
+        // previously produced a negative "remaining balance" on every later
+        // computation for any entry that had been partially retrieved.
+        amountPaid: result.newAmountPaid ?? tx.amount,
+        paymentHistory: [...(tx.paymentHistory || []), historyEntry],
+        mode: fullyPaid ? 'Debt Paid' : 'Debt',
+        paymentConfirmed: fullyPaid,
+        confirmedBy: fullyPaid ? (user.name || 'Unknown') : tx.confirmedBy,
+        confirmedAt: fullyPaid ? new Date().toISOString() : tx.confirmedAt,
+        ...(tx.type === 'package' && fullyPaid ? {
+          debtPaid: true,
+          debtPaidAt: new Date().toISOString()
+        } : {})
+      };
+
+      onUpdateTx(updated);
+
+      if (!fullyPaid) {
+        showToast({ message: `Payment recorded, but ₦${fmt(stillOwed)} still remains on this debt -- check with the server before assuming it's fully cleared.`, type: 'warning' });
+      }
+
+      // Same shadow-clearance record DebtorsTab.tsx's handleRecordPayment
+      // emits, and for the same reason: without a NEW, dated entry, this
+      // collection has no created_at of its own -- EODReconciliation.tsx's
+      // todaysTx filters strictly by created_at, so a debt logged on one day
+      // and cleared here on a later day was invisible to that later day's
+      // cash reconciliation even though the cash was physically collected
+      // then. Carries the real airline (see DebtorsTab's own shadowTx
+      // comment on why an unset one corrupts airline reports) and the
+      // debt's own hub_id, not the clearing user's.
+      if (onAddTx) {
+        // Kept short and un-delimited on purpose -- EHIApp.tsx's handleAddTx
+        // positionally parses a cargo/marketing entry's `detail` (airline ·
+        // awb · pcs · kg · route · content) as a fallback for its structured
+        // columns, and cargo_entries doesn't persist `detail` verbatim at all
+        // (it's rebuilt from those columns on every fetch) -- a multi-segment
+        // summary here either got discarded on refresh or, worse, corrupted
+        // route/awb/content with fragments of this text. The full breakdown
+        // goes in `remarks` instead, which genuinely round-trips.
+        onAddTx({
+          id: `DC-${Date.now()}-${tx.id.slice(-6)}`,
+          name: tx.name,
+          detail: 'DEBT CLEARANCE',
+          remarks: `${(tx as any).awb_tag_number ? `AWB: ${(tx as any).awb_tag_number} · ` : ''}Orig: ${fmt(tx.amount)} · Paid: ${fmt(remaining)} · Bal: ₦${fmt(stillOwed)}`,
+          amount: remaining,
+          mode: clearDebtMode,
+          bank: clearDebtMode === 'Transfer' ? clearDebtBank : undefined,
+          time: tnow(),
+          created_at: new Date().toISOString(),
+          type: tx.type,
+          status: 'Intake',
+          is_debt_clearance: true,
+          related_tx_id: tx.id,
+          clientType: tx.clientType || 'Individual',
+          airline: (tx as any).airline,
+          enteredByName: user.name || 'Unknown',
+          hub_id: tx.hub_id,
+          hub: tx.hub,
+        } as Transaction);
+      }
+
+      if (fullyPaid) {
+        showToast({ message: 'Debt cleared successfully', type: 'success' });
+      }
+      if (viewingDetail && viewingDetail.id === tx.id) {
+        setViewingDetail({
+          ...viewingDetail,
+          mode: fullyPaid ? 'Debt Paid' : 'Debt',
+          raw: updated
+        });
+      }
+      setClearDebtEntry(null);
+    } finally {
+      setClearingDebt(false);
     }
   };
 
@@ -2202,7 +2229,7 @@ export const TransactionLedger = ({
                             <button
                               onClick={(evt) => {
                                 evt.stopPropagation();
-                                handleClearDebt(e, evt);
+                                openClearDebt(e, evt);
                               }}
                               className="p-1 rounded bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] hover:bg-[var(--color-success)] hover:text-[#030712] transition-colors focus:outline-none flex items-center gap-0.5"
                               title="Clear Outstanding Debt"
@@ -2454,7 +2481,7 @@ export const TransactionLedger = ({
                     )}
                     {viewingDetail.mode === 'Debt' && !viewOnly && (
                       <button 
-                        onClick={(evt) => handleClearDebt(viewingDetail, evt)}
+                        onClick={(evt) => openClearDebt(viewingDetail, evt)}
                         className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold"
                       >
                         <CheckSquare size={14} /> Clear Debt
@@ -3031,6 +3058,73 @@ export const TransactionLedger = ({
           onConfirm={executeRetrieval}
         />
       )}
+
+      {/* Clear Debt: mode/bank picker -- replaces the old plain yes/no
+          confirm() that always cleared as 'Cash' with no way to say how the
+          debt was actually paid. */}
+      {clearDebtEntry && (() => {
+        const tx = clearDebtEntry.raw as Transaction;
+        const remaining = tx.amount - (tx.amountPaid || 0) - ((tx.raw as any)?.retrieved_amount || 0);
+        return (
+          <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !clearingDebt && setClearDebtEntry(null)}>
+            <div className="bg-[var(--color-obsidian)] border border-[var(--color-border)] rounded-xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-surface-card)] flex items-center justify-between">
+                <h3 className="text-[14px] font-bold text-[var(--color-foreground)]">Clear Debt</h3>
+                <button onClick={() => !clearingDebt && setClearDebtEntry(null)} className="text-[var(--color-muted)] hover:text-[var(--color-foreground)] p-1"><X size={16} /></button>
+              </div>
+              <div className="p-4 space-y-3">
+                <p className="text-[12px] font-sans text-[var(--color-muted)]">
+                  Mark the remaining debt of <span className="font-bold text-[var(--color-foreground)]">₦{fmt(remaining)}</span> for <span className="font-bold text-[var(--color-foreground)]">{tx.name}</span> as fully paid. How was it paid?
+                </p>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">Payment Mode</label>
+                  <select
+                    disabled={clearingDebt}
+                    value={clearDebtMode}
+                    onChange={(e) => setClearDebtMode(e.target.value as 'Cash' | 'Transfer' | 'POS')}
+                    className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Transfer">Bank Transfer</option>
+                    <option value="POS">POS / Card</option>
+                  </select>
+                </div>
+                {clearDebtMode === 'Transfer' && (
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-sans font-medium text-[var(--color-muted)]">Bank</label>
+                    <select
+                      disabled={clearingDebt}
+                      value={clearDebtBank}
+                      onChange={(e) => setClearDebtBank(e.target.value)}
+                      className="w-full h-10 px-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] font-sans text-[14px] focus:outline-none focus:border-[var(--color-accent-amber)] disabled:opacity-60"
+                    >
+                      <option value="">Select Bank</option>
+                      {banks.map((b) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+              <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-card)] flex gap-2">
+                <button
+                  onClick={() => setClearDebtEntry(null)}
+                  disabled={clearingDebt}
+                  className="flex-1 h-10 rounded-lg bg-[var(--color-surface-2)] text-[var(--color-foreground)] text-[13px] font-bold disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmClearDebt}
+                  disabled={clearingDebt || (clearDebtMode === 'Transfer' && !clearDebtBank)}
+                  className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-[var(--color-success)] text-[#030712] text-[13px] font-bold disabled:opacity-50"
+                >
+                  {clearingDebt ? <Loader2 size={14} className="animate-spin" /> : <CheckSquare size={14} />}
+                  Clear Debt
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {viewingQrTx && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in" onClick={() => setViewingQrTx(null)}>
