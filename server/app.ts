@@ -238,7 +238,8 @@ export function createApp() {
         // Supabase dashboard. Delete the orphan immediately instead of
         // leaving it behind.
         try {
-          await adminClient.auth.admin.deleteUser(authData.user.id);
+          const { error: deleteError } = await adminClient.auth.admin.deleteUser(authData.user.id);
+          if (deleteError) throw deleteError;
         } catch (cleanupErr: any) {
           console.error(`Failed to roll back orphaned auth user ${authData.user.id}:`, cleanupErr?.message || cleanupErr);
           return res.status(500).json({
