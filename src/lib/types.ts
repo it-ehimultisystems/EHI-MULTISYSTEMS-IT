@@ -237,7 +237,7 @@ export interface Transaction {
   debtPaidAt?: string;
   // Partial debt repayment tracking (cargo/VJ/marketing debts)
   amountPaid?: number;
-  paymentHistory?: { amount: number; mode: 'Cash' | 'Transfer'; by: string; at: string }[];
+  paymentHistory?: { amount: number; mode: 'Cash' | 'Transfer' | 'POS'; by: string; at: string }[];
   clientType?: 'Corporate' | 'Individual' | 'Office Work';
   raw?: any;
   // Retail cargo debtor contact, for following up on an individual (not
