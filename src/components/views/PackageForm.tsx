@@ -217,6 +217,11 @@ export const PackageForm = ({
       enteredByName: user.name,
       debtPaid: mode === "Debt" ? false : undefined,
       terminal,
+      // Was captured into local form state only and never attached to the
+      // Transaction itself -- package_entries had nowhere to store it, so
+      // it was silently lost the moment this session ended, and any later
+      // reprint from the ledger always showed a blank phone.
+      consigneePhone: phone.trim() || undefined,
     };
 
     // Wallet payment — AUTO-SPLIT. Wallet covers what it can; any remainder is

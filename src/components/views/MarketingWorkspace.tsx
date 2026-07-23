@@ -373,6 +373,11 @@ export const MarketingWorkspace = ({
       // Explicit fields so EHIApp doesn't need to parse the detail string
       ...(bb > 0 || mb > 0 || sb > 0 ? { _bb: bb, _mb: mb, _sb: sb } as any : {}),
       ...(totalKg > 0 ? { _bbKg: parseFloat(bbKg) || 0, _mbKg: parseFloat(mbKg) || 0, _sbKg: parseFloat(sbKg) || 0 } as any : {}),
+      // Was captured into local form state only and never attached to the
+      // Transaction itself -- marketing_entries had nowhere to store it, so
+      // it was silently lost the moment this session ended, and any later
+      // reprint from the ledger always showed a blank phone.
+      consigneePhone: phone.trim() || undefined,
       // TODO: capture client_type at entry
     };
 

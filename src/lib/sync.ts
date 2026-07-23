@@ -331,6 +331,7 @@ export async function getUnsyncedLocalTransactions(): Promise<{ transactions: an
           route: r.route,
           wallet_id: r.wallet_id || undefined,
           wallet_deduction_amount: r.wallet_deduction_amount ?? undefined,
+          consigneePhone: r.customer_phone || undefined,
         });
       }
     });
@@ -354,6 +355,7 @@ export async function getUnsyncedLocalTransactions(): Promise<{ transactions: an
           contents: r.contents,
           wallet_id: r.wallet_id || undefined,
           wallet_deduction_amount: r.wallet_deduction_amount ?? undefined,
+          consigneePhone: r.customer_phone || undefined,
         });
       }
     });

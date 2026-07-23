@@ -619,7 +619,7 @@ export const TransactionLedger = ({
             date: txDisplayDateTime(tx.created_at, tx.time),
             agentName: tx.enteredByName || user.name,
             customerName: tx.name,
-            phone: tx.consigneePhone || tx.phone,
+            phone: tx.consigneePhone,
             destination: tx.destination || tx.route || 'Destination',
             contentType: tx.contentType || 'Package',
             pieces: tx.pieces || 1,
@@ -657,7 +657,11 @@ export const TransactionLedger = ({
             date: txDisplayDateTime(tx.created_at, tx.time),
             agentName: tx.enteredByName || user.name,
             customerName: tx.name,
-            phone: tx.remarks || '',
+            // marketing_entries now has customer_phone (see the
+            // 20260904 migration) -- this used to read tx.remarks, which
+            // was never the phone number and was always empty for a
+            // reprint anyway.
+            phone: tx.consigneePhone || '',
             route: route,
             bigBags: big,
             medBags: med,
@@ -715,7 +719,7 @@ export const TransactionLedger = ({
           date: txDisplayDateTime(tx.created_at, tx.time),
           agentName: tx.enteredByName || user.name,
           customerName: tx.name,
-          phone: tx.consigneePhone || tx.phone,
+          phone: tx.consigneePhone,
           destination: tx.destination || tx.route || 'Destination',
           contentType: tx.contentType || 'Package',
           pieces: tx.pieces || 1,
