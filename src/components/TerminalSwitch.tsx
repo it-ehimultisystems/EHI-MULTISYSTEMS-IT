@@ -29,13 +29,15 @@ export function usePersistedTerminal(forceValue?: Terminal): [Terminal, (t: Term
   // miss (a small segmented control amid other form fields) and silently
   // submitting under the wrong terminal means an entry never shows up in
   // the GAT print queue at all. No-ops (re-clicking the already-active
-  // option) don't re-toast.
+  // option) don't re-toast. The comparison happens here against the
+  // closure-captured `terminal`, not inside the setState updater -- this
+  // app runs in StrictMode, which intentionally double-invokes functional
+  // state updaters in development to catch impure ones; a showToast() call
+  // inside an updater would fire twice for one real toggle.
   const setTerminal = (t: Terminal) => {
     if (forceValue) return;
-    setTerminalState(prev => {
-      if (prev !== t) showToast({ message: `Switched to ${t}`, type: 'info' });
-      return t;
-    });
+    if (terminal !== t) showToast({ message: `Switched to ${t}`, type: 'info' });
+    setTerminalState(t);
   };
   return [terminal, setTerminal];
 }
