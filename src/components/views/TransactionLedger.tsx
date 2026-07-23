@@ -2427,6 +2427,20 @@ export const TransactionLedger = ({
                         <span>{getHubCode(viewingDetail.raw.destination) || 'Destination'}</span>
                       </div>
                     )}
+                    {/* viewingDetail.raw is the Transaction; the true DB row
+                        with retrieved_amount/retrieved_pieces/retrieved_kg
+                        is one level deeper, at viewingDetail.raw.raw (see
+                        the Unretrieve button's own condition just below,
+                        which reads the same path). These are cumulative
+                        running totals across every retrieval this entry has
+                        ever had, not just the most recent one -- there's no
+                        per-event retrieval history the way payment_history
+                        tracks debt clearances. */}
+                    {((viewingDetail.raw as any)?.raw?.retrieved_amount || 0) > 0 && (
+                      <div className="text-[11px] font-mono text-[var(--color-accent-cobalt)] mt-1">
+                        Retrieved: {(viewingDetail.raw as any).raw.retrieved_kg || 0} KG · {(viewingDetail.raw as any).raw.retrieved_pieces || 0} PCS · ₦{fmt((viewingDetail.raw as any).raw.retrieved_amount || 0)}
+                      </div>
+                    )}
                   </div>
                 </section>
               )}

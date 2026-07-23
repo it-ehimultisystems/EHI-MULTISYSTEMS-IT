@@ -44,9 +44,22 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
     : (valueOverride !== ''
       ? Math.min(totalAmount, Math.round(parseFloat(valueOverride) || 0))
       : (supportsPieceBreakdown ? proportionalValue : 0));
+  const proportionalKg = supportsPieceBreakdown
+    ? Math.round((pieces / totalPieces) * totalKg * 10) / 10
+    : 0;
+  // Retrieved KG was previously always auto-derived from the piece
+  // proportion, with no way to enter the actual weight -- 2 of 5 pieces
+  // isn't necessarily exactly 40% of the total weight. Same override
+  // pattern as valueOverride above: optional, falls back to the
+  // proportional estimate when left blank.
+  const [kgOverride, setKgOverride] = useState<string>('');
   const retrievedKg = !supportsPieceBreakdown
     ? 0
-    : retrievalType === 'full' ? totalKg : Math.round((pieces / totalPieces) * totalKg * 10) / 10;
+    : retrievalType === 'full'
+      ? totalKg
+      : (kgOverride !== ''
+        ? Math.max(0, Math.min(totalKg, parseFloat(kgOverride) || 0))
+        : proportionalKg);
 
   const amountPaid = (entry as any).amountPaid || (entry.mode !== 'Debt' ? entry.amount : 0);
   const alreadyRetrieved = (entry as any).raw?.retrieved_amount || 0;
@@ -64,7 +77,9 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
       isPartial: retrievalType === 'partial',
       retrievedValue,
       retrievedPieces: !supportsPieceBreakdown ? 0 : (retrievalType === 'partial' ? pieces : totalPieces),
-      retrievedKg: !supportsPieceBreakdown ? 0 : (retrievalType === 'partial' ? retrievedKg : totalKg),
+      // retrievedKg already resolves full vs partial (and the kgOverride
+      // vs proportional fallback) internally -- no need to branch again here.
+      retrievedKg,
     });
   };
 
@@ -108,6 +123,15 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
                     <div className="flex-1 text-center text-[20px] font-mono font-bold text-[var(--color-foreground)]">{pieces} <span className="text-[12px] text-[var(--color-muted)]">/ {totalPieces}</span></div>
                     <button type="button" onClick={() => setPieces(p => Math.min(totalPieces, p + 1))} className="w-10 h-10 rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground)] text-lg font-bold">+</button>
                   </div>
+                </div>
+              )}
+              {supportsPieceBreakdown && (
+                <div>
+                  <label className="text-[11px] font-mono text-[var(--color-muted)] block mb-1.5">
+                    Weight (auto {proportionalKg} KG — edit if the retrieved pieces don't weigh exactly proportional)
+                  </label>
+                  <input type="number" value={kgOverride} onChange={e => setKgOverride(e.target.value)} placeholder={`${proportionalKg} KG`}
+                    className="w-full h-10 px-3 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[13px] font-mono text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-accent-cobalt)]" />
                 </div>
               )}
               <div>
