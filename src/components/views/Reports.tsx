@@ -90,10 +90,10 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
 
       try {
         const [cargoRes, vjRes, mktRes, pkgRes, profilesRes] = await Promise.all([
-          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,corporate_client_id').gte('created_at', fromISO).lte('created_at', toISO)),
-          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone').gte('created_at', fromISO).lte('created_at', toISO)),
-          addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by').gte('created_at', fromISO).lte('created_at', toISO)),
-          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,amount,payment_mode,created_at,hub_id,bank,entered_by,status').gte('created_at', fromISO).lte('created_at', toISO)),
+          addHubFilter(supabase.from('cargo_entries').select('entry_ref,consignee_name,airline,awb_tag_number,total_pcs,total_kg,route,content_type,amount,receipt_mode,created_at,status,bank,hub_id,corporate_client_id,client_type,entered_by,amount_paid,retrieved_amount').gte('created_at', fromISO).lte('created_at', toISO)),
+          addHubFilter(supabase.from('manifests').select('transaction_id,passenger_name,flight_no,destination,excess_kg,amount,payment_mode,created_at,bank,hub_id,total_kg,pnr,passenger_phone,entered_by,amount_paid,retrieved_amount').gte('created_at', fromISO).lte('created_at', toISO)),
+          addHubFilter(supabase.from('marketing_entries').select('entry_ref,customer_name,route,qty_big_bag,qty_med_bag,qty_small_bag,amount_paid,payment_mode,created_at,hub_id,bank,entered_by,debt_amount_paid,retrieved_amount').gte('created_at', fromISO).lte('created_at', toISO)),
+          addHubFilter(supabase.from('package_entries').select('entry_ref,customer_name,destination,content_type,total_pcs,total_kg,contents,amount,payment_mode,created_at,hub_id,bank,entered_by,status,amount_paid,debt_paid,retrieved_amount').gte('created_at', fromISO).lte('created_at', toISO)),
           supabase.from('user_profiles').select('id,name')
         ]);
 
@@ -108,12 +108,17 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
 
         if (cargoRes.data) {
           cargoRes.data.forEach((r: any) => {
+            const enteredByName = r.entered_by ? (profileLookup[r.entered_by] || r.entered_by) : undefined;
             allTx.push({
               id: r.entry_ref,
               name: r.consignee_name || 'Consignee',
               detail: `${r.airline || 'Airline'} · ${r.awb_tag_number || ''} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg · ${r.route || ''} · ${r.content_type || 'Package'}`,
               amount: r.amount || 0,
-              mode: r.receipt_mode || 'Cash',
+              // Same 'Debt Paid' derivation EHIApp.tsx's fetchInitial uses --
+              // receipt_mode itself never changes off 'Debt' when a debt is
+              // cleared (only amount_paid moves), so without this every
+              // cleared cargo debt still showed as outstanding here forever.
+              mode: r.receipt_mode === 'Debt' && (r.amount_paid || 0) >= (r.amount || 0) ? 'Debt Paid' : (r.receipt_mode || 'Cash'),
               time: new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
               type: 'cargo',
               status: r.status,
@@ -126,19 +131,24 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               pieces: r.total_pcs || 1,
               kg: r.total_kg || 0,
               contentType: r.content_type,
-              raw: { corporate_client_id: r.corporate_client_id }
+              clientType: r.client_type || undefined,
+              enteredByName: enteredByName || undefined,
+              amountPaid: r.amount_paid || 0,
+              raw: { corporate_client_id: r.corporate_client_id, retrieved_amount: r.retrieved_amount }
             });
           });
         }
 
         if (vjRes.data) {
           vjRes.data.forEach((r: any) => {
+            const enteredByName = r.entered_by ? (profileLookup[r.entered_by] || r.entered_by) : undefined;
             allTx.push({
               id: r.transaction_id,
               name: r.passenger_name || 'Passenger',
               detail: `${r.flight_no || ''} · ${r.destination || ''} · ${r.total_pcs || 1}pcs · +${r.excess_kg || 0}kg excess`,
               amount: r.amount || 0,
-              mode: r.payment_mode || 'Cash',
+              // Same 'Debt Paid' derivation as cargo above.
+              mode: r.payment_mode === 'Debt' && (r.amount_paid || 0) >= (r.amount || 0) ? 'Debt Paid' : (r.payment_mode || 'Cash'),
               time: new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
               type: 'baggage',
               status: r.status || 'Received',
@@ -153,6 +163,9 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               excessKg: r.excess_kg || 0,
               totalKg: r.total_kg || 0,
               kg: r.excess_kg || 0,
+              enteredByName: enteredByName || undefined,
+              amountPaid: r.amount_paid || 0,
+              raw: { retrieved_amount: r.retrieved_amount },
             });
           });
         }
@@ -165,7 +178,11 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               name: r.customer_name || 'Customer',
               detail: `${r.route || 'Local'} · BB:${r.qty_big_bag||0} MB:${r.qty_med_bag||0} SB:${r.qty_small_bag||0}`,
               amount: r.amount_paid || 0,
-              mode: r.payment_mode || 'Cash',
+              // marketing_entries.amount_paid is the sale total, NOT how
+              // much of a debt sale has been paid off -- that's
+              // debt_amount_paid (matches EHIApp.tsx's fetchInitial, which
+              // uses the same two columns the same way).
+              mode: r.payment_mode === 'Debt' && (r.debt_amount_paid || 0) >= (r.amount_paid || 0) ? 'Debt Paid' : (r.payment_mode || 'Cash'),
               time: new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
               type: 'marketing',
               status: r.status || 'Received',
@@ -174,6 +191,8 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               hub_id: r.hub_id,
               route: r.route,
               enteredByName: enteredByName || undefined,
+              amountPaid: r.debt_amount_paid || 0,
+              raw: { retrieved_amount: r.retrieved_amount },
             });
           });
         }
@@ -186,7 +205,9 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               name: r.customer_name || 'Customer',
               detail: `${r.destination || 'Destination'} · ${r.content_type || 'Package'} · ${r.total_pcs || 1}pcs · ${r.total_kg || 0}kg`,
               amount: r.amount || 0,
-              mode: r.payment_mode || 'Cash',
+              // Same 'Debt Paid' derivation EHIApp.tsx's fetchInitial uses
+              // for package_entries (debt_paid flag OR amount_paid caught up).
+              mode: r.payment_mode === 'Debt' && (r.debt_paid === true || (r.amount_paid || 0) >= (r.amount || 0)) ? 'Debt Paid' : (r.payment_mode || 'Cash'),
               time: new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
               type: 'package',
               status: r.status || 'Received',
@@ -200,6 +221,8 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
               kg: r.total_kg || 0,
               contents: r.contents || undefined,
               enteredByName: enteredByName || undefined,
+              amountPaid: r.amount_paid || 0,
+              raw: { retrieved_amount: r.retrieved_amount },
             });
           });
         }
@@ -293,18 +316,48 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
   }, [filteredTx]);
 
   const staffReport = useMemo(() => {
-    const map: Record<string, { entries: number; revenue: number; cargo: number; mktg: number; vj: number }> = {};
+    const map: Record<string, { entries: number; revenue: number; collected: number; owed: number; cargo: number; mktg: number; vj: number; pkg: number }> = {};
     filteredTx.forEach(t => {
       const agent = (t.enteredByName || 'Unknown Agent').trim();
-      if (!map[agent]) map[agent] = { entries: 0, revenue: 0, cargo: 0, mktg: 0, vj: 0 };
-      map[agent].entries  += 1;
-      map[agent].revenue  += t.amount;
+      if (!map[agent]) map[agent] = { entries: 0, revenue: 0, collected: 0, owed: 0, cargo: 0, mktg: 0, vj: 0, pkg: 0 };
+      map[agent].entries += 1;
+      // Gross value of business this agent brought in -- unchanged from before.
+      map[agent].revenue += t.amount;
       if (t.type === 'cargo')     map[agent].cargo += t.amount;
       if (t.type === 'marketing') map[agent].mktg  += t.amount;
       if (t.type === 'baggage')   map[agent].vj    += t.amount;
+      if (t.type === 'package')   map[agent].pkg   += t.amount;
+
+      // Collected -- actual liquid cash, excluding unpaid Debt AND the
+      // original entry once it flips to 'Debt Paid' on clearance (that
+      // money is already counted once via its own DC- shadow collection
+      // entry -- same double-count guard as TransactionLedger.tsx's
+      // totalAmount and Analytics.tsx's validLiquidTxs).
+      if (t.mode !== 'Debt' && t.mode !== 'Debt Paid') {
+        map[agent].collected += t.amount;
+      }
+
+      // Owed -- true remaining balance net of any partial payment or
+      // retrieval credit, same formula DebtorsTab.tsx/Analytics.tsx's
+      // debtOutstanding use. A DC- collection entry is attributed to
+      // whoever cleared the debt (may differ from the original agent),
+      // so this only ever accrues on the original still-open Debt entry.
+      if (t.mode === 'Debt') {
+        const remaining = t.amount - (t.amountPaid || 0) - ((t.raw as any)?.retrieved_amount || 0);
+        map[agent].owed += Math.max(0, remaining);
+      }
     });
     return Object.entries(map).map(([role, d]) => ({ role, ...d })).sort((a, b) => b.revenue - a.revenue).slice(0, 20);
   }, [filteredTx]);
+
+  // Layer 1 -- collective totals across every agent, shown before the
+  // per-agent breakdown so whoever's reading gets the big picture first.
+  const staffCollective = useMemo(() => staffReport.reduce((acc, s) => ({
+    entries: acc.entries + s.entries,
+    revenue: acc.revenue + s.revenue,
+    collected: acc.collected + s.collected,
+    owed: acc.owed + s.owed,
+  }), { entries: 0, revenue: 0, collected: 0, owed: 0 }), [staffReport]);
 
   const hubReport = useMemo(() => {
     const byHub: Record<string, { revenue: number; entries: number }> = {};
@@ -422,8 +475,13 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
         ['EHI MULTISYSTEMS - STAFF PRODUCTIVITY'],
         ['Period:', dateRange.from.toLocaleDateString(), 'to', dateRange.to.toLocaleDateString()],
         [],
-        ['Agent Name', 'Entries', 'Cargo', 'Mktg', 'Baggage', 'Total Revenue (NGN)'],
-        ...staffReport.map(s => [s.role, s.entries, s.cargo, s.mktg, s.vj, s.revenue])
+        ['ALL AGENTS COMBINED'],
+        ['Total Entries', 'Total Sales (NGN)', 'Total Collected (NGN)', 'Total Owed (NGN)'],
+        [staffCollective.entries, staffCollective.revenue, staffCollective.collected, staffCollective.owed],
+        [],
+        ['PER-AGENT DETAIL'],
+        ['Agent Name', 'Owed (NGN)', 'Entries', 'Total Sales (NGN)', 'Collected (NGN)', 'Cargo', 'Mktg', 'Baggage', 'Package'],
+        ...staffReport.map(s => [s.role, s.owed, s.entries, s.revenue, s.collected, s.cargo, s.mktg, s.vj, s.pkg])
       ];
     } else if (selectedReport === 'hubs') {
       wsData = [
@@ -598,7 +656,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
                 {selectedReport === 'routes'    && <RouteReportView data={routeReport} />}
                 {selectedReport === 'customers' && <CustomerReportView data={customerReport} />}
                 {selectedReport === 'debtors'   && <DebtorReportView data={debtorReport} />}
-                {selectedReport === 'staff'     && <StaffReportView data={staffReport} />}
+                {selectedReport === 'staff'     && <StaffReportView data={staffReport} collective={staffCollective} />}
                 {selectedReport === 'hubs'      && (
                   <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded overflow-hidden">
                     <table className="w-full text-left text-sm">
@@ -778,17 +836,87 @@ const DebtorReportView = ({ data }: { data: any }) => (
   </div>
 );
 
-const StaffReportView = ({ data }: { data: any[] }) => (
-  <div className="space-y-1">
-    {data.map(s => (
-      <div key={s.role} className="flex justify-between py-2.5 border-b border-[var(--color-border)] last:border-0">
+// Layer 1 (collective, all agents rolled up) then Layer 2 (per-agent
+// detail) -- the big picture before the drill-down, matching how this
+// report actually gets read: whoever's reviewing it wants the total
+// picture first, then to check individual agents against it.
+const StaffReportView = ({ data, collective }: { data: any[]; collective: { entries: number; revenue: number; collected: number; owed: number } }) => (
+  <div className="space-y-5">
+    {/* Layer 1 — Collective */}
+    <div className="rounded-[var(--radius-md)] border border-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.06)] p-3">
+      <div className="text-[10px] text-[var(--color-accent-amber)] mb-2.5 uppercase font-bold tracking-wider">All Agents Combined</div>
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <div className="text-[13px] font-bold text-[var(--color-foreground)]">{s.role}</div>
-          <div className="text-[10px] text-[var(--color-muted)]">{s.entries} entries</div>
+          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider">Total Sales</div>
+          <div className="text-[15px] font-mono font-bold text-[var(--color-foreground)]">₦{fmt(collective.revenue)}</div>
         </div>
-        <span className="text-[13px] font-mono font-bold text-[var(--color-accent-amber)]">₦{fmt(s.revenue)}</span>
+        <div>
+          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider">Total Collected</div>
+          <div className="text-[15px] font-mono font-bold text-[var(--color-success)]">₦{fmt(collective.collected)}</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider">Total Owed</div>
+          <div className="text-[15px] font-mono font-bold text-[var(--color-error)]">₦{fmt(collective.owed)}</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider">Total Entries</div>
+          <div className="text-[15px] font-mono font-bold text-[var(--color-foreground)]">{collective.entries}</div>
+        </div>
       </div>
-    ))}
+    </div>
+
+    {/* Layer 2 — Per-agent detail, owed first per row (the thing management
+        cares about most), then name, then the breakdown. */}
+    <div className="space-y-2.5">
+      {data.map(s => (
+        <div key={s.role} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider mb-0.5">Owed</div>
+              <div className={`text-[16px] font-mono font-bold ${s.owed > 0 ? 'text-[var(--color-error)]' : 'text-[var(--color-muted)]'}`}>₦{fmt(s.owed)}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[13px] font-bold text-[var(--color-foreground)]">{s.role}</div>
+              <div className="text-[10px] text-[var(--color-muted)]">{s.entries} entries</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-2 border-t border-[var(--color-border)] border-dashed">
+            <div className="flex justify-between">
+              <span className="text-[10px] text-[var(--color-muted)]">Total Sales</span>
+              <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)]">₦{fmt(s.revenue)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[10px] text-[var(--color-muted)]">Collected</span>
+              <span className="text-[11px] font-mono font-bold text-[var(--color-success)]">₦{fmt(s.collected)}</span>
+            </div>
+            {s.cargo > 0 && (
+              <div className="flex justify-between">
+                <span className="text-[10px] text-[var(--color-muted)]">Cargo</span>
+                <span className="text-[11px] font-mono text-[var(--color-foreground)]">₦{fmt(s.cargo)}</span>
+              </div>
+            )}
+            {s.mktg > 0 && (
+              <div className="flex justify-between">
+                <span className="text-[10px] text-[var(--color-muted)]">Marketing</span>
+                <span className="text-[11px] font-mono text-[var(--color-foreground)]">₦{fmt(s.mktg)}</span>
+              </div>
+            )}
+            {s.vj > 0 && (
+              <div className="flex justify-between">
+                <span className="text-[10px] text-[var(--color-muted)]">Baggage</span>
+                <span className="text-[11px] font-mono text-[var(--color-foreground)]">₦{fmt(s.vj)}</span>
+              </div>
+            )}
+            {s.pkg > 0 && (
+              <div className="flex justify-between">
+                <span className="text-[10px] text-[var(--color-muted)]">Package</span>
+                <span className="text-[11px] font-mono text-[var(--color-foreground)]">₦{fmt(s.pkg)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
   </div>
 );
 
