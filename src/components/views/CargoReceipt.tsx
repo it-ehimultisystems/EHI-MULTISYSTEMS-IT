@@ -79,6 +79,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 4,
   },
+  copyLabelText: {
+    fontSize: 8,
+    fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
+    textAlign: "center",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
   divider: {
     marginVertical: 3,
     borderBottomWidth: 1,
@@ -204,9 +212,12 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
     if (lines > 1) h += (lines - 1) * 12;
   }
 
-  return (
-  <Document>
-    <Page size={[226, h]} style={styles.page}>
+  // Two copies (CUSTOMER, MERCHANT) as separate pages in the same PDF --
+  // mirrors escposCargoReceiptPrinting.ts's thermal-printer output, which
+  // already prints both. The PDF path never had this: the "PDF Receipt"
+  // button produced a single page with no copy distinction at all.
+  const renderPage = (copyLabel: 'CUSTOMER COPY' | 'MERCHANT COPY') => (
+    <Page key={copyLabel} size={[226, h]} style={styles.page}>
       <View style={[styles.headerRow, styles.headerBorder]}>
         <EHILogoPDF width={70} />
         <AirlineLogoPDF airline={data.airline} logoUrl={data.airlineLogoUrl} width={70} />
@@ -217,6 +228,7 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
       </View>
 
       <Text style={styles.originLine}>Origin: {data.hubName}</Text>
+      <Text style={styles.copyLabelText}>*** {copyLabel} ***</Text>
 
       {data.qrCodeDataUrl ? (
         <View style={styles.qrContainer}>
@@ -313,7 +325,13 @@ const CargoReceiptOnlyPDF = ({ data }: { data: CargoReceiptData }) => {
       <Text style={styles.footerText}>app.ehimultisystems.com</Text>
       <Text style={styles.footerText}>{data.entryRef} • {data.date}</Text>
     </Page>
-  </Document>
+  );
+
+  return (
+    <Document>
+      {renderPage('CUSTOMER COPY')}
+      {renderPage('MERCHANT COPY')}
+    </Document>
   );
 };
 
