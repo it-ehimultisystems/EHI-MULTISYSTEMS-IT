@@ -21,6 +21,7 @@ import { CustomerWalletPicker } from "../CustomerWalletPicker";
 import { CustomerWallet } from "../../lib/types";
 import { ReviewEntryModal } from "./ReviewEntryModal";
 import { TerminalSwitch, usePersistedTerminal } from "../TerminalSwitch";
+import { DepartmentSalesAnalysisModal } from "../DepartmentSalesAnalysis";
 
 export const PackageForm = ({
   user: propUser,
@@ -187,6 +188,7 @@ export const PackageForm = ({
   // left debts paid off elsewhere still showing as unpaid here.
   const unpaidDebts = packageTxs.filter(t => t.mode === 'Debt' && (t.amount - (t.amountPaid || 0)) > 0);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showSalesAnalysis, setShowSalesAnalysis] = useState(false);
   const [closingDay, setClosingDay] = useState(false);
 
   const [selectedWalletOverride, setSelectedWalletOverride] = useState<CustomerWallet | null>(null);
@@ -423,6 +425,9 @@ export const PackageForm = ({
         <div>{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</div>
         <div className="flex items-center gap-3">
           {userHubCode === 'LOS' && !forcedTerminal && <TerminalSwitch value={terminal} onChange={setTerminal} />}
+          <button onClick={() => setShowSalesAnalysis(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)] transition-colors normal-case tracking-normal">
+            <BarChart2 size={14} /> <span>Sales Analysis</span>
+          </button>
           {onShowHistory && (
             <button onClick={onShowHistory} className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-cobalt)] hover:border-[var(--color-accent-cobalt)] transition-colors normal-case tracking-normal">
               <ClipboardList size={14} /> <span>History</span>
@@ -998,6 +1003,16 @@ export const PackageForm = ({
             </div>
           </div>
         </div>
+      )}
+
+      {showSalesAnalysis && (
+        <DepartmentSalesAnalysisModal
+          user={user}
+          deptType="package"
+          deptLabel="Package"
+          routeLabel="Destination"
+          onClose={() => setShowSalesAnalysis(false)}
+        />
       )}
     </div>
   );

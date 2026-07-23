@@ -18,6 +18,7 @@ import { isTagAlreadyDelivered } from "../../lib/scanLogic";
 import { getNextTag } from "../../lib/tagPool";
 import { CustomerWalletPicker } from "../CustomerWalletPicker";
 import { TerminalSwitch, usePersistedTerminal } from "../TerminalSwitch";
+import { DepartmentSalesAnalysisModal } from "../DepartmentSalesAnalysis";
 import {
   CheckCircle,
   Loader2,
@@ -52,6 +53,7 @@ import {
   Lock,
   Calendar,
   Ruler,
+  BarChart2,
 } from "lucide-react";
 import {
   sendReceiptWhatsApp,
@@ -488,6 +490,7 @@ export const CargoForm = ({
   // pick the actual period being closed (which can cross midnight) instead,
   // persisted via cargo_day_close so the exact boundary is auditable later.
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showSalesAnalysis, setShowSalesAnalysis] = useState(false);
   const [closingDay, setClosingDay] = useState(false);
   const [periodStart, setPeriodStart] = useState<string>('');
   const [periodEnd, setPeriodEnd] = useState<string>('');
@@ -1837,6 +1840,12 @@ export const CargoForm = ({
 
       <div className="flex items-center justify-end gap-2 mb-3">
         {userHubCode === 'LOS' && !forcedTerminal && <TerminalSwitch value={terminal} onChange={setTerminal} />}
+        <button
+          onClick={() => setShowSalesAnalysis(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-2)] border border-[var(--color-border-strong)] rounded-lg text-[11px] font-mono font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-3)] hover:border-[var(--color-accent-amber)] hover:text-[var(--color-accent-amber)] transition-colors shadow-[var(--shadow-xs)]"
+        >
+          <BarChart2 size={14} /> <span>SALES ANALYSIS</span>
+        </button>
         <button
           onClick={() => setShowCloseModal(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-2)] border border-[var(--color-border-strong)] rounded-lg text-[11px] font-mono font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-3)] hover:border-[var(--color-accent-amber)] hover:text-[var(--color-accent-amber)] transition-colors shadow-[var(--shadow-xs)]"
@@ -3229,6 +3238,16 @@ export const CargoForm = ({
             </div>
           </div>
         </div>
+      )}
+
+      {showSalesAnalysis && (
+        <DepartmentSalesAnalysisModal
+          user={user}
+          deptType="cargo"
+          deptLabel="Cargo"
+          routeLabel="Route"
+          onClose={() => setShowSalesAnalysis(false)}
+        />
       )}
     </div>
   );

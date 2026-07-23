@@ -6,7 +6,7 @@ import { chargeWalletForSale } from '../../lib/walletPayment';
 import { matchWallet } from '../../lib/customerIdentity';
 import { WalletRemainderSelector } from '../WalletRemainderSelector';
 import { getNextTag } from '../../lib/tagPool';
-import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer, Bluetooth } from 'lucide-react';
+import { CheckCircle, Loader2, ClipboardList, MessageSquare, Plus, Printer, Bluetooth, BarChart2 } from 'lucide-react';
 import { QRCode } from '../QRCode';
 import { sendReceiptWhatsApp, buildExcessBaggageWhatsApp } from '../../lib/notifications';
 import { PaymentNarrationBox } from '../PaymentNarrationBox';
@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase';
 import { CustomerWalletPicker } from '../CustomerWalletPicker';
 import { CustomerWallet } from '../../lib/types';
 import { ReviewEntryModal } from './ReviewEntryModal';
+import { DepartmentSalesAnalysisModal } from '../DepartmentSalesAnalysis';
 
 export const ExcessBaggageForm = ({
   airline,
@@ -66,6 +67,7 @@ export const ExcessBaggageForm = ({
   const [successTx, setSuccessTx] = useState<{ tx: Transaction, kgs: number, exc: number, pcs: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showBaggageReview, setShowBaggageReview] = useState(false);
+  const [showSalesAnalysis, setShowSalesAnalysis] = useState(false);
 
   // Pre-fetched once (like CargoForm/PackageForm/MarketingWorkspace's own
   // tag/id pre-fetch), not popped live inside handleSubmit -- popping live
@@ -490,6 +492,12 @@ export const ExcessBaggageForm = ({
           >
             <Printer size={14} /> <span>Daily PDF</span>
           </button>
+          <button
+            onClick={() => setShowSalesAnalysis(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)] transition-colors cursor-pointer"
+          >
+            <BarChart2 size={14} /> <span>Sales Analysis</span>
+          </button>
           {onShowHistory && (
             <button
               onClick={onShowHistory}
@@ -814,6 +822,16 @@ export const ExcessBaggageForm = ({
         </aside>
 
       </div>
+
+      {showSalesAnalysis && (
+        <DepartmentSalesAnalysisModal
+          user={user}
+          deptType="baggage"
+          deptLabel="Baggage"
+          routeLabel="Destination"
+          onClose={() => setShowSalesAnalysis(false)}
+        />
+      )}
     </div>
   );
 };

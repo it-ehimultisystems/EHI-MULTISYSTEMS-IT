@@ -10,6 +10,7 @@ import { chargeWalletForSale } from "../../lib/walletPayment";
 import { matchWallet } from "../../lib/customerIdentity";
 import { WalletRemainderSelector } from "../WalletRemainderSelector";
 import { getNextTag } from "../../lib/tagPool";
+import { DepartmentSalesAnalysisModal } from "../DepartmentSalesAnalysis";
 import { Plus, CheckCircle, Loader2, ClipboardList, MessageSquare, Printer, Minus, TrendingDown, BarChart2, Bluetooth } from "lucide-react";
 import { motion } from "motion/react";
 import { supabase } from "../../lib/supabase";
@@ -253,6 +254,7 @@ export const MarketingWorkspace = ({
   });
 
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showSalesAnalysis, setShowSalesAnalysis] = useState(false);
   const [closingDay, setClosingDay] = useState(false);
 
   const handleDownloadReceipt = async () => {
@@ -519,6 +521,12 @@ export const MarketingWorkspace = ({
           })}
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowSalesAnalysis(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-[11px] font-mono text-[var(--color-muted)] hover:text-[var(--color-accent-amber)] hover:border-[var(--color-accent-amber)] transition-colors normal-case tracking-normal"
+          >
+            <BarChart2 size={14} /> <span>Sales Analysis</span>
+          </button>
           {onShowHistory && (
             <button
               onClick={onShowHistory}
@@ -1398,6 +1406,16 @@ export const MarketingWorkspace = ({
             </div>
           </div>
         </div>
+      )}
+
+      {showSalesAnalysis && (
+        <DepartmentSalesAnalysisModal
+          user={user}
+          deptType="marketing"
+          deptLabel="Marketing"
+          routeLabel="Route"
+          onClose={() => setShowSalesAnalysis(false)}
+        />
       )}
     </div>
   );

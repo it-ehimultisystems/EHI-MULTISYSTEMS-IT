@@ -4,6 +4,8 @@ import { fmt, sanitizeSpreadsheetAoA } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { Calendar, FileText, Download, Printer, ChevronRight, Filter, Loader2 } from 'lucide-react';
 import { BackButton } from '../BackButton';
+import { DepartmentSalesAnalysisView } from '../DepartmentSalesAnalysis';
+import { DepartmentSalesAnalysis, computeDepartmentSalesAnalysis, computeReportDateRange } from '../../lib/salesAnalysis';
 import * as XLSX from 'xlsx';
 
 const REPORT_TYPES = [
@@ -31,81 +33,6 @@ const PRESETS = [
   { id: 'ytd',       label: 'Year to Date' },
   { id: 'custom',    label: 'Custom Range' },
 ];
-
-export interface DepartmentAgentRow {
-  role: string;
-  entries: number;
-  revenue: number;
-  collected: number;
-  owed: number;
-  topRoute: string | null;
-  topRouteCount: number;
-}
-
-export interface DepartmentSalesAnalysis {
-  agents: DepartmentAgentRow[];
-  collective: { agentCount: number; entries: number; revenue: number; collected: number; owed: number };
-}
-
-// Single-department version of the staffReport/staffCollective computation
-// just above -- same "real revenue"/owed formulas (collected excludes
-// unpaid Debt and the 'Debt Paid' entries already counted once via their
-// own DC- shadow collection entry; owed nets amountPaid and any retrieval
-// credit off the original amount), scoped to one type at a time and with
-// a top-route/destination added, which the combined staff report doesn't
-// break out. cargo/marketing set t.route directly; package aliases route
-// to its destination in this file's own fetch mapping above; baggage only
-// ever sets destination -- the fallback covers all four without branching
-// per type.
-function computeDepartmentSalesAnalysis(txs: Transaction[], deptType: 'cargo' | 'baggage' | 'marketing' | 'package'): DepartmentSalesAnalysis {
-  const deptTxs = txs.filter(t => t.type === deptType);
-
-  const map: Record<string, {
-    entries: number; revenue: number; collected: number; owed: number;
-    routeCounts: Record<string, number>;
-  }> = {};
-
-  deptTxs.forEach(t => {
-    const agent = (t.enteredByName || 'Unknown Agent').trim();
-    if (!map[agent]) map[agent] = { entries: 0, revenue: 0, collected: 0, owed: 0, routeCounts: {} };
-    map[agent].entries += 1;
-    map[agent].revenue += t.amount;
-    if (t.mode !== 'Debt' && t.mode !== 'Debt Paid') {
-      map[agent].collected += t.amount;
-    }
-    if (t.mode === 'Debt') {
-      const remaining = t.amount - (t.amountPaid || 0) - ((t.raw as any)?.retrieved_amount || 0);
-      map[agent].owed += Math.max(0, remaining);
-    }
-    const routeKey = (t.route || (t as any).destination || '').toString().trim();
-    if (routeKey) map[agent].routeCounts[routeKey] = (map[agent].routeCounts[routeKey] || 0) + 1;
-  });
-
-  const agents: DepartmentAgentRow[] = Object.entries(map)
-    .map(([role, d]) => {
-      const top = Object.entries(d.routeCounts).sort((a, b) => b[1] - a[1])[0];
-      return {
-        role,
-        entries: d.entries,
-        revenue: d.revenue,
-        collected: d.collected,
-        owed: d.owed,
-        topRoute: top ? top[0] : null,
-        topRouteCount: top ? top[1] : 0,
-      };
-    })
-    .sort((a, b) => b.revenue - a.revenue);
-
-  const collective = agents.reduce((acc, a) => ({
-    agentCount: acc.agentCount,
-    entries: acc.entries + a.entries,
-    revenue: acc.revenue + a.revenue,
-    collected: acc.collected + a.collected,
-    owed: acc.owed + a.owed,
-  }), { agentCount: agents.length, entries: 0, revenue: 0, collected: 0, owed: 0 });
-
-  return { agents, collective };
-}
 
 export const Reports = ({ user, transactions, onBack }: { user: User; transactions: Transaction[]; onBack?: () => void }) => {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
@@ -136,25 +63,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
   }, []);
 
   // Compute date range
-  const dateRange = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let from: Date, to: Date;
-    switch (preset) {
-      case 'today':      from = today;                                                to = now; break;
-      case 'yesterday':  from = new Date(today.getTime() - 86400000);                 to = today; break;
-      case 'week':       from = new Date(today.getTime() - 7 * 86400000);             to = now; break;
-      case 'month':      from = new Date(now.getFullYear(), now.getMonth(), 1);       to = now; break;
-      case 'last_month': from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                         to = new Date(now.getFullYear(), now.getMonth(), 0); break;
-      case 'quarter':    from = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1); to = now; break;
-      case 'ytd':        from = new Date(now.getFullYear(), 0, 1);                    to = now; break;
-      case 'custom':     from = customFrom ? new Date(customFrom) : today;
-                         to = customTo ? new Date(customTo) : now; break;
-      default:           from = today; to = now;
-    }
-    return { from, to };
-  }, [preset, customFrom, customTo]);
+  const dateRange = useMemo(() => computeReportDateRange(preset, customFrom, customTo), [preset, customFrom, customTo]);
 
   // Fetch transactions based on dateRange
   useEffect(() => {
@@ -1025,76 +934,6 @@ const StaffReportView = ({ data, collective }: { data: any[]; collective: { entr
         </div>
       ))}
     </div>
-  </div>
-);
-
-// Same collective-then-per-agent shape as StaffReportView above, scoped to
-// one department and with a top-route/destination line added to each
-// agent's detail -- the thing the combined report can't show since it mixes
-// routes from four different streams together.
-const DepartmentSalesAnalysisView = ({ data, deptLabel, routeLabel }: { data: DepartmentSalesAnalysis; deptLabel: string; routeLabel: string }) => (
-  <div className="space-y-5">
-    {/* Layer 1 — Collective */}
-    <div className="rounded-[var(--radius-md)] border border-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.06)] p-3">
-      <div className="text-[10px] text-[var(--color-accent-amber)] mb-2.5 uppercase font-bold tracking-wider">{deptLabel} — All Agents Combined</div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider">Total Sales</div>
-          <div className="text-[15px] font-mono font-bold text-[var(--color-foreground)]">₦{fmt(data.collective.revenue)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider">Total Collected</div>
-          <div className="text-[15px] font-mono font-bold text-[var(--color-success)]">₦{fmt(data.collective.collected)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider">Total Owed</div>
-          <div className="text-[15px] font-mono font-bold text-[var(--color-error)]">₦{fmt(data.collective.owed)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider">Agents / Entries</div>
-          <div className="text-[15px] font-mono font-bold text-[var(--color-foreground)]">{data.collective.agentCount} / {data.collective.entries}</div>
-        </div>
-      </div>
-    </div>
-
-    {data.agents.length === 0 ? (
-      <div className="p-8 text-center bg-[var(--color-surface-card)] rounded-xl border border-dashed border-[var(--color-border)] text-[var(--color-muted)] text-[12px] font-mono">
-        No {deptLabel.toLowerCase()} entries in this period.
-      </div>
-    ) : (
-      <div className="space-y-2.5">
-        {data.agents.map(s => (
-          <div key={s.role} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <div className="text-[9px] text-[var(--color-muted)] uppercase tracking-wider mb-0.5">Owed</div>
-                <div className={`text-[16px] font-mono font-bold ${s.owed > 0 ? 'text-[var(--color-error)]' : 'text-[var(--color-muted)]'}`}>₦{fmt(s.owed)}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[13px] font-bold text-[var(--color-foreground)]">{s.role}</div>
-                <div className="text-[10px] text-[var(--color-muted)]">{s.entries} {s.entries === 1 ? 'entry' : 'entries'}</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-2 border-t border-[var(--color-border)] border-dashed">
-              <div className="flex justify-between">
-                <span className="text-[10px] text-[var(--color-muted)]">Sales Value</span>
-                <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)]">₦{fmt(s.revenue)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[10px] text-[var(--color-muted)]">Collected</span>
-                <span className="text-[11px] font-mono font-bold text-[var(--color-success)]">₦{fmt(s.collected)}</span>
-              </div>
-              {s.topRoute && (
-                <div className="flex justify-between col-span-2">
-                  <span className="text-[10px] text-[var(--color-muted)]">Top {routeLabel}</span>
-                  <span className="text-[11px] font-mono font-bold text-[var(--color-foreground)]">{s.topRoute} ({s.topRouteCount})</span>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
   </div>
 );
 
