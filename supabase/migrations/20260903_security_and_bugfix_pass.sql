@@ -21,8 +21,25 @@
 -- in-hub wallet with an arbitrary amount, then cash it out via the wallet
 -- cash-payout flow. 'deduction'/'refund' stay broadly available since
 -- they're always tied to a real sale or a real retrieval RPC call, not a
--- bare balance mutation. Same signature as 20260902's redefine -- plain
--- CREATE OR REPLACE, no DROP needed.
+-- bare balance mutation.
+--
+-- FIXED (live bug, confirmed 2026-07-23): the comment above originally
+-- claimed "same signature as 20260902's redefine -- plain CREATE OR
+-- REPLACE, no DROP needed." That was wrong, and it's the exact same
+-- mistake process_cargo_retrieval's overload collision was fixed for
+-- above in 20260902: apply_wallet_transaction went from 7 params
+-- (20260810_wallet_atomicity_and_isolation.sql, no p_department) to 8
+-- (20260902_multi_department_retrieval_and_wallet_cashout.sql, +p_department
+-- DEFAULT 'cargo') via a bare CREATE OR REPLACE with no preceding DROP --
+-- Postgres treats a different parameter list as a distinct overload, not
+-- a replace, so both the old 7-param and new 8-param versions now coexist
+-- live. Every real call (CargoForm/PackageForm/MarketingWorkspace/
+-- ExcessBaggageForm/CustomerWallets, none of which pass p_department
+-- explicitly) is ambiguous between them, failing with Postgres error
+-- 42725 "could not choose the best candidate function" -- this is what
+-- broke wallet top-ups. DROP the old 7-param signature before replacing.
+DROP FUNCTION IF EXISTS public.apply_wallet_transaction(uuid, text, numeric, text, uuid, text, text);
+
 CREATE OR REPLACE FUNCTION public.apply_wallet_transaction(
   p_wallet_id       uuid,
   p_type            text,
