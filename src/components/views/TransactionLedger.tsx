@@ -128,6 +128,11 @@ export const TransactionLedger = ({
   // confirmPayment() RPC calls for the same entry with no reconciliation
   // between the two responses.
   const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set());
+  // selectAllCash had no in-flight guard at all (every other write action in
+  // this file -- toggleConfirm, savePosCode, handleSaveEdit -- does), so a
+  // fast double-click fired two overlapping Promise.all batches of
+  // confirmPayment calls across the same rows.
+  const [bulkConfirming, setBulkConfirming] = useState(false);
   // Marketing entries store bag counts inside the composed `detail` string,
   // not as discrete Transaction fields, so the edit modal keeps its own
   // working copy (seeded by parsing `detail` in handleEditClick) and
@@ -1358,41 +1363,47 @@ export const TransactionLedger = ({
   const unconfirmedPOS = filteredEntries.filter(e => e.mode === 'POS' && !e.raw.paymentConfirmed);
 
   const selectAllCash = async () => {
-    let skipped = 0;
-    let failed = 0;
-    const toConfirm: Entry[] = [];
-    unverifiedCash.forEach(e => {
-      if (e.source !== 'transaction') return;
-      // Same maker-checker rule as toggleConfirm -- skip rows the current
-      // user logged themselves rather than aborting the whole batch.
-      if (e.raw.enteredByName && e.raw.enteredByName === user.name) {
-        skipped++;
-        return;
+    if (bulkConfirming) return;
+    setBulkConfirming(true);
+    try {
+      let skipped = 0;
+      let failed = 0;
+      const toConfirm: Entry[] = [];
+      unverifiedCash.forEach(e => {
+        if (e.source !== 'transaction') return;
+        // Same maker-checker rule as toggleConfirm -- skip rows the current
+        // user logged themselves rather than aborting the whole batch.
+        if (e.raw.enteredByName && e.raw.enteredByName === user.name) {
+          skipped++;
+          return;
+        }
+        toConfirm.push(e);
+      });
+      // Same state-wide-authorized RPC as toggleConfirm -- this bulk action is
+      // exactly the workflow a state-wide accountant would use across
+      // multiple sibling hubs at once, so it needs the same fix.
+      const results = await Promise.all(toConfirm.map(e => confirmPayment(e.raw.type as PaymentEntryType, {
+        id: e.raw.id,
+        confirmed: true,
+        loggedBy: user.name || 'Unknown',
+      })));
+      results.forEach((result, i) => {
+        if (!result.ok) { failed++; return; }
+        const e = toConfirm[i];
+        const updated = { ...e.raw };
+        updated.paymentConfirmed = true;
+        updated.confirmedAt = new Date().toISOString();
+        updated.confirmedBy = user.name;
+        onUpdateTx(updated);
+      });
+      if (skipped > 0) {
+        showToast({ message: `Skipped ${skipped} entr${skipped === 1 ? 'y' : 'ies'} you personally logged.`, type: 'warning' });
       }
-      toConfirm.push(e);
-    });
-    // Same state-wide-authorized RPC as toggleConfirm -- this bulk action is
-    // exactly the workflow a state-wide accountant would use across
-    // multiple sibling hubs at once, so it needs the same fix.
-    const results = await Promise.all(toConfirm.map(e => confirmPayment(e.raw.type as PaymentEntryType, {
-      id: e.raw.id,
-      confirmed: true,
-      loggedBy: user.name || 'Unknown',
-    })));
-    results.forEach((result, i) => {
-      if (!result.ok) { failed++; return; }
-      const e = toConfirm[i];
-      const updated = { ...e.raw };
-      updated.paymentConfirmed = true;
-      updated.confirmedAt = new Date().toISOString();
-      updated.confirmedBy = user.name;
-      onUpdateTx(updated);
-    });
-    if (skipped > 0) {
-      showToast({ message: `Skipped ${skipped} entr${skipped === 1 ? 'y' : 'ies'} you personally logged.`, type: 'warning' });
-    }
-    if (failed > 0) {
-      showToast({ message: `Failed to confirm ${failed} entr${failed === 1 ? 'y' : 'ies'}.`, type: 'error' });
+      if (failed > 0) {
+        showToast({ message: `Failed to confirm ${failed} entr${failed === 1 ? 'y' : 'ies'}.`, type: 'error' });
+      }
+    } finally {
+      setBulkConfirming(false);
     }
   };
 
@@ -1865,13 +1876,14 @@ export const TransactionLedger = ({
             {/* ── Bulk Cash Verification Banner ─────────────── */}
             {modeFilter === 'Cash' && unverifiedCash.length > 0 && isAccountantOrAdmin && (
               <div className="px-4 py-2.5 bg-[rgba(245,158,11,0.05)] border-b border-[rgba(245,158,11,0.15)] flex items-center gap-3 shrink-0">
-                <CheckSquare size={13} className="cursor-pointer text-[var(--color-accent-amber)]" onClick={selectAllCash} />
+                <CheckSquare size={13} className={`text-[var(--color-accent-amber)] ${bulkConfirming ? 'opacity-50' : 'cursor-pointer'}`} onClick={bulkConfirming ? undefined : selectAllCash} />
                 <span className="text-[10px] font-mono text-[var(--color-accent-amber)] flex-1">{unverifiedCash.length} unverified cash {unverifiedCash.length === 1 ? 'entry' : 'entries'}</span>
                 <button
                   onClick={selectAllCash}
-                  className="bg-[var(--color-success)] text-[var(--color-obsidian)] px-3 py-1 rounded-lg text-[10px] font-mono font-bold hover:bg-emerald-500 transition-colors"
+                  disabled={bulkConfirming}
+                  className="bg-[var(--color-success)] text-[var(--color-obsidian)] px-3 py-1 rounded-lg text-[10px] font-mono font-bold hover:bg-emerald-500 transition-colors disabled:opacity-50"
                 >
-                  Confirm All
+                  {bulkConfirming ? 'Confirming...' : 'Confirm All'}
                 </button>
               </div>
             )}
