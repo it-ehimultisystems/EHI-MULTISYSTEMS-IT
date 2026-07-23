@@ -98,12 +98,12 @@ export const Analytics = ({
   
   // Custom Date Range State
   const defaultShift = useMemo(() => {
-    const b = getShiftBoundary(18);
+    const b = getShiftBoundary((user as any).shift_start_hour ?? 18);
     return {
       start: b.start.toISOString().slice(0, 16),
       end: b.end.toISOString().slice(0, 16)
     };
-  }, []);
+  }, [user]);
   const [customStart, setCustomStart] = useState(defaultShift.start);
   const [customEnd, setCustomEnd] = useState(defaultShift.end);
 
@@ -186,7 +186,11 @@ export const Analytics = ({
   // Date/Time Filtered Transactions
   const periodFilteredTxs = useMemo(() => {
     const now = new Date();
-    const shiftBoundary = getShiftBoundary(18);
+    // Same source EODReconciliation.tsx uses -- if this hub's
+    // shift_start_hour is ever configured away from the 18:00 default,
+    // Analytics' "This Shift" view must report the same window EOD
+    // reconciles against, not a silently different one.
+    const shiftBoundary = getShiftBoundary((user as any).shift_start_hour ?? 18);
 
     return hubFilteredTxs.filter(t => {
       const txDate = t.created_at ? new Date(t.created_at) : new Date();
@@ -266,17 +270,22 @@ export const Analytics = ({
     const avgYieldPerKg = totalKg > 0 ? totalRevenue / totalKg : 0;
     const avgRevenuePerShipment = totalWaybills > 0 ? totalRevenue / totalWaybills : 0;
 
-    // Payment Collection Breakdown
-    const cashRevenue = periodFilteredTxs.filter(t => t.mode === 'Cash').reduce((sum, t) => sum + t.amount, 0);
-    const transferRevenue = periodFilteredTxs.filter(t => t.mode === 'Transfer').reduce((sum, t) => sum + t.amount, 0);
-    const posRevenue = periodFilteredTxs.filter(t => t.mode === 'POS').reduce((sum, t) => sum + t.amount, 0);
-    const walletDeductions = periodFilteredTxs.reduce((sum, t) => sum + (t.wallet_deduction_amount || (t.mode === 'Wallet' ? t.amount : 0)), 0);
+    // Payment Collection Breakdown -- scoped to validLiquidTxs (the same
+    // "real money" set totalRevenue uses), NOT the raw periodFilteredTxs.
+    // A retrieved (already-accounted-for) transaction's payment amount
+    // must not appear here while being excluded from totalRevenue above --
+    // that mismatch is exactly what let collectionEfficiency silently
+    // exceed 100% and get clamped instead of surfacing the real drift.
+    const cashRevenue = validLiquidTxs.filter(t => t.mode === 'Cash').reduce((sum, t) => sum + t.amount, 0);
+    const transferRevenue = validLiquidTxs.filter(t => t.mode === 'Transfer').reduce((sum, t) => sum + t.amount, 0);
+    const posRevenue = validLiquidTxs.filter(t => t.mode === 'POS').reduce((sum, t) => sum + t.amount, 0);
+    const walletDeductions = validLiquidTxs.reduce((sum, t) => sum + (t.wallet_deduction_amount || (t.mode === 'Wallet' ? t.amount : 0)), 0);
     const debtOutstanding = debtTxs.reduce((sum, t) => sum + t.amount, 0);
     const officeWorkValue = officeWorkTxs.reduce((sum, t) => sum + t.amount, 0);
     const retrievedValue = retrievedTxs.reduce((sum, t) => sum + t.amount, 0);
 
-    const unconfirmedTransfers = periodFilteredTxs.filter(t => t.mode === 'Transfer' && !t.paymentConfirmed).reduce((sum, t) => sum + t.amount, 0);
-    const unverifiedCash = periodFilteredTxs.filter(t => t.mode === 'Cash' && !t.paymentConfirmed).reduce((sum, t) => sum + t.amount, 0);
+    const unconfirmedTransfers = validLiquidTxs.filter(t => t.mode === 'Transfer' && !t.paymentConfirmed).reduce((sum, t) => sum + t.amount, 0);
+    const unverifiedCash = validLiquidTxs.filter(t => t.mode === 'Cash' && !t.paymentConfirmed).reduce((sum, t) => sum + t.amount, 0);
 
     const totalCollected = cashRevenue + transferRevenue + posRevenue + walletDeductions - unconfirmedTransfers - unverifiedCash;
     const collectionEfficiency = totalRevenue > 0 ? Math.min(100, Math.round((totalCollected / totalRevenue) * 100)) : 100;
