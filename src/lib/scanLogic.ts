@@ -589,15 +589,15 @@ export async function logScanEvent(
         consigneeName  = mktHit.data.customer_name || '';
         consigneePhone = mktHit.data.customer_phone || '';
       } else {
-        // Package/Parcel desk has no phone column yet -- consigneePhone
-        // stays empty here, so no scan-status SMS fires for this stream
-        // until a phone column is added (PackageForm.tsx already collects
-        // a phone number for the immediate WhatsApp receipt at intake, but
-        // never persists it -- a separate follow-up if SMS on scan is wanted).
-        const pkgHit = await supabase.from('package_entries').select('entry_ref, customer_name').eq('entry_ref', ref).limit(1).maybeSingle();
+        // package_entries.customer_phone now exists (see the 20260904
+        // migration) -- was previously empty here, so no scan-status SMS
+        // ever fired for this stream even though PackageForm.tsx already
+        // collected a phone number at intake.
+        const pkgHit = await supabase.from('package_entries').select('entry_ref, customer_name, customer_phone').eq('entry_ref', ref).limit(1).maybeSingle();
         if (pkgHit.data) {
           await supabase.from('package_entries').update({ status: newStatus }).eq('entry_ref', ref);
-          consigneeName = pkgHit.data.customer_name || '';
+          consigneeName  = pkgHit.data.customer_name || '';
+          consigneePhone = pkgHit.data.customer_phone || '';
         }
       }
     }
