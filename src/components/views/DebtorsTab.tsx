@@ -187,88 +187,93 @@ export const DebtorsTab = ({
       return;
     }
     setSubmittingPaymentId(id);
-    const cappedPaid = Math.min(paidNow, debt.balance);
-    const remaining = debt.balance - cappedPaid;
+    try {
+      const cappedPaid = Math.min(paidNow, debt.balance);
+      const remaining = debt.balance - cappedPaid;
 
-    // 1. Update the original debt entry via clear_*_debt (see
-    // src/lib/debt.ts) instead of the generic onUpdateTx path -- that
-    // path's plain UPDATE is hub-locked and silently affects 0 rows (no
-    // error) when the debtor belongs to a sibling hub the agent can see
-    // but doesn't own, which used to show "recorded" regardless of
-    // whether the database actually changed.
-    const result = await clearDebt({
-      type: (debt as any).type,
-      id,
-      paymentAmount: cappedPaid,
-      paymentMode,
-      bank: paymentMode === 'Transfer' ? paymentBank : undefined,
-      loggedBy: user?.name || 'Unknown',
-      // Server re-validates this against the just-locked row and rejects
-      // a stale/duplicate call instead of silently double-applying it.
-      expectedRemaining: debt.balance,
-    });
-
-    if (!result.ok) {
-      showToast({ message: result.error || 'Failed to record payment.', type: 'error' });
-      setSubmittingPaymentId(null);
-      return;
-    }
-
-    // 2. Emit a visible debt-clearance shadow transaction so today's
-    //    ledger and EOD show this collection separately from new sales.
-    //    Without this, the cash arrives in the till but the system cannot
-    //    explain it — staff write "unexplained excess" in every variance
-    //    reason. The shadow entry carries the full context the accountant needs.
-    if (onAddTx) {
-      const awbLabel = (debt as any).awb_tag_number ? ` · AWB: ${(debt as any).awb_tag_number}` : '';
-      const shadowTx: Transaction = {
-        id: `DC-${Date.now()}-${id.slice(-6)}`,
-        name: debt.name,
-        detail: `DEBT CLEARANCE${awbLabel} · Orig: ${fmt(debt.amount)} · Paid: ${fmt(cappedPaid)} · Bal: ${fmt(remaining)} · Age: ${debt.ageInDays}d`,
-        amount: cappedPaid,
-        mode: paymentMode,
-        // Never set before -- EHIApp.tsx's handleAddTx falls back to
-        // parsing this shadow entry's own `detail` string for cargo
-        // (yielding the literal "DEBT CLEARANCE" as the airline) or to a
-        // hardcoded 'ValueJet' for baggage when tx.airline is undefined,
-        // polluting AirlinePerformance/Analytics airline groupings with
-        // fake or misattributed revenue for every cleared debt. This is
-        // real money collected for the original airline/route, so it
-        // should count there, not toward a bogus bucket.
-        airline: (debt as any).airline,
+      // 1. Update the original debt entry via clear_*_debt (see
+      // src/lib/debt.ts) instead of the generic onUpdateTx path -- that
+      // path's plain UPDATE is hub-locked and silently affects 0 rows (no
+      // error) when the debtor belongs to a sibling hub the agent can see
+      // but doesn't own, which used to show "recorded" regardless of
+      // whether the database actually changed.
+      const result = await clearDebt({
+        type: (debt as any).type,
+        id,
+        paymentAmount: cappedPaid,
+        paymentMode,
         bank: paymentMode === 'Transfer' ? paymentBank : undefined,
-        time: tnow(),
-        created_at: new Date().toISOString(),
-        // Was hardcoded 'cargo' regardless of the debt's real type -- the
-        // RPC call above already uses (debt as any).type correctly (it
-        // routes to the matching clear_*_debt function), but this shadow
-        // receipt didn't, so clearing a baggage/marketing/package debt
-        // wrote its receipt into cargo_entries instead: parsed through
-        // cargo's own detail-string format (garbled airline/route/awb),
-        // and invisible under any type filter except "Cargo"/"All Types".
-        type: (debt as any).type || 'cargo',
-        status: 'Intake',
-        is_debt_clearance: true,
-        related_tx_id: id,
-        clientType: (debt as any).clientType || 'Individual',
-        enteredByName: user?.name || 'Unknown',
-        // The original debt's own hub, not the clearing user's -- a
-        // super_admin (or any hub-unrestricted role) clearing a debt on
-        // behalf of a branch has their own hub_id, which is often a
-        // different hub (or none at all). Stamping that instead of the
-        // debt's real hub silently hid the clearance record from that
-        // branch's own agents (RLS scopes them to their own hub_id), even
-        // though the super_admin could always see it fine.
-        hub_id: (debt as any).hub_id || user?.hub_id,
-        hub: user?.hub,
-      };
-      onAddTx(shadowTx);
-    }
+        loggedBy: user?.name || 'Unknown',
+        // Server re-validates this against the just-locked row and rejects
+        // a stale/duplicate call instead of silently double-applying it.
+        expectedRemaining: debt.balance,
+      });
 
-    setShowPaymentForm(null);
-    setPaymentAmount('');
-    setSubmittingPaymentId(null);
-    showToast({ message: `₦${cappedPaid.toLocaleString()} recorded. ${remaining > 0 ? `Balance: ${fmt(remaining)}` : 'Debt fully cleared.'}`, type: 'success' });
+      if (!result.ok) {
+        showToast({ message: result.error || 'Failed to record payment.', type: 'error' });
+        return;
+      }
+
+      // 2. Emit a visible debt-clearance shadow transaction so today's
+      //    ledger and EOD show this collection separately from new sales.
+      //    Without this, the cash arrives in the till but the system cannot
+      //    explain it — staff write "unexplained excess" in every variance
+      //    reason. The shadow entry carries the full context the accountant needs.
+      if (onAddTx) {
+        const awbLabel = (debt as any).awb_tag_number ? ` · AWB: ${(debt as any).awb_tag_number}` : '';
+        const shadowTx: Transaction = {
+          id: `DC-${Date.now()}-${id.slice(-6)}`,
+          name: debt.name,
+          detail: `DEBT CLEARANCE${awbLabel} · Orig: ${fmt(debt.amount)} · Paid: ${fmt(cappedPaid)} · Bal: ${fmt(remaining)} · Age: ${debt.ageInDays}d`,
+          amount: cappedPaid,
+          mode: paymentMode,
+          // Never set before -- EHIApp.tsx's handleAddTx falls back to
+          // parsing this shadow entry's own `detail` string for cargo
+          // (yielding the literal "DEBT CLEARANCE" as the airline) or to a
+          // hardcoded 'ValueJet' for baggage when tx.airline is undefined,
+          // polluting AirlinePerformance/Analytics airline groupings with
+          // fake or misattributed revenue for every cleared debt. This is
+          // real money collected for the original airline/route, so it
+          // should count there, not toward a bogus bucket.
+          airline: (debt as any).airline,
+          bank: paymentMode === 'Transfer' ? paymentBank : undefined,
+          time: tnow(),
+          created_at: new Date().toISOString(),
+          // Was hardcoded 'cargo' regardless of the debt's real type -- the
+          // RPC call above already uses (debt as any).type correctly (it
+          // routes to the matching clear_*_debt function), but this shadow
+          // receipt didn't, so clearing a baggage/marketing/package debt
+          // wrote its receipt into cargo_entries instead: parsed through
+          // cargo's own detail-string format (garbled airline/route/awb),
+          // and invisible under any type filter except "Cargo"/"All Types".
+          type: (debt as any).type || 'cargo',
+          status: 'Intake',
+          is_debt_clearance: true,
+          related_tx_id: id,
+          clientType: (debt as any).clientType || 'Individual',
+          enteredByName: user?.name || 'Unknown',
+          // The original debt's own hub, not the clearing user's -- a
+          // super_admin (or any hub-unrestricted role) clearing a debt on
+          // behalf of a branch has their own hub_id, which is often a
+          // different hub (or none at all). Stamping that instead of the
+          // debt's real hub silently hid the clearance record from that
+          // branch's own agents (RLS scopes them to their own hub_id), even
+          // though the super_admin could always see it fine.
+          hub_id: (debt as any).hub_id || user?.hub_id,
+          hub: user?.hub,
+        };
+        onAddTx(shadowTx);
+      }
+
+      setShowPaymentForm(null);
+      setPaymentAmount('');
+      showToast({ message: `₦${cappedPaid.toLocaleString()} recorded. ${remaining > 0 ? `Balance: ${fmt(remaining)}` : 'Debt fully cleared.'}`, type: 'success' });
+    } finally {
+      // Guarantees the lock releases even if clearDebt()/onAddTx() throws
+      // unexpectedly -- without this, an unhandled exception left the
+      // Confirm button permanently disabled for this debtor until reload.
+      setSubmittingPaymentId(null);
+    }
   };
 
   return (

@@ -448,108 +448,110 @@ export const TransactionLedger = ({
     // double-deducting the same customer's wallet for one edit.
     if (savingEdit) return;
     setSavingEdit(true);
+    // Everything below is wrapped in try/finally -- setSavingEdit(true)
+    // now guards the WHOLE save (previously only the wallet-charge branch),
+    // so an unhandled exception anywhere in here (e.g. chargeWalletForSale's
+    // underlying RPC call throwing instead of resolving to {ok:false}) must
+    // still release the lock, or every future edit attempt -- for any
+    // transaction, not just this one -- would find the Save button
+    // permanently disabled until a page reload.
+    try {
+      const pieces = parseInt(pieceInput) || 0;
+      const kg = parseFloat(kgInput) || 0;
+      const amount = parseFloat(amountInput) || 0;
+      const bb = parseInt(editBagCounts.bb) || 0;
+      const mb = parseInt(editBagCounts.mb) || 0;
+      const sb = parseInt(editBagCounts.sb) || 0;
+      if (amount < 0 || pieces < 0 || kg < 0 || bb < 0 || mb < 0 || sb < 0) {
+        showToast({ message: 'Amount, pieces, weight, and bag counts cannot be negative.', type: 'warning' });
+        return;
+      }
+      if (editingTx.type === 'package' && amount < MIN_PACKAGE_AMOUNT) {
+        showToast({ message: `Package/Parcel transactions must have an amount of at least ₦${MIN_PACKAGE_AMOUNT.toLocaleString()}`, type: 'warning' });
+        return;
+      }
+      // Amount can never be edited below what's already been recorded as
+      // paid (a partial debt payment, a retrieval, etc.) -- doing so would
+      // leave amountPaid/paymentHistory referencing a debt state larger
+      // than the entry's own total, silently corrupting DebtorsTab's
+      // balance math and any prior payment history for this entry.
+      if (editingTx.amountPaid && amount < editingTx.amountPaid) {
+        showToast({ message: `Amount cannot be reduced below the ₦${fmt(editingTx.amountPaid)} already recorded as paid on this entry.`, type: 'warning' });
+        return;
+      }
 
-    const pieces = parseInt(pieceInput) || 0;
-    const kg = parseFloat(kgInput) || 0;
-    const amount = parseFloat(amountInput) || 0;
-    const bb = parseInt(editBagCounts.bb) || 0;
-    const mb = parseInt(editBagCounts.mb) || 0;
-    const sb = parseInt(editBagCounts.sb) || 0;
-    if (amount < 0 || pieces < 0 || kg < 0 || bb < 0 || mb < 0 || sb < 0) {
-      showToast({ message: 'Amount, pieces, weight, and bag counts cannot be negative.', type: 'warning' });
-      setSavingEdit(false);
-      return;
-    }
-    if (editingTx.type === 'package' && amount < MIN_PACKAGE_AMOUNT) {
-      showToast({ message: `Package/Parcel transactions must have an amount of at least ₦${MIN_PACKAGE_AMOUNT.toLocaleString()}`, type: 'warning' });
-      setSavingEdit(false);
-      return;
-    }
-    // Amount can never be edited below what's already been recorded as
-    // paid (a partial debt payment, a retrieval, etc.) -- doing so would
-    // leave amountPaid/paymentHistory referencing a debt state larger
-    // than the entry's own total, silently corrupting DebtorsTab's
-    // balance math and any prior payment history for this entry.
-    if (editingTx.amountPaid && amount < editingTx.amountPaid) {
-      showToast({ message: `Amount cannot be reduced below the ₦${fmt(editingTx.amountPaid)} already recorded as paid on this entry.`, type: 'warning' });
-      setSavingEdit(false);
-      return;
-    }
+      if (editingTx.type === 'cargo') {
+        try {
+          const standardRates = JSON.parse(localStorage.getItem("ehi_standard_cargo_rates") || "{}");
+          const rate = standardRates[editingTx.route || ''] || 0;
+          const computedFloor = rate * kg;
+          if (amount < computedFloor) {
+            showToast({ message: `Amount cannot be lower than the calculated price (₦${computedFloor.toLocaleString()})`, type: 'warning' });
+            return;
+          }
+        } catch (e) {}
+      }
 
-    if (editingTx.type === 'cargo') {
-      try {
-        const standardRates = JSON.parse(localStorage.getItem("ehi_standard_cargo_rates") || "{}");
-        const rate = standardRates[editingTx.route || ''] || 0;
-        const computedFloor = rate * kg;
-        if (amount < computedFloor) {
-          showToast({ message: `Amount cannot be lower than the calculated price (₦${computedFloor.toLocaleString()})`, type: 'warning' });
-          setSavingEdit(false);
+      // Switching an entry's mode TO 'Wallet' (from anything else) deducts
+      // the amount from the selected customer's wallet, same as picking
+      // Wallet at intake (CargoForm's chargeWalletForSale). Re-saving an
+      // entry that was already 'Wallet' does NOT charge again -- only an
+      // actual change of mode triggers it, guarded by editOriginalMode
+      // captured when the modal opened.
+      const switchingToWallet = editingTx.mode === 'Wallet' && editOriginalMode !== 'Wallet';
+      let walletId = editingTx.wallet_id;
+      let walletDeduction = editingTx.wallet_deduction_amount;
+      if (switchingToWallet) {
+        if (!editWallet) {
+          showToast({ message: 'Select a customer wallet to charge before saving.', type: 'warning' });
           return;
         }
-      } catch (e) {}
-    }
+        if (editWallet.balance < amount) {
+          showToast({ message: `${editWallet.customer_name}'s wallet only has ₦${fmt(editWallet.balance)} -- not enough to cover ₦${fmt(amount)}.`, type: 'error' });
+          return;
+        }
+        const charge = await chargeWalletForSale({
+          wallet: editWallet,
+          amount,
+          cargoRef: editingTx.id,
+          description: `Mode changed to Wallet on edit (${editingTx.type} ${editingTx.id})`,
+          loggedBy: user.name,
+        });
+        if (!charge.ok || charge.remainder > 0) {
+          showToast({ message: `Wallet charge failed: ${charge.error || 'insufficient balance'}. Entry not saved.`, type: 'error' });
+          return;
+        }
+        walletId = editWallet.id;
+        walletDeduction = charge.walletDeduction;
+      }
 
-    // Switching an entry's mode TO 'Wallet' (from anything else) deducts
-    // the amount from the selected customer's wallet, same as picking
-    // Wallet at intake (CargoForm's chargeWalletForSale). Re-saving an
-    // entry that was already 'Wallet' does NOT charge again -- only an
-    // actual change of mode triggers it, guarded by editOriginalMode
-    // captured when the modal opened.
-    const switchingToWallet = editingTx.mode === 'Wallet' && editOriginalMode !== 'Wallet';
-    let walletId = editingTx.wallet_id;
-    let walletDeduction = editingTx.wallet_deduction_amount;
-    if (switchingToWallet) {
-      if (!editWallet) {
-        showToast({ message: 'Select a customer wallet to charge before saving.', type: 'warning' });
-        setSavingEdit(false);
-        return;
+      // Details fields (name, route, pieces, weight, etc.) are edited as
+      // discrete fields, but `detail` is the composed string the rest of the
+      // app (ledger rows, receipts) displays -- rebuild it here so the
+      // optimistic local update stays consistent with what a refetch from
+      // Supabase will later reconstruct (see EHIApp.tsx's fetchInitial).
+      const finalTx: Transaction = { ...editingTx, pieces, kg, amount, wallet_id: walletId, wallet_deduction_amount: walletDeduction };
+      finalTx.editedBy = user.name;
+      finalTx.editedAt = new Date().toISOString();
+      if (finalTx.type === 'cargo') {
+        finalTx.detail = `${finalTx.airline || ''} · ${finalTx.awb_tag_number || ''} · ${pieces}pcs · ${kg}kg · ${finalTx.route || ''} · ${finalTx.contentType || ''}`;
+      } else if (finalTx.type === 'baggage') {
+        finalTx.detail = `${finalTx.flight || ''} · ${finalTx.destination || ''} · ${pieces}pcs · +${finalTx.excessKg || 0}kg excess`;
+      } else if (finalTx.type === 'marketing') {
+        finalTx.detail = `${finalTx.route || ''} · ${bb}BB ${mb}MB ${sb}SB`;
+        (finalTx as any)._bb = bb;
+        (finalTx as any)._mb = mb;
+        (finalTx as any)._sb = sb;
+      } else if (finalTx.type === 'package') {
+        finalTx.detail = `${finalTx.destination || ''} · ${finalTx.contentType || 'Package'} · ${pieces}pcs · ${kg}kg${finalTx.contents ? ` · ${finalTx.contents}` : ''}`;
       }
-      if (editWallet.balance < amount) {
-        showToast({ message: `${editWallet.customer_name}'s wallet only has ₦${fmt(editWallet.balance)} -- not enough to cover ₦${fmt(amount)}.`, type: 'error' });
-        setSavingEdit(false);
-        return;
-      }
-      const charge = await chargeWalletForSale({
-        wallet: editWallet,
-        amount,
-        cargoRef: editingTx.id,
-        description: `Mode changed to Wallet on edit (${editingTx.type} ${editingTx.id})`,
-        loggedBy: user.name,
-      });
-      if (!charge.ok || charge.remainder > 0) {
-        showToast({ message: `Wallet charge failed: ${charge.error || 'insufficient balance'}. Entry not saved.`, type: 'error' });
-        setSavingEdit(false);
-        return;
-      }
-      walletId = editWallet.id;
-      walletDeduction = charge.walletDeduction;
+      onUpdateTx(finalTx);
+      setEditingTx(null);
+      setEditWallet(null);
+      setEditOriginalMode(null);
+    } finally {
+      setSavingEdit(false);
     }
-
-    // Details fields (name, route, pieces, weight, etc.) are edited as
-    // discrete fields, but `detail` is the composed string the rest of the
-    // app (ledger rows, receipts) displays -- rebuild it here so the
-    // optimistic local update stays consistent with what a refetch from
-    // Supabase will later reconstruct (see EHIApp.tsx's fetchInitial).
-    const finalTx: Transaction = { ...editingTx, pieces, kg, amount, wallet_id: walletId, wallet_deduction_amount: walletDeduction };
-    finalTx.editedBy = user.name;
-    finalTx.editedAt = new Date().toISOString();
-    if (finalTx.type === 'cargo') {
-      finalTx.detail = `${finalTx.airline || ''} · ${finalTx.awb_tag_number || ''} · ${pieces}pcs · ${kg}kg · ${finalTx.route || ''} · ${finalTx.contentType || ''}`;
-    } else if (finalTx.type === 'baggage') {
-      finalTx.detail = `${finalTx.flight || ''} · ${finalTx.destination || ''} · ${pieces}pcs · +${finalTx.excessKg || 0}kg excess`;
-    } else if (finalTx.type === 'marketing') {
-      finalTx.detail = `${finalTx.route || ''} · ${bb}BB ${mb}MB ${sb}SB`;
-      (finalTx as any)._bb = bb;
-      (finalTx as any)._mb = mb;
-      (finalTx as any)._sb = sb;
-    } else if (finalTx.type === 'package') {
-      finalTx.detail = `${finalTx.destination || ''} · ${finalTx.contentType || 'Package'} · ${pieces}pcs · ${kg}kg${finalTx.contents ? ` · ${finalTx.contents}` : ''}`;
-    }
-    onUpdateTx(finalTx);
-    setSavingEdit(false);
-    setEditingTx(null);
-    setEditWallet(null);
-    setEditOriginalMode(null);
   };
 
   const handleReprintReceipt = async (width: '58mm' | '80mm') => {
