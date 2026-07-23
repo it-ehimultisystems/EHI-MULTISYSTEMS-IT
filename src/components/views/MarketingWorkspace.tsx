@@ -5,7 +5,7 @@ import {  PRICING , CARGO_ROUTES } from "../../lib/constants";
 import { useAirlines } from "../../lib/airlines";
 import { useExpenseCategories } from "../../lib/expenseCategories";
 import { useBanks } from "../../lib/banks";
-import { fmt, uid, tnow, getHubCode, upperOnChange } from "../../lib/helpers";
+import { fmt, uid, tnow, getHubCode, upperOnChange, roundMoney } from "../../lib/helpers";
 import { chargeWalletForSale } from "../../lib/walletPayment";
 import { matchWallet } from "../../lib/customerIdentity";
 import { WalletRemainderSelector } from "../WalletRemainderSelector";
@@ -93,6 +93,13 @@ export const MarketingWorkspace = ({
   // blocked below -- no silent random fallback, since a non-atomic tag
   // could collide with a real one.
   const [awb, setAwb] = useState('');
+  // Pre-generated once (like awb above), not inside handleAddEntry -- a
+  // fresh uid("MK") on every call meant a double-fire (e.g. a chattery
+  // mouse double-clicking ReviewEntryModal's Confirm button before React
+  // re-rendered the disabled state) produced two distinct marketing_entries
+  // rows instead of one. Regenerated only after a successful submit
+  // (handleReset), matching CargoForm/PackageForm's pre-fetched-id pattern.
+  const [pendingEntryId, setPendingEntryId] = useState(() => uid("MK"));
   const [awbError, setAwbError] = useState(false);
   const fetchNextTag = async () => {
     setAwbError(false);
@@ -177,7 +184,7 @@ export const MarketingWorkspace = ({
   const [expDesc, setExpDesc] = useState("");
 
   const routePrices = pricingMatrix[route] || { BB: 0, MB: 0, SB: 0 };
-  const minAmount = bb * routePrices.BB + mb * routePrices.MB + sb * routePrices.SB;
+  const minAmount = roundMoney(bb * routePrices.BB + mb * routePrices.MB + sb * routePrices.SB);
   const totalKg = (parseFloat(bbKg) || 0) + (parseFloat(mbKg) || 0) + (parseFloat(sbKg) || 0);
   const parsedOverride = parseFloat(amountOverride) || 0;
   const totalAmount = amountOverride !== "" ? parsedOverride : minAmount;
@@ -348,7 +355,7 @@ export const MarketingWorkspace = ({
     if (sb > 0) details.push(`${sb}SB`);
 
     const tx: Transaction = {
-      id: uid("MK"),
+      id: pendingEntryId,
       awb_tag_number: awb,
       airline,
       name: mode === "Debt" ? debtorName.trim() : name.trim(),
@@ -454,6 +461,7 @@ export const MarketingWorkspace = ({
     setNarrationCode("");
     setSuccessTx(null);
     fetchNextTag();
+    setPendingEntryId(uid("MK"));
   };
 
   const handleAddExpense = () => {

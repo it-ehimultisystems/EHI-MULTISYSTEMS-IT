@@ -435,7 +435,15 @@ export const CargoForm = ({
     }
     const specialRate = resolveSpecialGoodsRate(specialGoodsRates, actualContentType, actualAirline, w, user.hub_id, route);
     const minCharge = resolveMinimumCharge(minimumCharges, actualAirline, route, w);
-    const perKgAmount = specialRate != null ? roundMoney(w * specialRate) : null;
+    // Was special-goods-only -- when no special-goods rate applied but the
+    // full cascade (hub/company rate) still resolved a legitimately higher
+    // per-kg amount than autoAmount actually uses, perKgAmount fell back to
+    // null and this badge unconditionally claimed "Minimum Charge applied"
+    // even though the real charge (visible in the Amount field) was the
+    // cascade rate, never the minimum. Falls back to the same resolveRate()
+    // cascade autoAmount itself uses whenever no special-goods rate exists.
+    const cascadeRate = specialRate ?? resolveRate(actualAirline, route, actualContentType, w);
+    const perKgAmount = cascadeRate != null ? roundMoney(w * cascadeRate) : null;
     if (minCharge != null && (perKgAmount == null || minCharge > perKgAmount)) {
       return { type: 'minimum' as const, amount: minCharge };
     }
@@ -444,7 +452,7 @@ export const CargoForm = ({
     }
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kg, sizeInches, isSizeTierContent, route, actualContentType, actualAirline, specialGoodsRates, minimumCharges, flatTierRates, sizeTierRates]);
+  }, [kg, sizeInches, isSizeTierContent, route, actualContentType, actualAirline, specialGoodsRates, minimumCharges, flatTierRates, sizeTierRates, standardRates, hubRouteRates, hubAirlineRouteRates]);
 
   const availableAirlines = useAirlines();
 
@@ -794,7 +802,7 @@ export const CargoForm = ({
     const sig = `${officeWorkRate.corporate_client_id}|${route}|${w}`;
     if (officePricedSigRef.current === sig) return;
     officePricedSigRef.current = sig;
-    const computed = Math.max(w * officeWorkRate.rate_per_kg, officeWorkRate.minimum_amount ?? 0);
+    const computed = Math.max(roundMoney(w * officeWorkRate.rate_per_kg), officeWorkRate.minimum_amount ?? 0);
     setAmount(String(computed));
   }, [linkedAsOfficeWork, officeWorkRate, kg, route]);
 
@@ -810,7 +818,7 @@ export const CargoForm = ({
   // expected behavior for a client with no override on file.
   useEffect(() => {
     let active = true;
-    (async () => {
+    const fetchCorpRates = async () => {
       try {
         const { data } = await supabase
           .from('corporate_route_rates')
@@ -819,8 +827,25 @@ export const CargoForm = ({
           setCorpRates(data as CorporateRouteRate[]);
         }
       } catch { /* keep local seed if offline */ }
-    })();
-    return () => { active = false; };
+    };
+    fetchCorpRates();
+
+    // Same staleness reasoning as the standardRates/hubRates effects above:
+    // an admin editing a corporate client's negotiated rate in Pricing
+    // Configuration mid-shift wouldn't otherwise show up here until the
+    // agent navigated away and back or reloaded, silently billing every
+    // B2B shipment finalized in the meantime at the stale rate.
+    const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+    const interval = setInterval(fetchCorpRates, REFRESH_INTERVAL_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchCorpRates(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchCorpRates);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchCorpRates);
+    };
   }, []);
 
   // Load pending Phase 1 gate intakes from Supabase -- this table used to be
@@ -2328,6 +2353,13 @@ export const CargoForm = ({
                     { label: 'Weight', value: `${kg} KG` },
                     { label: 'Amount', value: parsedAmount },
                     { label: 'Payment Mode', value: mode },
+                    // Terminal choice (MMA2/GAT, LOS hub only) is otherwise a
+                    // small segmented control easy to glance past -- surfacing
+                    // it here, right before confirming, means a staff member
+                    // can't silently submit under the wrong terminal (GAT
+                    // entries logged as MMA2 by mistake would never show up
+                    // in the GAT print queue at all).
+                    ...(userHubCode === 'LOS' && !forcedTerminal ? [{ label: 'Terminal', value: terminal }] : []),
                   ]}
                   onConfirm={() => { setShowRetailReview(false); handleRetailSubmit(); }}
                   onCancel={() => setShowRetailReview(false)}
@@ -2774,9 +2806,13 @@ export const CargoForm = ({
                               r.route_name === pi.route,
                           )
                         : null;
-                      const finalRate = clientRate
-                        ? clientRate.rate_per_kg
-                        : 500;
+                      // No hardcoded 500 fallback here anymore -- handleFinalizeWeighing
+                      // itself blocks finalizing and requires an explicit admin rate
+                      // override when there's no negotiated contract rate on file (its
+                      // own comment explains the old ₦500/kg fallback was "wildly
+                      // wrong" and was removed there). This preview must not imply a
+                      // rate that will never actually be used to bill the shipment.
+                      const finalRate = clientRate ? clientRate.rate_per_kg : null;
 
                       return (
                         <div
@@ -2831,8 +2867,8 @@ export const CargoForm = ({
                               <div className="text-[var(--color-light-muted)]">
                                 Negotiated Rate
                               </div>
-                              <div className="font-bold text-[var(--color-accent-amber)]">
-                                ₦{finalRate}/KG
+                              <div className={finalRate != null ? "font-bold text-[var(--color-accent-amber)]" : "font-bold text-[var(--color-error)]"}>
+                                {finalRate != null ? `₦${finalRate}/KG` : "No rate on file"}
                               </div>
                             </div>
                             <div className="flex flex-col items-end gap-2">
