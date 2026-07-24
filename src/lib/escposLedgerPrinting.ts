@@ -1,11 +1,11 @@
 import {
   INIT,
-  ALIGN_CENTER,
-  ALIGN_LEFT,
+  CENTER,
+  LEFT,
   BOLD_ON,
   BOLD_OFF,
-  FEED_LINES,
-  CUT_PAPER,
+  FEED_AND_CUT,
+  concatChunks,
 } from './escposShared';
 import { fmt, getHubCode } from './helpers';
 
@@ -46,13 +46,13 @@ export interface LedgerPrintMetadata {
 export async function compileLedger80mmStream(
   entries: LedgerPrintEntry[],
   meta: LedgerPrintMetadata
-): Promise<Uint8Array[]> {
+): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const chunks: Uint8Array[] = [];
 
   // Initialize printer
   chunks.push(new Uint8Array(INIT));
-  chunks.push(new Uint8Array(ALIGN_CENTER));
+  chunks.push(new Uint8Array(CENTER));
 
   // Header Title
   chunks.push(new Uint8Array(BOLD_ON));
@@ -64,7 +64,7 @@ export async function compileLedger80mmStream(
   const doubleLine = "=".repeat(48) + "\n";
 
   // Shift & Station Info
-  chunks.push(new Uint8Array(ALIGN_LEFT));
+  chunks.push(new Uint8Array(LEFT));
   chunks.push(encoder.encode(`Hub: ${meta.hubCode || 'ORIGIN'} (${meta.hubName})\n`));
   chunks.push(encoder.encode(`Agent: ${meta.agentName || 'Staff'}\n`));
   chunks.push(encoder.encode(`Printed: ${meta.printedAt} | Entries: ${entries.length}\n`));
@@ -129,8 +129,7 @@ export async function compileLedger80mmStream(
   chunks.push(encoder.encode("Agent Sig: ____________  Acct Sig: ____________\n"));
   chunks.push(encoder.encode("\n"));
 
-  chunks.push(new Uint8Array(FEED_LINES(3)));
-  chunks.push(new Uint8Array(CUT_PAPER));
+  chunks.push(new Uint8Array(FEED_AND_CUT));
 
-  return chunks;
+  return concatChunks(chunks);
 }
