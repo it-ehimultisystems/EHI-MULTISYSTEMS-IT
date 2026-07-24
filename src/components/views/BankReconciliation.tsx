@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, CheckCircle2, AlertCircle, RefreshCw, Layers, DollarSign, FileSpreadsheet, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { BackButton } from '../BackButton';
-import { fmt } from '../../lib/helpers';
+import { fmt, sanitizeSpreadsheetCell } from '../../lib/helpers';
 import { Transaction, User } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { useBanksWithFormat } from '../../lib/banks';
@@ -295,9 +295,21 @@ export const BankReconciliation = ({
       "Bank Ref,Bank Description,Amount,Status,System Match ID,System Client Name",
       ...bankTxList.map(b => {
          const sys = b.matchedId ? systemPayments.find(s => s.id === b.matchedId) : null;
-         return `${b.reference},"${b.description}",${b.credit},${b.status},${b.matchedId || ''},${sys ? sys.name : ''}`;
+         // Both fields are free text (bank statement description, matched
+         // client name) -- quoting alone doesn't stop Excel evaluating a
+         // quoted field starting with =/+/-/@ as a formula, so sanitize
+         // before quoting (same helper every other export screen uses).
+         // sys.name was previously interpolated unquoted -- a comma in a
+         // matched client's name silently broke the CSV column alignment
+         // for every column after it.
+         const safeDescription = sanitizeSpreadsheetCell(b.description || '') as string;
+         const safeSysName = sanitizeSpreadsheetCell(sys ? sys.name : '') as string;
+         return `${b.reference},"${safeDescription.replace(/"/g, '""')}",${b.credit},${b.status},${b.matchedId || ''},"${safeSysName.replace(/"/g, '""')}"`;
       })
-    ].join("\\n");
+    // Was "\\n" -- a literal backslash-n TEXT string, not a real newline,
+    // which joined every row onto a single visual line in the exported
+    // file instead of one row per line.
+    ].join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

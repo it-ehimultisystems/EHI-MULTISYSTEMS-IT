@@ -268,8 +268,16 @@ export const DebtorsTab = ({
           // debt's real hub silently hid the clearance record from that
           // branch's own agents (RLS scopes them to their own hub_id), even
           // though the super_admin could always see it fine.
+          // `hub` (the display name) must match `hub_id` for the same
+          // reason -- this previously stamped the CLEARING user's hub name
+          // here while correctly using the debt's own hub_id above, so a
+          // super_admin clearing a sibling branch's debt produced a shadow
+          // row whose hub_id and displayed hub name pointed at two
+          // different hubs (matches TransactionLedger.tsx's own
+          // confirmClearDebt, which already used tx.hub/tx.hub_id
+          // consistently).
           hub_id: (debt as any).hub_id || user?.hub_id,
-          hub: user?.hub,
+          hub: (debt as any).hub || user?.hub,
         };
         onAddTx(shadowTx);
       }

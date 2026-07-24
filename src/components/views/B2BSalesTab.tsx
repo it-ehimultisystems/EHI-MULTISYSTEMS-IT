@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Transaction, User } from '../../lib/types';
-import { fmt } from '../../lib/helpers';
+import { fmt, sanitizeSpreadsheetCell } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { Search, FileDown, Briefcase, Scale, DollarSign, AlertCircle } from 'lucide-react';
 import { useToast } from '../../lib/ToastContext';
@@ -99,10 +99,17 @@ export const B2BSalesTab = ({ transactions, user }: B2BSalesTabProps) => {
       const cName = t.corporate_client_id ? (clientNameMap.get(t.corporate_client_id) || t.name) : t.name;
       const outstanding = Math.max(0, t.amount - (t.mode === 'Debt' ? (t.amountPaid || 0) : t.amount));
       const paid = t.mode === 'Debt' ? (t.amountPaid || 0) : t.amount;
+      // Quoting alone does not neutralize a formula -- Excel still evaluates
+      // a quoted CSV field starting with =/+/-/@ (e.g. a client name entered
+      // as =HYPERLINK("http://evil.com","x")). sanitizeSpreadsheetCell
+      // prefixes those with a leading apostrophe first, same as every other
+      // export screen (Reports.tsx/AirlinePerformance.tsx/Analytics.tsx/
+      // ExpensesTab.tsx) already does for their XLSX exports.
+      const safeName = sanitizeSpreadsheetCell(cName || '') as string;
       return [
         t.id,
         t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB') : (t.time || ''),
-        `"${(cName || '').replace(/"/g, '""')}"`,
+        `"${safeName.replace(/"/g, '""')}"`,
         t.awb_tag_number || '',
         t.airline || '',
         t.route || '',

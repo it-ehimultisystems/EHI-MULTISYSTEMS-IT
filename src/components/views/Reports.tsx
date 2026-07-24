@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { User, Transaction } from '../../lib/types';
-import { fmt, sanitizeSpreadsheetAoA } from '../../lib/helpers';
+import { fmt, sanitizeSpreadsheetAoA, normalizeAirlineName } from '../../lib/helpers';
 import { supabase } from '../../lib/supabase';
 import { Calendar, FileText, Download, Printer, ChevronRight, Filter, Loader2 } from 'lucide-react';
 import { BackButton } from '../BackButton';
@@ -402,7 +402,14 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
   const airlineReport = useMemo(() => {
     const map: Record<string, { cargoSales: number; cargoKg: number; baggageSales: number; baggageKg: number; totalSales: number; totalKg: number; count: number }> = {};
     nonClearanceTx.forEach(t => {
-      const air = (t.airline || (t.type === 'baggage' ? 'ValueJet' : t.type === 'marketing' ? 'Marketing Desk' : 'Unassigned')).trim();
+      // Normalized the same way AirlinePerformance.tsx's identical
+      // aggregation already does -- without this, "Arik Air" vs "arik air"
+      // (real-world data-entry variance) split into two separate rows here,
+      // even though the dedicated Airline Performance screen correctly
+      // merges them.
+      const air = t.airline
+        ? normalizeAirlineName(t.airline)
+        : (t.type === 'baggage' ? 'ValueJet' : t.type === 'marketing' ? 'Marketing Desk' : 'Unassigned');
       if (!map[air]) map[air] = { cargoSales: 0, cargoKg: 0, baggageSales: 0, baggageKg: 0, totalSales: 0, totalKg: 0, count: 0 };
       const st = map[air];
       st.totalSales += t.amount || 0;

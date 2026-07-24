@@ -45,7 +45,12 @@ export const ExcessBaggageForm = ({
   const [flight, setFlight] = useState('');
   const flightCode = flight ? `${airline.flight_prefix}${flight}` : '';
   const routes = useHubRoutes();
-  const [dest, setDest] = useState(routes[0]);
+  // Left empty rather than defaulting to routes[0] -- a pre-filled dropdown
+  // looks like a deliberate choice, so staff could submit against whatever
+  // destination happened to be first without ever consciously picking it.
+  // isValid below now requires it explicitly (matches CargoForm/
+  // MarketingWorkspace/PackageForm's identical fix).
+  const [dest, setDest] = useState<string>('');
   useValidatedRouteSelection(routes, dest, setDest);
   const [kg, setKg] = useState('');
   const [pcs, setPcs] = useState('');
@@ -114,7 +119,7 @@ export const ExcessBaggageForm = ({
   const parsedOverride = parseFloat(amountOverride) || 0;
   const totalAmount = amountOverride !== "" ? parsedOverride : minAmount;
 
-  const isValid = name.trim().length > 0 && flight.trim().length > 0 && kgVal > 0 && (amountOverride === "" || parsedOverride >= minAmount);
+  const isValid = name.trim().length > 0 && flight.trim().length > 0 && dest !== '' && kgVal > 0 && (amountOverride === "" || parsedOverride >= minAmount);
 
   const { showToast } = useToast();
 
@@ -579,6 +584,7 @@ export const ExcessBaggageForm = ({
                 className={formInputClass}
                 style={{ appearance: "none" }}
               >
+                <option value="" disabled>-- Select Destination --</option>
                 {routes.map((route) => (
                   <option key={route} value={route}>
                     {route}

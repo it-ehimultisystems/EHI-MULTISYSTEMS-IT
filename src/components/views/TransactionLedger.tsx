@@ -510,12 +510,20 @@ export const TransactionLedger = ({
         return;
       }
       // Amount can never be edited below what's already been recorded as
-      // paid (a partial debt payment, a retrieval, etc.) -- doing so would
-      // leave amountPaid/paymentHistory referencing a debt state larger
-      // than the entry's own total, silently corrupting DebtorsTab's
-      // balance math and any prior payment history for this entry.
-      if (editingTx.amountPaid && amount < editingTx.amountPaid) {
-        showToast({ message: `Amount cannot be reduced below the ₦${fmt(editingTx.amountPaid)} already recorded as paid on this entry.`, type: 'warning' });
+      // paid (a partial debt payment) OR retrieved (goods already released
+      // against this balance) -- doing so would drive the true remaining
+      // balance negative, silently corrupting DebtorsTab's/CreditDebit's
+      // balance math and every clear_*_debt RPC's own remaining-balance
+      // check (all of which subtract both amountPaid AND retrieved_amount,
+      // not amountPaid alone -- see clear_cargo_debt's formula). This
+      // previously only checked amountPaid, so a Debt-mode entry that had
+      // already been partially retrieved could still have its amount
+      // edited down below (amountPaid + retrieved_amount), silently
+      // clamped to a 0 balance server-side with the real gap unrecoverable
+      // through the normal clear-debt flow.
+      const alreadyAccountedFor = (editingTx.amountPaid || 0) + ((editingTx.raw as any)?.retrieved_amount || 0);
+      if (alreadyAccountedFor > 0 && amount < alreadyAccountedFor) {
+        showToast({ message: `Amount cannot be reduced below the ₦${fmt(alreadyAccountedFor)} already recorded as paid or retrieved on this entry.`, type: 'warning' });
         return;
       }
 
