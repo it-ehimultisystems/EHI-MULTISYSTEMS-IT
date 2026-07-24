@@ -1628,6 +1628,49 @@ export const TransactionLedger = ({
   const transferAmount = filteredEntries.filter(e => e.mode === 'Transfer').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
   const posAmount = filteredEntries.filter(e => e.mode === 'POS').reduce((acc, e) => acc + (e.source === 'expense' ? -e.amount : e.amount), 0);
 
+  const debtAmount = filteredEntries.filter(e => e.mode === 'Debt').reduce((acc, e) => {
+    const tx = e.raw as Transaction;
+    const remaining = Math.max(0, (tx.amount || 0) - (tx.amountPaid || 0) - ((tx.raw as any)?.retrieved_amount || 0));
+    return acc + remaining;
+  }, 0);
+
+  const walletAmount = filteredEntries.reduce((acc, e) => {
+    const ded = e.raw?.wallet_deduction_amount || (e.mode === 'Wallet' ? e.amount : 0);
+    return acc + ded;
+  }, 0);
+
+  const unpaidDebtCount = filteredEntries.filter(e => e.mode === 'Debt').length;
+
+  const hasNonDefaultFilters =
+    typeFilter !== (defaultTypeFilter || "All") ||
+    modeFilter !== "All" ||
+    terminalFilter !== (defaultTerminalFilter || "All") ||
+    timeFilter !== "All" ||
+    searchQuery.trim() !== "" ||
+    vjFlightFilter !== "All" ||
+    vjDestFilter !== "All";
+
+  const activeFilterCount =
+    (typeFilter !== (defaultTypeFilter || "All") ? 1 : 0) +
+    (modeFilter !== "All" ? 1 : 0) +
+    (terminalFilter !== (defaultTerminalFilter || "All") ? 1 : 0) +
+    (timeFilter !== "All" ? 1 : 0) +
+    (searchQuery.trim() !== "" ? 1 : 0) +
+    (vjFlightFilter !== "All" ? 1 : 0) +
+    (vjDestFilter !== "All" ? 1 : 0);
+
+  const resetAllFilters = () => {
+    setTypeFilter(defaultTypeFilter || "All");
+    setModeFilter("All");
+    setTerminalFilter(defaultTerminalFilter || "All");
+    setTimeFilter("All");
+    setTimeStart("");
+    setTimeEnd("");
+    setSearchQuery("");
+    setVjFlightFilter("All");
+    setVjDestFilter("All");
+  };
+
   const vjFlights = useMemo(() => {
     if (defaultTypeFilter !== 'baggage') return [];
     const set = new Set<string>();
@@ -1805,12 +1848,20 @@ export const TransactionLedger = ({
           <>
             {/* ── KPI Summary Cards ───────────────────────────── */}
             <div className="px-4 py-3 border-b border-[var(--color-border)] shrink-0 bg-[var(--color-surface-card)]">
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 {/* Total */}
-                <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl px-3 py-2.5">
+                <div
+                  onClick={() => setModeFilter('All')}
+                  className={`rounded-xl px-3 py-2.5 border text-left transition-all cursor-pointer ${
+                    modeFilter === 'All'
+                      ? 'bg-[var(--color-surface-2)] border-[var(--color-accent-amber)]'
+                      : 'bg-[var(--color-surface-1)] border-[var(--color-border)] hover:border-[var(--color-muted)]'
+                  }`}
+                >
                   <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-1">Total</div>
-                  <div className="text-[15px] font-bold font-mono text-[var(--color-foreground)] leading-none">₦{fmt(totalAmount)}</div>
+                  <div className="text-[14px] sm:text-[15px] font-bold font-mono text-[var(--color-foreground)] leading-none truncate">₦{fmt(totalAmount)}</div>
                 </div>
+
                 {/* Cash */}
                 <button
                   onClick={() => setModeFilter(modeFilter === 'Cash' ? 'All' : 'Cash')}
@@ -1826,8 +1877,9 @@ export const TransactionLedger = ({
                       <span className="text-[8px] font-mono font-bold bg-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] px-1 py-0.5 rounded">!{unverifiedCash.length}</span>
                     )}
                   </div>
-                  <div className="text-[15px] font-bold font-mono text-[var(--color-success)] leading-none">₦{fmt(cashAmount)}</div>
+                  <div className="text-[14px] sm:text-[15px] font-bold font-mono text-[var(--color-success)] leading-none truncate">₦{fmt(cashAmount)}</div>
                 </button>
+
                 {/* Transfer */}
                 <button
                   onClick={() => setModeFilter(modeFilter === 'Transfer' ? 'All' : 'Transfer')}
@@ -1843,8 +1895,9 @@ export const TransactionLedger = ({
                       <span className="text-[8px] font-mono font-bold bg-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] px-1 py-0.5 rounded">!{unconfirmedTransfer.length}</span>
                     )}
                   </div>
-                  <div className="text-[15px] font-bold font-mono text-[var(--color-accent-cobalt)] leading-none">₦{fmt(transferAmount)}</div>
+                  <div className="text-[14px] sm:text-[15px] font-bold font-mono text-[var(--color-accent-cobalt)] leading-none truncate">₦{fmt(transferAmount)}</div>
                 </button>
+
                 {/* POS */}
                 <button
                   onClick={() => setModeFilter(modeFilter === 'POS' ? 'All' : 'POS')}
@@ -1860,7 +1913,40 @@ export const TransactionLedger = ({
                       <span className="text-[8px] font-mono font-bold bg-[rgba(245,158,11,0.2)] text-[var(--color-accent-amber)] px-1 py-0.5 rounded">!{unconfirmedPOS.length}</span>
                     )}
                   </div>
-                  <div className="text-[15px] font-bold font-mono text-[var(--color-accent-amber)] leading-none">₦{fmt(posAmount)}</div>
+                  <div className="text-[14px] sm:text-[15px] font-bold font-mono text-[var(--color-accent-amber)] leading-none truncate">₦{fmt(posAmount)}</div>
+                </button>
+
+                {/* Debt */}
+                <button
+                  onClick={() => setModeFilter(modeFilter === 'Debt' ? 'All' : 'Debt')}
+                  className={`rounded-xl px-3 py-2.5 border text-left transition-all ${
+                    modeFilter === 'Debt'
+                      ? 'bg-[rgba(239,68,68,0.15)] border-[var(--color-error)]'
+                      : 'bg-[var(--color-surface-1)] border-[var(--color-border)] hover:border-[var(--color-error)]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Debt</div>
+                    {unpaidDebtCount > 0 && (
+                      <span className="text-[8px] font-mono font-bold bg-[rgba(239,68,68,0.2)] text-[var(--color-error)] px-1 py-0.5 rounded">{unpaidDebtCount}</span>
+                    )}
+                  </div>
+                  <div className="text-[14px] sm:text-[15px] font-bold font-mono text-[var(--color-error)] leading-none truncate">₦{fmt(debtAmount)}</div>
+                </button>
+
+                {/* Wallet */}
+                <button
+                  onClick={() => setModeFilter(modeFilter === 'Wallet' ? 'All' : 'Wallet')}
+                  className={`rounded-xl px-3 py-2.5 border text-left transition-all ${
+                    modeFilter === 'Wallet'
+                      ? 'bg-[rgba(168,85,247,0.15)] border-purple-400'
+                      : 'bg-[var(--color-surface-1)] border-[var(--color-border)] hover:border-purple-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Wallet</div>
+                  </div>
+                  <div className="text-[14px] sm:text-[15px] font-bold font-mono text-purple-400 leading-none truncate">₦{fmt(walletAmount)}</div>
                 </button>
               </div>
             </div>
@@ -2041,6 +2127,22 @@ export const TransactionLedger = ({
                   </div>
                 )}
               </div>
+
+              {/* Active Filter Banner & Reset Button */}
+              {hasNonDefaultFilters && (
+                <div className="flex items-center justify-between pt-1 font-mono text-[10px]">
+                  <span className="text-[var(--color-accent-amber)] flex items-center gap-1.5 font-bold">
+                    <Filter size={11} />
+                    <span>{activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active</span>
+                  </span>
+                  <button
+                    onClick={resetAllFilters}
+                    className="text-[var(--color-muted)] hover:text-[var(--color-foreground)] underline font-medium transition-colors cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── Bulk Cash Verification Banner ─────────────── */}
@@ -2058,11 +2160,164 @@ export const TransactionLedger = ({
               </div>
             )}
 
-            {/* Table Container */}
-            <div ref={tableRef} className="flex-1 overflow-auto p-4 pb-4 relative">
-        <div className="ehi-card overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left font-mono text-[10px]">
+            {/* Table / Mobile Cards Container */}
+            <div ref={tableRef} className="flex-1 overflow-auto p-3 sm:p-4 pb-4 relative">
+              {/* Mobile Card List View (Visible on < 640px) */}
+              <div className="block sm:hidden space-y-2.5">
+                {displayEntries.length === 0 ? (
+                  <div className="py-8 text-center text-[var(--color-muted)] text-[12px] font-mono">
+                    No entries found matching filters.
+                  </div>
+                ) : (
+                  displayEntries.map((e) => {
+                    if (e.type === 'shift-marker') {
+                      return (
+                        <div key={e.id} className="bg-[rgba(245,158,11,0.1)] border border-[var(--color-accent-amber)] rounded-lg p-2.5 text-center font-bold text-[var(--color-accent-amber)] text-[11px] font-mono">
+                          {e.name} — {e.detail}
+                        </div>
+                      );
+                    }
+
+                    let displayDate = '';
+                    let displayTime = '';
+                    const dtStr = (e as any).created_at || (e.raw && e.raw.created_at) || e.time;
+                    try {
+                      const d = new Date(dtStr);
+                      if (!isNaN(d.getTime())) {
+                        displayDate = d.toLocaleDateString('en-NG', { day: '2-digit', month: 'short' });
+                        displayTime = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                      } else {
+                        displayDate = 'Unknown';
+                        displayTime = e.time;
+                      }
+                    } catch {
+                      displayDate = 'Unknown';
+                      displayTime = e.time;
+                    }
+
+                    const statusColor =
+                      e.status === 'Delivered' ? 'text-[var(--color-success)] bg-[rgba(16,185,129,0.12)] border-[rgba(16,185,129,0.3)]' :
+                      ['In-Transit','Dispatched','Departure'].includes(e.status) ? 'text-[var(--color-accent-cobalt)] bg-[rgba(59,130,246,0.12)] border-[rgba(59,130,246,0.3)]' :
+                      e.status === 'Arrived' ? 'text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.12)] border-[rgba(245,158,11,0.3)]' :
+                      e.status === 'Cancelled' ? 'text-[var(--color-error)] bg-[rgba(239,68,68,0.12)] border-[rgba(239,68,68,0.3)]' :
+                      'text-[var(--color-muted)] bg-[rgba(255,255,255,0.06)] border-[var(--color-border)]';
+
+                    return (
+                      <div
+                        key={e.id}
+                        onClick={() => setViewingDetail(e)}
+                        className={`ehi-card p-3 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-accent-amber)] transition-all cursor-pointer space-y-2 ${
+                          e.raw?.retrieved ? 'opacity-50' : ''
+                        } ${e.raw?.is_debt_clearance ? 'bg-[rgba(59,130,246,0.05)]' : ''}`}
+                      >
+                        {/* Top header row */}
+                        <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                              e.type === 'cargo' ? 'bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]' :
+                              e.type === 'baggage' ? 'bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]' :
+                              e.type === 'marketing' ? 'bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]' :
+                              e.type === 'package' ? 'bg-[rgba(168,85,247,0.15)] text-[var(--color-purple)]' :
+                              'bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]'
+                            }`}>
+                              {e.type === 'cargo' && <Package size={10} />}
+                              {e.type === 'baggage' && <Plane size={10} />}
+                              {e.type === 'marketing' && <TrendingUp size={10} />}
+                              {e.type === 'package' && <Truck size={10} />}
+                              {e.source === 'expense' && <Minus size={10} />}
+                            </div>
+                            <span className="font-mono font-bold text-[11px] text-[var(--color-foreground)] truncate">{e.id}</span>
+                            {canSeePin && e.raw.pickupPin && (
+                              <span className="font-mono text-[9px] text-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.12)] px-1 rounded">PIN: {e.raw.pickupPin}</span>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold font-mono border ${statusColor}`}>
+                              {e.source === 'expense' ? 'Expense' : (e.status || 'Intake')}
+                            </span>
+                            <div className="text-[9px] font-mono text-[var(--color-muted)] mt-0.5">{displayDate} {displayTime}</div>
+                          </div>
+                        </div>
+
+                        {/* Customer & Detail */}
+                        <div>
+                          <div className={`font-sans font-bold text-[13px] ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-foreground)]"}`}>
+                            {e.name}
+                          </div>
+                          <div className="text-[10px] text-[var(--color-muted)] line-clamp-2 mt-0.5 font-sans">
+                            {e.detail}
+                          </div>
+                        </div>
+
+                        {/* Badges */}
+                        <div className="flex flex-wrap gap-1">
+                          {e.raw?.is_debt_clearance && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold font-mono bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)] border border-[rgba(59,130,246,0.3)]">
+                              COLLECTION
+                            </span>
+                          )}
+                          {e.raw?.retrieved && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold font-mono bg-[rgba(239,68,68,0.12)] text-[var(--color-error)] border border-[rgba(239,68,68,0.25)] line-through">
+                              RETRIEVED
+                            </span>
+                          )}
+                          {!e.raw?.retrieved && ((e.raw as any)?.raw?.retrieved_amount || 0) > 0 && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold font-mono bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)] border border-[rgba(245,158,11,0.3)]">
+                              PARTIAL: ₦{fmt((e.raw as any).raw.retrieved_amount)}
+                            </span>
+                          )}
+                          {e.raw?.wallet_id && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold font-mono bg-[rgba(245,158,11,0.12)] text-[var(--color-accent-amber)] border border-[rgba(245,158,11,0.25)]">
+                              WALLET
+                            </span>
+                          )}
+                          {(e.raw as any)?.terminal === 'GAT' && (
+                            <span className="text-[8px] font-bold font-mono px-1.5 py-0.5 rounded bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)] border border-[var(--color-accent-cobalt)]">GAT</span>
+                          )}
+                        </div>
+
+                        {/* Bottom Row: Mode & Amount & Action */}
+                        <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-2 mt-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+                              e.mode === "Cash" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
+                              e.mode === "Transfer" ? "bg-[rgba(59,130,246,0.15)] text-[var(--color-accent-cobalt)]" :
+                              e.mode === "POS" ? "bg-[rgba(245,158,11,0.15)] text-[var(--color-accent-amber)]" :
+                              e.mode === "Expense" ? "bg-[rgba(239,68,68,0.15)] text-[var(--color-error)]" :
+                              e.mode === "Debt Paid" ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)]" :
+                              e.mode === "Wallet" ? "bg-[rgba(245,158,11,0.12)] text-[var(--color-accent-amber)]" :
+                              "border border-[var(--color-error)] text-[var(--color-error)]"
+                            }`}>
+                              {e.mode === "Debt" ? "Debt" : e.mode === "Debt Paid" ? "Debt Cleared" : e.mode}
+                            </span>
+
+                            {e.mode === "Debt" && (
+                              <button
+                                onClick={(evt) => {
+                                  evt.stopPropagation();
+                                  openClearDebt(e, evt);
+                                }}
+                                className="px-2 py-1 rounded bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] text-[9px] font-bold flex items-center gap-1 cursor-pointer"
+                              >
+                                <HandCoins size={11} /> Clear
+                              </button>
+                            )}
+                          </div>
+
+                          <div className={`font-mono font-bold text-[13px] ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-success)]"}`}>
+                            {e.source === "expense" ? "-" : ""}₦{fmt(e.amount)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop Virtualized Table (Visible on >= 640px) */}
+              <div className="hidden sm:block ehi-card overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left font-mono text-[10px]">
             <thead className="bg-[var(--color-surface-card)]">
               <tr className="text-[var(--color-muted)] border-b border-[var(--color-border)] uppercase">
                 {(isAccountantOrAdmin || !viewOnly) && <th className="py-3 px-3 w-[36px]"></th>}
@@ -2616,124 +2871,126 @@ export const TransactionLedger = ({
             </div>
 
             {/* Actions Footer */}
-            <div className="p-4 bg-[var(--color-obsidian)] border-t border-[var(--color-border)] flex flex-col gap-2 shrink-0">
+            <div className="p-4 bg-[var(--color-obsidian)] border-t border-[var(--color-border)] flex flex-col gap-3 shrink-0">
               {viewingDetail.source === 'transaction' && (
                 <>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setViewingQrTx(viewingDetail)}
-                      className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
-                    >
-                      <QrCode size={14} /> Scan
-                    </button>
-                    {/* Deliberately not gated by !viewOnly like the ledger's other
-                        edit actions -- any staff member can process a retrieval
-                        and refund it to the customer's wallet, not just
-                        super_admin/can_print_ledger holders. */}
-                    {(['cargo', 'baggage', 'marketing', 'package'] as const).includes(viewingDetail.type as RetrievalEntryType) && !viewingDetail.raw?.retrieved && (
-                      <button
-                        onClick={() => handleMarkRetrievedAndDeposit(viewingDetail)}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-1.5 bg-[rgba(245,158,11,0.12)] hover:bg-[var(--color-accent-amber)] hover:text-[var(--color-obsidian)] text-[var(--color-accent-amber)] rounded-lg transition-colors border border-[rgba(245,158,11,0.3)] text-[11px] font-mono font-bold"
-                        title="Deposit retrieved refund directly into customer credit wallet"
-                      >
-                        <HandCoins size={14} /> 💰 Refund to Wallet
-                      </button>
-                    )}
-                    {/* viewingDetail is an Entry, so viewingDetail.raw is the
-                        Transaction -- the true DB row with retrieved_amount is
-                        one level deeper, at viewingDetail.raw.raw. */}
-                    {((viewingDetail.raw as any)?.raw?.retrieved_amount || 0) > 0 && (
-                      <button
-                        onClick={handleUnretrieve}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-1.5 bg-[rgba(239,68,68,0.08)] hover:bg-[var(--color-error)] hover:text-white text-[var(--color-error)] rounded-lg transition-colors border border-[rgba(239,68,68,0.25)] text-[11px] font-mono font-bold"
-                        title="Undo this entry's retrieval record (does not touch any wallet balance)"
-                      >
-                        <Undo2 size={14} /> Unretrieve
-                      </button>
-                    )}
-                    {/* Post-hoc review stamp, gated by the can_approve_retrievals
-                        permission -- unlike Refund to Wallet/Unretrieve above,
-                        this one IS gated: it's an oversight/audit action, not
-                        retrieval execution itself, which stays open to any
-                        staff by design. Never re-triggers any wallet/debt
-                        movement. */}
-                    {canApproveRetrievals && ((viewingDetail.raw as any)?.raw?.retrieved_amount || 0) > 0 && !(viewingDetail.raw as any)?.raw?.retrieval_approved && (
-                      <button
-                        onClick={handleApproveRetrieval}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-1.5 bg-[rgba(16,185,129,0.1)] hover:bg-[var(--color-success)] hover:text-white text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[11px] font-mono font-bold"
-                        title="Mark this retrieval as reviewed and approved"
-                      >
-                        <ShieldCheck size={14} /> Approve Retrieval
-                      </button>
-                    )}
-                    {viewingDetail.mode === 'Debt' && !viewOnly && (
+                  {/* Primary Operations Row */}
+                  <div className="space-y-1.5">
+                    <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Operations</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       <button 
-                        onClick={(evt) => openClearDebt(viewingDetail, evt)}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold"
+                        onClick={() => setViewingQrTx(viewingDetail)}
+                        className="py-2.5 px-3 flex items-center justify-center gap-1.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[11px] font-medium"
                       >
-                        <CheckSquare size={14} /> Clear Debt
+                        <QrCode size={13} /> Scan QR
                       </button>
-                    )}
-                    {viewingDetail.mode !== 'Debt' && !viewingDetail.raw.paymentConfirmed && isAccountantOrAdmin && (
-                      <button
-                        disabled={confirmingIds.has(viewingDetail.id)}
-                        onClick={(evt) => toggleConfirm(viewingDetail, evt)}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[rgba(16,185,129,0.1)] hover:bg-[rgba(16,185,129,0.2)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[12px] font-bold disabled:opacity-50"
-                      >
-                        <CheckSquare size={14} /> Confirm
-                      </button>
-                    )}
-                    {(canEdit || canEditRemarks) && (
-                      <button
-                        onClick={(evt) => handleEditClick(viewingDetail, evt)}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
-                      >
-                        <Edit2 size={14} /> Edit
-                      </button>
-                    )}
-                  </div>
-                  {(user.can_print_ledger || user.role === 'super_admin') && (
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => handleReprintReceipt('80mm')}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
-                      >
-                        <Printer size={14} /> Receipt (80)
-                      </button>
-                      <button
-                        onClick={() => handleReprintReceipt('58mm')}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
-                      >
-                        <Printer size={14} /> Receipt (58)
-                      </button>
-                      {(viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing' || viewingDetail.raw.type === 'package') && (
-                        <>
-                          <button
-                            onClick={() => handleReprintTag('80mm')}
-                            className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-accent-amber)] hover:bg-opacity-90 text-[#0D1117] rounded-lg transition-colors border-none text-[12px] font-bold shadow-[var(--shadow-button)]"
-                          >
-                            <Printer size={14} /> Print Tag
-                          </button>
-                          <button
-                            onClick={() => handleReprintTagPDF()}
-                            className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
-                            title="Open 100×80mm PDF tag (for USB / die-cut label printers)"
-                          >
-                            <Printer size={14} /> Tag PDF
-                          </button>
-                        </>
+
+                      {viewingDetail.mode === 'Debt' && !viewOnly && (
+                        <button 
+                          onClick={(evt) => openClearDebt(viewingDetail, evt)}
+                          className="py-2.5 px-3 flex items-center justify-center gap-1.5 bg-[rgba(16,185,129,0.15)] hover:bg-[rgba(16,185,129,0.25)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.3)] text-[11px] font-bold"
+                        >
+                          <CheckSquare size={13} /> Clear Debt
+                        </button>
+                      )}
+
+                      {viewingDetail.mode !== 'Debt' && !viewingDetail.raw.paymentConfirmed && isAccountantOrAdmin && (
+                        <button
+                          disabled={confirmingIds.has(viewingDetail.id)}
+                          onClick={(evt) => toggleConfirm(viewingDetail, evt)}
+                          className="py-2.5 px-3 flex items-center justify-center gap-1.5 bg-[rgba(16,185,129,0.15)] hover:bg-[rgba(16,185,129,0.25)] text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.3)] text-[11px] font-bold disabled:opacity-50"
+                        >
+                          <CheckSquare size={13} /> Confirm Payment
+                        </button>
+                      )}
+
+                      {(['cargo', 'baggage', 'marketing', 'package'] as const).includes(viewingDetail.type as RetrievalEntryType) && !viewingDetail.raw?.retrieved && (
+                        <button
+                          onClick={() => handleMarkRetrievedAndDeposit(viewingDetail)}
+                          className="py-2.5 px-3 flex items-center justify-center gap-1 bg-[rgba(245,158,11,0.12)] hover:bg-[var(--color-accent-amber)] hover:text-[var(--color-obsidian)] text-[var(--color-accent-amber)] rounded-lg transition-colors border border-[rgba(245,158,11,0.3)] text-[10px] font-mono font-bold"
+                          title="Deposit retrieved refund directly into customer credit wallet"
+                        >
+                          <HandCoins size={13} /> 💰 Refund to Wallet
+                        </button>
+                      )}
+
+                      {((viewingDetail.raw as any)?.raw?.retrieved_amount || 0) > 0 && (
+                        <button
+                          onClick={handleUnretrieve}
+                          className="py-2.5 px-3 flex items-center justify-center gap-1.5 bg-[rgba(239,68,68,0.08)] hover:bg-[var(--color-error)] hover:text-white text-[var(--color-error)] rounded-lg transition-colors border border-[rgba(239,68,68,0.25)] text-[11px] font-mono font-bold"
+                          title="Undo this entry's retrieval record"
+                        >
+                          <Undo2 size={13} /> Unretrieve
+                        </button>
+                      )}
+
+                      {canApproveRetrievals && ((viewingDetail.raw as any)?.raw?.retrieved_amount || 0) > 0 && !(viewingDetail.raw as any)?.raw?.retrieval_approved && (
+                        <button
+                          onClick={handleApproveRetrieval}
+                          className="py-2.5 px-3 flex items-center justify-center gap-1.5 bg-[rgba(16,185,129,0.1)] hover:bg-[var(--color-success)] hover:text-white text-[var(--color-success)] rounded-lg transition-colors border border-[rgba(16,185,129,0.2)] text-[11px] font-mono font-bold"
+                          title="Mark this retrieval as reviewed and approved"
+                        >
+                          <ShieldCheck size={13} /> Approve
+                        </button>
+                      )}
+
+                      {(canEdit || canEditRemarks) && (
+                        <button
+                          onClick={(evt) => handleEditClick(viewingDetail, evt)}
+                          className="py-2.5 px-3 flex items-center justify-center gap-1.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[11px] font-medium"
+                        >
+                          <Edit2 size={13} /> Edit
+                        </button>
                       )}
                     </div>
-                  )}
-                  {(user.can_print_ledger || user.role === 'super_admin') && (viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'baggage' || viewingDetail.raw.type === 'package') && (
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => handleReprintReceiptPDF()}
-                        className="flex-1 py-2.5 flex items-center justify-center gap-2 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[12px] font-medium"
-                        title="Open PDF receipt (for regular printers, or to save/email)"
-                      >
-                        <Printer size={14} /> PDF Receipt
-                      </button>
+                  </div>
+
+                  {/* Document Printing & PDF Row */}
+                  {(user.can_print_ledger || user.role === 'super_admin') && (
+                    <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)]">
+                      <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider">Printing &amp; Documents</div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button
+                          onClick={() => handleReprintReceipt('80mm')}
+                          className="py-2 px-2 flex items-center justify-center gap-1.5 bg-[var(--color-accent-amber)] hover:bg-amber-400 text-[#0D1117] rounded-lg transition-colors border-none text-[11px] font-bold shadow-[var(--shadow-button)]"
+                        >
+                          <Printer size={13} /> Receipt (80)
+                        </button>
+                        <button
+                          onClick={() => handleReprintReceipt('58mm')}
+                          className="py-2 px-2 flex items-center justify-center gap-1.5 bg-[var(--color-accent-amber)] hover:bg-amber-400 text-[#0D1117] rounded-lg transition-colors border-none text-[11px] font-bold shadow-[var(--shadow-button)]"
+                        >
+                          <Printer size={13} /> Receipt (58)
+                        </button>
+
+                        {(viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'marketing' || viewingDetail.raw.type === 'package') && (
+                          <>
+                            <button
+                              onClick={() => handleReprintTag('80mm')}
+                              className="py-2 px-2 flex items-center justify-center gap-1.5 bg-[var(--color-accent-amber)] hover:bg-amber-400 text-[#0D1117] rounded-lg transition-colors border-none text-[11px] font-bold shadow-[var(--shadow-button)]"
+                            >
+                              <Printer size={13} /> Print Tag
+                            </button>
+                            <button
+                              onClick={() => handleReprintTagPDF()}
+                              className="py-2 px-2 flex items-center justify-center gap-1.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[11px] font-medium"
+                              title="Open 100×80mm PDF tag"
+                            >
+                              <Printer size={13} /> Tag PDF
+                            </button>
+                          </>
+                        )}
+
+                        {(viewingDetail.raw.type === 'cargo' || viewingDetail.raw.type === 'baggage' || viewingDetail.raw.type === 'package') && (
+                          <button
+                            onClick={() => handleReprintReceiptPDF()}
+                            className="py-2 px-2 flex items-center justify-center gap-1.5 bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-foreground)] rounded-lg transition-colors border border-[var(--color-border)] text-[11px] font-medium col-span-2 sm:col-span-1"
+                            title="Open PDF receipt for viewing or printing"
+                          >
+                            <Printer size={13} /> PDF Receipt
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </>
