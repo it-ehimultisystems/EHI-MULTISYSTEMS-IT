@@ -230,7 +230,13 @@ export const CargoForm = ({
     const tag = await getNextTag(poolKey, `EHI-${hubCode}-CG`);
     setAwb(tag || '');
   };
-  useEffect(() => { fetchAwbPreview(); }, []);
+  // Re-fetch when the admin's hub context changes -- fetchAwbPreview's
+  // pool key is derived from user.hub_code/hub, so a mount-only effect
+  // left a tag reserved from whichever hub was active at mount, unrelated
+  // to whatever the admin later switches "Global Hub Context" to.
+  // Matches the corporate-intake preview's own effect below, which
+  // already re-fetches on this exact dependency pair.
+  useEffect(() => { fetchAwbPreview(); }, [user.hub_code, user.hub]);
 
   const [pcs, setPcs] = useState("1");
   const [kg, setKg] = useState("");
@@ -1168,6 +1174,9 @@ export const CargoForm = ({
       contentType: selectedIntake.contentType || selectedIntake.content_type || 'General Goods',
       enteredByName: user.name,
       terminal,
+      // See the retail tx's identical comment above -- same gap, same fix.
+      hub: user.hub,
+      hub_id: user.hub_id,
     };
 
     // 1. Add to central transactions grid
@@ -1378,6 +1387,15 @@ export const CargoForm = ({
       clientType: linkedAsOfficeWork ? "Corporate" : "Individual",
       enteredByName: user.name,
       terminal,
+      // Was missing entirely -- EHIApp.tsx's handleAddTx falls back to
+      // `hubId = tx.hub_id || user.hub_id` using ITS OWN top-level,
+      // never-admin-overridden user prop when tx.hub_id is absent. Without
+      // this, an admin using "Global Hub Context" to act as a different
+      // hub had pricing correctly computed against their chosen hub, but
+      // the saved entry was still filed under their own real hub --
+      // invisible to the hub they thought they were entering it for.
+      hub: user.hub,
+      hub_id: user.hub_id,
     } as Transaction;
 
     // Wallet payment — AUTO-SPLIT. Wallet covers what it can; any remainder is

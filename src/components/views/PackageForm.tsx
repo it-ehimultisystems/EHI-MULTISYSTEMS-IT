@@ -100,7 +100,12 @@ export const PackageForm = ({
       }
     };
     allocate();
-  }, []);
+    // Re-fetch when the admin's hub context changes -- the pool key above
+    // is derived from user.hub_code/hub, so a mount-only effect left a
+    // tracking number reserved from whichever hub was active at mount,
+    // unrelated to whatever the admin later switches "Global Hub
+    // Context" to.
+  }, [user.hub_code, user.hub]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");

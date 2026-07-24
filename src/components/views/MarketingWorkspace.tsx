@@ -130,7 +130,11 @@ export const MarketingWorkspace = ({
       showToast({ message: 'No tag number available offline. Connect to the internet briefly to reserve more, then try again.', type: 'error' });
     }
   };
-  useEffect(() => { fetchNextTag(); }, []);
+  // Re-fetch when the admin's hub context changes -- fetchNextTag's pool
+  // key is derived from user.hub_code/hub, so a mount-only effect left a
+  // tag reserved from whichever hub was active at mount, unrelated to
+  // whatever the admin later switches "Global Hub Context" to.
+  useEffect(() => { fetchNextTag(); }, [user.hub_code, user.hub]);
 
   // Same canonical airline source every other picker uses (was previously
   // sourced from whatever logo files happened to be uploaded to Supabase
@@ -395,6 +399,13 @@ export const MarketingWorkspace = ({
       status: "Intake",
       route,
       hub: user.hub,
+      // Was missing entirely -- EHIApp.tsx's handleAddTx falls back to
+      // `hubId = tx.hub_id || user.hub_id` using ITS OWN top-level,
+      // never-admin-overridden user prop when tx.hub_id is absent. Without
+      // this, an admin using "Global Hub Context" to act as a different
+      // hub had the entry silently filed under their own real hub instead
+      // of the one they thought they were entering it for.
+      hub_id: user.hub_id,
       enteredByName: user.name,
       // Explicit fields so EHIApp doesn't need to parse the detail string
       ...(bb > 0 || mb > 0 || sb > 0 ? { _bb: bb, _mb: mb, _sb: sb } as any : {}),
