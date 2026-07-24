@@ -352,7 +352,10 @@ export const CargoForm = ({
       ]);
       if (airlineRes.data && !airlineRes.error) {
         const rates: Record<string, number> = {};
-        airlineRes.data.forEach((r: any) => { rates[`${r.airline}|${r.route_name}`] = Number(r.rate_per_kg); });
+        airlineRes.data.forEach((r: any) => {
+          rates[`${r.airline}|${r.route_name}`] = Number(r.rate_per_kg);
+          rates[`${normalizeAirlineName(r.airline)}|${r.route_name}`] = Number(r.rate_per_kg);
+        });
         setHubAirlineRouteRates(rates);
       }
       if (hubRes.data && !hubRes.error) {
@@ -398,7 +401,7 @@ export const CargoForm = ({
   const resolveRate = (forAirline: string, forRoute: string, forContentType: string, forKg: number): number | null => {
     const special = resolveSpecialGoodsRate(specialGoodsRates, forContentType, forAirline, forKg, user.hub_id, forRoute);
     if (special != null) return special;
-    const exact = hubAirlineRouteRates[`${forAirline}|${forRoute}`];
+    const exact = hubAirlineRouteRates[`${forAirline}|${forRoute}`] ?? hubAirlineRouteRates[`${normalizeAirlineName(forAirline)}|${forRoute}`];
     if (exact != null) return exact;
     const hubDefault = hubRouteRates[forRoute];
     if (hubDefault != null) return hubDefault;

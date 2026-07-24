@@ -106,8 +106,8 @@ export function resolveSpecialGoodsRate(
   );
 
   const pick = (hubOk: boolean, routeOk: boolean) => scoped.find(r =>
-    (hubOk ? r.hub_id === hubId : r.hub_id == null) &&
-    (routeOk ? (r.route_name != null && normRoute != null && cleanRoute(r.route_name) === normRoute) : r.route_name == null)
+    (hubOk ? r.hub_id === hubId : (r.hub_id == null || r.hub_id === '')) &&
+    (routeOk ? (r.route_name != null && normRoute != null && cleanRoute(r.route_name) === normRoute) : (r.route_name == null || r.route_name === ''))
   );
 
   const match =

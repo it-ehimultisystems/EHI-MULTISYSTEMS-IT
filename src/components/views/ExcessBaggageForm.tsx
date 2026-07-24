@@ -119,7 +119,7 @@ export const ExcessBaggageForm = ({
   const parsedOverride = parseFloat(amountOverride) || 0;
   const totalAmount = amountOverride !== "" ? parsedOverride : minAmount;
 
-  const isValid = name.trim().length > 0 && flight.trim().length > 0 && dest !== '' && kgVal > 0 && (amountOverride === "" || parsedOverride >= minAmount);
+  const isValid = name.trim().length > 0 && flight.trim().length > 0 && dest !== '' && excessKg > 0 && (amountOverride === "" || parsedOverride >= minAmount);
 
   const { showToast } = useToast();
 
