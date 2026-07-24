@@ -46,8 +46,20 @@ export function computeDepartmentSalesAnalysis(txs: Transaction[], deptType: Dep
   deptTxs.forEach(t => {
     const agent = (t.enteredByName || 'Unknown Agent').trim();
     if (!map[agent]) map[agent] = { entries: 0, revenue: 0, collected: 0, owed: 0, cash: 0, transfer: 0, transferCash: 0, pos: 0, wallet: 0, other: 0, routeCounts: {} };
-    map[agent].entries += 1;
-    map[agent].revenue += t.amount;
+    // DC-... debt-clearance shadow entries (DebtorsTab.tsx/
+    // TransactionLedger.tsx) are a PAYMENT against a sale already counted
+    // once via the original Debt-mode entry, not a second sale -- entries/
+    // revenue must skip them or every cleared debt inflates both this
+    // agent's entry count and gross revenue by the amount collected.
+    // collected/the per-mode split below deliberately do NOT skip them --
+    // that's the whole point of the shadow entry: it carries the real
+    // Cash/Transfer/POS mode the debt was actually paid off in, which the
+    // now-'Debt Paid' original entry no longer reflects.
+    const isDebtClearance = t.id?.startsWith('DC-');
+    if (!isDebtClearance) {
+      map[agent].entries += 1;
+      map[agent].revenue += t.amount;
+    }
     if (t.mode !== 'Debt' && t.mode !== 'Debt Paid') {
       map[agent].collected += t.amount;
     }

@@ -234,12 +234,37 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
     return fetchedTx;
   }, [fetchedTx]);
 
+  // Debt-clearance shadow entries (DebtorsTab.tsx/TransactionLedger.tsx's
+  // "DC-..." ids, inserted as real rows in the same table as the original
+  // sale so today's cash reconciliation can see where the money came from)
+  // are a PAYMENT event, not a new sale -- the sale's full value was
+  // already counted once via the original Debt-mode entry. None of the
+  // four department tables have a reliable is_debt_clearance-style column
+  // to filter on server-side (cargo_entries does; manifests/marketing_
+  // entries/package_entries don't), so the "DC-" id prefix -- present on
+  // all four types -- is the one signal that works everywhere without a
+  // schema change. Every revenue/count-style report below must exclude
+  // these or a cleared debt's value gets counted twice (once as the
+  // original sale, again as its own collection). staffReport and the
+  // department Sales Analysis modals (salesAnalysis.ts) need finer-grained
+  // handling instead of this blanket filter, since they separately track
+  // "collected" cash, which DOES need the shadow entry's contribution --
+  // see their own comments below / in salesAnalysis.ts.
+  const isDebtClearanceTx = (t: Transaction) => !!t.id?.startsWith('DC-');
+  const nonClearanceTx = useMemo(() => filteredTx.filter(t => !isDebtClearanceTx(t)), [filteredTx]);
+
   // ── Report computations ─────────────────────────
 
   const revenueReport = useMemo(() => {
-    const cargo     = filteredTx.filter(t => t.type === 'cargo');
-    const marketing = filteredTx.filter(t => t.type === 'marketing');
-    const vj        = filteredTx.filter(t => t.type === 'baggage');
+    // streams/total use nonClearanceTx (gross sales, never double-counted).
+    // modes intentionally stays on filteredTx -- it's a "how was cash
+    // actually collected" breakdown, and correctly relies on the shadow
+    // entry's real Cash/Transfer/POS mode (the original entry no longer
+    // matches any of these four buckets once it flips to 'Debt Paid', so
+    // it isn't double-counted here either).
+    const cargo     = nonClearanceTx.filter(t => t.type === 'cargo');
+    const marketing = nonClearanceTx.filter(t => t.type === 'marketing');
+    const vj        = nonClearanceTx.filter(t => t.type === 'baggage');
     return {
       streams: [
         { name: 'Air Cargo',          count: cargo.length,     amount: cargo.reduce((s,t) => s+t.amount, 0) },
@@ -252,13 +277,13 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
         { name: 'POS',      amount: filteredTx.filter(t => t.mode === 'POS').reduce((s,t) => s+t.amount, 0) },
         { name: 'Credit (Debt)', amount: filteredTx.filter(t => t.mode === 'Debt').reduce((s,t) => s+t.amount, 0) },
       ],
-      total: filteredTx.reduce((s,t) => s+t.amount, 0),
+      total: nonClearanceTx.reduce((s,t) => s+t.amount, 0),
     };
-  }, [filteredTx]);
+  }, [filteredTx, nonClearanceTx]);
 
   const routeReport = useMemo(() => {
     const map: Record<string, { revenue: number; count: number; cargo: number; mktg: number }> = {};
-    filteredTx.filter(t => t.type === 'cargo' || t.type === 'marketing').forEach(t => {
+    nonClearanceTx.filter(t => t.type === 'cargo' || t.type === 'marketing').forEach(t => {
       const route = t.route || t.detail?.split('·')[0]?.trim() || 'Unknown';
       if (!map[route]) map[route] = { revenue: 0, count: 0, cargo: 0, mktg: 0 };
       map[route].revenue += t.amount;
@@ -268,11 +293,11 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
     return Object.entries(map)
       .map(([route, d]) => ({ route, ...d }))
       .sort((a, b) => b.revenue - a.revenue);
-  }, [filteredTx]);
+  }, [nonClearanceTx]);
 
   const customerReport = useMemo(() => {
     const map: Record<string, { revenue: number; transactions: number; lastSeen: string }> = {};
-    filteredTx.forEach(t => {
+    nonClearanceTx.forEach(t => {
       const name = (t.name || 'Unknown').trim();
       if (!map[name]) map[name] = { revenue: 0, transactions: 0, lastSeen: t.time || '' };
       map[name].revenue      += t.amount;
@@ -283,7 +308,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
       .map(([name, d]) => ({ name, ...d }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 20);
-  }, [filteredTx]);
+  }, [nonClearanceTx]);
 
   const debtorReport = useMemo(() => {
     const debts = filteredTx.filter(t => t.mode === 'Debt');
@@ -308,13 +333,20 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
     filteredTx.forEach(t => {
       const agent = (t.enteredByName || 'Unknown Agent').trim();
       if (!map[agent]) map[agent] = { entries: 0, revenue: 0, collected: 0, owed: 0, cargo: 0, mktg: 0, vj: 0, pkg: 0 };
-      map[agent].entries += 1;
-      // Gross value of business this agent brought in -- unchanged from before.
-      map[agent].revenue += t.amount;
-      if (t.type === 'cargo')     map[agent].cargo += t.amount;
-      if (t.type === 'marketing') map[agent].mktg  += t.amount;
-      if (t.type === 'baggage')   map[agent].vj    += t.amount;
-      if (t.type === 'package')   map[agent].pkg   += t.amount;
+      // Entries/revenue/per-type breakdown must skip DC- debt-clearance
+      // shadow rows -- a shadow entry is a PAYMENT against a sale already
+      // counted once via the original Debt-mode entry, not a second sale.
+      // Without this guard, every cleared debt inflated both this agent's
+      // entry count and their gross revenue by the amount collected.
+      if (!isDebtClearanceTx(t)) {
+        map[agent].entries += 1;
+        // Gross value of business this agent brought in.
+        map[agent].revenue += t.amount;
+        if (t.type === 'cargo')     map[agent].cargo += t.amount;
+        if (t.type === 'marketing') map[agent].mktg  += t.amount;
+        if (t.type === 'baggage')   map[agent].vj    += t.amount;
+        if (t.type === 'package')   map[agent].pkg   += t.amount;
+      }
 
       // Collected -- actual liquid cash, excluding unpaid Debt AND the
       // original entry once it flips to 'Debt Paid' on clearance (that
@@ -354,7 +386,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
 
   const hubReport = useMemo(() => {
     const byHub: Record<string, { revenue: number; entries: number }> = {};
-    filteredTx.forEach(t => {
+    nonClearanceTx.forEach(t => {
       const hid = t.hub_id || 'Unknown';
       if (!byHub[hid]) byHub[hid] = { revenue: 0, entries: 0 };
       byHub[hid].revenue += t.amount;
@@ -365,11 +397,11 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
       hub_name: hubNames[id] || id,
       ...d
     })).sort((a, b) => b.revenue - a.revenue);
-  }, [filteredTx, hubNames]);
+  }, [nonClearanceTx, hubNames]);
 
   const airlineReport = useMemo(() => {
     const map: Record<string, { cargoSales: number; cargoKg: number; baggageSales: number; baggageKg: number; totalSales: number; totalKg: number; count: number }> = {};
-    filteredTx.forEach(t => {
+    nonClearanceTx.forEach(t => {
       const air = (t.airline || (t.type === 'baggage' ? 'ValueJet' : t.type === 'marketing' ? 'Marketing Desk' : 'Unassigned')).trim();
       if (!map[air]) map[air] = { cargoSales: 0, cargoKg: 0, baggageSales: 0, baggageKg: 0, totalSales: 0, totalKg: 0, count: 0 };
       const st = map[air];
@@ -392,11 +424,11 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
     return Object.entries(map)
       .map(([airline, d]) => ({ airline, ...d }))
       .sort((a, b) => b.totalSales - a.totalSales);
-  }, [filteredTx]);
+  }, [nonClearanceTx]);
 
   const b2bReport = useMemo(() => {
     const corporateClientNames = Object.values(corpClientsMap).map(n => n.toLowerCase());
-    const b2bTxs = filteredTx.filter(t => {
+    const b2bTxs = nonClearanceTx.filter(t => {
       const isLinked = t.raw?.corporate_client_id != null;
       const nameMatch = corporateClientNames.includes((t.name || '').toLowerCase());
       return t.type === 'cargo' && (isLinked || nameMatch);
@@ -420,7 +452,7 @@ export const Reports = ({ user, transactions, onBack }: { user: User; transactio
       totalRevenue: b2bTxs.reduce((s, t) => s + t.amount, 0),
       totalEntries: b2bTxs.length
     };
-  }, [filteredTx, corpClientsMap]);
+  }, [nonClearanceTx, corpClientsMap]);
 
   // ── Export functions ─────────────────────────────
 
