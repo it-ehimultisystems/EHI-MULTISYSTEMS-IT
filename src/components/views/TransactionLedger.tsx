@@ -747,6 +747,38 @@ export const TransactionLedger = ({
     }
   };
 
+  const handlePrint80mmLedger = async () => {
+    if (filteredEntries.length === 0) {
+      showToast({ message: 'No ledger entries to print.', type: 'error' });
+      return;
+    }
+    try {
+      const { printViaBluetooth } = await import('../../lib/escpos');
+      await printViaBluetooth(async () => {
+        const { compileLedger80mmStream } = await import('../../lib/escposLedgerPrinting');
+        return await compileLedger80mmStream(
+          filteredEntries as any,
+          {
+            hubName: user.hub || 'Station Hub',
+            hubCode: userHubCode || 'ORIGIN',
+            shiftDate: new Date().toLocaleDateString('en-GB'),
+            agentName: user.name || 'Staff',
+            printedAt: `${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`,
+            totalAmount,
+            cashAmount,
+            transferAmount,
+            posAmount,
+            debtAmount,
+            walletAmount,
+          }
+        );
+      });
+    } catch (error: any) {
+      console.error('Error printing 80mm ledger summary:', error);
+      showToast({ message: error?.message || 'Error connecting to Bluetooth printer. Ensure it is paired and turned on.', type: 'error' });
+    }
+  };
+
   // Opens the same PDF receipt already used by CargoForm/ExcessBaggageForm's
   // point-of-sale success screens, rebuilt from the historical Transaction --
   // unlike handleReprintReceipt above, this needs no Bluetooth printer, just
@@ -1771,6 +1803,15 @@ export const TransactionLedger = ({
               className="h-8 w-8 flex items-center justify-center bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg text-[var(--color-muted)] hover:text-[var(--color-success)] hover:border-[var(--color-success)] transition-colors"
             >
               <Download size={13} />
+            </button>
+
+            <button
+              title="Print Compact 80mm Ledger Summary"
+              onClick={handlePrint80mmLedger}
+              className="h-8 px-2 flex items-center gap-1.5 bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.3)] rounded-lg text-[var(--color-accent-amber)] hover:bg-[var(--color-accent-amber)] hover:text-black font-mono text-[10px] font-bold transition-colors cursor-pointer"
+            >
+              <Printer size={13} />
+              <span>80mm</span>
             </button>
 
             {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'accountant' || user.role === 'auditor') && (
