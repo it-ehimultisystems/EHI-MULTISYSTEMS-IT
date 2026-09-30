@@ -4254,7 +4254,7 @@ export const TransactionLedger = ({
                     onChange={(e) => setTimeFilter(e.target.value as any)}
                     className="bg-transparent text-[var(--color-foreground)] border-none focus:outline-none cursor-pointer h-full appearance-none font-bold pr-1"
                   >
-                    <option value="All" className="bg-[var(--color-surface-card)]">All Time</option>
+                    <option value="All" className="bg-[var(--color-surface-card)]">All Hours (24h)</option>
                     <option value="Morning" className="bg-[var(--color-surface-card)]">Morning (06–12)</option>
                     <option value="Afternoon" className="bg-[var(--color-surface-card)]">Afternoon (12–17)</option>
                     <option value="Evening" className="bg-[var(--color-surface-card)]">Evening (17–24)</option>
@@ -4321,13 +4321,13 @@ export const TransactionLedger = ({
 
             {/* ── Batch Select/Print Bar -- every mode; Clear is Debt-only ── */}
             {debtEntriesInView.length > 0 && (
-              <div className="px-4 py-2.5 bg-[rgba(239,68,68,0.05)] border-b border-[rgba(239,68,68,0.15)] flex flex-col sm:flex-row sm:items-center gap-2 shrink-0">
-                <label className="flex items-center gap-2 text-[10px] font-mono font-semibold text-[var(--color-error)] cursor-pointer select-none shrink-0">
+              <div className="px-4 py-2.5 bg-[rgba(245,158,11,0.06)] border-b border-[rgba(245,158,11,0.2)] flex flex-col sm:flex-row sm:items-center gap-2 shrink-0">
+                <label className="flex items-center gap-2 text-[10px] font-mono font-semibold text-[var(--color-accent-amber)] cursor-pointer select-none shrink-0">
                   <input
                     type="checkbox"
                     checked={selectedDebtIds.size > 0 && selectedDebtIds.size === debtEntriesInView.length}
                     onChange={(e) => setSelectedDebtIds(e.target.checked ? new Set(debtEntriesInView.map(x => x.id)) : new Set())}
-                    className="w-3.5 h-3.5 cursor-pointer"
+                    className="w-3.5 h-3.5 cursor-pointer accent-[var(--color-accent-amber)]"
                   />
                   Select All ({debtEntriesInView.length})
                 </label>
@@ -4639,7 +4639,7 @@ export const TransactionLedger = ({
                             )}
                             <div className="text-right">
                               <div className={`font-mono font-bold text-[13px] ${e.source === "expense" ? "text-[var(--color-error)]" : "text-[var(--color-success)]"}`}>
-                                {e.source === "expense" ? "-" : ""}₦{fmt(e.source === "expense" ? e.amount : Math.max(0, e.amount - ((e.raw as any)?.raw?.retrieved_amount || 0)))}
+                                {e.source === "expense" ? "-" : ""}<span className="font-sans font-normal">₦</span>{fmt(e.source === "expense" ? e.amount : Math.max(0, e.amount - ((e.raw as any)?.raw?.retrieved_amount || 0)))}
                               </div>
                               {/* Struck-through original once anything's been retrieved -- the
                                   bold figure above is what's still un-retrieved (see the PARTIAL
@@ -4675,7 +4675,7 @@ export const TransactionLedger = ({
                 <th className="py-3 px-2 w-[72px] font-medium">Date</th>
                 <th className="py-3 px-2 font-medium min-w-[120px]">Customer / Detail</th>
                 <th className="py-3 px-2 w-[72px] font-medium text-center">Status</th>
-                <th className="py-3 px-2 w-[28px] font-medium text-center"></th>
+                <th className="py-3 px-2 w-[28px] font-medium text-center" title="Select entries for batch actions"></th>
                 <th className="py-3 px-2 w-[80px] font-medium text-right">Amount</th>
                 <th className="py-3 px-2 w-[56px] font-medium text-center">Mode</th>
                 <th className="py-3 px-3 w-[32px] font-medium text-center"></th>
@@ -4962,13 +4962,13 @@ export const TransactionLedger = ({
                               return next;
                             });
                           }}
-                          className="w-3.5 h-3.5 cursor-pointer"
+                          className="w-3.5 h-3.5 cursor-pointer accent-[var(--color-accent-amber)]"
                         />
                       )}
                     </td>
                     {/* Amount */}
                     <td className={`py-2.5 px-2 text-right font-mono text-[11px] whitespace-nowrap ${e.source === "expense" ? "text-[var(--color-error)] font-bold" : "text-[var(--color-success)] font-bold"}`}>
-                      <div>{e.source === "expense" ? "-" : ""}₦{fmt(e.source === "expense" ? e.amount : Math.max(0, e.amount - ((e.raw as any)?.raw?.retrieved_amount || 0)))}</div>
+                      <div>{e.source === "expense" ? "-" : ""}<span className="font-sans font-normal">₦</span>{fmt(e.source === "expense" ? e.amount : Math.max(0, e.amount - ((e.raw as any)?.raw?.retrieved_amount || 0)))}</div>
                       {/* Struck-through original once anything's been retrieved -- the
                           bold figure above is what's still un-retrieved, matching the
                           mobile card's identical treatment above. */}
