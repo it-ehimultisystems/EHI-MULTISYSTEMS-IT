@@ -142,21 +142,29 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
     loadLedger();
   };
 
-  const debts = useMemo(() => {
-    return debtsData.filter(tx => (tx.name.toLowerCase().includes(search.toLowerCase()) || tx.awb_tag_number?.includes(search)));
-  }, [debtsData, search]);
-
   // Canonical remaining-balance formula (matches clear_*_debt's own SQL and
   // DebtorsTab.tsx) -- subtracting retrieved_amount too, not just
   // amountPaid, so a debt already settled via a retrieval doesn't show an
   // inflated balance anywhere this screen displays one.
   const debtBalance = (tx: Transaction) => tx.amount - (tx.amountPaid || 0) - ((tx.raw as any)?.retrieved_amount || 0);
 
+  const debts = useMemo(() => {
+    return debtsData.filter(tx => {
+      const legacyPaid = (tx.raw as any)?.debt_paid === true;
+      const balance = debtBalance(tx);
+      if (legacyPaid || balance <= 0) return false;
+      return (tx.name.toLowerCase().includes(search.toLowerCase()) || tx.awb_tag_number?.includes(search));
+    });
+  }, [debtsData, search]);
+
   const debtSummary = useMemo(() => {
     const summary: Record<string, number> = {};
     debts.forEach(tx => {
       const name = tx.name || 'Unknown';
-      summary[name] = (summary[name] || 0) + debtBalance(tx);
+      const bal = debtBalance(tx);
+      if (bal > 0) {
+        summary[name] = (summary[name] || 0) + bal;
+      }
     });
     return Object.entries(summary).map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount);
   }, [debts]);
@@ -246,7 +254,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
         {onBack && <BackButton onClick={onBack} label="Back to Menu" className="mb-3" />}
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[var(--color-amber-bg)] rounded-lg">
-            <CreditCard size={20} strokeWidth={1.5} className="text-[var(--color-accent-amber)]" />
+            <CreditCard size={20} strokeWidth={2} className="text-[var(--color-accent-amber)]" />
           </div>
           <div>
             <h1 className="text-[16px] font-bold font-sans text-[var(--color-foreground)] tracking-tight">Credit & Debit</h1>
@@ -275,7 +283,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
 
         <div className="flex items-center gap-2 mt-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" size={14} strokeWidth={1.5} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" size={14} strokeWidth={2} />
             <input
               type="text"
               placeholder={activeTab === 'debts' ? 'Search debtors...' : 'Search airlines...'}
@@ -290,7 +298,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
             aria-label="Download PDF"
             className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:border-[var(--color-accent-amber)] hover:text-[var(--color-accent-amber)] text-[var(--color-muted)] transition-colors"
           >
-            <FileDown size={15} strokeWidth={1.5} />
+            <FileDown size={15} strokeWidth={2} />
           </button>
         </div>
       </div>
@@ -303,7 +311,7 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
           </div>
         ) : fetchError ? (
           <EmptyState
-            icon={<CreditCard size={36} strokeWidth={1.5} />}
+            icon={<CreditCard size={36} strokeWidth={2} />}
             title="Couldn't load the ledger"
             subtext="Check your connection and try again."
             actions={[{ label: 'Retry', onClick: retryFetch }]}
@@ -312,14 +320,14 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
           <>
             {activeTab === 'debts' && (
               <>
-                <div className="bg-[var(--color-surface-card)] border border-[rgba(245,158,11,0.2)] rounded-lg p-6 flex flex-col justify-center items-center shadow-[0_0_15px_rgba(245,158,11,0.05)] relative overflow-hidden">
+                <div className="bg-[var(--color-surface-card)] border border-[var(--color-amber-border)] rounded-lg p-6 flex flex-col justify-center items-center shadow-[var(--shadow-amber)] relative overflow-hidden">
                   <div className="absolute -top-6 -right-6 opacity-5 text-[var(--color-accent-amber)]">
                     <TrendingDown size={120} />
                   </div>
                   <div className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-2 relative z-10 flex items-center gap-2">
                     <ArrowDownLeft size={14} className="text-[var(--color-accent-amber)]" /> Total Outstanding Debt
                   </div>
-                  <div className="text-[32px] font-sans font-bold text-[var(--color-accent-amber)] relative z-10">{fmt(totalDebt)}</div>
+                  <div className="text-[32px] font-mono font-bold text-[var(--color-accent-amber)] relative z-10">{fmt(totalDebt)}</div>
                 </div>
 
                 <div className="space-y-3">
@@ -359,14 +367,14 @@ export const CreditDebit = ({ user, transactions: _propTransactions, onBack }: {
 
             {activeTab === 'credits' && (
           <>
-            <div className="bg-[var(--color-surface-card)] border border-[rgba(16,185,129,0.2)] rounded-lg p-6 flex flex-col justify-center items-center shadow-[0_0_15px_rgba(16,185,129,0.05)] relative overflow-hidden">
+            <div className="bg-[var(--color-surface-card)] border border-[var(--color-success-border)] rounded-lg p-6 flex flex-col justify-center items-center shadow-[var(--shadow-card)] relative overflow-hidden">
               <div className="absolute -top-6 -right-6 opacity-5 text-[var(--color-success)]">
                 <TrendingUp size={120} />
               </div>
               <div className="text-[11px] font-mono text-[var(--color-muted)] uppercase tracking-wider mb-2 relative z-10 flex items-center gap-2">
                 <ArrowUpRight size={14} className="text-[var(--color-success)]" /> Total Due to Airlines
               </div>
-              <div className="text-[32px] font-sans font-bold text-[var(--color-success)] relative z-10">{fmt(totalCredit)}</div>
+              <div className="text-[32px] font-mono font-bold text-[var(--color-success)] relative z-10">{fmt(totalCredit)}</div>
               <div className="text-[9px] font-mono text-[var(--color-muted)] uppercase tracking-wider mt-1 relative z-10">Last 30 days</div>
             </div>
 

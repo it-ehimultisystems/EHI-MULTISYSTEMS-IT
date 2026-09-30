@@ -152,7 +152,6 @@ export const PackageForm = ({
   }, [isOnline, mode]);
   const banks = useBanks();
   const [bank, setBank] = useState<string>(banks[0]);
-  const [debtorName, setDebtorName] = useState("");
   const [narrationCode, setNarrationCode] = useState<string>("");
 
   // Office-work (B2B corporate) auto-detection -- shared with Cargo/
@@ -162,7 +161,7 @@ export const PackageForm = ({
   // against the negotiated contract rate.
   const corpClients = useCorporateClients();
   const corpRates = useCorporateRouteRates();
-  const officeMatch = useMemo(() => matchOfficeClient(mode === "Debt" ? debtorName : name, corpClients), [mode, debtorName, name, corpClients]);
+  const officeMatch = useMemo(() => matchOfficeClient(name, corpClients), [name, corpClients]);
   const detectedOfficeClient = officeMatch.client;
   const [linkedAsOfficeWork, setLinkedAsOfficeWork] = useState(false);
   // Neither match type auto-links anymore -- both exact and fuzzy matches
@@ -182,7 +181,7 @@ export const PackageForm = ({
     if (wasLinkedRef.current) setAmount('');
     setLinkedAsOfficeWork(false);
     wasLinkedRef.current = false;
-  }, [name, debtorName, officeMatch.type]);
+  }, [name, officeMatch.type]);
   const officeWorkRate = useMemo(() => {
     if (!linkedAsOfficeWork || !detectedOfficeClient) return null;
     return corpRates.find(r => r.corporate_client_id === detectedOfficeClient.id && r.route_name === destination) || null;
@@ -228,7 +227,7 @@ export const PackageForm = ({
   // configured rate for this specific route is not itself a pricing
   // decision, so the normal retail floor still applies (matches
   // CargoForm.tsx's identical exemption for size/flat-tier pricing).
-  const isValidCore = (mode === "Debt" ? debtorName.trim().length > 0 : name.trim().length > 0)
+  const isValidCore = name.trim().length > 0
     && ((linkedAsOfficeWork && officeWorkRate) ? parsedAmount > 0 : parsedAmount >= MIN_PACKAGE_AMOUNT) && destination.trim().length > 0 && actualContents.trim().length > 0 && !!trackingRef && pcsNum > 0;
 
   // "Today" here means the actual calendar day, not whatever the app-wide
@@ -320,7 +319,7 @@ export const PackageForm = ({
 
     const tx: Transaction = {
       id: trackingRef,
-      name: mode === "Debt" ? debtorName.trim() : name.trim(),
+      name: name.trim(),
       detail: `${destination} · ${contentType} · ${pcsNum}pcs · ${kgNum}kg · ${actualContents}`,
       amount: parsedAmount,
       mode,
@@ -438,7 +437,6 @@ export const PackageForm = ({
   const handleReset = () => {
     setName("");
     setPhone("");
-    setDebtorName("");
     setPcs("1");
     setKg("");
     // Blank, not contentTypes[0]/destination left untouched -- both start
@@ -900,39 +898,34 @@ export const PackageForm = ({
                   </div>
                 </div>
 
+                {renderLabel(UserIcon, mode === "Debt" ? "Debtor Name" : "Customer")}
+                <input
+                  id="pkg-name"
+                  name="name"
+                  placeholder={mode === "Debt" ? "Debtor Name" : "Customer Name"}
+                  value={name}
+                  onChange={upperOnChange(setName)}
+                  className={formInputClass}
+                />
                 {mode !== "Debt" && (
-                  <>
-                    {renderLabel(UserIcon, "Customer")}
+                  <div className="relative">
+                    <MessageSquare size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
                     <input
-                      id="pkg-name"
-                      name="name"
-                      placeholder="Customer Name"
-                      value={name}
-                      onChange={upperOnChange(setName)}
-                      className={formInputClass}
+                      id="pkg-phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="Phone (required)"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className={`${formInputClass} pl-10`}
                     />
-                    <div className="relative">
-                      <MessageSquare size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
-                      <input
-                        id="pkg-phone"
-                        name="phone"
-                        type="tel"
-                        placeholder="Phone (required)"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className={`${formInputClass} pl-10`}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
                 {/* Office-work detection banner -- see CargoForm.tsx's
-                    equivalent for the reference implementation. Deliberately
-                    OUTSIDE the `mode !== "Debt"` block above: officeMatch
-                    matches `debtorName` in Debt mode (the primary corporate
-                    scenario), so gating this on retail-only mode meant a
-                    Debt-mode match linked silently with no banner, no chip,
-                    no unlink control, and no repricing. */}
+                    equivalent for the reference implementation. officeMatch
+                    is keyed off the single `name` field above regardless of
+                    mode, so this works the same for Debt entries too. */}
                 {detectedOfficeClient && !linkedAsOfficeWork && (
                   <div className="p-3 rounded-lg border border-[var(--color-accent-amber)] bg-[rgba(245,158,11,0.08)] flex items-start gap-3">
                     <AlertTriangle size={16} className="text-[var(--color-accent-amber)] shrink-0 mt-0.5" />
@@ -1177,21 +1170,6 @@ export const PackageForm = ({
                   </div>
                 )}
 
-                {mode === "Debt" && (
-                  <div>
-                    {renderLabel(UserIcon, "Debtor Name")}
-                    <input
-                      id="pkg-debtor-name"
-                      name="debtor-name"
-                      type="text"
-                      placeholder="Debtor Name"
-                      value={debtorName}
-                      onChange={(e) => setDebtorName(e.target.value)}
-                      className={formInputClass}
-                    />
-                  </div>
-                )}
-
                 <div>
                   {renderLabel(Banknote, "Amount")}
                   <div className="relative">
@@ -1247,7 +1225,7 @@ export const PackageForm = ({
                       { label: 'Customer', value: name },
                       { label: 'Content', value: actualContents },
                       { label: 'Amount', value: parseFloat(amount) || 0 },
-                      { label: 'Payment Mode', value: mode === 'Debt' ? `Debt (${debtorName})` : mode },
+                      { label: 'Payment Mode', value: mode },
                       // Surfaced right before confirming so a staff member
                       // can't silently submit under the wrong terminal --
                       // same reasoning as CargoForm's own review modal.

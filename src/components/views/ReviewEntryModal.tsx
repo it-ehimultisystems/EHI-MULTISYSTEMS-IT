@@ -58,7 +58,7 @@ export const ReviewEntryModal: React.FC<ReviewEntryModalProps> = ({
   // root wrapper). Matches Modal.tsx's own fix for the same class of bug.
   return createPortal(
     <div
-      className={`fixed inset-0 w-screen h-screen bg-black/75 backdrop-blur-md z-[999999] flex items-center justify-center p-3 sm:p-4 select-none ${
+      className={`fixed inset-0 w-screen h-screen ehi-scrim z-[999999] flex items-center justify-center p-3 sm:p-4 select-none ${
         isClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'
       }`}
       onClick={(e) => {

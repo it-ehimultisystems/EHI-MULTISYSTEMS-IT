@@ -95,7 +95,7 @@ export const PartialRetrievalModal: React.FC<PartialRetrievalModalProps> = ({ en
   // wrapper) that sets transform/filter/will-change/perspective silently
   // becomes a containing block for this modal's `position: fixed`.
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 ehi-scrim z-[9999] flex items-center justify-center p-4">
       <div className="bg-[var(--color-obsidian)] border border-[var(--color-border)] rounded-xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-[var(--color-surface-card)]">
           <h3 className="text-[14px] font-bold text-[var(--color-foreground)]">Process {typeLabel} Retrieval</h3>

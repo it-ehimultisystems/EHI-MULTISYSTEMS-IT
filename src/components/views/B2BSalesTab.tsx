@@ -250,42 +250,42 @@ export const B2BSalesTab = ({ transactions, user }: B2BSalesTabProps) => {
       {/* METRICS DASHBOARD GRID */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-[var(--color-surface-2)] p-4 rounded-xl border border-[var(--color-border)] flex items-center space-x-3">
-          <div className="p-2.5 rounded-lg bg-[rgba(251,191,36,0.1)] text-[var(--color-accent-amber)]">
+          <div className="p-2.5 rounded-lg bg-[var(--color-amber-bg)] text-[var(--color-accent-amber)] border border-[var(--color-amber-border)]">
             <Briefcase size={20} />
           </div>
           <div>
-            <div className="text-[10px] text-[var(--color-muted)] font-sans uppercase font-medium">B2B Shipments</div>
-            <div className="text-[18px] font-sans font-bold text-[var(--color-foreground)]">{metrics.count}</div>
+            <div className="text-[10px] text-[var(--color-muted)] font-mono uppercase font-medium">B2B Shipments</div>
+            <div className="text-[18px] font-mono font-bold text-[var(--color-foreground)]">{metrics.count}</div>
           </div>
         </div>
 
         <div className="bg-[var(--color-surface-2)] p-4 rounded-xl border border-[var(--color-border)] flex items-center space-x-3">
-          <div className="p-2.5 rounded-lg bg-[rgba(59,130,246,0.1)] text-[#3b82f6]">
+          <div className="p-2.5 rounded-lg bg-[var(--color-info-bg)] text-[var(--color-accent-cobalt)] border border-[var(--color-info-border)]">
             <Scale size={20} />
           </div>
           <div>
-            <div className="text-[10px] text-[var(--color-muted)] font-sans uppercase font-medium">Total Tonnage</div>
-            <div className="text-[18px] font-sans font-bold text-[var(--color-foreground)]">{metrics.totalKg.toLocaleString()} KG</div>
+            <div className="text-[10px] text-[var(--color-muted)] font-mono uppercase font-medium">Total Tonnage</div>
+            <div className="text-[18px] font-mono font-bold text-[var(--color-foreground)]">{metrics.totalKg.toLocaleString()} KG</div>
           </div>
         </div>
 
         <div className="bg-[var(--color-surface-2)] p-4 rounded-xl border border-[var(--color-border)] flex items-center space-x-3">
-          <div className="p-2.5 rounded-lg bg-[rgba(16,185,129,0.1)] text-[var(--color-success)]">
+          <div className="p-2.5 rounded-lg bg-[var(--color-success-bg)] text-[var(--color-success)] border border-[var(--color-success-border)]">
             <DollarSign size={20} />
           </div>
           <div>
-            <div className="text-[10px] text-[var(--color-muted)] font-sans uppercase font-medium">Billed Revenue</div>
-            <div className="text-[18px] font-sans font-bold text-[var(--color-foreground)]">₦{metrics.totalRevenue.toLocaleString()}</div>
+            <div className="text-[10px] text-[var(--color-muted)] font-mono uppercase font-medium">Billed Revenue</div>
+            <div className="text-[18px] font-mono font-bold text-[var(--color-foreground)]">{fmt(metrics.totalRevenue)}</div>
           </div>
         </div>
 
         <div className="bg-[var(--color-surface-2)] p-4 rounded-xl border border-[var(--color-border)] flex items-center space-x-3">
-          <div className="p-2.5 rounded-lg bg-[rgba(239,68,68,0.1)] text-[var(--color-error)]">
+          <div className="p-2.5 rounded-lg bg-[var(--color-error-bg)] text-[var(--color-error)] border border-[var(--color-error-border)]">
             <AlertCircle size={20} />
           </div>
           <div>
-            <div className="text-[10px] text-[var(--color-muted)] font-sans uppercase font-medium">Outstanding Balance</div>
-            <div className="text-[18px] font-sans font-bold text-[var(--color-foreground)]">₦{metrics.totalOutstanding.toLocaleString()}</div>
+            <div className="text-[10px] text-[var(--color-muted)] font-mono uppercase font-medium">Outstanding Balance</div>
+            <div className="text-[18px] font-mono font-bold text-[var(--color-foreground)]">{fmt(metrics.totalOutstanding)}</div>
           </div>
         </div>
       </div>

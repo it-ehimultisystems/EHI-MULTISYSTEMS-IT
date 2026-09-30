@@ -172,6 +172,7 @@ export const SideNav = ({
         <div
           className={`flex items-center transition-opacity ${docked ? "" : "cursor-pointer hover:opacity-80"} ${effectiveExpanded ? "gap-2.5" : "justify-center w-full"}`}
           style={{ minHeight: 36 }}
+          title={docked ? undefined : (effectiveExpanded ? "Collapse sidebar" : "Expand sidebar")}
           onClick={docked ? undefined : handleToggleExpand}
         >
           <div
@@ -288,6 +289,7 @@ export const SideNav = ({
             <button
               key={tab.id}
               onClick={() => onChangeTab(tab.id)}
+              title={!effectiveExpanded ? tab.label : undefined}
               className="group"
               style={{
                 width: "100%",
@@ -296,7 +298,7 @@ export const SideNav = ({
                 justifyContent: effectiveExpanded ? "flex-start" : "center",
                 gap: effectiveExpanded ? 10 : 0,
                 padding: effectiveExpanded ? "5px 8px" : "5px",
-                background: isActive ? "transparent" : "transparent",
+                background: "transparent",
                 border: "none",
                 borderRadius: "var(--radius-md)",
                 cursor: "pointer",
@@ -344,7 +346,7 @@ export const SideNav = ({
                 }}
               >
                 <span
-                  className={`${isActive ? "text-[var(--color-foreground)]" : "text-[var(--color-muted)] group-hover:text-[var(--color-foreground)]"} transition-colors`}
+                  className={`${isActive ? "text-[var(--color-accent-amber)]" : "text-[var(--color-muted)] group-hover:text-[var(--color-foreground)]"} transition-colors`}
                   style={{
                     fontSize: 12.5,
                     fontWeight: isActive ? 700 : 500,
@@ -370,6 +372,7 @@ export const SideNav = ({
       >
         <button
           onClick={onToggleTheme}
+          title={!effectiveExpanded ? (theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode") : undefined}
           className="group hover:bg-[var(--color-surface-2)] transition-colors"
           style={{
             width: "100%",
@@ -418,6 +421,7 @@ export const SideNav = ({
 
         <button
           onClick={onLogout}
+          title={!effectiveExpanded ? "Sign Out" : undefined}
           className="group hover:bg-[var(--color-surface-2)] transition-colors"
           style={{
             width: "100%",
